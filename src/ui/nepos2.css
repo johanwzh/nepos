@@ -59,3 +59,14 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 
 .pop-static { font-family: monospace; padding: 4px 0; }
 .pop-note { color: var(--text-m); font-size: 10px; }
+
+/* The 1.5.7 grid had a price column (72px) and a vehicle row (22px); both are hidden in Nepos 2,
+   so the sticky name column and header rows move up/left by those amounts. */
+.g-sticky1 { left: 20px; }
+.g-row-foot { top: 22px; }
+.g-row-dc { top: 40px; }
+
+#grid-status.n2-readonly { cursor: pointer; }
+#edit-footer .n2-readonly-note { color: var(--g-dec-c); font-size: 11px; }
+.ef-org-chip.n2-missing .ef-org-name { color: var(--g-dec-c); }
+.ef-org-role { font-size: 10px; color: var(--text-m); margin: 0 4px; }
