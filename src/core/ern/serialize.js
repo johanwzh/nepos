@@ -19,7 +19,8 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     lines.push(`#LEV;${esc(d.name)};${esc(d.codespace)}`);
     lines.push(`#RUT;-1;${esc(routeCode)};${esc(rs.routeName)};;${rs.transportMode||6};`);
     const curId = rs.currency || 'neposcoin';
-    const curRate = currencyRate(curId);
+    // The rate read from the file wins; the 1.5.7 table is only the fallback for files without one.
+    const curRate = rs.currencyRate ?? currencyRate(curId);
     const sek = rs.sek || [];
     if (sek.length > 0) {
         sek.forEach(s => {

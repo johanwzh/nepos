@@ -124,8 +124,10 @@ export function parseERN(text, { lang = 'en' } = {}) {
                 break;
             }
             case '#CUR': {
-                // Prices are hidden in Nepos 2; only the currency id is kept for write-back.
+                // Prices are hidden in Nepos 2; the currency id and rate are kept exactly as read
+                // so they are written back unchanged.
                 if (f[1]) rs.currency = f[1];
+                if (f[2]) rs.currencyRate = f[2];
                 break;
             }
             case '#TRC': {

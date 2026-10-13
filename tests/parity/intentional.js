@@ -13,16 +13,25 @@ export function expectedRoundtrip(v1Text) {
 }
 
 /**
- * Parsed route state: columns no longer carry vehicleId.
+ * Parsed route state: columns no longer carry vehicleId, and the #CUR rate is kept as read
+ * (1.5.7 replaced it with its built-in table value on write).
  * @param {any} v1Parsed
+ * @param {string} ernText the ERN file the state was parsed from
  */
-export function expectedParsed(v1Parsed) {
+export function expectedParsed(v1Parsed, ernText) {
   const copy = JSON.parse(JSON.stringify(v1Parsed));
   for (const grid of Object.values(copy.grids)) {
     for (const col of /** @type {any} */ (grid).cols) delete col.vehicleId;
   }
+  const rate = ernText.match(/^#CUR;[^;\r\n]*;([^;\r\n]+)/m)?.[1];
+  if (rate) copy.currencyRate = rate;
   return copy;
 }
+
+// Not a transform, but a deliberate difference all the same: 1.5.7 also wrote _stops.xml.
+// Nepos 2 never produces it (stops belong to NSR), so it is neither recorded nor compared.
+// Until Plan 3 switches stop references to NSR Quay IDs, the shared file's QuayRefs point at
+// Quays no file defines.
 
 /** NeTEx file names: Entur delivery convention. */
 export const NETEX_FILE_NAMES = {

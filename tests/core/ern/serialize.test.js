@@ -32,4 +32,11 @@ describe('serializeERN', () => {
     expect(out.endsWith('\r\n')).toBe(true);
     expect(out.replace(/\r\n/g, '')).not.toContain('\n');
   });
+
+  it('writes the #CUR rate back exactly as read, even for unknown currencies', () => {
+    const text = sample.routes[0].text.replace('#CUR;spd;9', '#CUR;custom_1;2.50');
+    expect(serializeERN(parseERN(text), '10', opts)).toContain('#CUR;custom_1;2.50\r\n');
+    const spd = sample.routes[0].text.replace('#CUR;spd;9', '#CUR;spd;10');
+    expect(serializeERN(parseERN(spd), '10', opts)).toContain('#CUR;spd;10\r\n');
+  });
 });

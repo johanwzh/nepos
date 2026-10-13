@@ -10,7 +10,7 @@ const plain = (v) => JSON.parse(JSON.stringify(v));
 describe('ERN parser matches 1.5.7 (with intentional differences)', () => {
   for (const { code, text } of sample.routes) {
     it(`route ${code}`, () => {
-      expect(plain(parseERN(text))).toEqual(expectedParsed(readBaselineJson(`${code}.parsed.json`)));
+      expect(plain(parseERN(text))).toEqual(expectedParsed(readBaselineJson(`${code}.parsed.json`), text));
     });
   }
 });
