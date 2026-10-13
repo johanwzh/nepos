@@ -44,6 +44,13 @@
           </PointProjection>
         </projections>
       </RoutePoint>
+      <RoutePoint id="TST:RoutePoint:999" version="1">
+        <projections>
+          <PointProjection id="TST:PointProjection:999" version="1">
+            <ProjectedPointRef ref="TST:ScheduledStopPoint:999"/>
+          </PointProjection>
+        </projections>
+      </RoutePoint>
       </routePoints>
       <routes>
       <Route id="TST:Route:10-0" version="1">
@@ -69,6 +76,9 @@
             <RoutePointRef ref="TST:RoutePoint:103" version="1"/>
           </PointOnRoute>
           <PointOnRoute id="TST:PointOnRoute:10-1-2" version="1" order="2">
+            <RoutePointRef ref="TST:RoutePoint:999" version="1"/>
+          </PointOnRoute>
+          <PointOnRoute id="TST:PointOnRoute:10-1-3" version="1" order="3">
             <RoutePointRef ref="TST:RoutePoint:101" version="1"/>
           </PointOnRoute>
         </pointsInSequence>
@@ -169,12 +179,18 @@
           <DestinationDisplayRef ref="TST:DestinationDisplay:101"/>
           </StopPointInJourneyPattern>
           <StopPointInJourneyPattern id="TST:StopPointInJourneyPattern:10-1-4-2" version="1" order="2">
+            <ScheduledStopPointRef ref="TST:ScheduledStopPoint:999"/>
+          </StopPointInJourneyPattern>
+          <StopPointInJourneyPattern id="TST:StopPointInJourneyPattern:10-1-4-3" version="1" order="3">
             <ScheduledStopPointRef ref="TST:ScheduledStopPoint:101"/>
           </StopPointInJourneyPattern>
         </pointsInSequence>
         <linksInSequence>
           <ServiceLinkInJourneyPattern id="TST:ServiceLinkInJourneyPattern:10-1-4-1" version="1" order="1">
-            <ServiceLinkRef ref="TST:ServiceLink:103-101"/>
+            <ServiceLinkRef ref="TST:ServiceLink:103-999"/>
+          </ServiceLinkInJourneyPattern>
+          <ServiceLinkInJourneyPattern id="TST:ServiceLinkInJourneyPattern:10-1-4-2" version="1" order="2">
+            <ServiceLinkRef ref="TST:ServiceLink:999-101"/>
           </ServiceLinkInJourneyPattern>
         </linksInSequence>
       </JourneyPattern>
@@ -229,6 +245,10 @@
           </TimetabledPassingTime>
           <TimetabledPassingTime id="TST:TimetabledPassingTime:10-1-1-0-2" version="1">
             <StopPointInJourneyPatternRef ref="TST:StopPointInJourneyPattern:10-1-4-2" version="1"/>
+            <DepartureTime>07:00:00</DepartureTime>
+          </TimetabledPassingTime>
+          <TimetabledPassingTime id="TST:TimetabledPassingTime:10-1-1-0-3" version="1">
+            <StopPointInJourneyPatternRef ref="TST:StopPointInJourneyPattern:10-1-4-3" version="1"/>
             <DepartureTime>09:30:00</DepartureTime>
           </TimetabledPassingTime>
         </passingTimes>

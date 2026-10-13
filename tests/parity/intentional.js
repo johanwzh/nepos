@@ -42,8 +42,18 @@ export function expectedParsed(v1Parsed, ernText) {
 
 // Not a transform, but a deliberate difference all the same: 1.5.7 also wrote _stops.xml.
 // Nepos 2 never produces it (stops belong to NSR), so it is neither recorded nor compared.
-// Until Plan 3 switches stop references to NSR Quay IDs, the shared file's QuayRefs point at
-// Quays no file defines.
+// QuayRefs point at NSR Quays directly; the sample's old numeric IDs keep 1.5.7's CS:Quay:<id>.
+
+/**
+ * NeTEx: Nepos 2 produces no ServiceLinks (spec §8), so the shared file has no <serviceLinks>
+ * and journey patterns have no <linksInSequence>.
+ * @param {string} v1Xml
+ */
+export function expectedNetex(v1Xml) {
+  return v1Xml
+    .replace(/\n {6}<serviceLinks>[\s\S]*?\n {6}<\/serviceLinks>/g, '')
+    .replace(/\n {8}<linksInSequence>[\s\S]*?\n {8}<\/linksInSequence>/g, '');
+}
 
 /** NeTEx file names: Entur delivery convention. */
 export const NETEX_FILE_NAMES = {

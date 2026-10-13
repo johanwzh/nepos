@@ -1,6 +1,6 @@
 // _shared_data.xml generator, ported from Nepos 1.5.7 (nepos.html lines 6076–6220).
 import { xe, pubDelivery, compositeFrame } from './xml.js';
-import { haversineM } from './geo.js';
+import { stopLocalId, quayRef } from '../quays.js';
 import { netexOrgId, authorityNetworkLocalId } from '../orgs.js';
 
 /**
@@ -8,7 +8,7 @@ import { netexOrgId, authorityNetworkLocalId } from '../orgs.js';
  * @param {{ deliveryName?: string, timestamp?: string }} [opts]
  */
 export function genSharedXml(data, { deliveryName = '', timestamp } = {}) {
-    const { cs, orgs, usedStops, stopPairs, destDisps, operDays, operPers, dayTypes, dtAssignments, overallFrom, overallTo } = data;
+    const { cs, orgs, usedStops, destDisps, operDays, operPers, dayTypes, dtAssignments, overallFrom, overallTo } = data;
 
     // ResourceFrame
     const authXml = [...orgs.values()].filter(o=>o.isAuthority).map(o=>`      <Authority id="${xe(netexOrgId(o.id,'Authority',cs))}" version="1">
@@ -39,38 +39,18 @@ ${operXml}
       <Name>${xe(deliveryName||cs)}</Name>
     </Network>${authOrgs.length > 0 ? `\n    <additionalNetworks>\n${addNetItems}\n    </additionalNetworks>` : ''}`;
 
-    const sspXml = [...usedStops.values()].map(s=>`      <ScheduledStopPoint id="${cs}:ScheduledStopPoint:${s.id}" version="1">
+    const sspXml = [...usedStops.values()].map(s=>`      <ScheduledStopPoint id="${cs}:ScheduledStopPoint:${stopLocalId(s.id)}" version="1">
         <Name>${xe(s.name)}</Name>
         <TimingPointStatus>timingPoint</TimingPointStatus>
       </ScheduledStopPoint>`).join('\n');
 
-    const slXml = [...stopPairs.values()].map(p=>{
-        // GML posList: lat lon order (WGS84 geographic CRS standard)
-        // All coords in one space-separated list — matches Norwegian NeTEx profile convention
-        const posList = (p.coords||[]).map(([lon,lat])=>`${lat} ${lon}`).join(' ');
-        // Approximate distance in metres (sum of haversine segments)
-        let distM = 0;
-        for (let i=0;i<(p.coords||[]).length-1;i++) distM += haversineM(p.coords[i], p.coords[i+1]);
-        return `      <ServiceLink id="${cs}:ServiceLink:${p.fromId}-${p.toId}" version="1">
-        <Distance>${distM.toFixed(1)}</Distance>
-        <projections>
-          <LinkSequenceProjection id="${cs}:LinkSequenceProjection:${p.fromId}-${p.toId}" version="1">
-            <gml:LineString gml:id="LSP_${p.fromId}_${p.toId}">
-              <gml:posList srsDimension="2" count="${(p.coords||[]).length}">${posList}</gml:posList>
-            </gml:LineString>
-          </LinkSequenceProjection>
-        </projections>
-        <FromPointRef ref="${cs}:ScheduledStopPoint:${p.fromId}" version="1"/>
-        <ToPointRef ref="${cs}:ScheduledStopPoint:${p.toId}" version="1"/>
-      </ServiceLink>`;
-    }).join('\n');
-
-    const psaXml = [...usedStops.keys()].map((sid,i)=>`      <PassengerStopAssignment id="${cs}:PassengerStopAssignment:${sid}" version="1" order="${i+1}">
-        <ScheduledStopPointRef ref="${cs}:ScheduledStopPoint:${sid}" version="1"/>
-        <QuayRef ref="${cs}:Quay:${sid}"/>
+    // PassengerStopAssignments point at the NSR Quays themselves (spec §8): no _stops.xml.
+    const psaXml = [...usedStops.keys()].map((sid,i)=>`      <PassengerStopAssignment id="${cs}:PassengerStopAssignment:${stopLocalId(sid)}" version="1" order="${i+1}">
+        <ScheduledStopPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(sid)}" version="1"/>
+        <QuayRef ref="${xe(quayRef(sid, cs))}"/>
       </PassengerStopAssignment>`).join('\n');
 
-    const ddXml = [...destDisps.entries()].map(([sid,name])=>`      <DestinationDisplay id="${cs}:DestinationDisplay:${sid}" version="1">
+    const ddXml = [...destDisps.entries()].map(([sid,name])=>`      <DestinationDisplay id="${cs}:DestinationDisplay:${stopLocalId(sid)}" version="1">
         <FrontText>${xe(name)}</FrontText>
       </DestinationDisplay>`).join('\n');
 
@@ -82,9 +62,6 @@ ${ddXml}
       <scheduledStopPoints>
 ${sspXml}
       </scheduledStopPoints>
-      <serviceLinks>
-${slXml}
-      </serviceLinks>
       <stopAssignments>
 ${psaXml}
       </stopAssignments>

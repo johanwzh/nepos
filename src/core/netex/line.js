@@ -1,6 +1,7 @@
 // Line timetable file generator, ported from Nepos 1.5.7 (nepos.html lines 6223–6483).
 import { xe, hhmm2t, ernModeNeTEx, dirType, pubDelivery, compositeFrame } from './xml.js';
 import { netexOrgId, authorityNetworkLocalId } from '../orgs.js';
+import { stopLocalId } from '../quays.js';
 
 /**
  * @param {string} routeCode
@@ -9,7 +10,7 @@ import { netexOrgId, authorityNetworkLocalId } from '../orgs.js';
  * @param {{ timestamp?: string }} [opts]
  */
 export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
-    const { cs, dayTypes, operPers, stopDb } = data;
+    const { cs, dayTypes, operPers } = data;
     const lineId = `${cs}:Line:${routeCode}`;
 
     // Line from/to dates
@@ -88,11 +89,9 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     const arrCell = pendingDwellTime; // may be null
                     pendingDwellTime = null;
 
-                    // Resolve stop — skip if not in stopDb (mirrors collectNeTExData logic)
-                    let dbStop = stop.stopId != null ? stopDb.find(s=>+s.id===+stop.stopId) : null;
-                    if (!dbStop && stop.name) dbStop = stopDb.find(s=>s.name===stop.name);
-                    if (!dbStop) { pendingDwellTime = null; continue; }
-                    const resolvedId = dbStop.id;
+                    // A row without a stop ID is left out (mirrors collectNeTExData)
+                    if (stop.stopId == null || stop.stopId === '') { pendingDwellTime = null; continue; }
+                    const resolvedId = String(stop.stopId);
                     jpStopList.push({
                         stopId: resolvedId,
                         name:   stop.name,
@@ -152,13 +151,14 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     const tgtStop = grid.stops[targetR];
                     const srcStop = grid.stops[ri];
                     if (!tgtStop||!srcStop) continue;
+                    if (srcStop.stopId == null || tgtStop.stopId == null) continue; // no ScheduledStopPoint to refer to
                     const toSjId = `${cs}:ServiceJourney:${routeCode}-${di}-${per.id}-${targetC}`;
                     const staySeated = type==='stayseated' ? '\n        <StaySeated>true</StaySeated>' : '';
                     const guaranteed = type==='guaranteed'  ? '\n        <Guaranteed>true</Guaranteed>' : '';
                     sjs.push(`      <!-- interchange from col ${ci} to col ${targetC} -->
       <ServiceJourneyInterchange id="${cs}:ServiceJourneyInterchange:${sjId.split(':').pop()}-${targetC}" version="1">${staySeated}${guaranteed}
-        <FromPointRef ref="${cs}:ScheduledStopPoint:${srcStop.stopId??''}"/>
-        <ToPointRef ref="${cs}:ScheduledStopPoint:${tgtStop.stopId??''}"/>
+        <FromPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(srcStop.stopId)}"/>
+        <ToPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(tgtStop.stopId)}"/>
         <FromJourneyRef ref="${sjId}" version="1"/>
         <ToJourneyRef ref="${toSjId}" version="1"/>
       </ServiceJourneyInterchange>`);
@@ -170,7 +170,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
         const firstJP = jpMap.values().next().value;
         const routeStopList = firstJP ? firstJP.stopList : [];
         const porXml = routeStopList.map((s,i)=>`          <PointOnRoute id="${cs}:PointOnRoute:${routeCode}-${di}-${i+1}" version="1" order="${i+1}">
-            <RoutePointRef ref="${cs}:RoutePoint:${s.stopId}" version="1"/>
+            <RoutePointRef ref="${cs}:RoutePoint:${stopLocalId(s.stopId)}" version="1"/>
           </PointOnRoute>`).join('\n');
         routesXml.push(`      <Route id="${routeId}" version="1">
         <LineRef ref="${lineId}" version="1"/>
@@ -184,7 +184,7 @@ ${porXml}
         for (const [, { jpId, stopList }] of jpMap) {
             const lastStop = stopList[stopList.length-1];
             const ddRef = lastStop?.stopId!=null
-                ? `\n          <DestinationDisplayRef ref="${cs}:DestinationDisplay:${lastStop.stopId}"/>` : '';
+                ? `\n          <DestinationDisplayRef ref="${cs}:DestinationDisplay:${stopLocalId(lastStop.stopId)}"/>` : '';
 
             // DestinationDisplay only on the FIRST stop (front sign at departure)
             const spijpList = stopList.map((s,i)=>{
@@ -194,24 +194,9 @@ ${porXml}
                 const alt = s.forAlighting ? '' : '\n            <ForAlighting>false</ForAlighting>';
                 const req = s.requestStop  ? '\n            <RequestStop>true</RequestStop>' : '';
                 return `          <StopPointInJourneyPattern id="${spijpId}" version="1" order="${i+1}">
-            <ScheduledStopPointRef ref="${cs}:ScheduledStopPoint:${s.stopId}"/>${dd}${brd}${alt}${req}
+            <ScheduledStopPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(s.stopId)}"/>${dd}${brd}${alt}${req}
           </StopPointInJourneyPattern>`;
             }).join('\n');
-
-            // Skip same-stop pairs (dwell stops — no ServiceLink between a stop and itself)
-            const slInJpItems = [];
-            for (let i=0; i<stopList.length-1; i++) {
-                // Only skip true dwell pairs — same NON-NULL stopId.
-                // null === null would incorrectly skip unresolved stops.
-                const sa = stopList[i].stopId, sb = stopList[i+1].stopId;
-                if (sa != null && sa === sb) continue;
-                slInJpItems.push(
-                    `          <ServiceLinkInJourneyPattern id="${cs}:ServiceLinkInJourneyPattern:${jpId.split(':').pop()}-${slInJpItems.length+1}" version="1" order="${slInJpItems.length+1}">
-            <ServiceLinkRef ref="${cs}:ServiceLink:${stopList[i].stopId}-${stopList[i+1].stopId}"/>
-          </ServiceLinkInJourneyPattern>`
-                );
-            }
-            const slInJpList = slInJpItems.join('\n');
 
             jpsXml.push(`      <JourneyPattern id="${jpId}" version="1">
         <RouteRef ref="${routeId}" version="1"/>
@@ -219,18 +204,15 @@ ${porXml}
         <pointsInSequence>
 ${spijpList}
         </pointsInSequence>
-        <linksInSequence>
-${slInJpList}
-        </linksInSequence>
       </JourneyPattern>`);
         }
     }
 
     // RoutePoints
-    const rpXml = [...routePointsMap.keys()].map(sid=>`      <RoutePoint id="${cs}:RoutePoint:${sid}" version="1">
+    const rpXml = [...routePointsMap.keys()].map(sid=>`      <RoutePoint id="${cs}:RoutePoint:${stopLocalId(sid)}" version="1">
         <projections>
-          <PointProjection id="${cs}:PointProjection:${sid}" version="1">
-            <ProjectedPointRef ref="${cs}:ScheduledStopPoint:${sid}"/>
+          <PointProjection id="${cs}:PointProjection:${stopLocalId(sid)}" version="1">
+            <ProjectedPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(sid)}"/>
           </PointProjection>
         </projections>
       </RoutePoint>`).join('\n');

@@ -2,14 +2,14 @@
 // Pure: takes the parsed routes and stop database as input instead of reading app state.
 import { yyyymmdd2d } from './xml.js';
 import { expandDayCode } from './daycodes.js';
-import { straightLine } from './geo.js';
 
 /**
- * Collect everything the NeTEx files need from the parsed routes.
- * @param {{ codespace: string, routes: { code: string, rs: any }[], orgs?: { id: any, name: string }[],
- *           stopDb?: any[], routePath?: (a: any, b: any) => { routed: boolean, coords: number[][] } }} input
+ * Collect everything the NeTEx files need from the parsed routes. Stops are identified by their
+ * stop ID in the route file (an NSR Quay ID); rows without one are left out. No ServiceLinks are
+ * produced (spec §8).
+ * @param {{ codespace: string, routes: { code: string, rs: any }[], orgs?: { id: any, name: string }[] }} input
  */
-export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList = [], stopDb = [], routePath = straightLine }) {
+export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList = [] }) {
     const cs = codespace || '1869';
 
     // Routes without periods have nothing to export
@@ -42,8 +42,7 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
     }
 
     // Collect used stops, stop pairs, dest displays, day types, operating periods
-    const usedStops = new Map();  // stopId → stop db entry
-    const stopPairs  = new Map();  // "fId-tId" → {fromId, toId, coords}
+    const usedStops = new Map();  // stopId → {id, name} (name from the first row that uses it)
     const destDisps  = new Map();  // stopId → name (final stops of JPs)
     const operDays  = new Map();  // "YYYY-MM-DD" → {ntxId, date}   (one per real calendar date)
     const operPers  = new Map();  // "from-to" → {ntxId, from, to, fromDayId, toDayId, name}
@@ -51,28 +50,8 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
     const dtAssignments = [];     // built inline during DayType creation
     let opCtr = 1, dtCtr = 1, dtaCtr = 1;
 
-    // Resolve a stop: ID match first, then name fallback
-    function resolveStop(stopId, stopName) {
-        let db = (stopId!=null) ? stopDb.find(s=>+s.id===+stopId) : null;
-        if (!db && stopName) db = stopDb.find(s=>s.name===stopName);
-        return db;
-    }
-
     function ensureStop(stopId, stopName) {
-        if (stopId == null && !stopName) return;
-        const db = resolveStop(stopId, stopName);
-        if (db) usedStops.set(db.id, db);
-    }
-
-    function ensureStopPair(s1id, s2id, s1name, s2name) {
-        const db1 = resolveStop(s1id, s1name);
-        const db2 = resolveStop(s2id, s2name);
-        if (!db1?.coords || !db2?.coords) return;
-        if (db1.id === db2.id) return;  // same stop — dwell pair or name-collision; no ServiceLink
-        const key = `${db1.id}-${db2.id}`;
-        if (stopPairs.has(key)) return;
-        const res = routePath({stopId:db1.id,coords:db1.coords},{stopId:db2.id,coords:db2.coords});
-        stopPairs.set(key, { fromId:db1.id, toId:db2.id, routed:res.routed, coords:res.coords });
+        if (!usedStops.has(stopId)) usedStops.set(stopId, { id: stopId, name: stopName });
     }
 
     // OperatingDay: one per real calendar date, ID = date string (reusable across routes)
@@ -157,10 +136,8 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
                 const dir = rs.directions[di];
                 const grid = rs.grids[`${per.id}:${dir.id}`]||{stops:[],cols:[]};
 
-                // Collect stops, pairs, dest displays PER COLUMN.
-                // Each column may have a different stopping pattern (different stops have times).
-                // We must mirror exactly what genLineXml does when building each JourneyPattern,
-                // otherwise the shared ServiceLinks won't cover all the pairs the line files need.
+                // Collect stops and dest displays PER COLUMN, mirroring what genLineXml does when
+                // building each JourneyPattern (each column may stop at different stops).
                 for (const col of grid.cols||[]) {
                     const colStops = [];
                     for (let ri=0; ri<grid.stops.length; ri++) {
@@ -168,13 +145,10 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
                         const cell = col.cells[ri];
                         if (stop.isDwellArr) continue;
                         if (!cell?.time || cell.time==='|') continue;
-                        const db = resolveStop(stop.stopId, stop.name);
-                        if (!db) continue;
-                        ensureStop(db.id, stop.name);
-                        colStops.push({ stopId: db.id, name: stop.name });
-                    }
-                    for (let i=0; i<colStops.length-1; i++) {
-                        ensureStopPair(colStops[i].stopId, colStops[i+1].stopId, colStops[i].name, colStops[i+1].name);
+                        if (stop.stopId == null || stop.stopId === '') continue;
+                        const stopId = String(stop.stopId);
+                        ensureStop(stopId, stop.name);
+                        colStops.push({ stopId, name: stop.name });
                     }
                     if (colStops.length > 0) {
                         const last = colStops[colStops.length-1];
@@ -197,6 +171,6 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
         }
     }
 
-    return { cs, routes, orgs, usedStops, stopPairs, destDisps, operDays, operPers, dayTypes,
-             dtAssignments, overallFrom, overallTo, stopDb };
+    return { cs, routes, orgs, usedStops, destDisps, operDays, operPers, dayTypes,
+             dtAssignments, overallFrom, overallTo };
 }

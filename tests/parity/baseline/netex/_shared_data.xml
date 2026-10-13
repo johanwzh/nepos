@@ -82,6 +82,10 @@
         <Name>Florø</Name>
         <TimingPointStatus>timingPoint</TimingPointStatus>
       </ScheduledStopPoint>
+      <ScheduledStopPoint id="TST:ScheduledStopPoint:999" version="1">
+        <Name>Ukjent brygge</Name>
+        <TimingPointStatus>timingPoint</TimingPointStatus>
+      </ScheduledStopPoint>
       <ScheduledStopPoint id="TST:ScheduledStopPoint:104" version="1">
         <Name>Florø skysstasjon</Name>
         <TimingPointStatus>timingPoint</TimingPointStatus>
@@ -128,16 +132,28 @@
         <FromPointRef ref="TST:ScheduledStopPoint:101" version="1"/>
         <ToPointRef ref="TST:ScheduledStopPoint:103" version="1"/>
       </ServiceLink>
-      <ServiceLink id="TST:ServiceLink:103-101" version="1">
-        <Distance>135082.1</Distance>
+      <ServiceLink id="TST:ServiceLink:103-999" version="1">
+        <Distance>18849.1</Distance>
         <projections>
-          <LinkSequenceProjection id="TST:LinkSequenceProjection:103-101" version="1">
-            <gml:LineString gml:id="LSP_103_101">
-              <gml:posList srsDimension="2" count="2">61.5996 5.0328 60.3929 5.3221</gml:posList>
+          <LinkSequenceProjection id="TST:LinkSequenceProjection:103-999" version="1">
+            <gml:LineString gml:id="LSP_103_999">
+              <gml:posList srsDimension="2" count="2">61.5996 5.0328 61.45 5.2</gml:posList>
             </gml:LineString>
           </LinkSequenceProjection>
         </projections>
         <FromPointRef ref="TST:ScheduledStopPoint:103" version="1"/>
+        <ToPointRef ref="TST:ScheduledStopPoint:999" version="1"/>
+      </ServiceLink>
+      <ServiceLink id="TST:ServiceLink:999-101" version="1">
+        <Distance>117729.2</Distance>
+        <projections>
+          <LinkSequenceProjection id="TST:LinkSequenceProjection:999-101" version="1">
+            <gml:LineString gml:id="LSP_999_101">
+              <gml:posList srsDimension="2" count="2">61.45 5.2 60.3929 5.3221</gml:posList>
+            </gml:LineString>
+          </LinkSequenceProjection>
+        </projections>
+        <FromPointRef ref="TST:ScheduledStopPoint:999" version="1"/>
         <ToPointRef ref="TST:ScheduledStopPoint:101" version="1"/>
       </ServiceLink>
       <ServiceLink id="TST:ServiceLink:104-105" version="1">
@@ -166,11 +182,15 @@
         <ScheduledStopPointRef ref="TST:ScheduledStopPoint:103" version="1"/>
         <QuayRef ref="TST:Quay:103"/>
       </PassengerStopAssignment>
-      <PassengerStopAssignment id="TST:PassengerStopAssignment:104" version="1" order="4">
+      <PassengerStopAssignment id="TST:PassengerStopAssignment:999" version="1" order="4">
+        <ScheduledStopPointRef ref="TST:ScheduledStopPoint:999" version="1"/>
+        <QuayRef ref="TST:Quay:999"/>
+      </PassengerStopAssignment>
+      <PassengerStopAssignment id="TST:PassengerStopAssignment:104" version="1" order="5">
         <ScheduledStopPointRef ref="TST:ScheduledStopPoint:104" version="1"/>
         <QuayRef ref="TST:Quay:104"/>
       </PassengerStopAssignment>
-      <PassengerStopAssignment id="TST:PassengerStopAssignment:105" version="1" order="5">
+      <PassengerStopAssignment id="TST:PassengerStopAssignment:105" version="1" order="6">
         <ScheduledStopPointRef ref="TST:ScheduledStopPoint:105" version="1"/>
         <QuayRef ref="TST:Quay:105"/>
       </PassengerStopAssignment>
