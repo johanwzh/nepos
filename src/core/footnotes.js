@@ -70,7 +70,7 @@ export function fnToText(fn, lang) {
     if (!from && !to) continue;
     const prefix = ex.runsOnly ? (lang === 'no' ? 'Kjører kun' : 'Only') : (lang === 'no' ? 'Ikke' : 'Not');
     let dateStr;
-    if (from && to) {
+    if (from && to && from !== to) {
       const fd = parseInt(from.slice(6, 8)), fm = parseInt(from.slice(4, 6)), fy = from.slice(2, 4);
       const td = parseInt(to.slice(6, 8)), tm = parseInt(to.slice(4, 6)), ty = to.slice(2, 4);
       dateStr = fy === ty ? `${fd}/${fm}-${td}/${tm} ${fy}` : `${fd}/${fm} ${fy}-${td}/${tm} ${ty}`;

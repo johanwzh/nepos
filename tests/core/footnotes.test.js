@@ -26,4 +26,9 @@ describe('footnote helpers', () => {
     expect(fnToText(fn, 'en')).toBe('Via Hamrebakkene. Not 6/7-2/8 26.');
     expect(fnSummary(fn, 'en')).toBe('Via Hamrebakkene · Not 20260706 → 20260802');
   });
+
+  it('writes a one-day exception as a single date', () => {
+    const fn = { text: '', exceptions: [{ runsOnly: false, from: '20260706', to: '20260706' }] };
+    expect(fnToText(fn, 'no')).toBe('Ikke 6/7/26.');
+  });
 });
