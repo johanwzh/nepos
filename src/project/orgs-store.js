@@ -12,7 +12,8 @@ export async function readOrgs(fs) {
   if (text === null) return { orgs: [], error: null };
   try {
     const value = JSON.parse(text);
-    if (!Array.isArray(value)) return { orgs: [], error: 'unreadable' };
+    const isOrg = (/** @type {any} */ o) => o !== null && typeof o === 'object' && typeof o.id === 'string' && typeof o.name === 'string';
+    if (!Array.isArray(value) || !value.every(isOrg)) return { orgs: [], error: 'unreadable' };
     return { orgs: value, error: null };
   } catch {
     return { orgs: [], error: 'unreadable' };

@@ -92,3 +92,15 @@ describe('updateOutdatedRoutes', () => {
     expect(await readRoute(fs, '10')).toBe(damaged);
   });
 });
+
+describe('openProject with odd route files', () => {
+  it('does not crash on a route file with an upper-case .TXT extension', async () => {
+    const fs = await newProject();
+    await writeRoute(fs, '20', nepos2Route, { now });
+    await fs.writeBytes('data/routes/12.TXT', new TextEncoder().encode('#RUT;-1;12;x;;1;\r\n'));
+    const opened = await openProject(fs);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(opened.routes.map((r) => r.code)).toEqual(['20']);
+  });
+});

@@ -10,7 +10,8 @@ const isNumber = (/** @type {string} */ s) => /^\d+$/.test(s);
  */
 export async function listRoutes(fs) {
   return (await fs.list(ROUTES_DIR))
-    .filter((e) => e.kind === 'file' && e.name.toLowerCase().endsWith('.txt'))
+    // Only the exact '.txt' Nepos writes: a '12.TXT' would be read and saved under different names.
+    .filter((e) => e.kind === 'file' && e.name.endsWith('.txt'))
     .map((e) => e.name.slice(0, -4))
     .sort((a, b) => {
       if (isNumber(a) && isNumber(b)) return Number(a) - Number(b);

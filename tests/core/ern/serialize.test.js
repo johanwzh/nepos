@@ -40,3 +40,15 @@ describe('serializeERN', () => {
     expect(serializeERN(parseERN(spd), '10', opts)).toContain('#CUR;spd;10\r\n');
   });
 });
+
+describe('serializeERN keeps what it read', () => {
+  it('keeps the organisation name from the file when the organisation list does not have it', () => {
+    const out = serializeERN(parseERN(sample.routes[1].text), '20', { delivery: sample.delivery, orgs: [] });
+    expect(out).toContain('#SEK;3;Kystbuss AS;0;1;0;0\r\n');
+  });
+
+  it('writes a price of 0 as 0, not as "no price"', () => {
+    const text = sample.routes[1].text.replace('#TRL;1;105;Eikefjord;34;0;-1;', '#TRL;1;105;Eikefjord;34;0;0.000000;');
+    expect(serializeERN(parseERN(text), '20', opts)).toContain('#TRL;1;105;Eikefjord;34;0;0.000000;-1;34;-1');
+  });
+});

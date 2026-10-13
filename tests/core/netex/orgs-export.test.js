@@ -43,3 +43,15 @@ describe('organisation IDs in NeTEx', () => {
     expect(shared).toContain('<Name>Innlandsbuss</Name>');
   });
 });
+
+describe('organisation IDs that reach the XML', () => {
+  it('escapes a legacy ID with XML special characters', () => {
+    const legacy = sample.routes[1].text.replace('#SEK;3;Kystbuss AS;0;1;0;0', '#SEK;A&B;Kystbuss AS;0;1;0;0');
+    const out = buildNeTExFiles({
+      codespace: 'TST', deliveryName: 'x', routes: [{ code: '20', rs: parseERN(legacy) }],
+      orgs: [], stopDb: sample.stopDb, timestamp: '2026-01-01T00:00:00',
+    });
+    expect(out[0].xml).toContain('<Operator id="TST:Operator:A&amp;B" version="1">');
+    expect(out[1].xml).toContain('<OperatorRef ref="TST:Operator:A&amp;B"/>');
+  });
+});

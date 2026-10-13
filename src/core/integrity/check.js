@@ -3,6 +3,7 @@
 // opens it read-only. "outdated" = valid, but written with an older Nepos convention; saving
 // (or "update") rewrites it. Issues carry codes; the UI translates them.
 import { isValidDayCode, isValidCellTime, isValidDate } from '../ern/validate.js';
+import { findLostRecords } from './roundtrip.js';
 
 /**
  * @typedef {{ code: string, severity: 'damaged' | 'outdated' | 'note', line?: number, detail?: string }} IntegrityIssue
@@ -88,6 +89,17 @@ export function checkRouteFile(text) {
         break;
     }
   });
+
+  // Anything else a save would lose or change (see roundtrip.js). Lines already reported as
+  // damaged above are not reported twice.
+  const flagged = new Set(issues.filter((x) => x.severity === 'damaged').map((x) => x.line));
+  try {
+    for (const { line, record } of findLostRecords(text)) {
+      if (!flagged.has(line)) damaged('lost-on-save', line, record);
+    }
+  } catch {
+    damaged('unreadable-file');
+  }
 
   if (!seenRUT) damaged('missing-route-record');
   if (seenRUT && !seenLEV) outdated('missing-lev');

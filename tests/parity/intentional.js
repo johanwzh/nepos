@@ -13,8 +13,9 @@ export function expectedRoundtrip(v1Text) {
 }
 
 /**
- * Parsed route state: columns no longer carry vehicleId, #SEK org IDs are strings, and the #CUR
- * rate is kept as read (1.5.7 replaced it with its built-in table value on write).
+ * Parsed route state: columns no longer carry vehicleId, #SEK org IDs are strings and keep the
+ * name from the file, and the #CUR rate is kept as read (1.5.7 replaced it with its built-in
+ * table value on write).
  * @param {any} v1Parsed
  * @param {string} ernText the ERN file the state was parsed from
  */
@@ -25,8 +26,13 @@ export function expectedParsed(v1Parsed, ernText) {
   }
   const rate = ernText.match(/^#CUR;[^;\r\n]*;([^;\r\n]+)/m)?.[1];
   if (rate) copy.currencyRate = rate;
-  // #SEK org IDs are kept as text (they are full NeTEx IDs in Nepos 2).
-  for (const s of copy.sek) s.orgId = String(s.orgId);
+  const sekLines = ernText.split(/\r?\n/).filter((l) => l.startsWith('#SEK;')).map((l) => l.split(';'));
+  for (const s of copy.sek) {
+    // #SEK org IDs are kept as text (they are full NeTEx IDs in Nepos 2).
+    s.orgId = String(s.orgId);
+    // #SEK keeps the organisation name from the file, so a save never blanks it.
+    s.name = sekLines.find((f) => f[1].trim() === s.orgId)?.[2] || '';
+  }
   return copy;
 }
 

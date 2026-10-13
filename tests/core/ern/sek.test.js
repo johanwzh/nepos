@@ -12,12 +12,12 @@ const orgs = [
 describe('#SEK organisation IDs', () => {
   it('keeps a full NeTEx ID as text', () => {
     const rs = parseERN(withSek(['#SEK;RUT:Authority:1;Ruter;1;0;0;0']));
-    expect(rs.sek).toEqual([{ orgId: 'RUT:Authority:1', isAuthority: true, isOperator: false }]);
+    expect(rs.sek).toEqual([{ orgId: 'RUT:Authority:1', isAuthority: true, isOperator: false, name: 'Ruter' }]);
   });
 
   it('takes the role from the ID, not from contradicting flags', () => {
     const rs = parseERN(withSek(['#SEK;INN:Operator:62;Innlandsbuss;1;0;0;0']));
-    expect(rs.sek).toEqual([{ orgId: 'INN:Operator:62', isAuthority: false, isOperator: true }]);
+    expect(rs.sek).toEqual([{ orgId: 'INN:Operator:62', isAuthority: false, isOperator: true, name: 'Innlandsbuss' }]);
   });
 
   it('writes the ID and matching flags back', () => {
@@ -32,6 +32,6 @@ describe('#SEK organisation IDs', () => {
   });
 
   it('still reads a bare ID with its flags', () => {
-    expect(parseERN(sample.routes[1].text).sek).toEqual([{ orgId: '3', isAuthority: false, isOperator: true }]);
+    expect(parseERN(sample.routes[1].text).sek).toEqual([{ orgId: '3', isAuthority: false, isOperator: true, name: 'Kystbuss AS' }]);
   });
 });

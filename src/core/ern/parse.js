@@ -77,6 +77,7 @@ export function parseERN(text, { lang = 'en' } = {}) {
                     orgId,
                     isAuthority: role ? role === 'authority' : parseInt(f[3])===1,
                     isOperator:  role ? role === 'operator'  : parseInt(f[4])===1,
+                    name:        f[2]||'',   // written back if the org list lacks this org
                 });
                 break;
             }

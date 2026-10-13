@@ -23,7 +23,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     const firstOper = (rs.sek||[]).find(s=>s.isOperator);
     const firstAuth = (rs.sek||[]).find(s=>s.isAuthority);   // route's own authority
     // OperatorRef is cross-file (→ _shared_data.xml) — no version attribute
-    const operRef = firstOper ? `\n        <OperatorRef ref="${netexOrgId(firstOper.orgId,'Operator',cs)}"/>` : '';
+    const operRef = firstOper ? `\n        <OperatorRef ref="${xe(netexOrgId(firstOper.orgId,'Operator',cs))}"/>` : '';
     const komRef  = rs.kom?.trim() ? `\n      <noticeAssignments>\n        <NoticeAssignment id="${cs}:NoticeAssignment:${routeCode}-kom" version="1">\n          <NoticeRef ref="${cs}:Notice:${routeCode}-kom" version="1"/>\n          <NoticedObjectRef ref="${lineId}" version="1"/>\n        </NoticeAssignment>\n      </noticeAssignments>` : '';
 
     // Element order per Norwegian NeTEx profile:
@@ -32,7 +32,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
         <Name>${xe(rs.routeName||routeCode)}</Name>
         <TransportMode>${lineMode}</TransportMode>${subEl}
         <PublicCode>${xe(rs.publicCode||routeCode)}</PublicCode>${operRef}
-        <RepresentedByGroupRef ref="${cs}:Network:${firstAuth ? authorityNetworkLocalId(firstAuth.orgId) : cs}"/>
+        <RepresentedByGroupRef ref="${cs}:Network:${firstAuth ? xe(authorityNetworkLocalId(firstAuth.orgId)) : cs}"/>
       </Line>`;
 
     // Per-direction: routes, routePoints, journeyPatterns

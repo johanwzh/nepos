@@ -52,3 +52,15 @@ describe('validateOrgs', () => {
     ]).map((i) => i.code)).toEqual(['id-format', 'id-format', 'id-format']);
   });
 });
+
+describe('organisation ID characters', () => {
+  it('only allows letters, digits, _ and - after the role', () => {
+    expect(validateOrgs([
+      { id: 'RUT:Operator:A&B', name: 'x' },
+      { id: 'RUT:Operator:a<b', name: 'y' },
+      { id: 'RUT:Operator:62.1', name: 'z' },
+      { id: 'RUT:Operator:Øst', name: 'w' },
+    ]).map((i) => i.code)).toEqual(['id-format', 'id-format', 'id-format', 'id-format']);
+    expect(validateOrgs([{ id: 'RUT:Operator:Ab_9-x', name: 'ok' }])).toEqual([]);
+  });
+});

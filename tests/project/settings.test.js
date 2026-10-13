@@ -64,3 +64,11 @@ describe('backup names', () => {
     expect(await uniqueBackupPath(fs, 'data/backups/20.x', '.txt')).toBe('data/backups/20.x.txt');
   });
 });
+
+describe('organisations file entries', () => {
+  it('reports entries that are not organisations instead of passing them on', async () => {
+    for (const bad of ['[null]', '[5]', '[{"name":"x"}]', '[{"id":7,"name":"x"}]', '[{"id":"RUT:Authority:1"}]']) {
+      expect(await readOrgs(createMemoryFs({ 'data/orgs.json': bad }))).toEqual({ orgs: [], error: 'unreadable' });
+    }
+  });
+});

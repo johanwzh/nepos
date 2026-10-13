@@ -25,7 +25,7 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     if (sek.length > 0) {
         sek.forEach(s => {
             const org = (orgs||[]).find(o => String(o.id) === String(s.orgId));
-            lines.push(`#SEK;${esc(String(s.orgId))};${esc(org?.name||'')};${s.isAuthority?1:0};${s.isOperator?1:0};0;0`);
+            lines.push(`#SEK;${esc(String(s.orgId))};${esc(org?.name||s.name||'')};${s.isAuthority?1:0};${s.isOperator?1:0};0;0`);
         });
     } else {
         lines.push(`#SEK;-1;;0;0;0;0`);
@@ -52,7 +52,7 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
 
             grid.stops.forEach((stop, ri) => {
                 const sid = (stop.stopId != null) ? stop.stopId : -1;
-                const pNep = (stop.price != null && stop.price > 0) ? stop.price.toFixed(6) : '-1';
+                const pNep = (stop.price != null && stop.price >= 0) ? stop.price.toFixed(6) : '-1';
                 const flags = (stop.bold ? 1 : 0) | (stop.sep ? 2 : 0);
                 lines.push(`#TRL;${ri};${sid};${esc(stop.name)};34;${flags};${pNep};-1;34;-1`);
                 grid.cols.forEach((col, ci) => {

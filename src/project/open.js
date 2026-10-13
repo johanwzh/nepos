@@ -62,6 +62,11 @@ export async function openProject(fs, { now = new Date() } = {}) {
   const routes = [];
   for (const code of await listRoutes(fs)) {
     const text = await readRoute(fs, code);
+    if (text === null) {
+      // Listed but unreadable (e.g. removed while opening): report it instead of failing the project.
+      routes.push({ code, text: '', status: 'damaged', issues: [{ code: 'unreadable-file', severity: 'damaged' }] });
+      continue;
+    }
     const { status, issues } = checkRouteFile(text);
     routes.push({ code, text, status, issues });
   }

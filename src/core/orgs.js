@@ -2,7 +2,8 @@
 // The middle part of the ID says whether the organisation is an authority or an operator, so
 // an organisation that is both has two entries (as in Entur's own data).
 
-export const ORG_ID_PATTERN = /^[A-Z]{3}:(Authority|Operator):[^:;\s]+$/;
+// The part after the role is limited to letters, digits, _ and -, which are safe in NeTEx IDs.
+export const ORG_ID_PATTERN = /^[A-Z]{3}:(Authority|Operator):[A-Za-z0-9_-]+$/;
 
 /**
  * @param {string} id
