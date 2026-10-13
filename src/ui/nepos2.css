@@ -73,3 +73,5 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 
 /* A Quay NSR does not know yet (spec §7.2): allowed, but worth a second look. */
 .g-td-name.n2-quay-notseen { font-style: italic; text-decoration: underline dotted; }
+/* Not checked against NSR (still looking, or NSR could not be reached): muted, never like confirmed. */
+.g-td-name.n2-quay-unknown { color: var(--text-m); }

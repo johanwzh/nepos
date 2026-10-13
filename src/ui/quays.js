@@ -72,6 +72,6 @@ export function stopMark(stop) {
     case 'not-seen': return { cls: 'n2-quay-notseen', title: t('quayNotSeen', id) };
     case 'mode-mismatch': return { cls: 'stop-broken', title: t('quayMismatch', id, info?.stopPlaceName ?? '', info?.mode ?? '') };
     case 'confirmed': return { cls: '', title: t('quayConfirmed', id, `${info?.stopPlaceName ?? ''} ${info?.publicCode ?? ''}`.trim()) };
-    default: return { cls: '', title: t('quayUnknown', id) };
+    default: return { cls: 'n2-quay-unknown', title: t('quayUnknown', id) }; // never looks confirmed (spec §7.2)
   }
 }

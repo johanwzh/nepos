@@ -185,7 +185,7 @@ function cancelStopEdit() {
 }
 
 // ─── Stop marks (NSR status, spec §7.2) ─────────────────────────────────────
-const MARK_CLASSES = ['stop-unlinked', 'stop-broken', 'n2-quay-notseen'];
+const MARK_CLASSES = ['stop-unlinked', 'stop-broken', 'n2-quay-notseen', 'n2-quay-unknown'];
 
 /** @param {HTMLElement} td @param {any} stop */
 function applyStopMark(td, stop) {
@@ -215,14 +215,21 @@ function setStopId(ri) {
   const id = answer.trim();
   if (id && !NSR_QUAY_PATTERN.test(id)) { showMessage(t('stopIdInvalid')); return; }
   stop.stopId = id || null;
+  // A dwell stop is two rows with the same ID (arrival, then departure). Keep them one stop:
+  // otherwise the file reopens with an extra call at the old Quay.
+  const arrival = grid.stops[ri - 1]?.isDwellArr ? grid.stops[ri - 1] : null;
+  if (arrival) {
+    arrival.stopId = stop.stopId;
+    if (!id) arrival.isDwellArr = false;
+  }
   render();
   if (!id) return;
   loadQuays([id]).then(() => {
     const info = quayInfo.get(id);
-    if (info && !stop.name.trim() && grid.stops.includes(stop)) {
-      stop.name = info.stopPlaceName;
-      render();
-    }
+    if (!info || stop.name.trim() || !grid.stops.includes(stop)) return;
+    if (inStopEdit) { updateStopMarks(); return; } // a name is being typed: never rebuild under it
+    stop.name = info.stopPlaceName;
+    render();
   });
 }
 
