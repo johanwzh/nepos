@@ -36,8 +36,13 @@ describe('integrity check: data a save would lose', () => {
     expect(lost(nepos2.replace('#SEK;3;Kystbuss AS;0;1;0;0', '#SEK;3;Kystbuss AS;0;1;100;0')).length).toBe(1);
   });
 
+  it('keeps an NSR Quay stop ID', () => {
+    expect(lost(nepos2.replace('#TRL;0;104;', '#TRL;0;NSR:Quay:7203;'))).toEqual([]);
+  });
+
   it('flags a stop ID the parser cannot keep', () => {
-    expect(lost(nepos2.replace('#TRL;0;104;', '#TRL;0;NSR:Quay:7203;')).length).toBe(1);
+    // 0 means "no stop ID" and is written back as -1
+    expect(lost(nepos2.replace('#TRL;0;104;', '#TRL;0;0;')).length).toBe(1);
   });
 
   it('flags a cell in a column that has no #TUR', () => {

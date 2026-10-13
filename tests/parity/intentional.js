@@ -15,7 +15,7 @@ export function expectedRoundtrip(v1Text) {
 /**
  * Parsed route state: columns no longer carry vehicleId, #SEK org IDs are strings and keep the
  * name from the file, and the #CUR rate is kept as read (1.5.7 replaced it with its built-in
- * table value on write).
+ * table value on write). Stop IDs are text (NSR Quay IDs), not numbers.
  * @param {any} v1Parsed
  * @param {string} ernText the ERN file the state was parsed from
  */
@@ -23,6 +23,10 @@ export function expectedParsed(v1Parsed, ernText) {
   const copy = JSON.parse(JSON.stringify(v1Parsed));
   for (const grid of Object.values(copy.grids)) {
     for (const col of /** @type {any} */ (grid).cols) delete col.vehicleId;
+  }
+  // Stop IDs are text in Nepos 2 (NSR Quay IDs); 1.5.7 parsed them as numbers.
+  for (const grid of Object.values(copy.grids)) {
+    for (const stop of /** @type {any} */ (grid).stops) if (stop.stopId != null) stop.stopId = String(stop.stopId);
   }
   const rate = ernText.match(/^#CUR;[^;\r\n]*;([^;\r\n]+)/m)?.[1];
   if (rate) copy.currencyRate = rate;
