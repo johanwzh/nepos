@@ -24,7 +24,7 @@ beforeEach(() => {
   changes = 0;
   onGridChange(() => { changes++; });
   loadGrid({
-    stops: [stop('Sentrum', 1), stop('Flyplass')],
+    stops: [stop('Sentrum', 'NSR:Quay:7203'), stop('Flyplass')],
     cols: [{ dayCode: 'DX67', footnote: '', footnoteId: null, cells: [cell('0700'), cell('0745')] }],
   }, { readOnly: false });
 });
@@ -36,7 +36,7 @@ describe('grid', () => {
     expect(cellText(1, 0)).toBe('0745');
   });
 
-  it('marks a stop without an ID', () => {
+  it('marks a stop without an ID, not one with an NSR Quay ID', () => {
     const names = [...document.querySelectorAll('.g-td-name')];
     expect(names[0].classList.contains('stop-unlinked')).toBe(false);
     expect(names[1].classList.contains('stop-unlinked')).toBe(true);

@@ -13,6 +13,8 @@ export function loadAppMarkup() {
   proto.showModal = function showModal() { this.open = true; };
   proto.close = function close() { this.open = false; };
   /** @type {any} */ (window).matchMedia = () => ({ matches: false, addEventListener() {} });
+  // Tests never call Entur (spec §10): any network use fails loudly instead.
+  /** @type {any} */ (globalThis).fetch = async () => { throw new Error('Network access is disabled in tests'); };
 }
 
 /** Let pending promise callbacks (file writes) finish. */
