@@ -1,7 +1,8 @@
 // The route list (F5 panel), ported from Nepos 1.5.7 (nepos.html lines 2501–2554), with a
 // mark for routes that can be updated (↻) or need attention (⚠).
 import { app } from './state.js';
-import { $, onRefresh, refreshAll } from './shell.js';
+import { $, onRefresh } from './shell.js';
+import { selectRoute } from './route-editor.js';
 import { t } from '../i18n/strings.js';
 import { routeSummary } from './route-summary.js';
 
@@ -44,10 +45,7 @@ export function renderRouteList() {
       ${r.name ? `<div style="font-size:12px;color:var(--text);font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.name)}</div>` : ''}
       ${r.publicCode ? `<div style="font-size:14px;color:var(--accent);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.publicCode)}</div>` : ''}`;
     div.title = [r.code, r.name, r.publicCode, r.status === 'ok' ? '' : t(r.status === 'damaged' ? 'statusDamaged' : 'statusOutdated')].filter(Boolean).join(' · ');
-    div.addEventListener('click', () => {
-      app.activeRoute = r.code;
-      refreshAll();
-    });
+    div.addEventListener('click', () => { selectRoute(r.code); });
     el.appendChild(div);
   }
 }
