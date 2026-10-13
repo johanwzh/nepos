@@ -95,7 +95,27 @@ function closePop() {
 /** Show a message in a dialog. @param {string} text */
 export function showMessage(text) {
   $('msg-text').textContent = text;
-  $('msg-dlg').showModal();
+  if (!$('msg-dlg').open) $('msg-dlg').showModal();
+}
+
+/**
+ * Run something that writes to the project folder. The button that started it is disabled while
+ * it runs (no double runs), and a failure is shown to the user instead of disappearing.
+ * @param {() => Promise<any>} action
+ * @param {HTMLButtonElement | null} [trigger]
+ * @returns {Promise<boolean>} true when it succeeded
+ */
+export async function runAction(action, trigger = null) {
+  if (trigger) trigger.disabled = true;
+  try {
+    await action();
+    return true;
+  } catch (e) {
+    showMessage(t('actionFailed', /** @type {Error} */ (e).message));
+    return false;
+  } finally {
+    if (trigger) trigger.disabled = false;
+  }
 }
 
 // ─── Panels (F5 / F6) ───────────────────────────────────────────────────────
@@ -140,15 +160,15 @@ export function currentPage() {
 export function initShell() {
   $('el-ver').textContent = `v${VERSION}`;
 
-  $('btn-theme').addEventListener('click', async () => {
+  $('btn-theme').addEventListener('click', () => {
     app.settings.theme = resolvedTheme() === 'light' ? 'dark' : 'light';
     applyTheme();
-    await persistSettings();
+    runAction(persistSettings);
   });
-  $('btn-lang').addEventListener('click', async () => {
+  $('btn-lang').addEventListener('click', () => {
     app.settings.lang = app.settings.lang === 'no' ? 'en' : 'no';
     refreshAll();
-    await persistSettings();
+    runAction(persistSettings);
   });
 
   $('delivery-btn').addEventListener('click', () => {
@@ -162,7 +182,9 @@ export function initShell() {
   });
   $('pop-save').addEventListener('click', async () => {
     if (!app.fs || !app.meta) return;
-    app.meta = await writeProjectName(app.fs, app.meta, $('pop-name').value);
+    const fs = app.fs, meta = app.meta;
+    const ok = await runAction(async () => { app.meta = await writeProjectName(fs, meta, $('pop-name').value); }, $('pop-save'));
+    if (!ok) return;
     closePop();
     refreshAll();
   });

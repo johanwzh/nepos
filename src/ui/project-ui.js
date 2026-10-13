@@ -1,6 +1,6 @@
 // Opening, creating and reopening projects, and the empty-state placeholder.
 import { app } from './state.js';
-import { $, onRefresh, refreshAll, showMessage } from './shell.js';
+import { $, onRefresh, refreshAll, showMessage, runAction } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { createHandleFs } from '../project/fs.js';
 import { openProject, updateOutdatedRoutes } from '../project/open.js';
@@ -38,7 +38,7 @@ export async function openFs(fs, { handle = null, sample = false } = {}) {
     fs, handle, sampleMode: sample,
     meta: result.meta, settings: result.settings,
     orgs: result.orgs, orgsError: result.orgsError,
-    routes: result.routes, activeRoute: null, dirty: false,
+    routes: result.routes, activeRoute: null, dirty: false, orgsStatus: '',
     fileNameProblems: await findFileNameProblems(fs),
   });
   pendingNotes = [];
@@ -97,19 +97,26 @@ export function showProjectCheck({ always = false } = {}) {
   if (!$('check-dlg').open) $('check-dlg').showModal();
 }
 
-async function updateOutdated() {
+/** @param {HTMLButtonElement} trigger */
+async function updateOutdated(trigger) {
   if (!app.fs || !app.meta) return;
-  const updated = await updateOutdatedRoutes(app.fs, { meta: app.meta, orgs: app.orgs, routes: app.routes });
-  app.routes = app.routes.map((r) => updated.find((u) => u.code === r.code) ?? r);
+  const fs = app.fs;
+  const ok = await runAction(async () => {
+    const updated = await updateOutdatedRoutes(fs, { meta: app.meta, orgs: app.orgs, routes: app.routes });
+    app.routes = app.routes.map((r) => updated.find((u) => u.code === r.code) ?? r);
+  }, trigger);
   refreshAll();
-  showProjectCheck({ always: true });
+  if (ok) showProjectCheck({ always: true });
 }
 
-async function repairNames() {
+/** @param {HTMLButtonElement} trigger */
+async function repairNames(trigger) {
   if (!app.fs) return;
-  await repairFileNames(app.fs, app.fileNameProblems);
+  const fs = app.fs;
+  await runAction(() => repairFileNames(fs, app.fileNameProblems), trigger);
   $('check-dlg').close();
-  await openFs(app.fs, { handle: app.handle, sample: app.sampleMode });
+  // Reopen either way: after a failure some of the renames may already have happened.
+  await openFs(fs, { handle: app.handle, sample: app.sampleMode });
 }
 
 /** @param {any} handle */
@@ -157,7 +164,10 @@ async function createFromDialog() {
     return;
   }
   const fs = createHandleFs(handle);
-  const result = await createProject(fs, { name: $('new-name').value, codespace: cs.value });
+  /** @type {any} */
+  let result;
+  const ok = await runAction(async () => { result = await createProject(fs, { name: $('new-name').value, codespace: cs.value }); }, $('new-create'));
+  if (!ok) return;
   if (result.ok === false) {
     $('new-error').textContent = createFailureMessage(result);
     return;
@@ -167,12 +177,16 @@ async function createFromDialog() {
 }
 
 // ─── Placeholder (shown where the grid will be) ─────────────────────────────
-/** @param {string} label @param {() => void} onClick @param {boolean} [primary] */
+/**
+ * @param {string} label
+ * @param {(trigger: HTMLButtonElement) => void} onClick receives the button, e.g. to disable it while working
+ * @param {boolean} [primary]
+ */
 function button(label, onClick, primary = false) {
   const b = document.createElement('button');
   b.className = primary ? 'open-btn' : 'pop-btn';
   b.textContent = label;
-  b.addEventListener('click', onClick);
+  b.addEventListener('click', () => onClick(b));
   return b;
 }
 

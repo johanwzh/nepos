@@ -16,6 +16,8 @@ export const app = {
   orgs: [],
   /** @type {null | 'unreadable'} */
   orgsError: null,
+  /** @type {'' | 'saved' | 'not-saved'} save state shown on the organisations page */
+  orgsStatus: '',
   /** @type {import('../project/open.js').RouteEntry[]} */
   routes: [],
   /** @type {{ fileName: string, problem: string, rename: string | null }[]} */
