@@ -1,0 +1,22 @@
+// ERN transport mode code (#RUT field 4) → NeTEx mode and submode.
+export const ERN_MODES = {
+    1:  { mode:'bus',   sub:'localBus',                  no:'Buss',             en:'Bus' },
+    2:  { mode:'tram',  sub:'localTram',                 no:'Trikk',            en:'Tram' },
+    3:  { mode:'rail',  sub:'regionalRail',              no:'Tog',              en:'Train' },
+    4:  { mode:'bus',   sub:'airportLinkBus',            no:'Flyplass',         en:'Airport' },
+    5:  { mode:'water', sub:'highSpeedPassengerService', no:'Hurtigbåt',        en:'Express boat' },
+    6:  { mode:'water', sub:'localPassengerFerry',       no:'Skip',             en:'Ship' },
+    7:  { mode:'water', sub:'localCarFerry',             no:'Ferge',            en:'Ferry' },
+    8:  { mode:'metro', sub:'metro',                     no:'T-bane',           en:'Metro' },
+    9:  { mode:'air',   sub:'helicopterService',         no:'Helikopter',       en:'Helicopter' },
+    10: { mode:'rail',  sub:'interregionalRail',         no:'Intercity tog',    en:'Intercity train' },
+    11: { mode:'rail',  sub:'airportLinkRail',           no:'Fly tog',          en:'Airport train' },
+    12: { mode:'rail',  sub:'touristRailway',            no:'Museums tog',      en:'Heritage railway' },
+    13: { mode:'bus',   sub:'expressBus',                no:'Ekspress buss',    en:'Express bus' },
+    14: { mode:'bus',   sub:'shuttleBus',                no:'Shuttle buss',     en:'Shuttle bus' },
+    15: { mode:'bus',   sub:'airportLinkBus',            no:'Fly buss',         en:'Airport bus' },
+    16: { mode:'bus',   sub:'replacementBus',            no:'Erstatnings buss', en:'Replacement bus' },
+    17: { mode:'bus',   sub:'railReplacementBus',        no:'Togbuss',          en:'Rail bus' },
+    18: { mode:'water', sub:'localPassengerFerry',       no:'Kombibåt',         en:'Combined boat' },
+    19: { mode:'taxi',  sub:'communalTaxi',              no:'Taxi',             en:'Taxi' },
+};
