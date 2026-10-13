@@ -5,7 +5,7 @@
 import { app } from './state.js';
 import { $, onRefresh, refreshAll, runAction, markDirty, setBeforeLeave, beforeLeave, showMessage, currentPage } from './shell.js';
 import { t } from '../i18n/strings.js';
-import { grid, loadGrid, gridData, markGridClean, clearGrid, render as renderGrid, onGridChange } from './grid.js';
+import { grid, loadGrid, gridData, markGridClean, clearGrid, render as renderGrid, onGridChange, commitPending } from './grid.js';
 import { newRouteState, fillMissingPeriod, addPeriod, deletePeriod, addDirection, deleteDirection, periodHasData, directionHasData, gridKey } from './route-state.js';
 import { parseERN } from '../core/ern/parse.js';
 import { serializeERN } from '../core/ern/serialize.js';
@@ -16,6 +16,7 @@ import { nextRouteCode, compareRouteCodes } from '../core/route-codes.js';
 import { yyyymmddToInput, inputToYyyymmdd } from '../core/footnotes.js';
 import { writeRoute, deleteRoute as deleteRouteFile } from '../project/routes.js';
 import { showProjectCheck } from './project-ui.js';
+import { issueMessage } from './messages.js';
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -28,9 +29,18 @@ function saveGridToState() {
   if (app.routeState && grid.active) app.routeState.grids[gridKey(app.routeState)] = gridData();
 }
 
-/** @param {number} perId @param {number} dirId */
-function switchPeriodDir(perId, dirId) {
-  saveGridToState();
+/**
+ * Show another period × direction.
+ * @param {number} perId
+ * @param {number} dirId
+ * @param {{ store?: boolean }} [opts] store: false after deleting the shown period/direction —
+ *   the grid on screen belongs to the deleted one and must not be stored under the new key
+ */
+function switchPeriodDir(perId, dirId, { store = true } = {}) {
+  if (store) {
+    commitPending();
+    saveGridToState();
+  }
   app.routeState.activePer = perId;
   app.routeState.activeDir = dirId;
   loadGrid(app.routeState.grids[gridKey(app.routeState)] ?? { stops: [], cols: [] }, { readOnly: isReadOnly() });
@@ -50,23 +60,38 @@ function trustedOrgs() {
  */
 export async function saveRoute(trigger = null) {
   if (!app.fs || !app.meta || !app.activeRoute || !app.routeState || isReadOnly() || saving) return false;
-  saveGridToState();
+  commitPending();
   const code = app.activeRoute;
   const fs = app.fs;
-  const text = serializeERN(app.routeState, code, { delivery: { name: app.meta.name, codespace: app.meta.codespace }, orgs: trustedOrgs() });
+  const text = currentText();
+  const { status, issues } = checkRouteFile(text);
+  // Never write a file that Nepos itself would then refuse to edit.
+  if (status === 'damaged') {
+    showMessage(t('saveWouldDamage', issues.filter((i) => i.severity === 'damaged').map(issueMessage).join('\n')));
+    return false;
+  }
   saving = true; // one save at a time (Ctrl+S held down, or Ctrl+S during a button save)
   const ok = await runAction(() => writeRoute(fs, code, text), trigger).finally(() => { saving = false; });
   if (!ok) return false;
-  const { status, issues } = checkRouteFile(text);
   app.routes = app.routes.map((r) => (r.code === code ? { code, text, status, issues } : r));
-  app.dirty = false;
-  markGridClean();
+  // Edits made while the file was being written are not in it: they stay unsaved.
+  if (app.activeRoute === code && currentText() === text) {
+    app.dirty = false;
+    markGridClean();
+  }
   refreshAll();
   return true;
 }
 
+/** The open route as ERN text, including the grid on screen. */
+function currentText() {
+  saveGridToState();
+  return serializeERN(app.routeState, /** @type {string} */ (app.activeRoute), { delivery: { name: app.meta.name, codespace: app.meta.codespace }, orgs: trustedOrgs() });
+}
+
 /** Ask to save unsaved changes. Resolves false when the user wants to stay. */
 async function confirmLeave() {
+  commitPending(); // a half-typed time or name counts as a change
   if (!app.dirty) return true;
   if (!confirm(t('saveBeforeSwitch', app.activeRoute))) return false;
   return saveRoute();
@@ -188,7 +213,7 @@ function renderHeader() {
     saveGridToState();
     deletePeriod(rs);
     markDirty();
-    switchPeriodDir(rs.activePer, rs.activeDir);
+    switchPeriodDir(rs.activePer, rs.activeDir, { store: false });
   });
 }
 
@@ -232,7 +257,7 @@ function renderFooter() {
   const dirLabel = other ? `${esc(cur?.name ?? '—')} ⇄ ${esc(other.name)}` : esc(t('createReturn'));
 
   const chips = rs.sek.map((/** @type {any} */ s) => {
-    const org = app.orgs.find((o) => o.id === s.orgId);
+    const org = trustedOrgs().find((o) => o.id === s.orgId);
     const role = orgRole(s.orgId);
     const roleText = role === 'authority' ? t('roleAuthority') : role === 'operator' ? t('roleOperator') : [s.isAuthority ? 'A' : '', s.isOperator ? 'O' : ''].join('');
     return `<span class="ef-org-chip${org ? '' : ' n2-missing'}" title="${esc(org ? s.orgId : `${s.orgId} — ${t('orgNotInList')}`)}">
@@ -240,7 +265,7 @@ function renderFooter() {
       ${ro ? '' : `<button class="ef-org-x" data-oid="${esc(s.orgId)}" title="${esc(t('removeRouteOrg'))}">×</button>`}</span>`;
   }).join('');
   const attached = new Set(rs.sek.map((/** @type {any} */ s) => s.orgId));
-  const available = app.orgs.filter((o) => orgRole(o.id) && !attached.has(o.id)).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+  const available = trustedOrgs().filter((o) => orgRole(o.id) && !attached.has(o.id)).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
   const picker = !ro && available.length
     ? `<select class="ef-add-org" id="ef-add-org"><option value="">${esc(t('addRouteOrg'))}</option>${available.map((o) => `<option value="${esc(o.id)}">${esc(o.name)}</option>`).join('')}</select>`
     : '';
@@ -271,7 +296,7 @@ function renderFooter() {
     saveGridToState();
     deleteDirection(rs);
     markDirty();
-    switchPeriodDir(rs.activePer, rs.activeDir);
+    switchPeriodDir(rs.activePer, rs.activeDir, { store: false });
   });
   el.querySelectorAll('.ef-org-x').forEach((/** @type {HTMLElement} */ b) => b.addEventListener('click', () => {
     rs.sek = rs.sek.filter((/** @type {any} */ s) => s.orgId !== b.dataset.oid);
@@ -280,7 +305,7 @@ function renderFooter() {
   }));
   $('ef-add-org')?.addEventListener('change', () => {
     const id = $('ef-add-org').value;
-    const org = app.orgs.find((o) => o.id === id);
+    const org = trustedOrgs().find((o) => o.id === id);
     if (!org) return;
     const role = orgRole(id);
     rs.sek = [...rs.sek, { orgId: id, isAuthority: role === 'authority', isOperator: role === 'operator', name: org.name }];

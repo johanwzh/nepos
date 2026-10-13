@@ -9,7 +9,7 @@ import { t } from '../i18n/strings.js';
 import { isValidDayCode } from '../core/ern/validate.js';
 import { parseCellInput } from '../core/grid-input.js';
 import { currentPage } from './shell.js';
-import { fnById, footnoteSummary, openFnEditor, updateFnPreview } from './footnote-editor.js';
+import { fnById, footnoteSummary, openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
 
 /** The grid being edited: one period × direction of the open route. */
 export const grid = {
@@ -63,8 +63,17 @@ export function loadGrid(data, { readOnly = false } = {}) {
   ancR = 0; ancC = 0; endR = 0; endC = 0;
   editing = false; editBuf = ''; inDC = false; dcEdit = false; inStopCol = false;
   ixMode = false; ixSource = null; inStopEdit = false;
+  closeFnEditor(); // its target position belongs to the grid that was shown before
   $('tbl-wrap').style.display = 'block';
   render();
+}
+
+/** Finish a half-typed time, day code or stop name, so it counts as a change. */
+export function commitPending() {
+  if (!grid.active || grid.readOnly) return;
+  if (editing) commitEdit();
+  if (dcEdit) commitDayCode();
+  if (inStopEdit) commitStopEdit();
 }
 
 /** A copy of the grid's data, for storing in the route state. */
@@ -84,6 +93,7 @@ export function clearGrid() {
   $('tbl-wrap').style.display = 'none';
   $('tbl').innerHTML = '';
   hideCtx();
+  closeFnEditor();
   updateFnPreview(null);
 }
 

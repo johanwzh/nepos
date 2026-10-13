@@ -73,8 +73,8 @@ export function openFnEditor(type, ri, ci) {
   el.classList.add('open');
 }
 
-function closeFnEditor() {
-  $('fn-editor').classList.remove('open');
+export function closeFnEditor() {
+  $('fn-editor')?.classList.remove('open');
   ctx = null;
   draft = null;
 }
@@ -221,8 +221,14 @@ function renderGenerator(list) {
   });
 }
 
-/** Strip the editor-only flags before storing. @param {any[]} exceptions */
-const clean = (exceptions) => exceptions.map(({ runsOnly, from, to }) => ({ runsOnly, from, to }));
+/**
+ * Strip the editor-only flags before storing, and leave out exceptions without any date
+ * (they would be written as an empty #UNT record that cannot be read back).
+ * @param {any[]} exceptions
+ */
+const clean = (exceptions) => exceptions
+  .filter(({ from, to }) => from || to)
+  .map(({ runsOnly, from, to }) => ({ runsOnly, from, to }));
 
 export function initFootnoteEditor() {
   $('fn-close').addEventListener('click', closeFnEditor);
