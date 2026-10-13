@@ -24,8 +24,8 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     const sek = rs.sek || [];
     if (sek.length > 0) {
         sek.forEach(s => {
-            const org = (orgs||[]).find(o => o.id === s.orgId);
-            lines.push(`#SEK;${s.orgId};${esc(org?.name||'')};${s.isAuthority?1:0};${s.isOperator?1:0};0;0`);
+            const org = (orgs||[]).find(o => String(o.id) === String(s.orgId));
+            lines.push(`#SEK;${esc(String(s.orgId))};${esc(org?.name||'')};${s.isAuthority?1:0};${s.isOperator?1:0};0;0`);
         });
     } else {
         lines.push(`#SEK;-1;;0;0;0;0`);

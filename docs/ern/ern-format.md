@@ -616,6 +616,14 @@ any fields after position 1; Nepos 2 no longer writes them.
 The currency the route's stop prices are expressed in. Prices are hidden in Nepos 2 but this
 record and the `#TRL` price field are read and written back unchanged.
 
+### #SEK field 0 — organisation ID *Nepos 2*
+
+From Nepos 2, field 0 holds the organisation's ID as text, normally a full NeTEx ID such as
+`RUT:Authority:1` or `INN:Operator:62`. The middle part of the ID gives the role, and Nepos
+writes fields 2 (Responsibility) and 3 (Driver) to match it: `1;0` for an Authority, `0;1` for an
+Operator. On read, the ID wins over the flags. For an ID without that form (older data), the
+flags decide the role. `-1` or an empty field means "no organisation".
+
 ### #TUR field 6 — vehicle reference *Nepos 1.x only*
 
 Nepos 1.x wrote a seventh `#TUR` field holding a vehicle reference. Nepos 2 ignores it on read

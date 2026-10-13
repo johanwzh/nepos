@@ -1,4 +1,6 @@
 // ERN parser, ported from Nepos 1.5.7 (nepos.html lines 2812–3005). See docs/ern/ern-format.md.
+import { orgRole } from '../orgs.js';
+
 /**
  * Parse an ERN route file into a route state.
  * @param {string} text decoded file contents
@@ -67,11 +69,14 @@ export function parseERN(text, { lang = 'en' } = {}) {
                 rs.transportMode = parseInt(f[5])||6;
                 break;
             case '#SEK': {
-                const sid = parseInt(f[1]);
-                if (sid > 0) rs.sek.push({
-                    orgId:       sid,
-                    isAuthority: parseInt(f[3])===1,
-                    isOperator:  parseInt(f[4])===1,
+                // Nepos 2: the org ID is text, normally a full NeTEx ID whose role wins over the flags.
+                const orgId = (f[1]||'').trim();
+                if (!orgId || orgId === '-1') break;
+                const role = orgRole(orgId);
+                rs.sek.push({
+                    orgId,
+                    isAuthority: role ? role === 'authority' : parseInt(f[3])===1,
+                    isOperator:  role ? role === 'operator'  : parseInt(f[4])===1,
                 });
                 break;
             }

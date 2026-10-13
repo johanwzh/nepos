@@ -21,6 +21,7 @@ describe('ERN documentation', () => {
       '## Norwegian Record Names',
       '### #LEV',
       '### #CUR',
+      '### #SEK',
     ]) {
       expect(text).toContain(heading);
     }
