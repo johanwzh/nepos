@@ -1,4 +1,6 @@
-// NSR Quay IDs: recognising them and turning them into NeTEx references. Pure.
+// NSR Quay IDs: recognising them, turning them into NeTEx references, and judging a stop's
+// status from an NSR lookup. Pure.
+import { ERN_MODES } from './ern/modes.js';
 
 export const NSR_QUAY_PATTERN = /^NSR:Quay:\d+$/;
 
@@ -27,4 +29,31 @@ export function quayRef(id, cs) {
  */
 export function quayIdsInErn(text) {
   return [...new Set([...text.matchAll(/^#TRL;[^;\r\n]*;(NSR:Quay:\d+);/gm)].map((m) => m[1]))];
+}
+
+/**
+ * Whether a stop place's NSR transport mode suits the line's ERN mode. Advisory only.
+ * @param {number} ernMode ERN #RUT mode code
+ * @param {string} nsrMode lower-case NSR transport mode ('' when unknown)
+ */
+export function modeMatches(ernMode, nsrMode) {
+  const want = /** @type {any} */ (ERN_MODES)[ernMode]?.mode;
+  if (!want || !nsrMode) return true;
+  return nsrMode === want || (want === 'bus' && nsrMode === 'coach');
+}
+
+/**
+ * A stop's status for the grid and the export check (spec §7.2).
+ * @param {string | null} stopId
+ * @param {import('../services/nsr.js').QuayInfo | null | undefined} info undefined: not looked up
+ *   (yet, or NSR could not be reached); null: NSR does not know the Quay
+ * @param {number} ernMode the line's ERN mode
+ * @returns {'missing' | 'not-nsr' | 'unknown' | 'not-seen' | 'mode-mismatch' | 'confirmed'}
+ */
+export function quayStatus(stopId, info, ernMode) {
+  if (stopId == null || stopId === '') return 'missing';
+  if (!NSR_QUAY_PATTERN.test(stopId)) return 'not-nsr';
+  if (info === undefined) return 'unknown';
+  if (info === null) return 'not-seen';
+  return modeMatches(ernMode, info.mode) ? 'confirmed' : 'mode-mismatch';
 }
