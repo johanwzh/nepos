@@ -1,0 +1,132 @@
+{
+  "routeName": "Florø - Eikefjord",
+  "publicCode": "20",
+  "transportMode": 1,
+  "kom": "",
+  "sek": [
+    {
+      "orgId": 3,
+      "isAuthority": false,
+      "isOperator": true
+    }
+  ],
+  "footnotes": [],
+  "periods": [
+    {
+      "id": 1,
+      "name": "Vinter",
+      "from": "20260101",
+      "to": "20260531",
+      "from2": "",
+      "to2": ""
+    },
+    {
+      "id": 3,
+      "name": "Sommer",
+      "from": "20260601",
+      "to": "20260831",
+      "from2": "",
+      "to2": ""
+    }
+  ],
+  "directions": [
+    {
+      "id": 2,
+      "name": "Outbound"
+    }
+  ],
+  "activePer": 1,
+  "activeDir": 2,
+  "nextId": 4,
+  "grids": {
+    "1:2": {
+      "stops": [
+        {
+          "name": "Florø skysstasjon",
+          "stopId": 104,
+          "bold": false,
+          "sep": false,
+          "isDwellArr": false,
+          "price": null
+        },
+        {
+          "name": "Eikefjord",
+          "stopId": 105,
+          "bold": false,
+          "sep": false,
+          "isDwellArr": false,
+          "price": null
+        }
+      ],
+      "cols": [
+        {
+          "dayCode": "DX67",
+          "footnote": "",
+          "vehicleId": null,
+          "footnoteId": null,
+          "cells": [
+            {
+              "time": "0700",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            },
+            {
+              "time": "0745",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            }
+          ]
+        }
+      ]
+    },
+    "3:2": {
+      "stops": [
+        {
+          "name": "Florø skysstasjon",
+          "stopId": 104,
+          "bold": false,
+          "sep": false,
+          "isDwellArr": false,
+          "price": null
+        },
+        {
+          "name": "Eikefjord",
+          "stopId": 105,
+          "bold": false,
+          "sep": false,
+          "isDwellArr": false,
+          "price": null
+        }
+      ],
+      "cols": [
+        {
+          "dayCode": "67",
+          "footnote": "",
+          "vehicleId": null,
+          "footnoteId": null,
+          "cells": [
+            {
+              "time": "0900",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            },
+            {
+              "time": "0945",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "currency": "neposcoin"
+}

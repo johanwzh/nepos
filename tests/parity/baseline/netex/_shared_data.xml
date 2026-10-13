@@ -1,0 +1,1433 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PublicationDelivery
+    xmlns="http://www.netex.org.uk/netex"
+    xmlns:gml="http://www.opengis.net/gml/3.2"
+    version="1.15:NO-NeTEx-networktimetable:1.5">
+  <PublicationTimestamp>2026-01-01T00:00:00</PublicationTimestamp>
+  <ParticipantRef>TST</ParticipantRef>
+  <Description>TST shared data</Description>
+  <dataObjects>
+  <CompositeFrame id="TST:CompositeFrame:shared" version="1">
+  <validityConditions>
+    <AvailabilityCondition id="TST:AvailabilityCondition:shared" version="1">
+      <FromDate>2026-01-01T00:00:00</FromDate>
+      <ToDate>2026-08-31T00:00:00</ToDate>
+    </AvailabilityCondition>
+  </validityConditions>
+  <codespaces>
+    <Codespace id="tst">
+      <Xmlns>TST</Xmlns>
+      <XmlnsUrl>http://www.rutebanken.org/ns/tst</XmlnsUrl>
+    </Codespace>
+  </codespaces>
+  <frames>
+    <ResourceFrame id="TST:ResourceFrame:shared" version="1">
+      <organisations>
+      <Authority id="TST:Authority:1" version="1">
+        <Name>Fjordbåt AS</Name>
+        <OrganisationType>authority</OrganisationType>
+      </Authority>
+      <Authority id="TST:Authority:2" version="1">
+        <Name>Vestland fylkeskommune</Name>
+        <OrganisationType>authority</OrganisationType>
+      </Authority>
+      <Operator id="TST:Operator:1" version="1">
+        <Name>Fjordbåt AS</Name>
+        <OrganisationType>operator</OrganisationType>
+      </Operator>
+      <Operator id="TST:Operator:3" version="1">
+        <Name>Kystbuss AS</Name>
+        <OrganisationType>operator</OrganisationType>
+      </Operator>
+      </organisations>
+    </ResourceFrame>
+    <ServiceFrame id="TST:ServiceFrame:shared" version="1">
+    <Network id="TST:Network:TST" version="1">
+      <Name>Testprosjekt</Name>
+    </Network>
+    <additionalNetworks>
+      <Network id="TST:Network:authority-1" version="1">
+        <Name>Fjordbåt AS</Name>
+        <AuthorityRef ref="TST:Authority:1" version="1"/>
+      </Network>
+      <Network id="TST:Network:authority-2" version="1">
+        <Name>Vestland fylkeskommune</Name>
+        <AuthorityRef ref="TST:Authority:2" version="1"/>
+      </Network>
+    </additionalNetworks>
+      <destinationDisplays>
+      <DestinationDisplay id="TST:DestinationDisplay:103" version="1">
+        <FrontText>Florø</FrontText>
+      </DestinationDisplay>
+      <DestinationDisplay id="TST:DestinationDisplay:102" version="1">
+        <FrontText>Askvoll</FrontText>
+      </DestinationDisplay>
+      <DestinationDisplay id="TST:DestinationDisplay:101" version="1">
+        <FrontText>Bergen</FrontText>
+      </DestinationDisplay>
+      <DestinationDisplay id="TST:DestinationDisplay:105" version="1">
+        <FrontText>Eikefjord</FrontText>
+      </DestinationDisplay>
+      </destinationDisplays>
+      <scheduledStopPoints>
+      <ScheduledStopPoint id="TST:ScheduledStopPoint:101" version="1">
+        <Name>Bergen</Name>
+        <TimingPointStatus>timingPoint</TimingPointStatus>
+      </ScheduledStopPoint>
+      <ScheduledStopPoint id="TST:ScheduledStopPoint:102" version="1">
+        <Name>Askvoll</Name>
+        <TimingPointStatus>timingPoint</TimingPointStatus>
+      </ScheduledStopPoint>
+      <ScheduledStopPoint id="TST:ScheduledStopPoint:103" version="1">
+        <Name>Florø</Name>
+        <TimingPointStatus>timingPoint</TimingPointStatus>
+      </ScheduledStopPoint>
+      <ScheduledStopPoint id="TST:ScheduledStopPoint:104" version="1">
+        <Name>Florø skysstasjon</Name>
+        <TimingPointStatus>timingPoint</TimingPointStatus>
+      </ScheduledStopPoint>
+      <ScheduledStopPoint id="TST:ScheduledStopPoint:105" version="1">
+        <Name>Eikefjord</Name>
+        <TimingPointStatus>timingPoint</TimingPointStatus>
+      </ScheduledStopPoint>
+      </scheduledStopPoints>
+      <serviceLinks>
+      <ServiceLink id="TST:ServiceLink:101-102" version="1">
+        <Distance>106991.1</Distance>
+        <projections>
+          <LinkSequenceProjection id="TST:LinkSequenceProjection:101-102" version="1">
+            <gml:LineString gml:id="LSP_101_102">
+              <gml:posList srsDimension="2" count="2">60.3929 5.3221 61.3468 5.0631</gml:posList>
+            </gml:LineString>
+          </LinkSequenceProjection>
+        </projections>
+        <FromPointRef ref="TST:ScheduledStopPoint:101" version="1"/>
+        <ToPointRef ref="TST:ScheduledStopPoint:102" version="1"/>
+      </ServiceLink>
+      <ServiceLink id="TST:ServiceLink:102-103" version="1">
+        <Distance>28156.1</Distance>
+        <projections>
+          <LinkSequenceProjection id="TST:LinkSequenceProjection:102-103" version="1">
+            <gml:LineString gml:id="LSP_102_103">
+              <gml:posList srsDimension="2" count="2">61.3468 5.0631 61.5996 5.0328</gml:posList>
+            </gml:LineString>
+          </LinkSequenceProjection>
+        </projections>
+        <FromPointRef ref="TST:ScheduledStopPoint:102" version="1"/>
+        <ToPointRef ref="TST:ScheduledStopPoint:103" version="1"/>
+      </ServiceLink>
+      <ServiceLink id="TST:ServiceLink:101-103" version="1">
+        <Distance>135082.1</Distance>
+        <projections>
+          <LinkSequenceProjection id="TST:LinkSequenceProjection:101-103" version="1">
+            <gml:LineString gml:id="LSP_101_103">
+              <gml:posList srsDimension="2" count="2">60.3929 5.3221 61.5996 5.0328</gml:posList>
+            </gml:LineString>
+          </LinkSequenceProjection>
+        </projections>
+        <FromPointRef ref="TST:ScheduledStopPoint:101" version="1"/>
+        <ToPointRef ref="TST:ScheduledStopPoint:103" version="1"/>
+      </ServiceLink>
+      <ServiceLink id="TST:ServiceLink:103-101" version="1">
+        <Distance>135082.1</Distance>
+        <projections>
+          <LinkSequenceProjection id="TST:LinkSequenceProjection:103-101" version="1">
+            <gml:LineString gml:id="LSP_103_101">
+              <gml:posList srsDimension="2" count="2">61.5996 5.0328 60.3929 5.3221</gml:posList>
+            </gml:LineString>
+          </LinkSequenceProjection>
+        </projections>
+        <FromPointRef ref="TST:ScheduledStopPoint:103" version="1"/>
+        <ToPointRef ref="TST:ScheduledStopPoint:101" version="1"/>
+      </ServiceLink>
+      <ServiceLink id="TST:ServiceLink:104-105" version="1">
+        <Distance>21986.0</Distance>
+        <projections>
+          <LinkSequenceProjection id="TST:LinkSequenceProjection:104-105" version="1">
+            <gml:LineString gml:id="LSP_104_105">
+              <gml:posList srsDimension="2" count="2">61.6 5.035 61.589 5.45</gml:posList>
+            </gml:LineString>
+          </LinkSequenceProjection>
+        </projections>
+        <FromPointRef ref="TST:ScheduledStopPoint:104" version="1"/>
+        <ToPointRef ref="TST:ScheduledStopPoint:105" version="1"/>
+      </ServiceLink>
+      </serviceLinks>
+      <stopAssignments>
+      <PassengerStopAssignment id="TST:PassengerStopAssignment:101" version="1" order="1">
+        <ScheduledStopPointRef ref="TST:ScheduledStopPoint:101" version="1"/>
+        <QuayRef ref="TST:Quay:101"/>
+      </PassengerStopAssignment>
+      <PassengerStopAssignment id="TST:PassengerStopAssignment:102" version="1" order="2">
+        <ScheduledStopPointRef ref="TST:ScheduledStopPoint:102" version="1"/>
+        <QuayRef ref="TST:Quay:102"/>
+      </PassengerStopAssignment>
+      <PassengerStopAssignment id="TST:PassengerStopAssignment:103" version="1" order="3">
+        <ScheduledStopPointRef ref="TST:ScheduledStopPoint:103" version="1"/>
+        <QuayRef ref="TST:Quay:103"/>
+      </PassengerStopAssignment>
+      <PassengerStopAssignment id="TST:PassengerStopAssignment:104" version="1" order="4">
+        <ScheduledStopPointRef ref="TST:ScheduledStopPoint:104" version="1"/>
+        <QuayRef ref="TST:Quay:104"/>
+      </PassengerStopAssignment>
+      <PassengerStopAssignment id="TST:PassengerStopAssignment:105" version="1" order="5">
+        <ScheduledStopPointRef ref="TST:ScheduledStopPoint:105" version="1"/>
+        <QuayRef ref="TST:Quay:105"/>
+      </PassengerStopAssignment>
+      </stopAssignments>
+    </ServiceFrame>
+    <ServiceCalendarFrame id="TST:ServiceCalendarFrame:shared" version="1">
+      <dayTypes>
+      <DayType id="TST:DayType:1" version="1">
+        <properties><PropertyOfDay><DaysOfWeek>Everyday</DaysOfWeek></PropertyOfDay></properties>
+      </DayType>
+      <DayType id="TST:DayType:2" version="1">
+      </DayType>
+      <DayType id="TST:DayType:3" version="1">
+      </DayType>
+      <DayType id="TST:DayType:4" version="1">
+      </DayType>
+      <DayType id="TST:DayType:5" version="1">
+      </DayType>
+      </dayTypes>
+      <operatingDays>
+      <OperatingDay id="TST:OperatingDay:2026-06-01" version="1">
+        <CalendarDate>2026-06-01</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-31" version="1">
+        <CalendarDate>2026-08-31</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-15" version="1">
+        <CalendarDate>2026-06-15</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-03" version="1">
+        <CalendarDate>2026-06-03</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-05" version="1">
+        <CalendarDate>2026-06-05</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-08" version="1">
+        <CalendarDate>2026-06-08</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-10" version="1">
+        <CalendarDate>2026-06-10</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-12" version="1">
+        <CalendarDate>2026-06-12</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-17" version="1">
+        <CalendarDate>2026-06-17</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-19" version="1">
+        <CalendarDate>2026-06-19</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-22" version="1">
+        <CalendarDate>2026-06-22</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-24" version="1">
+        <CalendarDate>2026-06-24</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-26" version="1">
+        <CalendarDate>2026-06-26</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-29" version="1">
+        <CalendarDate>2026-06-29</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-01" version="1">
+        <CalendarDate>2026-07-01</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-03" version="1">
+        <CalendarDate>2026-07-03</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-06" version="1">
+        <CalendarDate>2026-07-06</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-08" version="1">
+        <CalendarDate>2026-07-08</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-10" version="1">
+        <CalendarDate>2026-07-10</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-13" version="1">
+        <CalendarDate>2026-07-13</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-15" version="1">
+        <CalendarDate>2026-07-15</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-17" version="1">
+        <CalendarDate>2026-07-17</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-20" version="1">
+        <CalendarDate>2026-07-20</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-22" version="1">
+        <CalendarDate>2026-07-22</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-24" version="1">
+        <CalendarDate>2026-07-24</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-27" version="1">
+        <CalendarDate>2026-07-27</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-29" version="1">
+        <CalendarDate>2026-07-29</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-31" version="1">
+        <CalendarDate>2026-07-31</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-03" version="1">
+        <CalendarDate>2026-08-03</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-05" version="1">
+        <CalendarDate>2026-08-05</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-07" version="1">
+        <CalendarDate>2026-08-07</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-10" version="1">
+        <CalendarDate>2026-08-10</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-12" version="1">
+        <CalendarDate>2026-08-12</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-14" version="1">
+        <CalendarDate>2026-08-14</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-17" version="1">
+        <CalendarDate>2026-08-17</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-19" version="1">
+        <CalendarDate>2026-08-19</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-21" version="1">
+        <CalendarDate>2026-08-21</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-24" version="1">
+        <CalendarDate>2026-08-24</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-26" version="1">
+        <CalendarDate>2026-08-26</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-28" version="1">
+        <CalendarDate>2026-08-28</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-01" version="1">
+        <CalendarDate>2026-01-01</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-31" version="1">
+        <CalendarDate>2026-05-31</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-02" version="1">
+        <CalendarDate>2026-01-02</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-05" version="1">
+        <CalendarDate>2026-01-05</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-06" version="1">
+        <CalendarDate>2026-01-06</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-07" version="1">
+        <CalendarDate>2026-01-07</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-08" version="1">
+        <CalendarDate>2026-01-08</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-09" version="1">
+        <CalendarDate>2026-01-09</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-12" version="1">
+        <CalendarDate>2026-01-12</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-13" version="1">
+        <CalendarDate>2026-01-13</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-14" version="1">
+        <CalendarDate>2026-01-14</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-15" version="1">
+        <CalendarDate>2026-01-15</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-16" version="1">
+        <CalendarDate>2026-01-16</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-19" version="1">
+        <CalendarDate>2026-01-19</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-20" version="1">
+        <CalendarDate>2026-01-20</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-21" version="1">
+        <CalendarDate>2026-01-21</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-22" version="1">
+        <CalendarDate>2026-01-22</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-23" version="1">
+        <CalendarDate>2026-01-23</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-26" version="1">
+        <CalendarDate>2026-01-26</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-27" version="1">
+        <CalendarDate>2026-01-27</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-28" version="1">
+        <CalendarDate>2026-01-28</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-29" version="1">
+        <CalendarDate>2026-01-29</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-01-30" version="1">
+        <CalendarDate>2026-01-30</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-02" version="1">
+        <CalendarDate>2026-02-02</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-03" version="1">
+        <CalendarDate>2026-02-03</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-04" version="1">
+        <CalendarDate>2026-02-04</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-05" version="1">
+        <CalendarDate>2026-02-05</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-06" version="1">
+        <CalendarDate>2026-02-06</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-09" version="1">
+        <CalendarDate>2026-02-09</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-10" version="1">
+        <CalendarDate>2026-02-10</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-11" version="1">
+        <CalendarDate>2026-02-11</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-12" version="1">
+        <CalendarDate>2026-02-12</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-13" version="1">
+        <CalendarDate>2026-02-13</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-16" version="1">
+        <CalendarDate>2026-02-16</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-17" version="1">
+        <CalendarDate>2026-02-17</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-18" version="1">
+        <CalendarDate>2026-02-18</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-19" version="1">
+        <CalendarDate>2026-02-19</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-20" version="1">
+        <CalendarDate>2026-02-20</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-23" version="1">
+        <CalendarDate>2026-02-23</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-24" version="1">
+        <CalendarDate>2026-02-24</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-25" version="1">
+        <CalendarDate>2026-02-25</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-26" version="1">
+        <CalendarDate>2026-02-26</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-02-27" version="1">
+        <CalendarDate>2026-02-27</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-02" version="1">
+        <CalendarDate>2026-03-02</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-03" version="1">
+        <CalendarDate>2026-03-03</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-04" version="1">
+        <CalendarDate>2026-03-04</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-05" version="1">
+        <CalendarDate>2026-03-05</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-06" version="1">
+        <CalendarDate>2026-03-06</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-09" version="1">
+        <CalendarDate>2026-03-09</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-10" version="1">
+        <CalendarDate>2026-03-10</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-11" version="1">
+        <CalendarDate>2026-03-11</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-12" version="1">
+        <CalendarDate>2026-03-12</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-13" version="1">
+        <CalendarDate>2026-03-13</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-16" version="1">
+        <CalendarDate>2026-03-16</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-17" version="1">
+        <CalendarDate>2026-03-17</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-18" version="1">
+        <CalendarDate>2026-03-18</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-19" version="1">
+        <CalendarDate>2026-03-19</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-20" version="1">
+        <CalendarDate>2026-03-20</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-23" version="1">
+        <CalendarDate>2026-03-23</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-24" version="1">
+        <CalendarDate>2026-03-24</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-25" version="1">
+        <CalendarDate>2026-03-25</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-26" version="1">
+        <CalendarDate>2026-03-26</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-27" version="1">
+        <CalendarDate>2026-03-27</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-30" version="1">
+        <CalendarDate>2026-03-30</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-03-31" version="1">
+        <CalendarDate>2026-03-31</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-01" version="1">
+        <CalendarDate>2026-04-01</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-02" version="1">
+        <CalendarDate>2026-04-02</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-03" version="1">
+        <CalendarDate>2026-04-03</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-06" version="1">
+        <CalendarDate>2026-04-06</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-07" version="1">
+        <CalendarDate>2026-04-07</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-08" version="1">
+        <CalendarDate>2026-04-08</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-09" version="1">
+        <CalendarDate>2026-04-09</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-10" version="1">
+        <CalendarDate>2026-04-10</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-13" version="1">
+        <CalendarDate>2026-04-13</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-14" version="1">
+        <CalendarDate>2026-04-14</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-15" version="1">
+        <CalendarDate>2026-04-15</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-16" version="1">
+        <CalendarDate>2026-04-16</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-17" version="1">
+        <CalendarDate>2026-04-17</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-20" version="1">
+        <CalendarDate>2026-04-20</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-21" version="1">
+        <CalendarDate>2026-04-21</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-22" version="1">
+        <CalendarDate>2026-04-22</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-23" version="1">
+        <CalendarDate>2026-04-23</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-24" version="1">
+        <CalendarDate>2026-04-24</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-27" version="1">
+        <CalendarDate>2026-04-27</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-28" version="1">
+        <CalendarDate>2026-04-28</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-29" version="1">
+        <CalendarDate>2026-04-29</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-04-30" version="1">
+        <CalendarDate>2026-04-30</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-01" version="1">
+        <CalendarDate>2026-05-01</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-04" version="1">
+        <CalendarDate>2026-05-04</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-05" version="1">
+        <CalendarDate>2026-05-05</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-06" version="1">
+        <CalendarDate>2026-05-06</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-07" version="1">
+        <CalendarDate>2026-05-07</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-08" version="1">
+        <CalendarDate>2026-05-08</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-11" version="1">
+        <CalendarDate>2026-05-11</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-12" version="1">
+        <CalendarDate>2026-05-12</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-13" version="1">
+        <CalendarDate>2026-05-13</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-14" version="1">
+        <CalendarDate>2026-05-14</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-15" version="1">
+        <CalendarDate>2026-05-15</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-18" version="1">
+        <CalendarDate>2026-05-18</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-19" version="1">
+        <CalendarDate>2026-05-19</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-20" version="1">
+        <CalendarDate>2026-05-20</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-21" version="1">
+        <CalendarDate>2026-05-21</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-22" version="1">
+        <CalendarDate>2026-05-22</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-25" version="1">
+        <CalendarDate>2026-05-25</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-26" version="1">
+        <CalendarDate>2026-05-26</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-27" version="1">
+        <CalendarDate>2026-05-27</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-28" version="1">
+        <CalendarDate>2026-05-28</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-05-29" version="1">
+        <CalendarDate>2026-05-29</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-06" version="1">
+        <CalendarDate>2026-06-06</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-07" version="1">
+        <CalendarDate>2026-06-07</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-13" version="1">
+        <CalendarDate>2026-06-13</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-14" version="1">
+        <CalendarDate>2026-06-14</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-20" version="1">
+        <CalendarDate>2026-06-20</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-21" version="1">
+        <CalendarDate>2026-06-21</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-27" version="1">
+        <CalendarDate>2026-06-27</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-06-28" version="1">
+        <CalendarDate>2026-06-28</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-04" version="1">
+        <CalendarDate>2026-07-04</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-05" version="1">
+        <CalendarDate>2026-07-05</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-11" version="1">
+        <CalendarDate>2026-07-11</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-12" version="1">
+        <CalendarDate>2026-07-12</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-18" version="1">
+        <CalendarDate>2026-07-18</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-19" version="1">
+        <CalendarDate>2026-07-19</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-25" version="1">
+        <CalendarDate>2026-07-25</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-07-26" version="1">
+        <CalendarDate>2026-07-26</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-01" version="1">
+        <CalendarDate>2026-08-01</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-02" version="1">
+        <CalendarDate>2026-08-02</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-08" version="1">
+        <CalendarDate>2026-08-08</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-09" version="1">
+        <CalendarDate>2026-08-09</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-15" version="1">
+        <CalendarDate>2026-08-15</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-16" version="1">
+        <CalendarDate>2026-08-16</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-22" version="1">
+        <CalendarDate>2026-08-22</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-23" version="1">
+        <CalendarDate>2026-08-23</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-29" version="1">
+        <CalendarDate>2026-08-29</CalendarDate>
+      </OperatingDay>
+      <OperatingDay id="TST:OperatingDay:2026-08-30" version="1">
+        <CalendarDate>2026-08-30</CalendarDate>
+      </OperatingDay>
+      </operatingDays>
+      <operatingPeriods>
+      <OperatingPeriod id="TST:OperatingPeriod:1" version="1">
+        <FromOperatingDayRef ref="TST:OperatingDay:2026-06-01" version="1"/>
+        <ToOperatingDayRef ref="TST:OperatingDay:2026-08-31" version="1"/>
+      </OperatingPeriod>
+      <OperatingPeriod id="TST:OperatingPeriod:2" version="1">
+        <FromOperatingDayRef ref="TST:OperatingDay:2026-01-01" version="1"/>
+        <ToOperatingDayRef ref="TST:OperatingDay:2026-05-31" version="1"/>
+      </OperatingPeriod>
+      </operatingPeriods>
+      <dayTypeAssignments>
+      <DayTypeAssignment id="TST:DayTypeAssignment:1" version="1" order="1">
+        <OperatingPeriodRef ref="TST:OperatingPeriod:1" version="1"/>
+        <DayTypeRef ref="TST:DayType:1" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:2" version="1" order="2">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-15" version="1"/>
+        <DayTypeRef ref="TST:DayType:2" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:3" version="1" order="3">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-01" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:4" version="1" order="4">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-03" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:5" version="1" order="5">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-05" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:6" version="1" order="6">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-08" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:7" version="1" order="7">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-10" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:8" version="1" order="8">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-12" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:9" version="1" order="9">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-15" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:10" version="1" order="10">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-17" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:11" version="1" order="11">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-19" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:12" version="1" order="12">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-22" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:13" version="1" order="13">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-24" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:14" version="1" order="14">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-26" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:15" version="1" order="15">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-29" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:16" version="1" order="16">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-01" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:17" version="1" order="17">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-03" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:18" version="1" order="18">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-06" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:19" version="1" order="19">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-08" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:20" version="1" order="20">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-10" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:21" version="1" order="21">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-13" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:22" version="1" order="22">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-15" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:23" version="1" order="23">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-17" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:24" version="1" order="24">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-20" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:25" version="1" order="25">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-22" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:26" version="1" order="26">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-24" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:27" version="1" order="27">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-27" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:28" version="1" order="28">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-29" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:29" version="1" order="29">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-31" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:30" version="1" order="30">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-03" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:31" version="1" order="31">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-05" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:32" version="1" order="32">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-07" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:33" version="1" order="33">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-10" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:34" version="1" order="34">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-12" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:35" version="1" order="35">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-14" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:36" version="1" order="36">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-17" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:37" version="1" order="37">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-19" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:38" version="1" order="38">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-21" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:39" version="1" order="39">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-24" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:40" version="1" order="40">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-26" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:41" version="1" order="41">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-28" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:42" version="1" order="42">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-31" version="1"/>
+        <DayTypeRef ref="TST:DayType:3" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:43" version="1" order="43">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-01" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:44" version="1" order="44">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-02" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:45" version="1" order="45">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-05" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:46" version="1" order="46">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-06" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:47" version="1" order="47">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-07" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:48" version="1" order="48">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-08" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:49" version="1" order="49">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-09" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:50" version="1" order="50">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-12" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:51" version="1" order="51">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-13" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:52" version="1" order="52">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-14" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:53" version="1" order="53">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-15" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:54" version="1" order="54">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-16" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:55" version="1" order="55">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-19" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:56" version="1" order="56">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-20" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:57" version="1" order="57">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-21" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:58" version="1" order="58">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-22" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:59" version="1" order="59">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-23" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:60" version="1" order="60">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-26" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:61" version="1" order="61">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-27" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:62" version="1" order="62">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-28" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:63" version="1" order="63">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-29" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:64" version="1" order="64">
+        <OperatingDayRef ref="TST:OperatingDay:2026-01-30" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:65" version="1" order="65">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-02" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:66" version="1" order="66">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-03" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:67" version="1" order="67">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-04" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:68" version="1" order="68">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-05" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:69" version="1" order="69">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-06" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:70" version="1" order="70">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-09" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:71" version="1" order="71">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-10" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:72" version="1" order="72">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-11" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:73" version="1" order="73">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-12" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:74" version="1" order="74">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-13" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:75" version="1" order="75">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-16" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:76" version="1" order="76">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-17" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:77" version="1" order="77">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-18" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:78" version="1" order="78">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-19" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:79" version="1" order="79">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-20" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:80" version="1" order="80">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-23" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:81" version="1" order="81">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-24" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:82" version="1" order="82">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-25" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:83" version="1" order="83">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-26" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:84" version="1" order="84">
+        <OperatingDayRef ref="TST:OperatingDay:2026-02-27" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:85" version="1" order="85">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-02" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:86" version="1" order="86">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-03" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:87" version="1" order="87">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-04" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:88" version="1" order="88">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-05" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:89" version="1" order="89">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-06" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:90" version="1" order="90">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-09" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:91" version="1" order="91">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-10" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:92" version="1" order="92">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-11" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:93" version="1" order="93">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-12" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:94" version="1" order="94">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-13" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:95" version="1" order="95">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-16" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:96" version="1" order="96">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-17" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:97" version="1" order="97">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-18" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:98" version="1" order="98">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-19" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:99" version="1" order="99">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-20" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:100" version="1" order="100">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-23" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:101" version="1" order="101">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-24" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:102" version="1" order="102">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-25" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:103" version="1" order="103">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-26" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:104" version="1" order="104">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-27" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:105" version="1" order="105">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-30" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:106" version="1" order="106">
+        <OperatingDayRef ref="TST:OperatingDay:2026-03-31" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:107" version="1" order="107">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-01" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:108" version="1" order="108">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-02" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:109" version="1" order="109">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-03" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:110" version="1" order="110">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-06" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:111" version="1" order="111">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-07" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:112" version="1" order="112">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-08" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:113" version="1" order="113">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-09" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:114" version="1" order="114">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-10" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:115" version="1" order="115">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-13" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:116" version="1" order="116">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-14" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:117" version="1" order="117">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-15" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:118" version="1" order="118">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-16" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:119" version="1" order="119">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-17" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:120" version="1" order="120">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-20" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:121" version="1" order="121">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-21" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:122" version="1" order="122">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-22" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:123" version="1" order="123">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-23" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:124" version="1" order="124">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-24" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:125" version="1" order="125">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-27" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:126" version="1" order="126">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-28" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:127" version="1" order="127">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-29" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:128" version="1" order="128">
+        <OperatingDayRef ref="TST:OperatingDay:2026-04-30" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:129" version="1" order="129">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-01" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:130" version="1" order="130">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-04" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:131" version="1" order="131">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-05" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:132" version="1" order="132">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-06" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:133" version="1" order="133">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-07" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:134" version="1" order="134">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-08" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:135" version="1" order="135">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-11" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:136" version="1" order="136">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-12" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:137" version="1" order="137">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-13" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:138" version="1" order="138">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-14" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:139" version="1" order="139">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-15" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:140" version="1" order="140">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-18" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:141" version="1" order="141">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-19" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:142" version="1" order="142">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-20" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:143" version="1" order="143">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-21" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:144" version="1" order="144">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-22" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:145" version="1" order="145">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-25" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:146" version="1" order="146">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-26" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:147" version="1" order="147">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-27" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:148" version="1" order="148">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-28" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:149" version="1" order="149">
+        <OperatingDayRef ref="TST:OperatingDay:2026-05-29" version="1"/>
+        <DayTypeRef ref="TST:DayType:4" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:150" version="1" order="150">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-06" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:151" version="1" order="151">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-07" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:152" version="1" order="152">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-13" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:153" version="1" order="153">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-14" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:154" version="1" order="154">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-20" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:155" version="1" order="155">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-21" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:156" version="1" order="156">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-27" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:157" version="1" order="157">
+        <OperatingDayRef ref="TST:OperatingDay:2026-06-28" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:158" version="1" order="158">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-04" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:159" version="1" order="159">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-05" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:160" version="1" order="160">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-11" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:161" version="1" order="161">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-12" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:162" version="1" order="162">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-18" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:163" version="1" order="163">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-19" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:164" version="1" order="164">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-25" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:165" version="1" order="165">
+        <OperatingDayRef ref="TST:OperatingDay:2026-07-26" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:166" version="1" order="166">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-01" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:167" version="1" order="167">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-02" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:168" version="1" order="168">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-08" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:169" version="1" order="169">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-09" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:170" version="1" order="170">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-15" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:171" version="1" order="171">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-16" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:172" version="1" order="172">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-22" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:173" version="1" order="173">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-23" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:174" version="1" order="174">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-29" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      <DayTypeAssignment id="TST:DayTypeAssignment:175" version="1" order="175">
+        <OperatingDayRef ref="TST:OperatingDay:2026-08-30" version="1"/>
+        <DayTypeRef ref="TST:DayType:5" version="1"/>
+      </DayTypeAssignment>
+      </dayTypeAssignments>
+    </ServiceCalendarFrame>
+  </frames>
+  </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

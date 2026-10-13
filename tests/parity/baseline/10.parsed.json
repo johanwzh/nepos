@@ -1,0 +1,265 @@
+{
+  "routeName": "Bergen - Florø",
+  "publicCode": "10",
+  "transportMode": 6,
+  "kom": "Korrespondanse med buss i Florø.",
+  "sek": [
+    {
+      "orgId": 1,
+      "isAuthority": true,
+      "isOperator": true
+    },
+    {
+      "orgId": 2,
+      "isAuthority": true,
+      "isOperator": false
+    }
+  ],
+  "footnotes": [
+    {
+      "id": 1,
+      "text": "Kjører ikke i fellesferien.",
+      "exceptions": [
+        {
+          "runsOnly": false,
+          "from": "20260706",
+          "to": "20260802"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "text": "",
+      "exceptions": [
+        {
+          "runsOnly": true,
+          "from": "20260615",
+          "to": "20260615"
+        }
+      ]
+    }
+  ],
+  "periods": [
+    {
+      "id": 1,
+      "name": "Sommer",
+      "from": "20260601",
+      "to": "20260831",
+      "from2": "",
+      "to2": ""
+    }
+  ],
+  "directions": [
+    {
+      "id": 2,
+      "name": "Outbound"
+    },
+    {
+      "id": 3,
+      "name": "Return"
+    }
+  ],
+  "activePer": 1,
+  "activeDir": 2,
+  "nextId": 4,
+  "grids": {
+    "1:2": {
+      "stops": [
+        {
+          "name": "Bergen",
+          "stopId": 101,
+          "bold": true,
+          "sep": false,
+          "isDwellArr": false,
+          "price": null
+        },
+        {
+          "name": "Askvoll",
+          "stopId": 102,
+          "bold": false,
+          "sep": false,
+          "isDwellArr": false,
+          "price": 12.5
+        },
+        {
+          "name": "Florø",
+          "stopId": 103,
+          "bold": false,
+          "sep": true,
+          "isDwellArr": true,
+          "price": null
+        },
+        {
+          "name": "Florø",
+          "stopId": 103,
+          "bold": false,
+          "sep": false,
+          "isDwellArr": false,
+          "price": null
+        }
+      ],
+      "cols": [
+        {
+          "dayCode": "D",
+          "footnote": "",
+          "vehicleId": null,
+          "footnoteId": null,
+          "cells": [
+            {
+              "time": "0800",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            },
+            {
+              "time": "1030",
+              "dayOffset": 0,
+              "suffix": "x",
+              "interchange": null,
+              "footnoteId": null
+            },
+            {
+              "time": "1200",
+              "dayOffset": 0,
+              "suffix": "a",
+              "interchange": null,
+              "footnoteId": null
+            },
+            {
+              "time": "1215",
+              "dayOffset": 0,
+              "suffix": "p",
+              "interchange": {
+                "targetC": 1,
+                "targetR": 3,
+                "type": "guaranteed"
+              },
+              "footnoteId": null
+            }
+          ]
+        },
+        {
+          "dayCode": "DX67",
+          "footnote": "",
+          "vehicleId": null,
+          "footnoteId": 2,
+          "cells": [
+            {
+              "time": "1400",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            },
+            {
+              "time": "|",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            },
+            {
+              "time": "1630",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            },
+            {
+              "time": "1645",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            }
+          ]
+        },
+        {
+          "dayCode": "135",
+          "footnote": "",
+          "vehicleId": null,
+          "footnoteId": 1,
+          "cells": [
+            {
+              "time": "2200",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            },
+            {
+              "time": "0030",
+              "dayOffset": 1,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            },
+            null,
+            null
+          ]
+        }
+      ]
+    },
+    "1:3": {
+      "stops": [
+        {
+          "name": "Florø",
+          "stopId": 103,
+          "bold": false,
+          "sep": false,
+          "isDwellArr": false,
+          "price": null
+        },
+        {
+          "name": "Ukjent brygge",
+          "stopId": 999,
+          "bold": false,
+          "sep": false,
+          "isDwellArr": false,
+          "price": null
+        },
+        {
+          "name": "Bergen",
+          "stopId": 101,
+          "bold": false,
+          "sep": false,
+          "isDwellArr": false,
+          "price": null
+        }
+      ],
+      "cols": [
+        {
+          "dayCode": "D",
+          "footnote": "",
+          "vehicleId": null,
+          "footnoteId": null,
+          "cells": [
+            {
+              "time": "0600",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            },
+            {
+              "time": "0700",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            },
+            {
+              "time": "0930",
+              "dayOffset": 0,
+              "suffix": "",
+              "interchange": null,
+              "footnoteId": null
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "currency": "spd"
+}
