@@ -6,7 +6,159 @@
     <title>Nepos</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+
+      <div id="topbar">
+        <span class="tb-brand">Nepos</span>
+        <span class="tb-ver" id="el-ver"></span>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" id="btn-open" data-lk="openProject"></button>
+        <button class="tb-btn" id="btn-new" data-lk="newProject"></button>
+        <button id="delivery-btn"></button>
+        <div class="tb-spacer"></div>
+        <button class="tb-btn" id="btn-lang"></button>
+        <button class="tb-btn" id="btn-theme"></button>
+      </div>
+      <div class="n2-banner" id="sample-banner" data-lk="sampleMode" hidden></div>
+
+      <div id="tabbar">
+        <div class="tab active" data-page="edit"><span class="fk">F2</span><span data-lk="tabEdit"></span></div>
+        <div class="tab" data-page="assets"><span class="fk">F3</span><span data-lk="tabAssets"></span></div>
+        <div class="tab" data-page="export"><span class="fk">F4</span><span data-lk="tabExport"></span></div>
+        <div id="panel-btns">
+          <button class="ptbtn" id="btn-p5"><span class="fk">F5</span><span data-lk="panelRoutes"></span></button>
+          <button class="ptbtn" id="btn-p6"><span class="fk">F6</span><span data-lk="panelMap"></span></button>
+        </div>
+      </div>
+
+      <div id="pages">
+
+        <div id="page-edit" class="page active">
+          <div id="panel-left" class="side-panel">
+            <div class="panel-hdr">
+              <span class="panel-hdr-title" data-lk="panelRoutes"></span>
+              <span class="panel-close" id="close-left" title="F5">✕</span>
+            </div>
+            <div id="route-filter-bar" style="padding:4px 6px;display:flex;gap:4px;border-bottom:1px solid var(--border-lt)">
+              <input id="route-filter-input" type="text" autocomplete="off"
+                style="flex:1;height:22px;padding:0 6px;border:1px solid var(--border);border-radius:3px;background:var(--bg-raised);color:var(--text);font:inherit;font-size:11px"
+                placeholder="Filter…">
+              <select id="route-sort-sel"
+                style="height:22px;padding:0 4px;border:1px solid var(--border);border-radius:3px;background:var(--bg-raised);color:var(--text);font:inherit;font-size:10px;cursor:pointer">
+                <option value="id">ID</option>
+                <option value="name">Name</option>
+                <option value="code">Code</option>
+              </select>
+            </div>
+            <div class="route-list" id="route-list"></div>
+            <div class="panel-foot">
+              <button class="panel-foot-btn" id="btn-new-route" data-lk="newRoute" disabled></button>
+            </div>
+          </div>
+
+          <div class="rz-handle" id="rh-left" data-side="left"></div>
+
+          <div id="edit-main">
+            <div id="route-hdr"><span class="rh-hint" id="rh-hint"></span></div>
+            <div id="grid-wrap" style="flex:1;overflow:auto;display:flex;flex-direction:column;">
+              <div class="grid-placeholder" id="grid-ph">
+                <strong id="grid-ph-h"></strong>
+                <span id="grid-ph-s"></span>
+                <div class="n2-ph-actions" id="grid-ph-actions"></div>
+                <div class="n2-route-info" id="grid-ph-info"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rz-handle" id="rh-right" data-side="right"></div>
+
+          <div id="panel-right" class="side-panel">
+            <div class="panel-hdr">
+              <span class="panel-hdr-title" data-lk="panelMap"></span>
+              <span class="panel-close" id="close-right" title="F6">✕</span>
+            </div>
+            <div id="map-inner">
+              <div class="map-hint-overlay"><div class="map-hint" data-lk="mapHint"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="page-assets" class="page">
+          <div class="assets-nav">
+            <div class="assets-nav-item active" data-sec="orgs"><span data-lk="orgTitle"></span></div>
+          </div>
+          <div class="assets-body" id="assets-body"></div>
+        </div>
+
+        <div id="page-export" class="page">
+          <div class="exp-section">
+            <div class="exp-title" data-lk="validateTitle"></div>
+            <p class="exp-desc" data-lk="validateDesc"></p>
+            <button class="exp-btn primary" disabled><span class="ico">✓</span><span data-lk="validateBtn"></span></button>
+          </div>
+          <div class="exp-section">
+            <div class="exp-title" data-lk="exportTitle"></div>
+            <p class="exp-desc" data-lk="exportDesc"></p>
+            <button class="exp-btn primary" disabled><span class="ico">↓</span><span data-lk="exportNetex"></span></button>
+            <div style="margin-top:8px;font-size:11px;color:var(--text-f)" data-lk="exportLater"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="statusbar">
+        <span class="sb-item strong" id="sb-proj">Nepos</span>
+        <span class="sb-dot" id="sb-dot1" style="display:none"> · </span>
+        <span class="sb-item" id="sb-nroutes"></span>
+        <span class="sb-dot" id="sb-dot2" style="display:none"> · </span>
+        <span class="sb-item strong" id="sb-route"></span>
+        <span class="sb-item sb-right" id="sb-save"></span>
+      </div>
+    </div>
+
+    <div id="delivery-pop">
+      <div class="pop-title" data-lk="deliveryTitle"></div>
+      <div class="pop-row">
+        <label data-lk="fieldName"></label>
+        <input type="text" id="pop-name" autocomplete="off">
+      </div>
+      <div class="pop-row">
+        <label data-lk="fieldCodespace"></label>
+        <div class="pop-static" id="pop-codespace"></div>
+        <div class="pop-note" data-lk="codespaceReadOnly"></div>
+      </div>
+      <div class="pop-actions">
+        <button class="pop-btn" id="pop-cancel" data-lk="cancel"></button>
+        <button class="pop-btn primary" id="pop-save" data-lk="save"></button>
+      </div>
+    </div>
+
+    <dialog class="n2-dialog" id="msg-dlg">
+      <p id="msg-text"></p>
+      <div class="n2-actions"><button class="pop-btn primary" id="msg-close" data-lk="close"></button></div>
+    </dialog>
+
+    <dialog class="n2-dialog" id="new-dlg">
+      <h2 data-lk="newProjectTitle"></h2>
+      <p data-lk="newProjectDesc"></p>
+      <label for="new-name" data-lk="projectName"></label>
+      <input type="text" id="new-name" autocomplete="off">
+      <label for="new-cs" data-lk="fieldCodespace"></label>
+      <input type="text" id="new-cs" autocomplete="off" maxlength="3" style="width:80px;text-transform:uppercase">
+      <div class="n2-hint" data-lk="codespaceHint"></div>
+      <div class="n2-error" id="new-error"></div>
+      <div class="n2-actions">
+        <button class="pop-btn" id="new-cancel" data-lk="cancel"></button>
+        <button class="pop-btn primary" id="new-create" data-lk="create"></button>
+      </div>
+    </dialog>
+
+    <dialog class="n2-dialog" id="check-dlg">
+      <h2 data-lk="integrityTitle"></h2>
+      <div id="check-body"></div>
+      <div class="n2-actions" id="check-actions"></div>
+    </dialog>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

@@ -1,5 +1,6 @@
-import { VERSION } from './version.js';
+import './ui/styles.css';
+import './ui/nepos2.css';
+import { initShell, refreshAll } from './ui/shell.js';
 
-// Placeholder shell. The real UI is built in Plan 2.
-const app = document.getElementById('app');
-if (app) app.textContent = `Nepos ${VERSION}`;
+initShell();
+refreshAll();

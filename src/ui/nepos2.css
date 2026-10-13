@@ -1,0 +1,61 @@
+/* Nepos 2 additions on top of the 1.5.7 stylesheet. Uses the same theme variables. */
+
+dialog.n2-dialog {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel);
+  color: var(--text);
+  padding: 18px 20px;
+  min-width: 380px;
+  max-width: 720px;
+  max-height: 80vh;
+  overflow: auto;
+  font: inherit;
+  font-size: 12px;
+}
+dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+.n2-dialog h2 { font-size: 15px; margin: 0 0 10px; }
+.n2-dialog p { margin: 0 0 10px; line-height: 1.5; }
+.n2-dialog label { display: block; margin: 8px 0 3px; color: var(--text-m); }
+.n2-dialog input[type="text"] {
+  width: 100%; box-sizing: border-box; height: 26px; padding: 0 8px;
+  border: 1px solid var(--border); border-radius: 3px; background: var(--bg-raised); color: var(--text); font: inherit;
+}
+.n2-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
+.n2-error { color: var(--g-dec-c); margin-top: 8px; min-height: 1em; }
+.n2-hint { color: var(--text-m); font-size: 11px; margin-top: 3px; }
+
+.n2-file { border-top: 1px solid var(--border-lt); padding: 8px 0; }
+.n2-file-head { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+.n2-file ul { margin: 4px 0 0 18px; padding: 0; color: var(--text-m); }
+
+.n2-badge {
+  display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px;
+  border: 1px solid var(--border); color: var(--text-m); white-space: nowrap;
+}
+.n2-badge.ok { border-color: #3a8a3a; color: #3a8a3a; }
+.n2-badge.outdated { border-color: #b07a00; color: #b07a00; }
+.n2-badge.damaged { border-color: var(--g-dec-c); color: var(--g-dec-c); }
+
+.route-item .n2-route-mark { float: right; font-size: 11px; margin-left: 4px; }
+.route-item .n2-route-mark.outdated { color: #b07a00; }
+.route-item .n2-route-mark.damaged { color: var(--g-dec-c); }
+
+.n2-banner { background: var(--accent-bg); color: var(--text); font-size: 11px; padding: 3px 10px; border-bottom: 1px solid var(--border-lt); }
+.n2-ph-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+.n2-route-info { max-width: 640px; text-align: left; margin-top: 12px; font-size: 12px; }
+.n2-route-info ul { margin: 6px 0 0 18px; padding: 0; color: var(--text-m); }
+
+.asset-row.invalid .asset-id-in { border-color: var(--g-dec-c); }
+.asset-id-in {
+  width: 220px; height: 24px; padding: 0 6px; border: 1px solid var(--border); border-radius: 3px;
+  background: var(--bg-raised); color: var(--text); font: inherit; font-size: 12px; font-family: monospace;
+}
+.asset-role { width: 80px; color: var(--text-m); font-size: 11px; }
+.asset-msg { color: var(--g-dec-c); font-size: 11px; margin: -2px 0 6px 2px; }
+.assets-hint { color: var(--text-m); font-size: 11px; margin: 0 0 10px; }
+.assets-status { font-size: 11px; margin-top: 8px; color: var(--text-m); }
+.assets-status.bad { color: var(--g-dec-c); }
+
+.pop-static { font-family: monospace; padding: 4px 0; }
+.pop-note { color: var(--text-m); font-size: 10px; }
