@@ -3,12 +3,13 @@ import { app } from './state.js';
 import { $, onRefresh, refreshAll, showMessage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { createHandleFs } from '../project/fs.js';
-import { openProject } from '../project/open.js';
+import { openProject, updateOutdatedRoutes } from '../project/open.js';
 import { createProject } from '../project/create.js';
-import { findFileNameProblems } from '../project/repair.js';
+import { findFileNameProblems, repairFileNames } from '../project/repair.js';
+import { summarizeIntegrity } from '../core/integrity/check.js';
 import { normalizeCodespace } from '../core/codespace.js';
 import { loadLastFolder, saveLastFolder } from './last-folder.js';
-import { openFailureMessage, createFailureMessage, issueMessage } from './messages.js';
+import { openFailureMessage, createFailureMessage, issueMessage, summaryMessage, fileNameMessage } from './messages.js';
 
 /** Notes to show in the next project check (settings reset, format upgraded). @type {string[]} */
 let pendingNotes = [];
@@ -60,9 +61,56 @@ export function takePendingNotes() {
 }
 
 /**
- * Show the project check when anything needs the user's attention. Task 6 replaces this.
+ * The project check dialog: summary, notes, the files that need action with their issues,
+ * file-name problems, and buttons to update outdated files and repair file names.
+ * @param {{ always?: boolean }} [opts]
  */
-export function showProjectCheck() {}
+export function showProjectCheck({ always = false } = {}) {
+  const notes = takePendingNotes();
+  const summary = summarizeIntegrity(app.routes);
+  const attention = summary.outdated + summary.damaged + app.fileNameProblems.length + notes.length;
+  if (!attention && !always) return;
+
+  const body = $('check-body');
+  const parts = [`<p><strong>${escapeHtml(summaryMessage(summary))}</strong></p>`];
+  for (const note of notes) parts.push(`<p>${escapeHtml(note)}</p>`);
+
+  for (const route of app.routes.filter((r) => r.status !== 'ok')) {
+    const badge = `<span class="n2-badge ${route.status}">${escapeHtml(t(route.status === 'damaged' ? 'statusDamaged' : 'statusOutdated'))}</span>`;
+    const issues = route.issues.filter((i) => i.severity !== 'note').map((i) => `<li>${escapeHtml(issueMessage(i))}</li>`).join('');
+    parts.push(`<div class="n2-file"><div class="n2-file-head">${escapeHtml(route.code)} ${badge}</div><ul>${issues}</ul></div>`);
+  }
+
+  if (app.fileNameProblems.length) {
+    const items = app.fileNameProblems.map((p) => `<li>${escapeHtml(fileNameMessage(p))}</li>`).join('');
+    parts.push(`<div class="n2-file"><div class="n2-file-head">${escapeHtml(t('fileNamesTitle'))}</div><ul>${items}</ul></div>`);
+  }
+  body.innerHTML = parts.join('');
+
+  const actions = $('check-actions');
+  actions.innerHTML = '';
+  if (summary.outdated > 0) actions.appendChild(button(t('updateOutdated', summary.outdated), updateOutdated));
+  const repairable = app.fileNameProblems.filter((p) => p.rename).length;
+  if (repairable > 0) actions.appendChild(button(t('repairNames', repairable), repairNames));
+  actions.appendChild(button(t('close'), () => $('check-dlg').close(), true));
+
+  if (!$('check-dlg').open) $('check-dlg').showModal();
+}
+
+async function updateOutdated() {
+  if (!app.fs || !app.meta) return;
+  const updated = await updateOutdatedRoutes(app.fs, { meta: app.meta, orgs: app.orgs, routes: app.routes });
+  app.routes = app.routes.map((r) => updated.find((u) => u.code === r.code) ?? r);
+  refreshAll();
+  showProjectCheck({ always: true });
+}
+
+async function repairNames() {
+  if (!app.fs) return;
+  await repairFileNames(app.fs, app.fileNameProblems);
+  $('check-dlg').close();
+  await openFs(app.fs, { handle: app.handle, sample: app.sampleMode });
+}
 
 /** @param {any} handle */
 async function hasPermission(handle, ask) {
