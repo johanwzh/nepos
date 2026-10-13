@@ -1,0 +1,21 @@
+{
+  "name": "nepos-online",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Nepos 2 — timetable editor that writes ERN and exports NeTEx",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run && tsc -p .",
+    "test:watch": "vitest",
+    "baseline": "node tools/v1-baseline/record.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
+  }
+}
