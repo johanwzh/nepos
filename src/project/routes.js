@@ -1,7 +1,6 @@
 import { ROUTES_DIR, BACKUPS_DIR, backupStamp, uniqueBackupPath } from './layout.js';
 import { encodeWin1252, decodeWin1252 } from '../core/ern/win1252.js';
-
-const isNumber = (/** @type {string} */ s) => /^\d+$/.test(s);
+import { compareRouteCodes } from '../core/route-codes.js';
 
 /**
  * Route codes in the project, from data/routes/*.txt. Numeric codes come first in numeric order.
@@ -13,11 +12,7 @@ export async function listRoutes(fs) {
     // Only the exact '.txt' Nepos writes: a '12.TXT' would be read and saved under different names.
     .filter((e) => e.kind === 'file' && e.name.endsWith('.txt'))
     .map((e) => e.name.slice(0, -4))
-    .sort((a, b) => {
-      if (isNumber(a) && isNumber(b)) return Number(a) - Number(b);
-      if (isNumber(a) !== isNumber(b)) return isNumber(a) ? -1 : 1;
-      return a.localeCompare(b, 'nb');
-    });
+    .sort(compareRouteCodes);
 }
 
 /**
@@ -44,4 +39,18 @@ export async function writeRoute(fs, code, text, { now = new Date() } = {}) {
     await fs.writeBytes(await uniqueBackupPath(fs, `${BACKUPS_DIR}/${code}.${backupStamp(now)}`, '.txt'), existing);
   }
   await fs.writeBytes(path, encodeWin1252(text));
+}
+
+/**
+ * Delete a route file, backing it up first.
+ * @param {import('./fs.js').ProjectFs} fs
+ * @param {string} code
+ * @param {{ now?: Date }} [opts]
+ */
+export async function deleteRoute(fs, code, { now = new Date() } = {}) {
+  const path = `${ROUTES_DIR}/${code}.txt`;
+  const existing = await fs.readBytes(path);
+  if (existing === null) return;
+  await fs.writeBytes(await uniqueBackupPath(fs, `${BACKUPS_DIR}/${code}.${backupStamp(now)}.deleted`, '.txt'), existing);
+  await fs.remove(path);
 }

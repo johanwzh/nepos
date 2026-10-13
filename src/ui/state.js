@@ -24,6 +24,8 @@ export const app = {
   fileNameProblems: [],
   /** @type {string | null} code of the selected route */
   activeRoute: null,
+  /** @type {any} the open route's state (from parseERN), or null */
+  routeState: null,
   dirty: false,
   sampleMode: false,
 };

@@ -60,14 +60,19 @@
 
           <div id="edit-main">
             <div id="route-hdr"><span class="rh-hint" id="rh-hint"></span></div>
-            <div id="grid-wrap" style="flex:1;overflow:auto;display:flex;flex-direction:column;">
+            <div id="kom-bar" style="display:none"></div>
+            <div id="grid-status"></div>
+            <div id="grid-wrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
               <div class="grid-placeholder" id="grid-ph">
                 <strong id="grid-ph-h"></strong>
                 <span id="grid-ph-s"></span>
                 <div class="n2-ph-actions" id="grid-ph-actions"></div>
                 <div class="n2-route-info" id="grid-ph-info"></div>
               </div>
+              <div id="tbl-wrap" style="display:none"><table id="tbl"></table></div>
             </div>
+            <div id="fn-preview"></div>
+            <div id="edit-footer"></div>
           </div>
 
           <div class="rz-handle" id="rh-right" data-side="right"></div>
@@ -130,6 +135,50 @@
       <div class="pop-actions">
         <button class="pop-btn" id="pop-cancel" data-lk="cancel"></button>
         <button class="pop-btn primary" id="pop-save" data-lk="save"></button>
+      </div>
+    </div>
+
+    <div id="fn-editor">
+      <div class="fn-hdr">
+        <span class="fn-hdr-title" id="fn-title"></span>
+        <select id="fn-def-sel"></select>
+        <button class="fn-close-btn" id="fn-close">×</button>
+      </div>
+      <div class="fn-body">
+        <div>
+          <label class="fn-label" id="fn-text-label"></label>
+          <input type="text" class="fn-text-in" id="fn-text" autocomplete="off">
+        </div>
+        <div>
+          <label class="fn-label" id="fn-exc-label"></label>
+          <div class="fn-exc-list" id="fn-exc-list"></div>
+          <button class="fn-add-exc" id="fn-add-exc"></button>
+        </div>
+      </div>
+      <div class="fn-footer">
+        <button class="fn-remove-btn" id="fn-remove"></button>
+        <div class="fn-spacer"></div>
+        <button class="fn-apply-btn" id="fn-apply"></button>
+      </div>
+    </div>
+
+    <div id="grid-ctx" style="display:none">
+      <div id="gctx-time">
+        <div class="gci" id="gc-clear" data-lk="ctxClear"></div>
+        <div class="gci" id="gc-offset" data-lk="ctxOffset"></div>
+        <div class="gcs"></div>
+        <div class="gci" id="gc-ix-g" data-lk="ctxIxGuaranteed"></div>
+        <div class="gci" id="gc-ix-s" data-lk="ctxIxStaySeated"></div>
+        <div class="gci red" id="gc-ix-del" data-lk="ctxIxRemove"></div>
+        <div class="gcs"></div>
+        <div class="gci" id="gc-add-note" data-lk="ctxNote"></div>
+      </div>
+      <div id="gctx-stop">
+        <div class="gci" id="gc-bold"></div>
+        <div class="gci" id="gc-sep"></div>
+      </div>
+      <div id="gctx-dc">
+        <div class="gci" id="gc-dc-note" data-lk="ctxNote"></div>
       </div>
     </div>
 

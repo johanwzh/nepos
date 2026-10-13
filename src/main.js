@@ -4,10 +4,16 @@ import { initShell, refreshAll } from './ui/shell.js';
 import { initRouteList } from './ui/route-list.js';
 import { initOrgsPage } from './ui/orgs-page.js';
 import { initProjectUi, openFs } from './ui/project-ui.js';
+import { initGrid } from './ui/grid.js';
+import { initFootnoteEditor } from './ui/footnote-editor.js';
+import { initRouteEditor } from './ui/route-editor.js';
 
 initShell();
 initRouteList();
 initOrgsPage();
+initGrid();
+initFootnoteEditor();
+initRouteEditor();
 
 // Development only: /?sample opens an in-memory sample project, so the screens can be checked
 // without the browser's folder picker. Never active in a production build.

@@ -32,6 +32,26 @@ export async function persistSettings() {
   if (app.fs) await writeSettings(app.fs, app.settings);
 }
 
+/** Mark the open route as changed; refreshes once (status bar, save button). */
+export function markDirty() {
+  if (app.dirty) return;
+  app.dirty = true;
+  refreshAll();
+}
+
+/** @type {() => Promise<boolean>} */
+let leaveCheck = async () => true;
+
+/** The route editor registers how to protect unsaved changes. @param {() => Promise<boolean>} fn */
+export function setBeforeLeave(fn) {
+  leaveCheck = fn;
+}
+
+/** Ask before anything that closes the open route. Resolves false when the user wants to stay. */
+export function beforeLeave() {
+  return leaveCheck();
+}
+
 // ─── Theme ──────────────────────────────────────────────────────────────────
 function resolvedTheme() {
   const theme = app.settings.theme;
@@ -50,10 +70,10 @@ export function applyLang() {
   setLang(app.settings.lang);
   document.documentElement.lang = app.settings.lang;
   document.querySelectorAll('[data-lk]').forEach((el) => {
-    el.textContent = t(/** @type {HTMLElement} */ (el).dataset.lk);
+    const value = t(/** @type {HTMLElement} */ (el).dataset.lk);
+    if (typeof value === 'string') el.textContent = value;
   });
   $('btn-lang').textContent = app.settings.lang === 'no' ? 'EN' : 'NO';
-  $('btn-new-route').title = t('newRouteLater');
   applyTheme();
 }
 

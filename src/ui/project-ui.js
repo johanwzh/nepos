@@ -1,6 +1,6 @@
 // Opening, creating and reopening projects, and the empty-state placeholder.
 import { app } from './state.js';
-import { $, onRefresh, refreshAll, showMessage, runAction } from './shell.js';
+import { $, onRefresh, refreshAll, showMessage, runAction, beforeLeave } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { createHandleFs } from '../project/fs.js';
 import { openProject, updateOutdatedRoutes } from '../project/open.js';
@@ -38,7 +38,7 @@ export async function openFs(fs, { handle = null, sample = false } = {}) {
     fs, handle, sampleMode: sample,
     meta: result.meta, settings: result.settings,
     orgs: result.orgs, orgsError: result.orgsError,
-    routes: result.routes, activeRoute: null, dirty: false, orgsStatus: '',
+    routes: result.routes, activeRoute: null, routeState: null, dirty: false, orgsStatus: '',
     fileNameProblems: await findFileNameProblems(fs),
   });
   pendingNotes = [];
@@ -112,6 +112,7 @@ async function updateOutdated(trigger) {
 /** @param {HTMLButtonElement} trigger */
 async function repairNames(trigger) {
   if (!app.fs) return;
+  if (!(await beforeLeave())) return;
   const fs = app.fs;
   await runAction(() => repairFileNames(fs, app.fileNameProblems), trigger);
   $('check-dlg').close();
@@ -128,11 +129,13 @@ async function hasPermission(handle, ask) {
 
 /** @param {any} handle */
 async function openHandle(handle) {
+  if (!(await beforeLeave())) return false;
   if (!(await hasPermission(handle, true))) return false;
   return openFs(createHandleFs(handle), { handle });
 }
 
 async function pickAndOpen() {
+  if (!(await beforeLeave())) return;
   try {
     const handle = await /** @type {any} */ (window).showDirectoryPicker({ mode: 'readwrite', id: 'nepos-project' });
     await openHandle(handle);
@@ -142,7 +145,8 @@ async function pickAndOpen() {
 }
 
 // ─── New project dialog ─────────────────────────────────────────────────────
-function openNewDialog() {
+async function openNewDialog() {
+  if (!(await beforeLeave())) return;
   $('new-name').value = '';
   $('new-cs').value = '';
   $('new-error').textContent = '';
@@ -195,6 +199,7 @@ export function renderPlaceholder() {
   const info = $('grid-ph-info');
   actions.innerHTML = '';
   info.innerHTML = '';
+  $('grid-ph').style.display = app.routeState ? 'none' : '';
 
   if (!supported() && !app.sampleMode) {
     $('grid-ph-h').textContent = 'Nepos';
@@ -209,20 +214,8 @@ export function renderPlaceholder() {
     actions.appendChild(button(t('newProject'), openNewDialog));
     return;
   }
-  const route = app.routes.find((r) => r.code === app.activeRoute);
-  if (!route) {
-    $('grid-ph-h').textContent = app.meta.name || app.meta.codespace;
-    $('grid-ph-s').textContent = t('noRouteOpen');
-    return;
-  }
-  $('grid-ph-h').textContent = route.code;
-  $('grid-ph-s').textContent = t(route.status === 'ok' ? 'statusOk' : route.status === 'damaged' ? 'statusDamaged' : 'statusOutdated');
-  const lines = [];
-  if (route.status === 'damaged') lines.push(`<p><strong>${escapeHtml(t('readOnly'))}</strong></p>`);
-  const shown = route.issues.filter((i) => i.severity !== 'note');
-  if (shown.length) lines.push(`<ul>${shown.map((i) => `<li>${escapeHtml(issueMessage(i))}</li>`).join('')}</ul>`);
-  lines.push(`<p class="n2-hint">${escapeHtml(t('editingNext'))}</p>`);
-  info.innerHTML = lines.join('');
+  $('grid-ph-h').textContent = app.meta.name || app.meta.codespace;
+  $('grid-ph-s').textContent = t('noRouteOpen');
 }
 
 /** @param {string} s */
