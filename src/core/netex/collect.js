@@ -31,7 +31,7 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
     for (const { rs } of routes) {
         for (const s of rs.sek||[]) {
             if (!orgs.has(s.orgId)) {
-                const org = (orgList||[]).find(o=>o.id===s.orgId);
+                const org = (orgList||[]).find(o=>String(o.id)===String(s.orgId));
                 orgs.set(s.orgId, { id:s.orgId, name:org?.name||`Org ${s.orgId}`,
                     isAuthority:false, isOperator:false });
             }
