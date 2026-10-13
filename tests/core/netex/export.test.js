@@ -29,4 +29,9 @@ describe('buildNeTExFiles', () => {
     const files = buildNeTExFiles({ ...base, routes: [{ code: '20', rs: parseERN(sample.routes[1].text) }] });
     expect(files.map((f) => f.name)).not.toContain('_stops.xml');
   });
+
+  it('upper-cases the codespace in file names', () => {
+    const files = buildNeTExFiles({ ...base, codespace: 'abc', routes: [{ code: '20', rs: parseERN(sample.routes[1].text) }] });
+    expect(files.map((f) => f.name)).toEqual(['_ABC-shared.xml', 'ABC-Line-20.xml']);
+  });
 });

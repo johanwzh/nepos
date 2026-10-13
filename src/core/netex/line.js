@@ -131,11 +131,10 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
           </TimetabledPassingTime>`;
                 });
 
-                const vehRef = col.vehicleId != null ? `\n        <VehicleRef ref="${cs}:Vehicle:${col.vehicleId}"/>` : '';
                 sjs.push(`      <ServiceJourney id="${sjId}" version="1">
         <TransportMode>${lineMode}</TransportMode>
         <dayTypes><DayTypeRef ref="${dtEntry.ntxId}"/></dayTypes>
-        <JourneyPatternRef ref="${jpId}" version="1"/>${vehRef}
+        <JourneyPatternRef ref="${jpId}" version="1"/>
         <passingTimes>${ptXml}
         </passingTimes>
       </ServiceJourney>`);

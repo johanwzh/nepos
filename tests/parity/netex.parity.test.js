@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { sample, TIMESTAMP } from '../fixtures/sample-project.js';
 import { readBaseline } from './load-baseline.js';
+import { NETEX_FILE_NAMES } from './intentional.js';
 import { parseERN } from '../../src/core/ern/parse.js';
 import { buildNeTExFiles } from '../../src/core/netex/export.js';
 
@@ -13,18 +14,14 @@ const files = buildNeTExFiles({
   timestamp: TIMESTAMP,
 });
 
-describe('NeTEx export matches 1.5.7', () => {
-  it('produces the shared file and one file per line', () => {
-    expect(files.map((f) => f.name)).toEqual([
-      '_shared_data.xml',
-      'Line-TST_10_timetable.xml',
-      'Line-TST_20_timetable.xml',
-    ]);
+describe('NeTEx export matches 1.5.7 (with intentional differences)', () => {
+  it('uses the Entur file names', () => {
+    expect(files.map((f) => f.name)).toEqual(Object.values(NETEX_FILE_NAMES));
   });
 
-  for (const name of ['_shared_data.xml', 'Line-TST_10_timetable.xml', 'Line-TST_20_timetable.xml']) {
+  for (const [v1Name, name] of Object.entries(NETEX_FILE_NAMES)) {
     it(name, () => {
-      expect(files.find((f) => f.name === name)?.xml).toBe(readBaseline(`netex/${name}`));
+      expect(files.find((f) => f.name === name)?.xml).toBe(readBaseline(`netex/${v1Name}`));
     });
   }
 });

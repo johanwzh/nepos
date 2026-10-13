@@ -21,7 +21,7 @@ export function parseERN(text, { lang = 'en' } = {}) {
         const colXtoIdx = {};
         cols.forEach((c,i) => { colXtoIdx[c.x] = i; });
         const gCols2 = cols.map(c => ({
-            dayCode: c.dayCode, footnote: '', vehicleId: c.vehicleId ?? null, footnoteId: null,
+            dayCode: c.dayCode, footnote: '', footnoteId: null,
             cells: rows.map((_,ri) => {
                 const cell = cellMap[`${c.x}:${ri}`];
                 return cell || null;
@@ -106,9 +106,8 @@ export function parseERN(text, { lang = 'en' } = {}) {
                 break;
             }
             case '#TUR': {
-                const vId = parseInt(f[7]);  // field 6 = vehicleRef (v1.9)
-                cols.push({ x:parseInt(f[1])||cols.length, dayCode:f[2]||'',
-                            vehicleId: vId > 0 ? vId : null });
+                // Field 6 (1.x vehicle reference) is ignored; vehicles are dropped in Nepos 2.
+                cols.push({ x:parseInt(f[1])||cols.length, dayCode:f[2]||'' });
                 break;
             }
             case '#TRL': {

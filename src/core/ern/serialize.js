@@ -7,7 +7,7 @@ function fnByIdInRs(rs, id) { return id!=null ? (rs.footnotes||[]).find(f=>f.id=
  * Write a route state as ERN text (CRLF line endings).
  * @param {any} rs route state from parseERN
  * @param {string} routeCode
- * @param {{ delivery?: any, orgs?: { id: any, name: string }[] }} [opts]
+ * @param {{ delivery?: { name?: string, codespace?: string }, orgs?: { id: any, name: string }[] }} [opts]
  * @returns {string}
  */
 export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
@@ -16,7 +16,7 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     const esc = s => (s||'').replace(/;/g, ','); // semicolons not allowed in fields
     const lines = [];
 
-    lines.push(`#LEV;${esc(d.name)};${esc(d.codespace)};${esc(d.creator)};${esc(d.creatorEmail)}`);
+    lines.push(`#LEV;${esc(d.name)};${esc(d.codespace)}`);
     lines.push(`#RUT;-1;${esc(routeCode)};${esc(rs.routeName)};;${rs.transportMode||6};`);
     const curId = rs.currency || 'neposcoin';
     const curRate = currencyRate(curId);
@@ -45,8 +45,8 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
             const grid = rs.grids[`${per.id}:${dir.id}`] || { stops:[], cols:[] };
 
             grid.cols.forEach((col, ci) => {
-                // Fields: X ; dayCode ; requestRoute ; CO2 ; comfort ; replacementTransport ; vehicleRef(v1.9)
-                lines.push(`#TUR;${ci};${esc(col.dayCode)};0;0;0;0;${col.vehicleId != null ? col.vehicleId : ''}`);
+                // Fields: X ; dayCode ; requestRoute ; CO2 ; comfort ; replacementTransport
+                lines.push(`#TUR;${ci};${esc(col.dayCode)};0;0;0;0`);
             });
 
             grid.stops.forEach((stop, ri) => {

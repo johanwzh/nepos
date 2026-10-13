@@ -1,12 +1,12 @@
 // _shared_data.xml generator, ported from Nepos 1.5.7 (nepos.html lines 6076–6220).
-import { xe, ernModeNeTEx, pubDelivery, compositeFrame } from './xml.js';
+import { xe, pubDelivery, compositeFrame } from './xml.js';
 import { haversineM } from './geo.js';
 
 /**
  * @param {any} data from collectNeTExData
- * @param {{ deliveryName?: string, vehicles?: any[], timestamp?: string }} [opts]
+ * @param {{ deliveryName?: string, timestamp?: string }} [opts]
  */
-export function genSharedXml(data, { deliveryName = '', vehicles = [], timestamp } = {}) {
+export function genSharedXml(data, { deliveryName = '', timestamp } = {}) {
     const { cs, orgs, usedStops, stopPairs, destDisps, operDays, operPers, dayTypes, dtAssignments, overallFrom, overallTo } = data;
 
     // ResourceFrame
@@ -18,23 +18,11 @@ export function genSharedXml(data, { deliveryName = '', vehicles = [], timestamp
         <Name>${xe(o.name)}</Name>
         <OrganisationType>operator</OrganisationType>
       </Operator>`).join('\n');
-    // VehicleType — type/class of vessel (no TypeOfFuel: nothing appropriate for 1869)
-    const vtXml = (vehicles||[]).map(v=>{
-        const m=ernModeNeTEx(v.mode);
-        return `      <VehicleType id="${cs}:VehicleType:${v.id}" version="1">
-        <TransportMode>${m.mode}</TransportMode>
-      </VehicleType>`;
-    }).join('\n');
-    // Vehicle — the named individual vessel, references its VehicleType
-    const vXml = (vehicles||[]).map(v=>`      <Vehicle id="${cs}:Vehicle:${v.id}" version="1">
-        <Name>${xe(v.name)}</Name>
-        <VehicleTypeRef ref="${cs}:VehicleType:${v.id}"/>
-      </Vehicle>`).join('\n');
     const resFrame = `    <ResourceFrame id="${cs}:ResourceFrame:shared" version="1">
       <organisations>
 ${authXml}
 ${operXml}
-      </organisations>${vtXml?`\n      <vehicleTypes>\n${vtXml}\n      </vehicleTypes>`:''}${vXml?`\n      <vehicles>\n${vXml}\n      </vehicles>`:''}
+      </organisations>
     </ResourceFrame>`;
 
     // ServiceFrame: one Network per unique authority so each Line can point to the right one
