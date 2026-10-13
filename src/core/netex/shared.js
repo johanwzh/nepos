@@ -1,6 +1,7 @@
 // _shared_data.xml generator, ported from Nepos 1.5.7 (nepos.html lines 6076–6220).
 import { xe, pubDelivery, compositeFrame } from './xml.js';
 import { haversineM } from './geo.js';
+import { netexOrgId, authorityNetworkLocalId } from '../orgs.js';
 
 /**
  * @param {any} data from collectNeTExData
@@ -10,11 +11,11 @@ export function genSharedXml(data, { deliveryName = '', timestamp } = {}) {
     const { cs, orgs, usedStops, stopPairs, destDisps, operDays, operPers, dayTypes, dtAssignments, overallFrom, overallTo } = data;
 
     // ResourceFrame
-    const authXml = [...orgs.values()].filter(o=>o.isAuthority).map(o=>`      <Authority id="${cs}:Authority:${o.id}" version="1">
+    const authXml = [...orgs.values()].filter(o=>o.isAuthority).map(o=>`      <Authority id="${netexOrgId(o.id,'Authority',cs)}" version="1">
         <Name>${xe(o.name)}</Name>
         <OrganisationType>authority</OrganisationType>
       </Authority>`).join('\n');
-    const operXml = [...orgs.values()].filter(o=>o.isOperator).map(o=>`      <Operator id="${cs}:Operator:${o.id}" version="1">
+    const operXml = [...orgs.values()].filter(o=>o.isOperator).map(o=>`      <Operator id="${netexOrgId(o.id,'Operator',cs)}" version="1">
         <Name>${xe(o.name)}</Name>
         <OrganisationType>operator</OrganisationType>
       </Operator>`).join('\n');
@@ -30,9 +31,9 @@ ${operXml}
     // Fallback: if no authorities defined, create one unnamed network
     // Primary Network: the package itself (no AuthorityRef — just a grouping container)
     // Additional Networks: one per unique authority from SEK records, each with AuthorityRef
-    const addNetItems = authOrgs.map(o=>`      <Network id="${cs}:Network:authority-${o.id}" version="1">
+    const addNetItems = authOrgs.map(o=>`      <Network id="${cs}:Network:${authorityNetworkLocalId(o.id)}" version="1">
         <Name>${xe(o.name)}</Name>
-        <AuthorityRef ref="${cs}:Authority:${o.id}" version="1"/>
+        <AuthorityRef ref="${netexOrgId(o.id,'Authority',cs)}" version="1"/>
       </Network>`).join('\n');
     const netXml = `    <Network id="${cs}:Network:${cs}" version="1">
       <Name>${xe(deliveryName||cs)}</Name>
