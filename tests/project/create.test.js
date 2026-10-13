@@ -31,9 +31,14 @@ describe('createProject', () => {
     expect(fs.paths()).toEqual([]);
   });
 
-  it('refuses a folder that already has files and writes nothing', async () => {
-    const fs = createMemoryFs({ 'notes.txt': 'mine' });
-    expect(await createProject(fs, { name: 'X', codespace: 'ABC' })).toEqual({ ok: false, error: 'folder-not-empty' });
-    expect(fs.paths()).toEqual(['notes.txt']);
+  it('refuses a folder that already has files, says what it found, and writes nothing', async () => {
+    const fs = createMemoryFs({ 'notes.txt': 'mine', 'old/a.txt': 'x' });
+    expect(await createProject(fs, { name: 'X', codespace: 'ABC' })).toEqual({ ok: false, error: 'folder-not-empty', found: ['notes.txt', 'old'] });
+    expect(fs.paths()).toEqual(['notes.txt', 'old/a.txt']);
+  });
+
+  it('treats a folder with only system files as empty', async () => {
+    const fs = createMemoryFs({ 'desktop.ini': '', 'Thumbs.db': '', '.DS_Store': '' });
+    expect((await createProject(fs, { name: 'X', codespace: 'ABC' })).ok).toBe(true);
   });
 });
