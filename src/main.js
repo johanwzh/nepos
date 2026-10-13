@@ -2,10 +2,12 @@ import './ui/styles.css';
 import './ui/nepos2.css';
 import { initShell, refreshAll } from './ui/shell.js';
 import { initRouteList } from './ui/route-list.js';
+import { initOrgsPage } from './ui/orgs-page.js';
 import { initProjectUi, openFs } from './ui/project-ui.js';
 
 initShell();
 initRouteList();
+initOrgsPage();
 
 // Development only: /?sample opens an in-memory sample project, so the screens can be checked
 // without the browser's folder picker. Never active in a production build.
