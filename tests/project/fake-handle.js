@@ -28,12 +28,21 @@ export class FakeFile {
 }
 
 export class FakeDir {
-  /** @param {string} [name] */
-  constructor(name = '') {
+  /**
+   * @param {string} [name]
+   * @param {{ caseInsensitive?: boolean }} [opts] behave like Windows: names match regardless of case
+   */
+  constructor(name = '', { caseInsensitive = false } = {}) {
     this.kind = 'directory';
     this.name = name;
-    /** @type {Map<string, any>} */
+    this.caseInsensitive = caseInsensitive;
+    /** @type {Map<string, any>} key is the name, lower-cased when case-insensitive */
     this.children = new Map();
+  }
+
+  /** @param {string} name */
+  key(name) {
+    return this.caseInsensitive ? name.toLowerCase() : name;
   }
 
   /**
@@ -41,14 +50,14 @@ export class FakeDir {
    * @param {{ create?: boolean }} [opts]
    */
   async getDirectoryHandle(name, { create = false } = {}) {
-    const child = this.children.get(name);
+    const child = this.children.get(this.key(name));
     if (child) {
       if (child.kind !== 'directory') throw mismatch(name);
       return child;
     }
     if (!create) throw notFound(name);
-    const dir = new FakeDir(name);
-    this.children.set(name, dir);
+    const dir = new FakeDir(name, { caseInsensitive: this.caseInsensitive });
+    this.children.set(this.key(name), dir);
     return dir;
   }
 
@@ -57,18 +66,23 @@ export class FakeDir {
    * @param {{ create?: boolean }} [opts]
    */
   async getFileHandle(name, { create = false } = {}) {
-    const child = this.children.get(name);
+    const child = this.children.get(this.key(name));
     if (child) {
       if (child.kind !== 'file') throw mismatch(name);
       return child;
     }
     if (!create) throw notFound(name);
     const file = new FakeFile(name);
-    this.children.set(name, file);
+    this.children.set(this.key(name), file);
     return file;
   }
 
+  /** @param {string} name */
+  async removeEntry(name) {
+    if (!this.children.delete(this.key(name))) throw notFound(name);
+  }
+
   async *entries() {
-    for (const entry of this.children) yield entry;
+    for (const child of this.children.values()) yield [child.name, child];
   }
 }

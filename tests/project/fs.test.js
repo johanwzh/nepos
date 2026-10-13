@@ -59,5 +59,14 @@ for (const [label, make] of Object.entries(implementations)) {
       expect(await readText(fs, 'data/x.json')).toBe('{\n  "a": 1\n}\n');
       expect(await readText(fs, 'missing.json')).toBe(null);
     });
+
+    it('removes a file and ignores removing a missing one', async () => {
+      const fs = make();
+      await fs.writeBytes('data/routes/10.txt', new Uint8Array([1]));
+      await fs.remove('data/routes/10.txt');
+      expect(await fs.readBytes('data/routes/10.txt')).toBe(null);
+      await fs.remove('data/routes/10.txt');
+      await fs.remove('nowhere/x.txt');
+    });
   });
 }
