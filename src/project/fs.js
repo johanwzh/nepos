@@ -8,6 +8,7 @@
  *   writeBytes(path: string, bytes: Uint8Array): Promise<void>,
  *   list(dirPath: string): Promise<{ name: string, kind: 'file' | 'directory' }[]>,
  *   mkdir(dirPath: string): Promise<void>,
+ *   remove(path: string): Promise<void>,
  * }} ProjectFs
  */
 
@@ -92,6 +93,10 @@ export function createMemoryFs(files = {}) {
     async mkdir(dirPath) {
       addDir(dirPath);
     },
+    /** @param {string} path */
+    async remove(path) {
+      store.delete(parts(path).join('/'));
+    },
     /** @param {string} dirPath */
     async list(dirPath) {
       const dir = parts(dirPath).join('/');
@@ -156,6 +161,15 @@ export function createHandleFs(root) {
     },
     async mkdir(dirPath) {
       await dirHandle(parts(dirPath), true);
+    },
+    async remove(path) {
+      const p = parts(path);
+      const name = p.pop();
+      try {
+        await (await dirHandle(p, false)).removeEntry(name);
+      } catch (e) {
+        if (!isMissing(e)) throw e;
+      }
     },
     async list(dirPath) {
       let dir;
