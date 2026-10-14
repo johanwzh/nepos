@@ -269,6 +269,7 @@ export function initShell() {
   document.addEventListener('keydown', (e) => {
     const tag = /** @type {HTMLElement} */ (e.target).tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (document.querySelector('dialog[open]')) return; // nothing changes behind a window
     if (e.key === 'F2') {
       e.preventDefault();
       if (curPage !== 'edit') {

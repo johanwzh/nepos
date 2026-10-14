@@ -47,3 +47,36 @@ export async function lookupQuays(ids, { baseUrl, clientName, fetch: doFetch = (
   }
   return result;
 }
+
+/**
+ * @typedef {{ id: string, name: string, description: string, mode: string,
+ *             quays: { quayId: string, publicCode: string, description: string, lat: number | null, lon: number | null }[] }} StopPlace
+ */
+
+/**
+ * One stop place with its Quays (spec §7.1: drilling from a stop place to the Quays).
+ * @param {string} id NSR StopPlace ID
+ * @param {{ baseUrl: string, clientName: string, fetch?: (url: string, init?: any) => Promise<any> }} opts
+ * @returns {Promise<StopPlace | null>} null when NSR does not know the stop place
+ */
+export async function getStopPlace(id, { baseUrl, clientName, fetch: doFetch = (url, init) => fetch(url, init) }) {
+  const res = await doFetch(`${baseUrl.replace(/\/$/, '')}/stop-places/${id}`, {
+    headers: { 'ET-Client-Name': clientName, Accept: 'application/json' },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`NSR answered ${res.status}`);
+  const place = await res.json();
+  return {
+    id: place.id,
+    name: place.name?.value ?? '',
+    description: place.description?.value ?? '',
+    mode: String(place.transportMode ?? '').toLowerCase(),
+    quays: (place.quays?.quayRefOrQuay ?? []).filter((/** @type {any} */ q) => q.id).map((/** @type {any} */ q) => ({
+      quayId: q.id,
+      publicCode: q.publicCode ?? '',
+      description: q.description?.value ?? '',
+      lat: q.centroid?.location?.latitude ?? null,
+      lon: q.centroid?.location?.longitude ?? null,
+    })),
+  };
+}

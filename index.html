@@ -83,7 +83,7 @@
               <span class="panel-close" id="close-right" title="F6">✕</span>
             </div>
             <div id="map-inner">
-              <div id="leaflet-map"></div>
+              <div id="leaflet-map" class="n2-tiles"></div>
               <div class="map-hint-overlay"><div class="map-hint" data-lk="mapHint"></div></div>
               <div class="n2-map-missing" id="map-missing" hidden></div>
             </div>
@@ -186,6 +186,7 @@
         <div class="gci" id="gc-sep"></div>
         <div class="gcs"></div>
         <div class="gci" id="gc-stopid" data-lk="ctxStopId"></div>
+        <div class="gci" id="gc-findstop" data-lk="ctxFindStop"></div>
       </div>
       <div id="gctx-dc">
         <div class="gci" id="gc-dc-note" data-lk="ctxNote"></div>
@@ -195,6 +196,22 @@
     <dialog class="n2-dialog" id="msg-dlg">
       <p id="msg-text"></p>
       <div class="n2-actions"><button class="pop-btn primary" id="msg-close" data-lk="close"></button></div>
+    </dialog>
+
+    <dialog id="ws-dlg" class="n2-dialog n2-ws">
+      <div class="n2-ws-head">
+        <strong data-lk="wsTitle"></strong>
+        <button class="pop-btn" id="ws-close" data-lk="close"></button>
+      </div>
+      <div class="n2-ws-body">
+        <div class="n2-ws-left">
+          <input type="text" id="ws-q" autocomplete="off" spellcheck="false">
+          <label class="n2-check"><input type="checkbox" id="ws-only-mode"> <span id="ws-only-mode-label"></span></label>
+          <div class="n2-ws-status" id="ws-status"></div>
+          <div class="n2-ws-list" id="ws-list"></div>
+        </div>
+        <div class="n2-ws-map n2-tiles" id="ws-map"></div>
+      </div>
     </dialog>
 
     <dialog class="n2-dialog" id="new-dlg">
