@@ -6,6 +6,7 @@ import { t, setLang } from '../i18n/strings.js';
 import { writeSettings } from '../project/settings.js';
 import { writeProjectName } from '../project/meta.js';
 import { VERSION } from '../version.js';
+import { applyColourTheme } from './theme.js';
 
 /** @param {string} id */
 export const $ = (id) => /** @type {any} */ (document.getElementById(id));
@@ -66,7 +67,7 @@ function resolvedTheme() {
 export function applyTheme() {
   const theme = resolvedTheme();
   document.documentElement.setAttribute('data-theme', theme);
-  $('btn-theme').textContent = theme === 'light' ? t('darkMode') : t('lightMode');
+  applyColourTheme(); // a custom colour theme follows light/dark
 }
 
 // ─── Language ───────────────────────────────────────────────────────────────
@@ -77,7 +78,6 @@ export function applyLang() {
     const value = t(/** @type {HTMLElement} */ (el).dataset.lk);
     if (typeof value === 'string') el.textContent = value;
   });
-  $('btn-lang').textContent = app.settings.lang === 'no' ? 'EN' : 'NO';
   applyTheme();
 }
 
@@ -207,16 +207,6 @@ export function currentPage() {
 export function initShell() {
   $('el-ver').textContent = `v${VERSION}`;
 
-  $('btn-theme').addEventListener('click', () => {
-    app.settings.theme = resolvedTheme() === 'light' ? 'dark' : 'light';
-    applyTheme();
-    runAction(persistSettings);
-  });
-  $('btn-lang').addEventListener('click', () => {
-    app.settings.lang = app.settings.lang === 'no' ? 'en' : 'no';
-    refreshAll();
-    runAction(persistSettings);
-  });
 
   $('delivery-btn').addEventListener('click', () => {
     if (!app.meta) return;

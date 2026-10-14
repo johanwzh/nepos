@@ -462,8 +462,6 @@ export function initRouteEditor() {
   onRefresh(renderEditor);
   onGridChange(markDirty);
   setBeforeLeave(confirmLeave);
-  $('btn-new-route').disabled = false;
-  $('btn-new-route').onclick = () => newRoute($('btn-new-route'));
   // Document and window listeners only once, also when tests reload the page markup.
   if (listenersWired) return;
   listenersWired = true;

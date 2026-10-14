@@ -7,7 +7,7 @@ import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid, grid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
-import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
+import { initRouteEditor, selectRoute, newRoute } from '../../src/ui/route-editor.js';
 import { createMemoryFs, readText } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute, readRoute } from '../../src/project/routes.js';
@@ -97,7 +97,7 @@ describe('route editor', () => {
   });
 
   it('creates a new route with a UUID as its ID and opens it', async () => {
-    document.getElementById('btn-new-route').click();
+    await newRoute(); // "Ny linje" in the Linjer menu
     await flush();
     expect(app.activeRoute).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(await readRoute(fs, /** @type {string} */ (app.activeRoute))).toContain('#RUT;-1;;');

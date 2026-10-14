@@ -18,9 +18,11 @@ import { initMapPanel } from './ui/map-panel.js';
 import { initWorkbench, setWorkbenchMap } from './ui/workbench.js';
 import { createWorkbenchMap } from './ui/workbench-map.js';
 import { initOrgRegister } from './ui/org-register.js';
+import { initMenus } from './ui/menus.js';
 
 initShell();
 initOrgRegister({ fetchOnStart: true });
+initMenus();
 initRouteList();
 initOrgsPage();
 initAssetsNav();
