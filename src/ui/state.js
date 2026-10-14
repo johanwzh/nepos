@@ -30,6 +30,10 @@ export const app = {
   orgRegisterStatus: 'idle',
   /** @type {{ changed: string[], missing: string[] }} found by the last register refresh */
   orgChanges: { changed: [], missing: [] },
+  /** @type {string | null} the calendar shown in the calendar editor */
+  calendarSelected: null,
+  /** @type {number} the year shown in the calendar editor (0 = the calendar's first year) */
+  calendarYear: 0,
   /** @type {'orgs' | 'brandings' | 'calendars'} the section shown on Ressurser */
   assetsSection: 'orgs',
   /** @type {import('../project/open.js').RouteEntry[]} */

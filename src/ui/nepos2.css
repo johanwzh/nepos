@@ -212,3 +212,11 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .yv-day.on { background: #fff35a; color: #1a1a1a; }
 .yv-day.pending { outline: 2px solid var(--accent); }
 .yv-hol { font-size: 10px; color: var(--text-m); padding: 2px 6px; }
+
+.cal-page { display: flex; gap: 16px; align-items: flex-start; }
+.cal-list { width: 220px; flex-shrink: 0; }
+.cal-item { padding: 4px 8px; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; gap: 6px; }
+.cal-item.active { background: var(--accent-bg); font-weight: 600; }
+.cal-editor { flex: 1; min-width: 0; }
+.cal-toolbar { display: flex; gap: 8px; align-items: center; margin: 6px 0 10px; }
+.cal-year { min-width: 3em; text-align: center; }
