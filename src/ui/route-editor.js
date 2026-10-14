@@ -11,7 +11,7 @@ import { parseERN } from '../core/ern/parse.js';
 import { serializeERN } from '../core/ern/serialize.js';
 import { ERN_MODES } from '../core/ern/modes.js';
 import { checkRouteFile } from '../core/integrity/check.js';
-import { orgRole, validateOrgs } from '../core/orgs.js';
+import { orgRole, orgNameList } from '../core/orgs.js';
 import { nextRouteCode, compareRouteCodes } from '../core/route-codes.js';
 import { yyyymmddToInput, inputToYyyymmdd } from '../core/footnotes.js';
 import { writeRoute, deleteRoute as deleteRouteFile } from '../project/routes.js';
@@ -49,9 +49,9 @@ function switchPeriodDir(perId, dirId, { store = true } = {}) {
 
 let saving = false;
 
-/** The organisation list to name organisations with, unless it has unsaved invalid edits. */
+/** The project's organisations as id + name, one per role (the picker comes in plan 4a Task 7). */
 function trustedOrgs() {
-  return app.orgsStatus === 'not-saved' || validateOrgs(app.orgs).length ? [] : app.orgs;
+  return orgNameList(app.orgs);
 }
 
 /**

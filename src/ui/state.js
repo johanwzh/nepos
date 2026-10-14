@@ -12,12 +12,16 @@ export const app = {
   meta: null,
   /** @type {Record<string, any>} */
   settings: { ...DEFAULT_SETTINGS },
-  /** @type {{ id: string, name: string }[]} */
+  /** @type {import('../core/orgs.js').Company[]} the project's copy of the organisations in use */
   orgs: [],
   /** @type {null | 'unreadable'} */
   orgsError: null,
-  /** @type {'' | 'saved' | 'not-saved'} save state shown on the organisations page */
-  orgsStatus: '',
+  /** @type {{ companies: import('../core/orgs.js').Company[], fetchedAt: string } | null} Entur's register (browser cache) */
+  orgRegister: null,
+  /** @type {'idle' | 'loading' | 'ok' | 'failed'} */
+  orgRegisterStatus: 'idle',
+  /** @type {{ changed: string[], missing: string[] }} found by the last register refresh */
+  orgChanges: { changed: [], missing: [] },
   /** @type {import('../project/open.js').RouteEntry[]} */
   routes: [],
   /** @type {{ fileName: string, problem: string, rename: string | null }[]} */

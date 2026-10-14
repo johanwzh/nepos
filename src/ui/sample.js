@@ -15,8 +15,8 @@ const crlf = (/** @type {string[]} */ lines) => lines.join('\r\n') + '\r\n';
  */
 const route = (code, name, stops) => [
   `#RUT;-1;${code};${name};;1;`,
-  '#SEK;TST:Authority:1;Eksempel fylkeskommune;1;0;0;0',
-  '#SEK;TST:Operator:1;Eksempel Buss AS;0;1;0;0',
+  '#SEK;NOG:Authority:aaaaaaaaaa1;Eksempel fylkeskommune;1;0;0;0',
+  '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0',
   '#CUR;neposcoin;1',
   `#TRA;${code}`,
   '#PER;Vinter;20260101;20260630;;;',
@@ -38,9 +38,12 @@ const BAD_NAME = crlf(['#LEV;Eksempelprosjekt;TST', ...route('40', 'Jernbanetorg
 export async function createSampleFs() {
   const fs = createMemoryFs();
   await createProject(fs, { name: 'Eksempelprosjekt', codespace: 'TST' });
+  const contact = (url = '', phone = '') => ({ email: '', phone, url });
   await writeOrgs(fs, [
-    { id: 'TST:Authority:1', name: 'Eksempel fylkeskommune' },
-    { id: 'TST:Operator:1', name: 'Eksempel Buss AS' },
+    { organisationId: '22', companyNumber: '991609407', name: 'Eksempel fylkeskommune', legalName: 'EKSEMPEL FYLKESKOMMUNE', tradingName: '',
+      authority: { id: 'NOG:Authority:aaaaaaaaaa1', version: '3', contact: contact('https://fylke.example'), alias: '' }, operator: null },
+    { organisationId: '135', companyNumber: '938358907', name: 'Eksempel Buss AS', legalName: 'EKSEMPEL BUSS AS', tradingName: 'Eksempel Buss',
+      authority: null, operator: { id: 'NOG:Operator:bbbbbbbbbb2', version: '1', contact: contact('', '61245400'), alias: '' } },
   ]);
   await fs.writeBytes('data/routes/10.txt', encodeWin1252(OK));
   await fs.writeBytes('data/routes/20.txt', encodeWin1252(OUTDATED));

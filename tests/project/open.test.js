@@ -24,7 +24,7 @@ describe('openProject', () => {
     const opened = await openProject(fs);
     expect(opened.ok).toBe(true);
     if (!opened.ok) return;
-    expect(opened.meta).toEqual({ formatVersion: 1, name: 'Test', codespace: 'TST' });
+    expect(opened.meta).toEqual({ formatVersion: 1, name: 'Test', codespace: 'TST', orgExportMode: 'codespace' });
     expect(opened.routes.map((r) => [r.code, r.status])).toEqual([['10', 'outdated'], ['20', 'ok']]);
     expect(opened.summary).toEqual({ ok: 1, outdated: 1, damaged: 0 });
     expect(opened.migrated).toBe(false);

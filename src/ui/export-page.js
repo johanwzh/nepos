@@ -4,7 +4,7 @@ import { app } from './state.js';
 import { $, onRefresh, refreshAll, runAction, beforeLeave, persistSettings, showMessage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { parseERN } from '../core/ern/parse.js';
-import { validateOrgs } from '../core/orgs.js';
+import { orgNameList } from '../core/orgs.js';
 import { checkForExport } from '../core/export-check.js';
 import { buildNeTExFiles } from '../core/netex/export.js';
 import { writeExport } from '../project/export.js';
@@ -74,9 +74,8 @@ async function runCheck() {
     status: r.status,
     rs: r.status === 'damaged' ? null : parseERN(r.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) }),
   }));
-  const orgsProblem = app.orgsError ? 'unreadable'
-    : app.orgsStatus === 'not-saved' || validateOrgs(app.orgs).length ? 'not-saved' : '';
-  const issues = checkForExport({ routes, orgs: app.orgs, orgsProblem, quayInfo, changedOnDisk });
+  const orgsProblem = app.orgsError ? 'unreadable' : '';
+  const issues = checkForExport({ routes, orgs: orgNameList(app.orgs), orgsProblem, quayInfo, changedOnDisk });
   result = { fs, issues };
   refreshAll(); // the route list shows the files as they are now
   return { routes: routes.map(({ code, rs }) => ({ code, rs })), issues };
@@ -90,7 +89,7 @@ async function runExport() {
     setStatus(t('exportBlocked'), true);
     return;
   }
-  const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: app.orgs });
+  const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: orgNameList(app.orgs) });
   const asZip = app.settings.exportAsZip !== false;
   let written = '';
   const ok = await runAction(async () => { written = await writeExport(fs, files, { codespace: meta.codespace, asZip }); });

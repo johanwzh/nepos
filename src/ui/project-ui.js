@@ -39,7 +39,7 @@ export async function openFs(fs, { handle = null, sample = false } = {}) {
     fs, handle, sampleMode: sample,
     meta: result.meta, settings: result.settings,
     orgs: result.orgs, orgsError: result.orgsError,
-    routes: result.routes, activeRoute: null, routeState: null, dirty: false, orgsStatus: '',
+    routes: result.routes, activeRoute: null, routeState: null, dirty: false,
     fileNameProblems: await findFileNameProblems(fs),
   });
   pendingNotes = [];

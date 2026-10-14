@@ -45,12 +45,6 @@ describe('organisations file', () => {
     expect(await readOrgs(createMemoryFs({ 'data/orgs.json': '[{"id":' }))).toEqual({ orgs: [], error: 'unreadable' });
     expect(await readOrgs(createMemoryFs({ 'data/orgs.json': '{"id":"x"}' }))).toEqual({ orgs: [], error: 'unreadable' });
   });
-
-  it('round-trips the list', async () => {
-    const fs = createMemoryFs();
-    await writeOrgs(fs, [{ id: 'RUT:Authority:1', name: 'Ruter' }]);
-    expect(await readOrgs(fs)).toEqual({ orgs: [{ id: 'RUT:Authority:1', name: 'Ruter' }], error: null });
-  });
 });
 
 describe('backup names', () => {

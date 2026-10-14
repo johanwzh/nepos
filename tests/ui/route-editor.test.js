@@ -13,6 +13,7 @@ import { createProject } from '../../src/project/create.js';
 import { writeRoute, readRoute } from '../../src/project/routes.js';
 import { writeOrgs } from '../../src/project/orgs-store.js';
 import { sample } from '../fixtures/sample-project.js';
+import { projectCopy } from '../fixtures/orgs.js';
 import { parseERN } from '../../src/core/ern/parse.js';
 import { serializeERN } from '../../src/core/ern/serialize.js';
 
@@ -36,7 +37,7 @@ beforeEach(async () => {
   window.prompt = vi.fn(() => null);
   fs = createMemoryFs();
   await createProject(fs, { name: 'Test', codespace: 'TST' });
-  await writeOrgs(fs, [{ id: 'TST:Operator:3', name: 'Kystbuss AS' }]);
+  await writeOrgs(fs, projectCopy());
   await writeRoute(fs, '20', route20);
   await writeRoute(fs, '30', damaged30);
   await openFs(fs);
@@ -101,19 +102,6 @@ describe('route editor', () => {
     expect(await selectRoute('30')).toBe(true);
     expect(await readRoute(fs, '20')).toContain('#TRC;0;0815;');
     expect(app.activeRoute).toBe('30');
-  });
-
-  it('does not write unsaved invalid organisation edits into a route', async () => {
-    await selectRoute('20');
-    app.orgs = [{ id: '3', name: 'Ugyldig navn' }]; // matches the route's #SEK, but is not a valid ID
-    app.orgsStatus = 'not-saved';
-    typeKeys('0820');
-    press('Enter');
-    document.getElementById('ef-save').click();
-    await flush();
-    const text = await readRoute(fs, '20');
-    expect(text).not.toContain('Ugyldig navn');
-    expect(text).toContain('#SEK;3;Kystbuss AS;0;1;0;0');
   });
 
   it('creates a new route with the next number and opens it', async () => {
@@ -243,12 +231,4 @@ describe('route editor — review fixes', () => {
     expect(cellTime(0, 0)).toBe('0930');
   });
 
-  it('offers no organisations while the organisation list has unsaved invalid edits', async () => {
-    await selectRoute('20');
-    app.orgs = [{ id: 'TST:Operator:9', name: 'Ny' }, { id: 'bad', name: 'Ugyldig' }];
-    app.orgsStatus = 'not-saved';
-    app.dirty = false;
-    document.getElementById('btn-lang').click(); // any refresh
-    expect(document.getElementById('ef-add-org')).toBe(null);
-  });
 });

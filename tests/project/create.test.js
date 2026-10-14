@@ -6,9 +6,9 @@ describe('createProject', () => {
   it('creates the data/ and private/ structure with format version 1', async () => {
     const fs = createMemoryFs();
     const result = await createProject(fs, { name: 'Kystruter', codespace: 'abc' });
-    expect(result).toEqual({ ok: true, meta: { formatVersion: 1, name: 'Kystruter', codespace: 'ABC' } });
-    expect(JSON.parse(await readText(fs, 'data/nepos-project.json'))).toEqual({ formatVersion: 1, name: 'Kystruter', codespace: 'ABC' });
-    expect(JSON.parse(await readText(fs, 'data/orgs.json'))).toEqual([]);
+    expect(result).toEqual({ ok: true, meta: { formatVersion: 1, name: 'Kystruter', codespace: 'ABC', orgExportMode: 'codespace' } });
+    expect(JSON.parse(await readText(fs, 'data/nepos-project.json'))).toEqual({ formatVersion: 1, name: 'Kystruter', codespace: 'ABC', orgExportMode: 'codespace' });
+    expect(JSON.parse(await readText(fs, 'data/orgs.json'))).toEqual({ companies: [] });
     expect(await fs.list('data')).toEqual([
       { name: 'backups', kind: 'directory' },
       { name: 'nepos-project.json', kind: 'file' },
@@ -21,7 +21,7 @@ describe('createProject', () => {
   it('puts no personal data in the project file', async () => {
     const fs = createMemoryFs();
     await createProject(fs, { name: 'X', codespace: 'ABC' });
-    expect(Object.keys(JSON.parse(await readText(fs, 'data/nepos-project.json'))).sort()).toEqual(['codespace', 'formatVersion', 'name']);
+    expect(Object.keys(JSON.parse(await readText(fs, 'data/nepos-project.json'))).sort()).toEqual(['codespace', 'formatVersion', 'name', 'orgExportMode']);
   });
 
   it('refuses a bad codespace and writes nothing', async () => {
@@ -40,5 +40,12 @@ describe('createProject', () => {
   it('treats a folder with only system files as empty', async () => {
     const fs = createMemoryFs({ 'desktop.ini': '', 'Thumbs.db': '', '.DS_Store': '' });
     expect((await createProject(fs, { name: 'X', codespace: 'ABC' })).ok).toBe(true);
+  });
+
+  it('starts with an empty organisation copy and the codespace export mode', async () => {
+    const fs = createMemoryFs();
+    const r = await createProject(fs, { name: 'X', codespace: 'TST' });
+    expect(r.ok && r.meta.orgExportMode).toBe('codespace');
+    expect(JSON.parse(await readText(fs, 'data/orgs.json'))).toEqual({ companies: [] });
   });
 });
