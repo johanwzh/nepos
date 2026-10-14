@@ -12,6 +12,8 @@ import { currentPage, showMessage } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
 import { fnById, footnoteSummary, openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
+import { interpolateTime, extrapolateTime, speedUnit, toKmh } from '../core/interpolate.js';
+import { app } from './state.js';
 
 /** The grid being edited: one period × direction of the open route. */
 export const grid = {
@@ -28,6 +30,20 @@ let onChange = () => {};
 /** Called whenever the grid differs from what was loaded or last saved. @param {() => void} fn */
 export function onGridChange(fn) {
   onChange = fn;
+}
+
+/** @type {(() => void)[]} */
+const renderListeners = [];
+
+/** Called after every grid render (the map follows the selected trip). @param {() => void} fn */
+export function onGridRender(fn) {
+  renderListeners.push(fn);
+}
+
+/** Where a stop is, from the NSR lookups. @param {any} stop @returns {[number, number] | null} */
+function posOf(stop) {
+  const info = stop?.stopId == null ? null : quayInfo.get(String(stop.stopId));
+  return info?.lat != null && info.lon != null ? [info.lon, info.lat] : null;
 }
 
 let ancR = 0, ancC = 0, endR = 0, endC = 0;
@@ -280,6 +296,7 @@ export function render() {
   renderBottomRow(tbl);
   updateFnPreview(inDC ? { type: 'col', ri: 0, ci: dcCol } : inStopCol ? null : { type: 'cell', ri: ancR, ci: ancC });
   if (snapshot() !== baseline) onChange();
+  for (const fn of renderListeners) fn();
 }
 
 /** @param {string} label @param {string} cls @param {string} title @param {() => void} fn */
@@ -723,6 +740,11 @@ function showCtx(x, y, isDC = false) {
     $('gc-ix-g').className = 'gci' + (timed && !withIx ? '' : ' dis');
     $('gc-ix-s').className = 'gci' + (timed && !withIx ? '' : ' dis');
     $('gc-ix-del').className = 'gci red' + (withIx ? '' : ' dis');
+    // Filling a time: only an empty cell, and only with positions (1.5.7).
+    const empty = !cell || !cell.time;
+    $('gc-interp').className = 'gci' + (empty && interpolateTime(grid, ctxC, ctxR, posOf) ? '' : ' dis');
+    $('gc-extrap-fwd').className = 'gci' + (empty && extrapolateTime(grid, ctxC, ctxR, 'fwd', 1, posOf) ? '' : ' dis');
+    $('gc-extrap-bwd').className = 'gci' + (empty && extrapolateTime(grid, ctxC, ctxR, 'bwd', 1, posOf) ? '' : ' dis');
   } else if (isStop) {
     const stop = grid.stops[ctxStopRow];
     $('gc-bold').textContent = (stop.bold ? '✓ ' : '    ') + t('ctxBold');
@@ -816,6 +838,28 @@ export function initGrid() {
     }
     render();
   });
+  /** @param {(r: number, c: number) => any} compute */
+  const fill = (compute) => {
+    hideCtx();
+    if (grid.readOnly || ctxC < 0 || ctxC >= grid.cols.length) return;
+    const existing = grid.cols[ctxC].cells[ctxR];
+    if (existing && existing.time) return; // never overwrite a time
+    const result = compute(ctxR, ctxC);
+    if (!result) return;
+    grid.cols[ctxC].cells[ctxR] = result;
+    render();
+  };
+  /** @param {'fwd' | 'bwd'} direction */
+  const extrapolate = (direction) => fill((r, c) => {
+    const unit = speedUnit(app.routeState?.transportMode ?? 0);
+    const answer = prompt(t('speedPrompt', unit), unit === 'knots' ? '9' : '50');
+    if (answer === null) return null;
+    const value = parseFloat(answer.replace(',', '.'));
+    return extrapolateTime(grid, c, r, direction, toKmh(value, unit), posOf);
+  });
+  $('gc-interp').addEventListener('click', () => fill((r, c) => interpolateTime(grid, c, r, posOf)));
+  $('gc-extrap-fwd').addEventListener('click', () => extrapolate('fwd'));
+  $('gc-extrap-bwd').addEventListener('click', () => extrapolate('bwd'));
   $('gc-ix-g').addEventListener('click', () => { hideCtx(); if (hasTime(ctxR, ctxC)) enterIx(ctxR, ctxC, 'guaranteed'); });
   $('gc-ix-s').addEventListener('click', () => { hideCtx(); if (hasTime(ctxR, ctxC)) enterIx(ctxR, ctxC, 'stayseated'); });
   $('gc-ix-del').addEventListener('click', () => {

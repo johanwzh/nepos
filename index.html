@@ -83,7 +83,9 @@
               <span class="panel-close" id="close-right" title="F6">✕</span>
             </div>
             <div id="map-inner">
+              <div id="leaflet-map"></div>
               <div class="map-hint-overlay"><div class="map-hint" data-lk="mapHint"></div></div>
+              <div class="n2-map-missing" id="map-missing" hidden></div>
             </div>
           </div>
         </div>
@@ -168,6 +170,10 @@
       <div id="gctx-time">
         <div class="gci" id="gc-clear" data-lk="ctxClear"></div>
         <div class="gci" id="gc-offset" data-lk="ctxOffset"></div>
+        <div class="gcs"></div>
+        <div class="gci" id="gc-interp" data-lk="ctxInterp"></div>
+        <div class="gci" id="gc-extrap-fwd" data-lk="ctxExtrapFwd"></div>
+        <div class="gci" id="gc-extrap-bwd" data-lk="ctxExtrapBwd"></div>
         <div class="gcs"></div>
         <div class="gci" id="gc-ix-g" data-lk="ctxIxGuaranteed"></div>
         <div class="gci" id="gc-ix-s" data-lk="ctxIxStaySeated"></div>

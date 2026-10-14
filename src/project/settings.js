@@ -9,6 +9,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   geocoderUrl: 'https://api.entur.io/geocoder/v3',
   stopPlacesUrl: 'https://api.entur.io/stop-places/v1/read',
   exportAsZip: true,
+  // Map background: any raster tile URL with {z}/{x}/{y}. CARTO's free basemaps need an API key now.
+  tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  tileAttribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 });
 
 /** @type {Record<string, string[]>} */

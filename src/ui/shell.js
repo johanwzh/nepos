@@ -148,6 +148,19 @@ const panels = {
   right: { el: null, rz: null, w: 300, open: false },
 };
 
+/** @type {(() => void)[]} */
+const panelListeners = [];
+
+/** @param {'left' | 'right'} side */
+export function panelOpen(side) {
+  return panels[side].open;
+}
+
+/** Called after a side panel opens or closes. @param {() => void} fn */
+export function onPanelToggle(fn) {
+  panelListeners.push(fn);
+}
+
 /** @param {'left' | 'right'} side */
 function applyPanel(side) {
   const p = panels[side];
@@ -161,6 +174,7 @@ function applyPanel(side) {
 function togglePanel(side) {
   panels[side].open = !panels[side].open;
   applyPanel(side);
+  for (const fn of panelListeners) fn();
 }
 
 // ─── Pages (F2 / F3 / F4) ───────────────────────────────────────────────────
