@@ -851,6 +851,13 @@ function deleteRow(ri) {
 let documentWired = false;
 
 export function initGrid() {
+  // Clicks in the grid prevent the default (no text selection), so they never move focus: take the
+  // keyboard back from a field outside the grid (the map pane's search box) here.
+  document.addEventListener('mousedown', (e) => {
+    const target = /** @type {HTMLElement} */ (e.target);
+    const el = document.activeElement;
+    if (target.closest?.('#tbl') && el instanceof HTMLElement && el !== document.body && !el.closest('#tbl')) el.blur();
+  }, true);
   // Page-wide listeners only once, also when tests reload the page markup; the menu items below
   // belong to the markup and are wired on every call.
   if (!documentWired) {

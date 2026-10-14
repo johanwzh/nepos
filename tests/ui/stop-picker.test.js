@@ -220,3 +220,39 @@ describe('browsing the map', () => {
     }
   });
 });
+
+describe('stop picking review fixes', () => {
+  it('applies the candidate on Enter after a click, wherever the keyboard is (review I1)', async () => {
+    pickRow(3);
+    await search('Skøyen');
+    rows()[0].click();
+    await settle();
+    q().blur();
+    press('Enter');
+    expect(grid.stops[3].stopId).toBe('NSR:Quay:55');
+  });
+
+  it('gives the keyboard back to the grid when the grid is clicked (review I1)', async () => {
+    pickRow(3);
+    q().focus();
+    expect(document.activeElement).toBe(q());
+    pickRow(0);
+    expect(document.activeElement).not.toBe(q());
+  });
+
+  it('never applies an old candidate after new text is typed (review I2)', async () => {
+    pickRow(3);
+    await search('Skøyen');
+    rows()[0].click();
+    await settle();
+    q().value = 'Lysaker';
+    q().dispatchEvent(new Event('input'));
+    press('Enter', q());
+    expect(grid.stops[3].stopId).toBe(null);
+  });
+
+  it('points unlinked stops at the map pane, not the removed menu item', () => {
+    expect(nameCell(3).title).not.toContain('Finn stopp');
+    expect(nameCell(3).title).toContain('F6');
+  });
+});

@@ -318,9 +318,28 @@ export function initStopPicker() {
     else if (state.direct && q.value.trim() === state.direct.quayId && state.direct.info !== undefined) applyDirect();
     else void search();
   });
-  q.addEventListener('input', schedule);
+  q.addEventListener('input', () => {
+    // New text: the old candidate must never be applied by an Enter before the search answers.
+    if (state.candidate || state.direct) { state.candidate = null; state.direct = null; render(); }
+    schedule();
+  });
   $('sp-only-mode').addEventListener('change', render);
   $('sp-clear').addEventListener('click', () => { if (state.row != null) { clearStopOnRow(state.row); render(); } });
   onGridRender(followRow);
   onRefresh(followRow);
+  if (!keysWired) {
+    keysWired = true;
+    // Capture phase: before the grid, which would otherwise start editing the row's name.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || !state.candidate || state.row == null || $('sp')?.hidden) return;
+      const el = document.activeElement;
+      if (el === $('sp-q') || document.querySelector('dialog[open]')) return; // the box handles its own Enter
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) return;
+      e.preventDefault();
+      e.stopPropagation();
+      apply();
+    }, true);
+  }
 }
+
+let keysWired = false;
