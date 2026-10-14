@@ -85,3 +85,7 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .n2-issue-where { flex: none; white-space: nowrap; font-size: 10px; color: var(--text-f); }
 .n2-issue-summary { font-size: 11px; color: var(--text-m); margin-bottom: 6px; }
 .n2-issue-ok { color: #28a028; }
+
+/* Map panel: stops without a position, listed under the map (spec §7.3) */
+.n2-map-missing { position: absolute; left: 0; right: 0; bottom: 0; z-index: 600; padding: 6px 8px;
+  font-size: 11px; color: var(--text-m); background: var(--bg-panel); border-top: 1px solid var(--border); }

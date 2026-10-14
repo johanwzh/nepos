@@ -1,5 +1,6 @@
 import './ui/styles.css';
 import './ui/nepos2.css';
+import 'leaflet/dist/leaflet.css';
 import { initShell, refreshAll } from './ui/shell.js';
 import { initRouteList } from './ui/route-list.js';
 import { initOrgsPage } from './ui/orgs-page.js';
@@ -8,6 +9,7 @@ import { initGrid } from './ui/grid.js';
 import { initFootnoteEditor } from './ui/footnote-editor.js';
 import { initRouteEditor } from './ui/route-editor.js';
 import { initExportPage } from './ui/export-page.js';
+import { initMapPanel } from './ui/map-panel.js';
 
 initShell();
 initRouteList();
@@ -16,6 +18,7 @@ initGrid();
 initFootnoteEditor();
 initRouteEditor();
 initExportPage();
+initMapPanel();
 
 // Development only: /?sample opens an in-memory sample project, so the screens can be checked
 // without the browser's folder picker. Never active in a production build.
