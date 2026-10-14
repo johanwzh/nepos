@@ -127,4 +127,46 @@ describe('export page', () => {
     expect(await readText(fs, 'data/routes/50.txt')).toContain('#TRC;0;0705;');
     expect((await fs.list('exports')).length).toBe(1);
   });
+
+  it('runs only one export at a time', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    const write = fs.writeBytes;
+    /** @type {string[]} */
+    const written = [];
+    fs.writeBytes = async (/** @type {string} */ path, /** @type {Uint8Array} */ bytes) => { if (path.startsWith('exports/')) written.push(path); return write(path, bytes); };
+    document.getElementById('btn-netex').click();
+    document.getElementById('btn-netex').click();
+    await settle();
+    expect(written).toHaveLength(1);
+  });
+
+  it('checks the route files as they are on disk now', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    await writeRoute(fs, '50', route('104')); // changed outside Nepos after the project was opened
+    await click('btn-validate');
+    const text = document.getElementById('val-results').textContent;
+    expect(text).toContain('Oslo bussterminal (104)');
+    expect(text).toContain('endret utenfor Nepos');
+  });
+
+  it('says so when the project folder cannot be read', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    fs.list = async () => { throw new Error('folder gone'); };
+    await click('btn-netex');
+    expect(document.getElementById('msg-text').textContent).toContain('folder gone');
+  });
+
+  it('stops when another project is opened during the check', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    const first = fs;
+    let release = () => {};
+    setQuayLookup((ids) => new Promise((resolve) => { release = () => resolve(new Map(ids.map((id) => [id, bus(id)]))); }));
+    document.getElementById('btn-netex').click();
+    await settle();
+    await openProjectWith(route('NSR:Quay:11972')); // a different project folder
+    release();
+    await settle();
+    expect(await first.list('exports')).toEqual([]);
+    expect(await fs.list('exports')).toEqual([]);
+  });
 });
