@@ -99,13 +99,15 @@
           <div class="exp-section">
             <div class="exp-title" data-lk="validateTitle"></div>
             <p class="exp-desc" data-lk="validateDesc"></p>
-            <button class="exp-btn primary" disabled><span class="ico">✓</span><span data-lk="validateBtn"></span></button>
+            <button class="exp-btn primary" id="btn-validate"><span class="ico">✓</span><span data-lk="validateBtn"></span></button>
+            <div class="val-box" id="val-results"></div>
           </div>
           <div class="exp-section">
             <div class="exp-title" data-lk="exportTitle"></div>
             <p class="exp-desc" data-lk="exportDesc"></p>
-            <button class="exp-btn primary" disabled><span class="ico">↓</span><span data-lk="exportNetex"></span></button>
-            <div style="margin-top:8px;font-size:11px;color:var(--text-f)" data-lk="exportLater"></div>
+            <label class="n2-check"><input type="checkbox" id="chk-zip"> <span data-lk="exportAsZip"></span></label>
+            <button class="exp-btn primary" id="btn-netex"><span class="ico">↓</span><span data-lk="exportNetex"></span></button>
+            <div class="assets-status" id="export-status"></div>
           </div>
         </div>
 

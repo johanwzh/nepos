@@ -4,6 +4,7 @@ export const PROJECT_FILE = 'data/nepos-project.json';
 export const ORGS_FILE = 'data/orgs.json';
 export const ROUTES_DIR = 'data/routes';
 export const BACKUPS_DIR = 'data/backups';
+export const EXPORTS_DIR = 'exports'; // generated NeTEx deliveries; can be deleted at any time
 export const SETTINGS_FILE = 'private/settings.json';
 export const SECRETS_FILE = 'private/secrets.json';
 

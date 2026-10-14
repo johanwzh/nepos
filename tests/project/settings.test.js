@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createMemoryFs, readText } from '../../src/project/fs.js';
+import { createMemoryFs, readText, writeJson } from '../../src/project/fs.js';
 import { DEFAULT_SETTINGS, readSettings, writeSettings, readSecrets } from '../../src/project/settings.js';
 import { readOrgs, writeOrgs } from '../../src/project/orgs-store.js';
 import { backupStamp, uniqueBackupPath } from '../../src/project/layout.js';
@@ -70,5 +70,23 @@ describe('organisations file entries', () => {
     for (const bad of ['[null]', '[5]', '[{"name":"x"}]', '[{"id":7,"name":"x"}]', '[{"id":"RUT:Authority:1"}]']) {
       expect(await readOrgs(createMemoryFs({ 'data/orgs.json': bad }))).toEqual({ orgs: [], error: 'unreadable' });
     }
+  });
+});
+
+describe('exportAsZip setting', () => {
+  it('defaults to a ZIP', async () => {
+    const { settings, recovered } = await readSettings(createMemoryFs());
+    expect(settings.exportAsZip).toBe(true);
+    expect(recovered).toBe(false);
+  });
+
+  it('keeps a stored choice and resets a value that is not true or false', async () => {
+    const fs = createMemoryFs();
+    await writeJson(fs, 'private/settings.json', { exportAsZip: false });
+    expect((await readSettings(fs)).settings.exportAsZip).toBe(false);
+    await writeJson(fs, 'private/settings.json', { exportAsZip: 'yes' });
+    const { settings, recovered } = await readSettings(fs);
+    expect(settings.exportAsZip).toBe(true);
+    expect(recovered).toBe(true);
   });
 });

@@ -90,10 +90,11 @@ function currentText() {
 }
 
 /** Ask to save unsaved changes. Resolves false when the user wants to stay. */
-async function confirmLeave() {
+/** @param {string} [reason] */
+async function confirmLeave(reason) {
   commitPending(); // a half-typed time or name counts as a change
   if (!app.dirty) return true;
-  if (!confirm(t('saveBeforeSwitch', app.activeRoute))) return false;
+  if (!confirm(t(reason === 'export' ? 'saveBeforeExport' : 'saveBeforeSwitch', app.activeRoute))) return false;
   return saveRoute();
 }
 
