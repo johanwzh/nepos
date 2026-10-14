@@ -9,10 +9,25 @@ const MONTHS = {
 };
 const HEAD = { no: ['Uke', 'Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'], en: ['Week', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] };
 
-/** @type {{ days: string[], on: boolean } | null} */
+/** @type {{ start: string, days: string[], on: boolean, root: HTMLElement } | null} */
 let drag = null;
 /** @type {((days: string[], on: boolean) => void) | null} */
 let dragDone = null;
+/** Mark the days between the drag's first day and `day` (either direction). @param {string} day */
+function stretchTo(day) {
+  if (!drag) return;
+  const [a, b] = drag.start <= day ? [drag.start, day] : [day, drag.start];
+  /** @type {string[]} */ const days = [];
+  for (let d = a; d <= b; d = addDays(d, 1)) days.push(d);
+  drag.days = days;
+  for (const c of drag.root.querySelectorAll('.yv-day')) c.classList.toggle('pending', days.includes(/** @type {HTMLElement} */ (c).dataset.date ?? ''));
+}
+
+function cancelDrag() {
+  if (drag) for (const c of drag.root.querySelectorAll('.yv-day.pending')) c.classList.remove('pending');
+  drag = null; dragDone = null;
+}
+
 document.addEventListener('mouseup', () => {
   if (!drag || !dragDone) return;
   const { days, on } = drag;
@@ -63,15 +78,18 @@ export function renderYearView(container, { year, active, readOnly = false, lang
       if (name) { cell.classList.add('hol'); cell.title = name; hol.push(`${Number(d.slice(6, 8))}.${m + 1}: ${name}`); }
       if (!readOnly) {
         cell.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return; // only the left button switches days
           e.preventDefault();
           const day = /** @type {string} */ (cell.dataset.date);
-          drag = { days: [day], on: !active.has(day) };
+          drag = { start: day, days: [day], on: !active.has(day), root };
           dragDone = onChange;
           cell.classList.add('pending');
         });
-        cell.addEventListener('mouseover', () => {
-          const day = /** @type {string} */ (cell.dataset.date);
-          if (drag && !drag.days.includes(day)) { drag.days.push(day); cell.classList.add('pending'); }
+        cell.addEventListener('mouseover', (e) => {
+          if (!drag) return;
+          // Released outside the window: the mouseup never came, so the drag ends here.
+          if ((e.buttons & 1) === 0) { cancelDrag(); return; }
+          stretchTo(/** @type {string} */ (cell.dataset.date));
         });
       }
       row.appendChild(cell);

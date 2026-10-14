@@ -36,7 +36,7 @@ describe('calendars page', () => {
     const d1 = `${y}0817`, d2 = `${y}0818`;
     const cell = (/** @type {string} */ d) => /** @type {HTMLElement} */ (body().querySelector(`.yv-day[data-date="${d}"]`));
     cell(d1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    cell(d2).dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    cell(d2).dispatchEvent(new MouseEvent('mouseover', { bubbles: true, buttons: 1 }));
     document.body.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     await flush();
     const saved = JSON.parse(await readText(fs, 'data/calendars.json'));
@@ -100,6 +100,38 @@ describe('calendars page', () => {
     await flush(); await flush();
     expect(await readRoute(fs, 'r1')).toContain('#KAL;c2');
     expect(app.routes[0].text).toContain('#KAL;c2');
+    expect(document.getElementById('msg-text')?.textContent).toContain('r2');
+  });
+});
+
+describe('calendar page review fixes', () => {
+  it('keeps a typed name when the user goes straight to clicking a day', async () => {
+    openSection();
+    /** @type {HTMLElement} */ (body().querySelector('.cal-add')).click();
+    const name = /** @type {HTMLInputElement} */ (body().querySelector('.cal-name'));
+    name.value = 'Vinter';
+    name.dispatchEvent(new Event('input'));
+    const y = body().querySelector('.cal-year')?.textContent;
+    const cell = /** @type {HTMLElement} */ (body().querySelector(`.yv-day[data-date="${y}0817"]`));
+    cell.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    document.body.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    await flush();
+    expect(JSON.parse(await readText(fs, 'data/calendars.json'))[0].name).toBe('Vinter');
+  });
+
+  it('leaves damaged routes alone when replacing a calendar, and says so', async () => {
+    const ok = '#TRA;A\r\n#PER;;;;;;\r\n#KAL;c1\r\n#TAB;0;;;;\r\n', bad = '#TRA;B\r\n#PER;;;;;;\r\n#KAL;c1\r\n#TAB;0;;;;\r\n#KOS;x\r\n';
+    await writeRoute(fs, 'r1', ok);
+    await writeRoute(fs, 'r2', bad);
+    app.routes = [{ code: 'r1', text: ok, status: 'ok', issues: [] }, { code: 'r2', text: bad, status: 'damaged', issues: [] }];
+    app.calendars = [{ id: 'c1', name: 'Gammel', ranges: [] }, { id: 'c2', name: 'Ny', ranges: [] }];
+    app.calendarSelected = 'c1';
+    openSection();
+    /** @type {HTMLElement} */ (body().querySelector('.cal-replace')).click();
+    /** @type {HTMLSelectElement} */ (document.getElementById('cal-replace-to')).value = 'c2';
+    /** @type {HTMLElement} */ (document.getElementById('cal-replace-ok')).click();
+    await flush(); await flush();
+    expect(await readRoute(fs, 'r2')).toBe(bad);
     expect(document.getElementById('msg-text')?.textContent).toContain('r2');
   });
 });

@@ -7,6 +7,7 @@ import { t } from '../i18n/strings.js';
 import { replaceCalendarInErn, replaceCalendarInState } from '../core/calendar-replace.js';
 import { writeRoute } from '../project/routes.js';
 import { checkRouteFile } from '../core/integrity/check.js';
+import { isRouteReadOnly } from './route-editor.js';
 
 /** @type {string | null} */
 let fromId = null;
@@ -31,8 +32,11 @@ async function apply() {
   $('cal-replace-dlg').close();
   let total = 0;
   /** @type {string[]} */ const failed = [];
+  /** @type {string[]} */ const skipped = [];
   for (const r of [...app.routes]) {
     if (r.code === app.activeRoute) continue;
+    // Nepos never edits a damaged file (it opens read-only)
+    if (r.status === 'damaged') { if (replaceCalendarInErn(r.text, old, to).changed) skipped.push(r.code); continue; }
     const { text, changed } = replaceCalendarInErn(r.text, old, to);
     if (!changed) continue;
     try {
@@ -44,11 +48,15 @@ async function apply() {
       failed.push(r.code);
     }
   }
-  if (app.routeState) {
-    const n = replaceCalendarInState(app.routeState, old, to);
-    if (n) { total += n; markDirty(); }
+  if (app.routeState && app.activeRoute) {
+    if (isRouteReadOnly()) { if (app.routeState.periods.some((/** @type {any} */ p) => p.calendarIds.includes(old))) skipped.push(app.activeRoute); }
+    else {
+      const n = replaceCalendarInState(app.routeState, old, to);
+      if (n) { total += n; markDirty(); }
+    }
   }
-  showMessage([t('calReplaceDone', total), failed.length ? t('calReplaceFailed', failed.join(', ')) : ''].filter(Boolean).join('\n'));
+  showMessage([t('calReplaceDone', total), failed.length ? t('calReplaceFailed', failed.join(', ')) : '',
+    skipped.length ? t('calReplaceSkipped', skipped.join(', ')) : ''].filter(Boolean).join('\n'));
   refreshAll();
 }
 

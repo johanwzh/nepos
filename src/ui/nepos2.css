@@ -220,3 +220,4 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .cal-editor { flex: 1; min-width: 0; }
 .cal-toolbar { display: flex; gap: 8px; align-items: center; margin: 6px 0 10px; }
 .cal-year { min-width: 3em; text-align: center; }
+.yv-day.on.sun, .yv-day.on.hol { color: #b00000; }

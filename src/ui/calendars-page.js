@@ -73,6 +73,9 @@ export function renderCalendarsPage() {
     name.placeholder = t('calNamePh');
     name.classList.toggle('invalid', !cal.name.trim());
     name.addEventListener('keydown', (e) => e.stopPropagation());
+    // The name typed so far counts at once: clicking a day re-renders the page before this field
+    // would report a change.
+    name.addEventListener('input', () => { const v = name.value.trim(); if (v) cal.name = v; });
     name.addEventListener('change', () => {
       // A saved name is kept until a new one is typed: blanking it would drop the calendar from
       // the file while periods still use it.

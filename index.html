@@ -238,49 +238,6 @@
       </div>
     </dialog>
 
-**Files:** Modify `index.html` (`<dialog class="n2-dialog" id="ts-dlg">`), `src/ui/table-set-tabs.js`, `src/i18n/strings.js`; Test `tests/ui/table-set-tabs.test.js`
-
-**Interfaces:** The "+" opens `#ts-dlg` with `#ts-dlg-name` (input), radios `name="ts-stops"` values `same` / `reversed` / `empty` (`#ts-stops-same` checked by default), `#ts-dlg-ok`, `#ts-dlg-cancel`. OK with an empty name marks the input `.invalid` and keeps the dialog open; OK otherwise creates the set (`addTableSet(rs, name, { reversed: v === 'reversed' })`, then for `empty` clears the new set's grids' stops) and closes; Cancel/Esc creates nothing. `addTableSet` gains no new parameter (the `empty` case is handled in the UI).
-Strings: `tsDlgTitle` ("Nytt tabellsett" / "New table set"), `tsDlgName` ("Navn (mønsteret)" / "Name (the pattern)"), `tsStopsSame` ("Samme stopp, samme rekkefølge" / "Same stops, same order"), `tsStopsReversed` ("Samme stopp, motsatt rekkefølge" / "Same stops, reverse order"), `tsStopsEmpty` ("Ingen stopp" / "No stops"). Remove `tableSetReversed`.
-
-- [ ] **Step 1: Failing tests** — in `tests/ui/table-set-tabs.test.js` replace the "adds a table set with reversed stops after asking" test with:
-
-```js
-  it('adds a table set through the dialog, with the stops reversed', () => {
-    /** @type {HTMLElement} */ (document.querySelector('.ts-add')).click();
-    expect(/** @type {any} */ (document.getElementById('ts-dlg')).open).toBe(true);
-    /** @type {HTMLInputElement} */ (document.getElementById('ts-dlg-name')).value = 'Florø - Askvoll';
-    /** @type {HTMLInputElement} */ (document.querySelector('input[name="ts-stops"][value="reversed"]')).checked = true;
-    /** @type {HTMLElement} */ (document.getElementById('ts-dlg-ok')).click();
-    expect(app.routeState.tableSets.map((/** @type {any} */ s) => s.name)).toContain('Florø - Askvoll');
-    expect(grid.stops[0].name).toBe('Florø');
-    expect(/** @type {any} */ (document.getElementById('ts-dlg')).open).toBe(false);
-  });
-
-  it('keeps the dialog open on an empty name, and Cancel creates nothing', () => {
-    /** @type {HTMLElement} */ (document.querySelector('.ts-add')).click();
-    /** @type {HTMLElement} */ (document.getElementById('ts-dlg-ok')).click();
-    expect(/** @type {any} */ (document.getElementById('ts-dlg')).open).toBe(true);
-    expect(document.getElementById('ts-dlg-name')?.classList.contains('invalid')).toBe(true);
-    /** @type {HTMLElement} */ (document.getElementById('ts-dlg-cancel')).click();
-    expect(app.routeState.tableSets).toHaveLength(2);
-  });
-
-  it('can start a table set without stops', () => {
-    /** @type {HTMLElement} */ (document.querySelector('.ts-add')).click();
-    /** @type {HTMLInputElement} */ (document.getElementById('ts-dlg-name')).value = 'Rundtur';
-    /** @type {HTMLInputElement} */ (document.querySelector('input[name="ts-stops"][value="empty"]')).checked = true;
-    /** @type {HTMLElement} */ (document.getElementById('ts-dlg-ok')).click();
-    expect(grid.stops).toEqual([]);
-  });
-```
-
-(update the plan-4c safety test that used `window.prompt` for "+" to fill the dialog the same way.)
-
-- [ ] **Step 2: Run → FAIL.**
-- [ ] **Step 3: Implement** the dialog markup:
-
-```html
     <dialog class="n2-dialog" id="ts-dlg">
       <p><strong data-lk="tsDlgTitle"></strong></p>
       <label class="n2-field"><span data-lk="tsDlgName"></span> <input id="ts-dlg-name"></label>
