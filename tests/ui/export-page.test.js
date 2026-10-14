@@ -14,7 +14,7 @@ import { createMemoryFs, readText } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
 import { writeOrgs } from '../../src/project/orgs-store.js';
-import { projectCopy } from '../fixtures/orgs.js';
+import { projectCopy, registerCompanies } from '../fixtures/orgs.js';
 
 /** @param {string} secondStopId */
 const route = (secondStopId) => [
@@ -44,6 +44,7 @@ async function openProjectWith(text) {
   await writeOrgs(fs, projectCopy());
   await writeRoute(fs, '50', text);
   await openFs(fs);
+  app.orgRegister = { companies: registerCompanies(), fetchedAt: '2026-10-14T12:00:00Z' };
   /** @type {any} */ (document.getElementById('check-dlg')).close();
   await settle();
 }

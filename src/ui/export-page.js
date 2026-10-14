@@ -4,7 +4,6 @@ import { app } from './state.js';
 import { $, onRefresh, refreshAll, runAction, beforeLeave, persistSettings, showMessage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { parseERN } from '../core/ern/parse.js';
-import { orgNameList } from '../core/orgs.js';
 import { orgExportMode } from '../project/meta.js';
 import { checkForExport } from '../core/export-check.js';
 import { buildNeTExFiles } from '../core/netex/export.js';
@@ -49,8 +48,8 @@ async function exclusive(work) {
  *   null when the user cancelled, or another project was opened meanwhile
  */
 async function runCheck() {
-  const fs = app.fs;
-  if (!app.meta || !fs) return null;
+  const fs = app.fs, meta = app.meta;
+  if (!meta || !fs) return null;
   if (!(await beforeLeave('export'))) return null;
   if (app.fs !== fs) return null;
   $('val-results').textContent = t('checking');
@@ -76,7 +75,7 @@ async function runCheck() {
     rs: r.status === 'damaged' ? null : parseERN(r.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) }),
   }));
   const orgsProblem = app.orgsError ? 'unreadable' : '';
-  const issues = checkForExport({ routes, orgs: orgNameList(app.orgs), orgsProblem, quayInfo, changedOnDisk });
+  const issues = checkForExport({ routes, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, quayInfo, changedOnDisk });
   result = { fs, issues };
   refreshAll(); // the route list shows the files as they are now
   return { routes: routes.map(({ code, rs }) => ({ code, rs })), issues };

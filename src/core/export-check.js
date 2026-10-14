@@ -2,15 +2,15 @@
 // wrong or surprising. Errors block the export; warnings are shown and never block. Quay status
 // from NSR is advisory, so it only ever gives warnings. Pure.
 import { quayStatus, stopLocalId } from './quays.js';
-import { ORG_ID_PATTERN } from './orgs.js';
+import { findRole, aliasIssues, orgRole } from './orgs.js';
 import { ROUTE_CODE_PATTERN } from './route-names.js';
 import { journeyStops, runsOnlyDates } from './netex/journeys.js';
 
 /** Every code the check can give; each has a text 'chk:<code>' in both languages. */
 export const CHECK_CODES = [
-  'orgs-unreadable', 'orgs-not-saved', 'route-damaged', 'no-trips', 'route-code', 'no-period', 'period-dates',
+  'orgs-unreadable', 'route-damaged', 'no-trips', 'route-code', 'no-period', 'period-dates',
   'period-order', 'no-authority', 'no-operator', 'stop-missing', 'stop-not-nsr', 'stop-id-clash', 'col-no-daycode',
-  'col-one-stop', 'no-name', 'alt-dates', 'org-id-old', 'org-not-in-list', 'stop-not-seen', 'stop-mode',
+  'col-one-stop', 'no-name', 'alt-dates', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'col-exceptions-ignored', 'col-date-outside', 'route-no-trips',
   'route-changed-on-disk',
 ];
@@ -29,18 +29,21 @@ const minutes = (cell) => (cell.dayOffset || 0) * 1440 + Number(cell.time.slice(
 
 /**
  * @param {{ routes: { code: string, rs: any | null, status: string }[],
- *           orgs: { id: string, name: string }[], orgsProblem: '' | 'unreadable' | 'not-saved',
+ *           orgs: import('./orgs.js').Company[], register: import('./orgs.js').Company[] | null,
+ *           orgMode: 'codespace' | 'nog', codespace: string, orgsProblem: '' | 'unreadable',
  *           quayInfo: Map<string, any>, changedOnDisk?: string[] }} input
  * @returns {CheckIssue[]} errors first, then warnings
  */
-export function checkForExport({ routes, orgs, orgsProblem, quayInfo, changedOnDisk = [] }) {
+export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, quayInfo, changedOnDisk = [] }) {
   /** @type {CheckIssue[]} */
   const issues = [];
   /** @param {'error' | 'warning'} level @param {string} code @param {Partial<CheckIssue>} [extra] */
   const add = (level, code, extra = {}) => { issues.push({ level, code, ...extra }); };
 
   if (orgsProblem === 'unreadable') add('error', 'orgs-unreadable');
-  if (orgsProblem === 'not-saved') add('error', 'orgs-not-saved');
+  if (!register) add('warning', 'org-register-missing');
+  /** @type {Set<string>} organisation IDs the exported routes use */
+  const usedOrgIds = new Set();
 
   /** @type {Map<string, string>} NeTEx local ID → the first stop ID that produced it */
   const localIds = new Map();
@@ -50,9 +53,15 @@ export function checkForExport({ routes, orgs, orgsProblem, quayInfo, changedOnD
     if (status === 'damaged' || !rs) { add('error', 'route-damaged', { route: code }); damaged++; continue; }
     // The route code becomes part of NeTEx IDs and the line file name.
     if (!ROUTE_CODE_PATTERN.test(code)) add('error', 'route-code', { route: code });
-    const routeTrips = checkRoute(code, rs, { orgs, quayInfo, add, localIds });
+    const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, quayInfo, add, localIds, usedOrgIds });
     if (!routeTrips) add('warning', 'route-no-trips', { route: code });
     trips += routeTrips;
+  }
+  if (orgMode === 'codespace') {
+    const used = orgs.map((c) => ({ ...c,
+      authority: c.authority && usedOrgIds.has(c.authority.id) ? c.authority : null,
+      operator: c.operator && usedOrgIds.has(c.operator.id) ? c.operator : null }));
+    for (const i of aliasIssues(used, codespace)) add('error', i.code, { detail: i.alias });
   }
   if (!trips && !damaged) add('error', 'no-trips');
 
@@ -62,11 +71,11 @@ export function checkForExport({ routes, orgs, orgsProblem, quayInfo, changedOnD
 /**
  * @param {string} code
  * @param {any} rs
- * @param {{ orgs: { id: string }[], quayInfo: Map<string, any>, localIds: Map<string, string>,
+ * @param {{ orgs: import('./orgs.js').Company[], quayInfo: Map<string, any>, localIds: Map<string, string>, usedOrgIds: Set<string>,
  *           add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void }} ctx
  * @returns {number} trips (columns with times) in the route
  */
-function checkRoute(code, rs, { orgs, quayInfo, add, localIds }) {
+function checkRoute(code, rs, { orgs, quayInfo, add, localIds, usedOrgIds }) {
   const r = { route: code };
   if (!rs.routeName?.trim()) add('warning', 'no-name', r);
   if (!rs.periods?.length) { add('error', 'no-period', r); return 0; }
@@ -81,8 +90,10 @@ function checkRoute(code, rs, { orgs, quayInfo, add, localIds }) {
   if (!sek.some((/** @type {any} */ s) => s.isAuthority)) add('error', 'no-authority', r);
   if (!sek.some((/** @type {any} */ s) => s.isOperator)) add('error', 'no-operator', r);
   for (const s of sek) {
-    if (!ORG_ID_PATTERN.test(s.orgId)) add('warning', 'org-id-old', { ...r, detail: s.orgId });
-    else if (!orgs.some((o) => o.id === s.orgId)) add('warning', 'org-not-in-list', { ...r, detail: s.orgId });
+    const hit = findRole(orgs, s.orgId);
+    const role = s.isAuthority ? 'authority' : 'operator';
+    if (!hit || hit.role !== role || orgRole(s.orgId) !== role) add('error', 'org-not-in-register', { ...r, detail: s.orgId });
+    usedOrgIds.add(s.orgId);
   }
 
   let trips = 0;
