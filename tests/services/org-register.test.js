@@ -37,3 +37,10 @@ describe('organisation register', () => {
     await expect(fetchOrgRegister({ clientName: 'x', fetch: fake })).rejects.toThrow('Entur answered 503');
   });
 });
+
+describe('a damaged register download', () => {
+  it('refuses a cut-off document instead of returning the companies read so far', () => {
+    const cut = xml.slice(0, xml.indexOf('<Authority id="NOG:Authority:23e9gDqTGNg"') + 60);
+    expect(() => parseOrgRegister(cut)).toThrow('Not an organisation register');
+  });
+});

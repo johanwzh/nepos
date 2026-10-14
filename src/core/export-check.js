@@ -10,7 +10,7 @@ import { journeyStops, runsOnlyDates } from './netex/journeys.js';
 export const CHECK_CODES = [
   'orgs-unreadable', 'route-damaged', 'no-trips', 'route-code', 'no-period', 'period-dates',
   'period-order', 'no-authority', 'no-operator', 'stop-missing', 'stop-not-nsr', 'stop-id-clash', 'col-no-daycode',
-  'col-one-stop', 'no-name', 'alt-dates', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'stop-not-seen', 'stop-mode',
+  'col-one-stop', 'no-name', 'alt-dates', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'col-exceptions-ignored', 'col-date-outside', 'route-no-trips',
   'route-changed-on-disk',
 ];
@@ -53,7 +53,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     if (status === 'damaged' || !rs) { add('error', 'route-damaged', { route: code }); damaged++; continue; }
     // The route code becomes part of NeTEx IDs and the line file name.
     if (!ROUTE_CODE_PATTERN.test(code)) add('error', 'route-code', { route: code });
-    const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, quayInfo, add, localIds, usedOrgIds });
+    const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, quayInfo, add, localIds, usedOrgIds });
     if (!routeTrips) add('warning', 'route-no-trips', { route: code });
     trips += routeTrips;
   }
@@ -71,11 +71,11 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
 /**
  * @param {string} code
  * @param {any} rs
- * @param {{ orgs: import('./orgs.js').Company[], quayInfo: Map<string, any>, localIds: Map<string, string>, usedOrgIds: Set<string>,
+ * @param {{ orgs: import('./orgs.js').Company[], quayInfo: Map<string, any>, localIds: Map<string, string>, usedOrgIds: Set<string>, copy: import('./orgs.js').Company[] | null,
  *           add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void }} ctx
  * @returns {number} trips (columns with times) in the route
  */
-function checkRoute(code, rs, { orgs, quayInfo, add, localIds, usedOrgIds }) {
+function checkRoute(code, rs, { orgs, copy, quayInfo, add, localIds, usedOrgIds }) {
   const r = { route: code };
   if (!rs.routeName?.trim()) add('warning', 'no-name', r);
   if (!rs.periods?.length) { add('error', 'no-period', r); return 0; }
@@ -93,6 +93,8 @@ function checkRoute(code, rs, { orgs, quayInfo, add, localIds, usedOrgIds }) {
     const hit = findRole(orgs, s.orgId);
     const role = s.isAuthority ? 'authority' : 'operator';
     if (!hit || hit.role !== role || orgRole(s.orgId) !== role) add('error', 'org-not-in-register', { ...r, detail: s.orgId });
+    // Codespace mode writes the organisation from the project copy: it must be there.
+    else if (copy && !findRole(copy, s.orgId)) add('error', 'org-not-in-project', { ...r, detail: s.orgId });
     usedOrgIds.add(s.orgId);
   }
 

@@ -3,7 +3,7 @@
 import { app } from './state.js';
 import { refreshAll, runAction } from './shell.js';
 import { fetchOrgRegister } from '../services/org-register.js';
-import { refreshCopy, pruneCopy } from '../core/orgs.js';
+import { refreshCopy, pruneCopy, findRole, addToCopy } from '../core/orgs.js';
 import { writeOrgs } from '../project/orgs-store.js';
 
 export const REGISTER_KEY = 'nepos.orgRegister';
@@ -49,10 +49,28 @@ async function saveCopy(next) {
   await runAction(() => writeOrgs(fs, next));
 }
 
-/** Bring the project's copy up to date with the register (never touching aliases). */
+/** Organisation IDs the project's lines use: every saved route file and the open (maybe unsaved) line. */
+function usedOrgIds() {
+  /** @type {Set<string>} */
+  const used = new Set();
+  for (const r of app.routes) for (const m of r.text.matchAll(/^[ \t]*#SEK;([^;\r\n]*)/gm)) used.add(m[1].trim());
+  for (const s of app.routeState?.sek ?? []) used.add(String(s.orgId));
+  return used;
+}
+
+/**
+ * Bring the project's copy up to date with the register (never touching aliases), and add any
+ * organisation a line uses that is in the register but missing from the copy.
+ */
 export async function syncProjectCopy() {
   if (!app.fs || !app.orgRegister || app.orgsError) return;
-  const { companies, changed, missing } = refreshCopy(app.orgs, app.orgRegister.companies);
+  const register = app.orgRegister.companies;
+  const { changed, missing, companies: refreshed } = refreshCopy(app.orgs, register);
+  let companies = refreshed;
+  for (const id of usedOrgIds()) {
+    const hit = findRole(register, id);
+    if (hit && !findRole(companies, id)) companies = addToCopy(companies, hit.company, hit.role);
+  }
   app.orgChanges = { changed, missing };
   await saveCopy(companies);
   refreshAll();
@@ -60,10 +78,7 @@ export async function syncProjectCopy() {
 
 /** After a route save: drop organisations no route uses any more (unless they have an alias). */
 export async function pruneProjectCopy() {
-  /** @type {Set<string>} */
-  const used = new Set();
-  for (const r of app.routes) for (const m of r.text.matchAll(/^[ \t]*#SEK;([^;\r\n]*)/gm)) used.add(m[1].trim());
-  await saveCopy(pruneCopy(app.orgs, used));
+  await saveCopy(pruneCopy(app.orgs, usedOrgIds()));
 }
 
 /** @param {{ fetchOnStart: boolean }} opts */

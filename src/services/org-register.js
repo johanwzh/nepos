@@ -15,6 +15,9 @@ const text = (el, name) => child(el, name)?.textContent?.trim() ?? '';
  */
 export function parseOrgRegister(xml) {
   const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  // A cut-off or broken download: browsers keep the elements read before the error, which would
+  // look like a register where every later company is gone.
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('Not an organisation register');
   const elements = [...doc.getElementsByTagNameNS('*', 'Authority'), ...doc.getElementsByTagNameNS('*', 'Operator')];
   if (!elements.length) throw new Error('Not an organisation register');
   return groupCompanies(elements.map((el) => {

@@ -133,6 +133,11 @@ describe('checkForExport', () => {
       expect(codes(check(route(), { orgs: dup }))).toEqual(['error:org-alias-format', 'error:org-alias-duplicate', 'error:org-alias-duplicate']);
     });
 
+    it('blocks, in codespace mode, an organisation that is in the register but not in the project copy', () => {
+      expect(codes(check(route(), { orgs: [projectCopy()[0]] }))).toEqual(['error:org-not-in-project']);
+      expect(codes(check(route(), { orgs: [projectCopy()[0]], orgMode: 'nog' }))).toEqual([]);
+    });
+
     it('blocks an organisation copy that cannot be read', () => {
       expect(codes(check(route(), { orgsProblem: 'unreadable' }))).toEqual(['error:orgs-unreadable']);
     });

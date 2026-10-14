@@ -76,3 +76,22 @@ describe('organisation register in the app', () => {
     expect(JSON.parse(await readText(app.fs, 'data/orgs.json')).companies).toHaveLength(1);
   });
 });
+
+describe('organisations the lines use', () => {
+  it('adds a used organisation that is in the register but missing from the copy', async () => {
+    app.orgs = [];
+    app.routes = [{ code: '1', text: '#SEK;NOG:Operator:ddddddddd4;Fjord AS;0;1;0;0\r\n', status: 'ok', issues: [] }];
+    app.orgRegister = { companies: registerCompanies(), fetchedAt: 'x' };
+    await syncProjectCopy();
+    expect(app.orgs.map((c) => c.operator?.id)).toEqual(['NOG:Operator:ddddddddd4']);
+    expect(JSON.parse(await readText(app.fs, 'data/orgs.json')).companies).toHaveLength(1);
+  });
+
+  it('keeps an organisation the open, unsaved line uses when pruning', async () => {
+    app.routes = [];
+    app.routeState = { sek: [{ orgId: 'NOG:Operator:bbbbbbbbbb2', isAuthority: false, isOperator: true, name: 'Eksempel Buss AS' }] };
+    await pruneProjectCopy();
+    expect(app.orgs.map((c) => c.name)).toEqual(['Eksempel Buss AS']);
+    app.routeState = null;
+  });
+});
