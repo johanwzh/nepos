@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup, flush } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell } from '../../src/ui/shell.js';
+import { initShell, setPage } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
@@ -54,6 +54,7 @@ async function openProjectWith(text) {
 beforeEach(async () => {
   loadAppMarkup();
   initShell();
+  setPage('edit'); // the view is module state: start every test on the edit page
   initRouteList();
   await initProjectUi({ restoreLast: false });
   initGrid();
@@ -66,17 +67,36 @@ beforeEach(async () => {
 });
 
 describe('export page', () => {
-  it('reports a clean project', async () => {
+  it('shows the live check as soon as the page opens, with no validate button', async () => {
     await openProjectWith(route('NSR:Quay:11972'));
-    await click('btn-validate');
+    setPage('export');
+    await settle();
+    expect(document.getElementById('btn-validate')).toBeNull();
     expect(document.getElementById('val-results').textContent).toContain('Ingen problemer');
   });
 
-  it('looks the Quays up again before checking', async () => {
+  it('does not run the project check while another page is shown (review I5)', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    expect(document.getElementById('val-results').textContent).toBe('');
+  });
+
+  it('looks the Quays up again when the page opens', async () => {
     await openProjectWith(route('NSR:Quay:11972'));
     const before = lookups;
-    await click('btn-validate');
+    setPage('export');
+    await settle();
     expect(lookups).toBe(before + 1);
+    setPage('edit');
+  });
+
+  it('shows unsaved changes in the live check', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    await selectRoute('50');
+    app.routeState.periods[0].calendarIds = [];
+    setPage('export');
+    await settle();
+    expect(document.getElementById('val-results').textContent).toContain('kalender');
+    setPage('edit');
   });
 
   it('lists the errors and refuses to export', async () => {
@@ -85,6 +105,17 @@ describe('export page', () => {
     expect(document.getElementById('val-results').textContent).toContain('Oslo bussterminal (104)');
     expect(document.getElementById('export-status').textContent).toContain('feilene');
     expect(await fs.list('exports')).toEqual([]);
+  });
+
+  it('leaves a line that is not exported out, also when it has errors', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    await writeRoute(fs, '51', route('104').replace('#RUT;-1;50;', '#RUT;-1;51;').replace('#CUR;', '#EKS;0\r\n#CUR;'));
+    /** @type {HTMLInputElement} */ (document.getElementById('chk-zip')).checked = false;
+    document.getElementById('chk-zip')?.dispatchEvent(new Event('change'));
+    await click('btn-netex');
+    expect(document.getElementById('export-status').textContent).not.toContain('feilene');
+    const [dir] = await fs.list('exports');
+    expect(await fs.list(`exports/${dir.name}`)).toHaveLength(2); // shared + line 50 only
   });
 
   it('writes a ZIP into the project folder', async () => {
@@ -147,7 +178,7 @@ describe('export page', () => {
   it('checks the route files as they are on disk now', async () => {
     await openProjectWith(route('NSR:Quay:11972'));
     await writeRoute(fs, '50', route('104')); // changed outside Nepos after the project was opened
-    await click('btn-validate');
+    await click('btn-netex');
     const text = document.getElementById('val-results').textContent;
     expect(text).toContain('Oslo bussterminal (104)');
     expect(text).toContain('endret utenfor Nepos');

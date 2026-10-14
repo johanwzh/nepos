@@ -31,21 +31,11 @@
       <div id="pages">
 
         <div id="page-edit" class="page active">
+          <div id="line-table" class="line-table" hidden></div>
           <div id="panel-left" class="side-panel">
             <div class="panel-hdr">
               <span class="panel-hdr-title" data-lk="panelRoutes"></span>
-              <span class="panel-close" id="close-left" title="F5">✕</span>
-            </div>
-            <div id="route-filter-bar" style="padding:4px 6px;display:flex;gap:4px;border-bottom:1px solid var(--border-lt)">
-              <input id="route-filter-input" type="text" autocomplete="off"
-                style="flex:1;height:22px;padding:0 6px;border:1px solid var(--border);border-radius:3px;background:var(--bg-raised);color:var(--text);font:inherit;font-size:11px"
-                placeholder="Filter…">
-              <select id="route-sort-sel"
-                style="height:22px;padding:0 4px;border:1px solid var(--border);border-radius:3px;background:var(--bg-raised);color:var(--text);font:inherit;font-size:10px;cursor:pointer">
-                <option value="id">ID</option>
-                <option value="name">Name</option>
-                <option value="code">Code</option>
-              </select>
+              <span class="panel-close" id="close-left" title="F5">⤢</span>
             </div>
             <div class="route-list" id="route-list"></div>
           </div>
@@ -98,7 +88,6 @@
           <div class="exp-section">
             <div class="exp-title" data-lk="validateTitle"></div>
             <p class="exp-desc" data-lk="validateDesc"></p>
-            <button class="exp-btn primary" id="btn-validate"><span class="ico">✓</span><span data-lk="validateBtn"></span></button>
             <div class="val-box" id="val-results"></div>
           </div>
           <div class="exp-section">

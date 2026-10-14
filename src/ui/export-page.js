@@ -1,7 +1,8 @@
 // The Export page (F4): check the whole project, then write the NeTEx delivery into
 // exports/<time>/ in the project folder. Errors block the export; warnings never do.
 import { app } from './state.js';
-import { $, onRefresh, refreshAll, runAction, beforeLeave, persistSettings, showMessage } from './shell.js';
+import { $, onRefresh, refreshAll, runAction, beforeLeave, persistSettings, showMessage, currentPage } from './shell.js';
+import { projectIssues } from './line-info.js';
 import { t } from '../i18n/strings.js';
 import { parseERN } from '../core/ern/parse.js';
 import { orgExportMode, writeOrgExportMode } from '../project/meta.js';
@@ -75,10 +76,12 @@ async function runCheck() {
     rs: r.status === 'damaged' ? null : parseERN(r.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) }),
   }));
   const orgsProblem = app.orgsError ? 'unreadable' : '';
-  const issues = checkForExport({ routes, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, brandings: app.brandings, brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars, calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, changedOnDisk });
+  // Lines set to "Eksporteres: nei" are left out entirely (navigation spec §4); damaged ones are still checked.
+  const exported = routes.filter((r) => r.rs?.exported !== false);
+  const issues = checkForExport({ routes: exported, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, brandings: app.brandings, brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars, calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, changedOnDisk });
   result = { fs, issues };
   refreshAll(); // the route list shows the files as they are now
-  return { routes: routes.map(({ code, rs }) => ({ code, rs })), issues };
+  return { routes: exported.map(({ code, rs }) => ({ code, rs })), issues };
 }
 
 async function runExport() {
@@ -122,17 +125,33 @@ function issueLine(i) {
 
 function renderResults() {
   const el = $('val-results');
-  const current = result && result.fs === app.fs ? result : null;
-  if (!current) { el.innerHTML = `<span>${esc(t('validateHint'))}</span>`; return; }
-  if (!current.issues.length) { el.innerHTML = `<span class="n2-issue-ok">✔ ${esc(t('checkClean'))}</span>`; return; }
+  const run = result && result.fs === app.fs ? result : null;
+  // The live check runs only while the page is shown (it covers every line).
+  if (!app.meta || (!run && currentPage() !== 'export')) { el.innerHTML = ''; return; }
+  // The last export run while on this page, else the live check of the lines as they are now.
+  const current = run ?? { issues: projectIssues() };
+  const live = current !== result ? `<div class="n2-issue-live">${esc(t('liveCheckNote'))}</div>` : '';
+  if (!current.issues.length) { el.innerHTML = `${live}<span class="n2-issue-ok">✔ ${esc(t('checkClean'))}</span>`; return; }
   const errors = current.issues.filter((i) => i.level === 'error').length;
   const warnings = current.issues.length - errors;
-  el.innerHTML = `<div class="n2-issue-summary">${esc(t('checkSummary', errors, warnings))}</div>${current.issues.map(issueLine).join('')}`;
+  el.innerHTML = `${live}<div class="n2-issue-summary">${esc(t('checkSummary', errors, warnings))}</div>${current.issues.map(issueLine).join('')}`;
+}
+
+let wasOnPage = false;
+
+/** Opening the Export page starts the slow part of the check: asking NSR about the stops (spec §5). */
+function onPageEnter() {
+  result = null;
+  const fs = app.fs;
+  if (!fs) return;
+  void loadProjectQuays().then(() => { if (app.fs === fs && currentPage() === 'export') renderResults(); }, () => {});
 }
 
 function renderExportPage() {
+  const onPage = currentPage() === 'export';
+  if (onPage && !wasOnPage) { wasOnPage = true; onPageEnter(); }
+  else if (!onPage) wasOnPage = false;
   const open = !!app.meta;
-  $('btn-validate').disabled = !open || busy;
   $('btn-netex').disabled = !open || busy;
   $('chk-zip').disabled = !open;
   $('chk-zip').checked = app.settings.exportAsZip !== false;
@@ -147,7 +166,6 @@ function renderExportPage() {
 
 export function initExportPage() {
   onRefresh(renderExportPage);
-  $('btn-validate').addEventListener('click', () => exclusive(async () => { await runCheck(); }));
   $('btn-netex').addEventListener('click', () => exclusive(runExport));
   $('chk-zip').addEventListener('change', () => {
     app.settings.exportAsZip = $('chk-zip').checked;

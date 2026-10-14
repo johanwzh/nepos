@@ -622,6 +622,26 @@ After `#MOD`, only when the line has a branding (its commonly used name, e.g. "S
 The ID refers to `data/brandings.json`. NeTEx: `BrandingRef` on the Line, and the `Branding` in the
 shared file's `ResourceFrame/typesOfValue`.
 
+### #EKS — exported *Nepos 2*
+
+```
+#EKS;1|0
+```
+
+After `#BRA` (or `#MOD`/`#RUT` without it), always written. `0` = the line is left out of the
+NeTEx export entirely (navigation spec §4). A file without the record means `1`; any value other
+than `0` or `1` makes the file damaged.
+
+### #OFF — public *Nepos 2*
+
+```
+#OFF;1|0
+```
+
+Directly after `#EKS`, always written. `0` = the line is delivered but not for public release:
+`publication="restricted"` on its `Line`, `ServiceJourney` and `DatedServiceJourney` (NeTEx pull
+request 899). A missing record means `1`; other values make the file damaged.
+
 ### #UID — stable ID *Nepos 2*
 
 ```

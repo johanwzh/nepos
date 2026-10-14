@@ -79,7 +79,7 @@ describe('line details in ERN', () => {
   });
 
   it('summarises a route for the list without a full parse', () => {
-    expect(routeSummary(file())).toEqual({ name: 'Oslo - Gol', publicCode: 'X20', mode: 'bus', submode: 'expressBus', brandingId: 'TST:Branding:aaaa' });
+    expect(routeSummary(file())).toMatchObject({ name: 'Oslo - Gol', publicCode: 'X20', mode: 'bus', submode: 'expressBus', brandingId: 'TST:Branding:aaaa' });
   });
 });
 

@@ -27,7 +27,7 @@ describe('checkRouteFile', () => {
     const text = nepos2.replace('#TRA;Bergen - Florø\r\n', '#TRA;Bergen - Florø\r\n#KOS;4;Byttes i Florø;0\r\n');
     const result = checkRouteFile(text);
     expect(result.status).toBe('damaged');
-    expect(result.issues).toContainEqual({ code: 'unsupported-record', severity: 'damaged', line: 8, detail: '#KOS' });
+    expect(result.issues).toContainEqual({ code: 'unsupported-record', severity: 'damaged', line: 10, detail: '#KOS' });
   });
 
   it('marks a second #KOM as damaged (only the first is kept)', () => {
@@ -48,7 +48,7 @@ describe('checkRouteFile', () => {
 
   it('marks records in the wrong place as damaged', () => {
     const tabFirst = nepos2.replace('#PER;;;;;;', '#TAB;0;;;;\r\n#PER;;;;;;');
-    expect(checkRouteFile(tabFirst).issues).toContainEqual({ code: 'out-of-order', severity: 'damaged', line: 9, detail: '#TAB' });
+    expect(checkRouteFile(tabFirst).issues).toContainEqual({ code: 'out-of-order', severity: 'damaged', line: 11, detail: '#TAB' });
   });
 
   it('marks lines that are not records as damaged', () => {

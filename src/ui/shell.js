@@ -35,10 +35,28 @@ export async function persistSettings() {
 
 /** Mark the open route as changed; refreshes once (status bar, save button). */
 export function markDirty() {
-  if (app.dirty) return;
+  if (app.dirty) { notifyLinesChanged(); return; }
   app.dirty = true;
   refreshAll();
 }
+
+/** @type {(() => void)[]} */
+const linesListeners = [];
+
+/** The lines pane redraws when an open line changes, without a full refresh. @param {() => void} fn */
+export function onLinesChanged(fn) {
+  linesListeners.push(fn);
+}
+
+export function notifyLinesChanged() {
+  for (const fn of linesListeners) fn();
+}
+
+/** @type {boolean} */
+let maxiOpen = false;
+/** The maxi view covers the editor: the grid must not take keys meanwhile. @param {boolean} v */
+export function setMaxiOpen(v) { maxiOpen = v; }
+export function isMaxiOpen() { return maxiOpen; }
 
 /** @type {(reason?: string) => Promise<boolean>} */
 let leaveCheck = async () => true;
@@ -171,6 +189,19 @@ function applyPanel(side) {
 }
 
 /** @param {'left' | 'right'} side */
+/** @type {(() => void) | null} */
+let maxiToggle = null;
+
+/** The lines pane's maxi view registers here; F5 and the Linjer button toggle it. @param {(() => void) | null} fn */
+export function setMaxiToggle(fn) {
+  maxiToggle = fn;
+}
+
+function toggleMaxi() {
+  if (curPage !== 'edit') setPage('edit');
+  maxiToggle?.();
+}
+
 function togglePanel(side) {
   panels[side].open = !panels[side].open;
   applyPanel(side);
@@ -204,6 +235,8 @@ export function currentPage() {
 }
 
 /** Wire up the shell once at start-up. */
+let keysWired = false;
+
 export function initShell() {
   $('el-ver').textContent = `v${VERSION}`;
 
@@ -234,9 +267,11 @@ export function initShell() {
   panels.right.rz = $('rh-right');
   applyPanel('left');
   applyPanel('right');
-  $('btn-p5').addEventListener('click', () => togglePanel('left'));
+  panels.left.open = true; // the mini view is always shown (navigation spec §3.1)
+  applyPanel('left');
+  $('btn-p5').addEventListener('click', () => toggleMaxi());
   $('btn-p6').addEventListener('click', () => togglePanel('right'));
-  $('close-left').addEventListener('click', () => togglePanel('left'));
+  $('close-left').addEventListener('click', () => toggleMaxi());
   $('close-right').addEventListener('click', () => togglePanel('right'));
 
   /** @type {{ side: 'left' | 'right', x0: number, w0: number } | null} */
@@ -267,7 +302,7 @@ export function initShell() {
 
   // View and panel shortcuts (navigation spec §8). Capture phase, so they work from text fields and
   // the grid never sees them; nothing changes behind an open window. F2 belongs to the grid.
-  document.addEventListener('keydown', (e) => {
+  if (!keysWired) document.addEventListener('keydown', (e) => {
     if (document.querySelector('dialog[open]')) return;
     /** @type {Record<string, string>} */
     const byDigit = { 1: 'edit', 2: 'assets', 3: 'export' };
@@ -276,9 +311,10 @@ export function initShell() {
     if (e.key === 'F5' || e.key === 'F6') {
       e.preventDefault(); e.stopPropagation();
       if (curPage !== 'edit') setPage('edit');
-      togglePanel(e.key === 'F5' ? 'left' : 'right');
+      if (e.key === 'F5') toggleMaxi(); else togglePanel('right');
     }
   }, true);
+  keysWired = true; // the document outlives a re-initialised shell (tests): one listener only
 
   window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 }

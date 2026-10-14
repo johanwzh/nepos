@@ -16,7 +16,7 @@ describe('integrity check: data a save would lose', () => {
 
   it('flags a return table (#TAB;1): Nepos 2 writes one #TAB;0 per period', () => {
     const text = nepos2.replace('#TAB;0;;;;\r\n#TUR;0;DX67', '#TAB;1;;;;\r\n#TUR;0;DX67');
-    expect(lost(text).map((i) => i.line)).toContain(10);
+    expect(lost(text).map((i) => i.line)).toContain(12);
   });
 
   it('flags a second outbound table in the same period (save would drop one)', () => {
@@ -50,7 +50,7 @@ describe('integrity check: data a save would lose', () => {
   });
 
   it('flags comment lines, which a save drops', () => {
-    expect(lost(nepos2.replace('#TRA;Florø - Eikefjord\r\n', '#TRA;Florø - Eikefjord\r\n// husk dette\r\n')).map((i) => i.line)).toEqual([7]);
+    expect(lost(nepos2.replace('#TRA;Florø - Eikefjord\r\n', '#TRA;Florø - Eikefjord\r\n// husk dette\r\n')).map((i) => i.line)).toEqual([9]);
   });
 
   it('does not flag a price written with fewer decimals', () => {
