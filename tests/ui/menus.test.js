@@ -8,7 +8,8 @@ import { initProjectUi, openFs, openRecent } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { initRouteEditor } from '../../src/ui/route-editor.js';
-import { initMenus } from '../../src/ui/menus.js';
+import { initMenus, reloadRecent } from '../../src/ui/menus.js';
+import { setRecentStore, rememberFolder, loadRecentFolders } from '../../src/ui/recent-folders.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
@@ -82,8 +83,48 @@ describe('menu bar', () => {
 
   it('keeps the project when a recent folder refuses access', async () => {
     const handle = { name: 'Gammel', queryPermission: async () => 'prompt', requestPermission: async () => 'denied' };
+    window.confirm = vi.fn(() => false);
     await openRecent(handle);
     expect(app.meta?.name).toBe('Test');
-    expect(document.getElementById('msg-text')?.textContent).toContain('Gammel');
+    expect(/** @type {any} */ (window.confirm).mock.calls[0][0]).toContain('Gammel');
+  });
+});
+
+describe('recent folders that are gone', () => {
+  /** @type {Map<string, any>} */
+  let store;
+  beforeEach(async () => {
+    store = new Map();
+    setRecentStore({ get: async (k) => store.get(k) ?? null, put: async (k, v) => { store.set(k, v); } });
+  });
+
+  it('offers to take a folder off the list when it cannot be opened, and keeps the project', async () => {
+    const gone = { name: 'Gammel', queryPermission: async () => 'granted', requestPermission: async () => 'granted',
+      values: () => ({ next: async () => { throw new DOMException('gone', 'NotFoundError'); }, [Symbol.asyncIterator]() { return this; } }) };
+    await rememberFolder(gone);
+    window.confirm = vi.fn(() => true);
+    await openRecent(gone);
+    expect(window.confirm).toHaveBeenCalled();
+    expect(await loadRecentFolders()).toEqual([]);
+    expect(app.meta?.name).toBe('Test');
+  });
+
+  it('keeps it on the list when the user says no', async () => {
+    const denied = { name: 'Gammel', queryPermission: async () => 'prompt', requestPermission: async () => 'denied' };
+    await rememberFolder(denied);
+    window.confirm = vi.fn(() => false);
+    await openRecent(denied);
+    expect((await loadRecentFolders()).map((f) => f.name)).toEqual(['Gammel']);
+  });
+
+  it('clears the whole list from the menu', async () => {
+    await rememberFolder({ name: 'A' });
+    await rememberFolder({ name: 'B' });
+    await reloadRecent();
+    openMenu(0);
+    item('Åpne nylig').click();
+    item('Tøm listen').click();
+    await flush(); await flush();
+    expect(await loadRecentFolders()).toEqual([]);
   });
 });

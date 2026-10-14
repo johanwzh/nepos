@@ -84,6 +84,7 @@ const batch = (fn) => reportSkipped(editLines([...selected], fn));
 function render() {
   const el = $('line-table');
   if (!el || !document.getElementById('lt-body')) return; // not built yet
+  if (builtLang !== app.settings.lang) buildChrome();
   el.hidden = !open || !app.meta;
   setMaxiOpen(!el.hidden);
   if (el.hidden) return;
@@ -151,7 +152,13 @@ function openCalendarDialog() {
   /** @type {HTMLDialogElement} */ ($('lt-cal-dlg')).showModal();
 }
 
-export function initLineTable() {
+/** The language the toolbar and headings were built in; rebuilt when it changes. */
+let builtLang = '';
+const FILTERS = ['lt-f-mode', 'lt-f-org', 'lt-f-status', 'lt-f-exp', 'lt-f-pub'];
+
+/** Build the toolbar, headings and dialog in the current language, keeping the search and filters. */
+function buildChrome() {
+  const kept = { search: field('lt-search')?.value ?? '', filters: FILTERS.map((id) => field(id)?.value ?? '') };
   const el = $('line-table');
   el.innerHTML = `
     <div class="lt-bar">
@@ -183,10 +190,7 @@ export function initLineTable() {
       <p><select id="lt-cal-from"></select> → <select id="lt-cal-to"></select></p>
       <div class="n2-actions"><button class="pop-btn" id="lt-cal-cancel">${esc(t('cancel'))}</button><button class="pop-btn primary" id="lt-cal-ok">${esc(t('ok'))}</button></div>
     </dialog>`;
-  open = false;
-  selected = new Set();
-  anchor = null;
-  setMaxiToggle(toggle);
+  builtLang = app.settings.lang;
 
   field('lt-search').addEventListener('input', render);
   for (const id of ['lt-f-mode', 'lt-f-org', 'lt-f-status', 'lt-f-exp', 'lt-f-pub']) field(id).addEventListener('change', render);
@@ -226,6 +230,22 @@ export function initLineTable() {
     /** @type {HTMLDialogElement} */ ($('lt-cal-dlg')).close();
     if (from && to && from !== to) batch((rs) => { replaceCalendarInState(rs, from, to); });
   });
+  field('lt-search').value = kept.search;
+  FILTERS.forEach((id, i) => {
+    const sel = field(id);
+    const v = kept.filters[i];
+    if (v && ![...sel.options].some((o) => o.value === v)) sel.add(new Option(v, v)); // refilled on render
+    sel.value = v;
+  });
+}
+
+export function initLineTable() {
+  if (field('lt-search')) field('lt-search').value = ''; // a fresh page
+  buildChrome();
+  open = false;
+  selected = new Set();
+  anchor = null;
+  setMaxiToggle(toggle);
   document.addEventListener('keydown', (e) => {
     if (!open || e.key !== 'Escape' || document.querySelector('dialog[open]') || document.querySelector('.org-pick-pop')) return;
     e.preventDefault();

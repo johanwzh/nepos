@@ -1,4 +1,4 @@
-// Ressurser → Profiler (line header spec §6). Rows are built once per showing; edits change
+// Ressurser → Merkevarer (line header spec §6). Rows are built once per showing; edits change
 // their own field. A branding is saved once it has a name; the file is never written when it
 // could not be read.
 import { app } from './state.js';

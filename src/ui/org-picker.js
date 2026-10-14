@@ -17,7 +17,17 @@ export function createOrgPicker({ role, currentId, currentName, projectCompanies
   const btn = document.createElement('button');
   btn.className = 'org-pick-btn';
   btn.disabled = disabled;
-  btn.textContent = `${invalid ? '⚠ ' : ''}${currentId ? (currentName || currentId) : t(role === 'authority' ? 'pickAuthority' : 'pickOperator')} ▾`;
+  // A chip: the role as a small caption, the organisation, a caret (styled in nepos2.css).
+  const caption = document.createElement('span');
+  caption.className = 'org-pick-role';
+  caption.textContent = t(role === 'authority' ? 'roleAuthority' : 'roleOperator');
+  const name = document.createElement('span');
+  name.className = 'org-pick-name';
+  name.textContent = `${invalid ? '⚠ ' : ''}${currentId ? (currentName || currentId) : t(role === 'authority' ? 'pickAuthority' : 'pickOperator')}`;
+  const caret = document.createElement('span');
+  caret.className = 'org-pick-caret';
+  caret.textContent = '▾';
+  btn.append(caption, name, caret);
   root.appendChild(btn);
 
   /** @type {HTMLElement | null} */ let pop = null;

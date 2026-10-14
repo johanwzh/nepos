@@ -6,6 +6,7 @@ import { parseERN } from '../core/ern/parse.js';
 import { checkForExport } from '../core/export-check.js';
 import { orgExportMode } from '../project/meta.js';
 import { quayInfo } from './quays.js';
+import { routeSummary } from './route-summary.js';
 import { grid, gridData } from './grid.js';
 import { gridKey } from './route-state.js';
 
@@ -76,4 +77,16 @@ export function projectIssues() {
     .map((r) => ({ code: r.code, status: r.status, rs: lineState(r.code) }))
     .filter((r) => r.rs?.exported !== false);
   return check(routes);
+}
+
+/**
+ * How a line is named to the user: public code and name (the ID is a UUID, spec line header §4).
+ * @param {string} code
+ */
+export function lineLabel(code) {
+  const entry = app.routes.find((r) => r.code === code);
+  if (!entry) return code;
+  const rs = lineState(code);
+  const s = rs ? { publicCode: rs.publicCode ?? '', name: rs.routeName ?? '' } : routeSummary(entry.text);
+  return [s.publicCode, s.name].filter(Boolean).join(' ') || code;
 }
