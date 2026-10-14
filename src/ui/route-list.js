@@ -2,7 +2,7 @@
 // public code (or branding, or the first letters of the name), ● when unsaved and ⚠ n for problems.
 // The order is the maxi view's last sort; F5 opens the maxi view.
 import { app } from './state.js';
-import { $, onRefresh } from './shell.js';
+import { $, onRefresh, onLinesChanged } from './shell.js';
 import { selectRoute } from './route-editor.js';
 import { t } from '../i18n/strings.js';
 import { modeIconSvg } from './mode-icons.js';
@@ -38,4 +38,5 @@ export function renderRouteList() {
 
 export function initRouteList() {
   onRefresh(renderRouteList);
+  onLinesChanged(renderRouteList);
 }

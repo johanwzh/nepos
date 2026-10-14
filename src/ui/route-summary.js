@@ -6,6 +6,20 @@ import { modeFromErn } from '../core/modes.js';
  * @param {string} text
  */
 export function routeSummary(text) {
+  let hit = memo.get(text);
+  if (!hit) {
+    if (memo.size > 1000) memo.clear();
+    hit = summarise(text);
+    memo.set(text, hit);
+  }
+  return { ...hit, calendarIds: [...hit.calendarIds], orgIds: [...hit.orgIds] };
+}
+
+/** @type {Map<string, ReturnType<typeof summarise>>} */
+const memo = new Map();
+
+/** @param {string} text */
+function summarise(text) {
   let name = '', publicCode = '', mode = '', submode = '', brandingId = '', ern = 0, sawRut = false, inTables = false;
   let exported = true, isPublic = true;
   /** @type {string[]} */ const calendarIds = [];

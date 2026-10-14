@@ -125,9 +125,11 @@ function issueLine(i) {
 
 function renderResults() {
   const el = $('val-results');
-  if (!app.meta) { el.innerHTML = ''; return; }
+  const run = result && result.fs === app.fs ? result : null;
+  // The live check runs only while the page is shown (it covers every line).
+  if (!app.meta || (!run && currentPage() !== 'export')) { el.innerHTML = ''; return; }
   // The last export run while on this page, else the live check of the lines as they are now.
-  const current = result && result.fs === app.fs ? result : { issues: projectIssues() };
+  const current = run ?? { issues: projectIssues() };
   const live = current !== result ? `<div class="n2-issue-live">${esc(t('liveCheckNote'))}</div>` : '';
   if (!current.issues.length) { el.innerHTML = `${live}<span class="n2-issue-ok">✔ ${esc(t('checkClean'))}</span>`; return; }
   const errors = current.issues.filter((i) => i.level === 'error').length;

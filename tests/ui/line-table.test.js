@@ -7,7 +7,7 @@ import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
-import { initRouteEditor } from '../../src/ui/route-editor.js';
+import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
 import { initLineTable } from '../../src/ui/line-table.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
@@ -103,6 +103,17 @@ describe('lines pane, maxi view', () => {
     exp.dispatchEvent(new Event('change'));
     expect(app.drafts.get('b')?.exported).toBe(false);
     expect(rows()[0].textContent).toContain('●');
+  });
+
+  it('does not pass keys to the grid behind it (review I4)', async () => {
+    await selectRoute('a');
+    const cell = () => document.querySelector('[data-r="0"][data-c="0"]')?.textContent;
+    expect(cell()).toBe('0700');
+    key('F5');
+    rows()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    key('Delete');
+    key('Escape');
+    expect(cell()).toBe('0700');
   });
 
   it('opens a line on double-click and closes the view', () => {

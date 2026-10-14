@@ -75,6 +75,11 @@ describe('export page', () => {
     expect(document.getElementById('val-results').textContent).toContain('Ingen problemer');
   });
 
+  it('does not run the project check while another page is shown (review I5)', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    expect(document.getElementById('val-results').textContent).toBe('');
+  });
+
   it('looks the Quays up again when the page opens', async () => {
     await openProjectWith(route('NSR:Quay:11972'));
     const before = lookups;

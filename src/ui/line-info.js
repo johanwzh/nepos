@@ -6,6 +6,8 @@ import { parseERN } from '../core/ern/parse.js';
 import { checkForExport } from '../core/export-check.js';
 import { orgExportMode } from '../project/meta.js';
 import { quayInfo } from './quays.js';
+import { grid, gridData } from './grid.js';
+import { gridKey } from './route-state.js';
 
 /** @type {Map<string, any>} parsed saved texts */
 const parsed = new Map();
@@ -28,7 +30,11 @@ function parseCached(text) {
 export function lineState(code) {
   const entry = app.routes.find((r) => r.code === code);
   if (!entry || entry.status === 'damaged') return null;
-  if (code === app.activeRoute && app.routeState) return app.routeState;
+  if (code === app.activeRoute && app.routeState) {
+    // Grid edits live in the grid until stored: check what is on screen.
+    if (!grid.active) return app.routeState;
+    return { ...app.routeState, grids: { ...app.routeState.grids, [gridKey(app.routeState)]: gridData() } };
+  }
   return app.drafts.get(code) ?? parseCached(entry.text);
 }
 

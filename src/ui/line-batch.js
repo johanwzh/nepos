@@ -40,7 +40,7 @@ export function editLines(codes, fn) {
     }
     edited.push(code);
   }
-  if (openEdited) markDirty();
+  if (openEdited && !app.dirty) markDirty();
   else refreshAll();
   return { edited, skipped };
 }

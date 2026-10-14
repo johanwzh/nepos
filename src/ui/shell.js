@@ -35,10 +35,28 @@ export async function persistSettings() {
 
 /** Mark the open route as changed; refreshes once (status bar, save button). */
 export function markDirty() {
-  if (app.dirty) return;
+  if (app.dirty) { notifyLinesChanged(); return; }
   app.dirty = true;
   refreshAll();
 }
+
+/** @type {(() => void)[]} */
+const linesListeners = [];
+
+/** The lines pane redraws when an open line changes, without a full refresh. @param {() => void} fn */
+export function onLinesChanged(fn) {
+  linesListeners.push(fn);
+}
+
+export function notifyLinesChanged() {
+  for (const fn of linesListeners) fn();
+}
+
+/** @type {boolean} */
+let maxiOpen = false;
+/** The maxi view covers the editor: the grid must not take keys meanwhile. @param {boolean} v */
+export function setMaxiOpen(v) { maxiOpen = v; }
+export function isMaxiOpen() { return maxiOpen; }
 
 /** @type {(reason?: string) => Promise<boolean>} */
 let leaveCheck = async () => true;

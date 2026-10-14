@@ -8,7 +8,7 @@
 import { t } from '../i18n/strings.js';
 import { isValidDayCode } from '../core/ern/validate.js';
 import { parseCellInput } from '../core/grid-input.js';
-import { currentPage, showMessage } from './shell.js';
+import { currentPage, showMessage, isMaxiOpen } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
 import { openWorkbench } from './workbench.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
@@ -586,7 +586,7 @@ function scrollTo(r, c) {
 // ─── Keyboard ───────────────────────────────────────────────────────────────
 /** @param {KeyboardEvent} e */
 function onKeyDown(e) {
-  if (!grid.active || currentPage() !== 'edit') return;
+  if (!grid.active || currentPage() !== 'edit' || isMaxiOpen()) return;
   if ($('fn-editor').classList.contains('open') || document.querySelector('dialog[open]')) return;
   if (inStopEdit) return; // the name input handles its own keys
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;

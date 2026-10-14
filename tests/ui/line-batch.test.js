@@ -60,6 +60,16 @@ describe('batch edits on lines', () => {
     expect(app.orgs.some((c) => c.name === 'Ny Buss AS')).toBe(true);
   });
 
+  it('redraws after a batch on the open line that was already unsaved (review I3)', async () => {
+    await selectRoute('20');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '0', bubbles: true }));
+    for (const k of '701') document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(app.dirty).toBe(true);
+    editLines(['20'], (rs) => { rs.exported = false; });
+    expect(document.querySelector('.route-item.active')?.classList.contains('rl-not-exported')).toBe(true);
+  });
+
   it('duplicates a line with new IDs and leaves the original alone', async () => {
     const before = await readRoute(fs, '20');
     const [copy] = await duplicateLines(['20']);

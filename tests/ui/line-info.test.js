@@ -42,6 +42,38 @@ beforeEach(async () => {
   /** @type {any} */ (document.getElementById('check-dlg')).close();
 });
 
+const press = (/** @type {string} */ k) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+const typeKeys = (/** @type {string} */ s) => [...s].forEach(press);
+const problems = (/** @type {string} */ code) => lineIssues(code).length;
+
+describe('review fixes', () => {
+  it('keeps the public flag when the public code is edited; the Offentlig box sets it (review C1)', async () => {
+    await selectRoute('20');
+    const code = /** @type {HTMLInputElement} */ (document.querySelector('input.rh-public'));
+    code.value = '99';
+    code.dispatchEvent(new Event('change'));
+    expect(app.routeState.publicCode).toBe('99');
+    expect(app.routeState.isPublic).toBe(true);
+    const box = /** @type {HTMLInputElement} */ (document.getElementById('rh-ispublic'));
+    box.checked = false;
+    box.dispatchEvent(new Event('change'));
+    expect(app.routeState.isPublic).toBe(false);
+  });
+
+  it('checks grid edits on the open line at once, and the list follows (review I2)', async () => {
+    await selectRoute('20');
+    typeKeys('0701'); press('Enter');           // harmless: the line is now unsaved
+    const before = problems('20');
+    const title = () => /** @type {HTMLElement} */ ([...document.querySelectorAll('.route-item')].find((i) => i.classList.contains('active'))).title;
+    const titleBefore = title();
+    press('ArrowUp');
+    typeKeys('0730'); press('Enter');           // after the next stop's 0710: decreasing
+    expect(codes(lineIssues('20'))).toContain('col-decreasing');
+    expect(problems('20')).toBe(before + 1);
+    expect(title()).not.toBe(titleBefore);
+  });
+});
+
 describe('line info', () => {
   it('checks a saved line', () => {
     expect(codes(lineIssues('20'))).toContain('no-calendar');

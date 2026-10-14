@@ -2,7 +2,7 @@
 // filters, multi-select and batch actions. F5 or the Linjer button opens it; Esc or F5 closes it.
 // Batch edits leave the lines unsaved (§2); "Lagre" saves the selected lines.
 import { app } from './state.js';
-import { $, onRefresh, setMaxiToggle, showMessage } from './shell.js';
+import { $, onRefresh, onLinesChanged, setMaxiToggle, setMaxiOpen, showMessage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { modeIconSvg } from './mode-icons.js';
 import { modeLabel } from '../i18n/modes.js';
@@ -85,6 +85,7 @@ function render() {
   const el = $('line-table');
   if (!el || !document.getElementById('lt-body')) return; // not built yet
   el.hidden = !open || !app.meta;
+  setMaxiOpen(!el.hidden);
   if (el.hidden) return;
   const all = lineRows();
   const sort = loadLineSort();
@@ -231,4 +232,5 @@ export function initLineTable() {
     close();
   }, true);
   onRefresh(render);
+  onLinesChanged(render);
 }
