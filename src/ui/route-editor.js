@@ -132,11 +132,21 @@ async function confirmLeave(reason) {
  * @param {HTMLButtonElement | null} [trigger]
  */
 export async function saveAllRoutes(trigger = null) {
+  return saveRoutes(unsavedCodes(), trigger);
+}
+
+/**
+ * Save the given lines that have unsaved changes (the open one and parked ones). Returns false
+ * when any could not be saved; the message names them.
+ * @param {string[]} codes
+ * @param {HTMLButtonElement | null} [trigger]
+ */
+export async function saveRoutes(codes, trigger = null) {
   if (!app.fs || !app.meta) return false;
   const fs = app.fs, meta = app.meta;
   /** @type {string[]} */ const failed = [];
-  if (app.routeState && app.dirty && !(await saveRoute(trigger))) failed.push(/** @type {string} */ (app.activeRoute));
-  for (const [code, rs] of [...app.drafts]) {
+  if (app.routeState && app.dirty && codes.includes(/** @type {string} */ (app.activeRoute)) && !(await saveRoute(trigger))) failed.push(/** @type {string} */ (app.activeRoute));
+  for (const [code, rs] of [...app.drafts].filter(([c]) => codes.includes(c))) {
     const text = serializeERN(rs, code, { delivery: { name: meta.name, codespace: meta.codespace }, orgs: orgNameList(app.orgs) });
     const { status, issues } = checkRouteFile(text);
     if (status === 'damaged') { failed.push(code); continue; }
@@ -148,6 +158,7 @@ export async function saveAllRoutes(trigger = null) {
       failed.push(code);
     }
   }
+  await pruneProjectCopy();
   if (failed.length) showMessage(t('saveAllFailed', failed.join(', ')));
   refreshAll();
   return !failed.length;

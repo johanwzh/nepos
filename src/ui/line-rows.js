@@ -9,7 +9,7 @@ import { normalizeRanges } from '../core/calendars.js';
 
 /**
  * @typedef {{ code: string, name: string, publicCode: string, label: string, mode: string, submode: string,
- *   brandingId: string, brand: string, authority: string, operator: string, orgIds: string[],
+ *   brandingId: string, brand: string, authority: string, operator: string, orgIds: string[], calendarIds: string[],
  *   firstDay: string, lastDay: string, expired: boolean, exported: boolean, isPublic: boolean,
  *   unsaved: boolean, damaged: boolean, errors: number, warnings: number }} LineRow
  * @typedef {{ col: string, dir: 1 | -1 }} LineSort
@@ -73,7 +73,7 @@ export function lineRows() {
       code: r.code, name: s.name, publicCode: s.publicCode,
       label: s.publicCode || brand || s.name.replace(/[^\p{L}\p{N}]/gu, '').slice(0, 3),
       mode: s.mode, submode: s.submode, brandingId: s.brandingId, brand,
-      authority: authId ? orgName(authId) : '', operator: operId ? orgName(operId) : '', orgIds: s.orgIds,
+      authority: authId ? orgName(authId) : '', operator: operId ? orgName(operId) : '', orgIds: s.orgIds, calendarIds: s.calendarIds,
       firstDay, lastDay, expired: !!lastDay && lastDay < now, exported: s.exported, isPublic: s.isPublic,
       unsaved: isUnsaved(r.code), damaged: r.status === 'damaged', errors, warnings: issues.length - errors,
     };

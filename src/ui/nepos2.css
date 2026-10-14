@@ -247,3 +247,28 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .rl-warn { margin-left: auto; font-size: 11px; color: var(--warn, #b26a00); }
 .rl-warn.has-errors { color: var(--danger, #c62828); }
 .route-item.rl-not-exported .rl-code { opacity: .55; text-decoration: line-through; }
+
+/* Lines pane, maxi view (plan 4f) */
+#page-edit { position: relative; }
+.line-table { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; background: var(--bg-panel); color: var(--text);
+  box-shadow: 4px 0 16px rgba(0,0,0,.25); }
+.line-table[hidden] { display: none; }
+.lt-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--border-lt); }
+.lt-bar input[type=search] { flex: 0 1 280px; height: 26px; padding: 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text); font: inherit; }
+.lt-bar select { height: 26px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text); font: inherit; font-size: 12px; }
+.lt-spacer { flex: 1; }
+.lt-orgs { display: inline-flex; gap: 6px; }
+#lt-count { font-size: 12px; color: var(--text-f); min-width: 60px; }
+.lt-scroll { flex: 1; overflow: auto; }
+.lt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lt-table th { position: sticky; top: 0; background: var(--bg-panel); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; }
+.lt-table th.sorted[data-dir="1"]::after { content: ' ▲'; font-size: 9px; }
+.lt-table th.sorted[data-dir="-1"]::after { content: ' ▼'; font-size: 9px; }
+.lt-table td { padding: 4px 8px; border-bottom: 1px solid var(--border-lt); white-space: nowrap; }
+.lt-table tr[data-code] { cursor: default; }
+.lt-table tr[data-code]:hover { background: var(--bg-raised); }
+.lt-table tr.selected { background: var(--accent-bg); }
+.lt-table tr.active .lt-name { font-weight: 600; }
+.lt-table .mode-icon { width: 18px; height: 18px; vertical-align: middle; }
+.lt-status.has-errors { color: var(--danger, #c62828); }
+.lt-empty { color: var(--text-f); font-style: italic; }

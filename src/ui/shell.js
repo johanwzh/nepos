@@ -217,6 +217,8 @@ export function currentPage() {
 }
 
 /** Wire up the shell once at start-up. */
+let keysWired = false;
+
 export function initShell() {
   $('el-ver').textContent = `v${VERSION}`;
 
@@ -282,7 +284,7 @@ export function initShell() {
 
   // View and panel shortcuts (navigation spec §8). Capture phase, so they work from text fields and
   // the grid never sees them; nothing changes behind an open window. F2 belongs to the grid.
-  document.addEventListener('keydown', (e) => {
+  if (!keysWired) document.addEventListener('keydown', (e) => {
     if (document.querySelector('dialog[open]')) return;
     /** @type {Record<string, string>} */
     const byDigit = { 1: 'edit', 2: 'assets', 3: 'export' };
@@ -294,6 +296,7 @@ export function initShell() {
       if (e.key === 'F5') toggleMaxi(); else togglePanel('right');
     }
   }, true);
+  keysWired = true; // the document outlives a re-initialised shell (tests): one listener only
 
   window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 }
