@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { lookupQuays } from '../../src/services/nsr.js';
+import { lookupQuays, getStopPlace } from '../../src/services/nsr.js';
 
 const recorded = JSON.parse(readFileSync('tests/fixtures/nsr/stop-places-by-quay.json', 'utf8'));
 const opts = { baseUrl: 'https://api.entur.io/stop-places/v1/read/', clientName: 'test-nepos' };
@@ -54,5 +54,30 @@ describe('lookupQuays', () => {
   it('fails loudly on an error response', async () => {
     const { fn } = fakeFetch({}, { ok: false, status: 503 });
     await expect(lookupQuays(['NSR:Quay:7203'], { ...opts, fetch: fn })).rejects.toThrow('503');
+  });
+});
+
+describe('getStopPlace', () => {
+  const place = JSON.parse(readFileSync('tests/fixtures/nsr/stop-place-4000.json', 'utf8'));
+
+  it('gives the stop place with its Quays', async () => {
+    const { fn, calls } = fakeFetch(place);
+    const result = await getStopPlace('NSR:StopPlace:4000', { ...opts, fetch: fn });
+    expect(calls[0].url).toBe('https://api.entur.io/stop-places/v1/read/stop-places/NSR:StopPlace:4000');
+    expect(result?.name).toBe('Jernbanetorget');
+    expect(result?.mode).toBe('bus');
+    expect(result?.description).toBe('foran Oslo S');
+    expect(result?.quays.map((q) => `${q.quayId} ${q.publicCode}`)).toEqual(['NSR:Quay:100636 B', 'NSR:Quay:100635 C', 'NSR:Quay:7203 A', 'NSR:Quay:7202 D']);
+    expect(result?.quays[2]).toMatchObject({ lat: 59.911425, lon: 10.749736 });
+  });
+
+  it('gives null for a stop place NSR does not know', async () => {
+    const { fn } = fakeFetch({ errorCode: 'RESOURCE_NOT_FOUND' }, { ok: false, status: 404 });
+    expect(await getStopPlace('NSR:StopPlace:999999999', { ...opts, fetch: fn })).toBe(null);
+  });
+
+  it('fails loudly on other errors', async () => {
+    const { fn } = fakeFetch({}, { ok: false, status: 500 });
+    await expect(getStopPlace('NSR:StopPlace:4000', { ...opts, fetch: fn })).rejects.toThrow('500');
   });
 });

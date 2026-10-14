@@ -3,6 +3,7 @@
 import { ERN_MODES } from './ern/modes.js';
 
 export const NSR_QUAY_PATTERN = /^NSR:Quay:\d+$/;
+export const NSR_STOP_PLACE_PATTERN = /^NSR:StopPlace:\d+$/;
 
 /**
  * A stop ID as the local part of a NeTEx ID (ScheduledStopPoint, RoutePoint, …):
