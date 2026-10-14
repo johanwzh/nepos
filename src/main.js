@@ -7,6 +7,7 @@ import { initProjectUi, openFs } from './ui/project-ui.js';
 import { initGrid } from './ui/grid.js';
 import { initFootnoteEditor } from './ui/footnote-editor.js';
 import { initRouteEditor } from './ui/route-editor.js';
+import { initExportPage } from './ui/export-page.js';
 
 initShell();
 initRouteList();
@@ -14,6 +15,7 @@ initOrgsPage();
 initGrid();
 initFootnoteEditor();
 initRouteEditor();
+initExportPage();
 
 // Development only: /?sample opens an in-memory sample project, so the screens can be checked
 // without the browser's folder picker. Never active in a production build.

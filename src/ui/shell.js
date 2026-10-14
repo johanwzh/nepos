@@ -39,17 +39,21 @@ export function markDirty() {
   refreshAll();
 }
 
-/** @type {() => Promise<boolean>} */
+/** @type {(reason?: string) => Promise<boolean>} */
 let leaveCheck = async () => true;
 
-/** The route editor registers how to protect unsaved changes. @param {() => Promise<boolean>} fn */
+/** The route editor registers how to protect unsaved changes. @param {(reason?: string) => Promise<boolean>} fn */
 export function setBeforeLeave(fn) {
   leaveCheck = fn;
 }
 
-/** Ask before anything that closes the open route. Resolves false when the user wants to stay. */
-export function beforeLeave() {
-  return leaveCheck();
+/**
+ * Ask before anything that closes or reads past the open route's unsaved changes.
+ * Resolves false when the user wants to stay.
+ * @param {string} [reason] 'export' words the question for an export
+ */
+export function beforeLeave(reason) {
+  return leaveCheck(reason);
 }
 
 // ─── Theme ──────────────────────────────────────────────────────────────────
