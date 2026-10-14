@@ -95,7 +95,8 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .n2-tiles.n2-map-dark .leaflet-tile-pane { opacity: .75; filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
 
 /* Search window (spec §7.1): search and results beside a large map */
-dialog.n2-ws { width: min(1100px, 95vw); height: min(720px, 90vh); padding: 0; display: none; }
+dialog.n2-ws { width: min(1100px, 95vw); height: min(720px, 90vh); max-width: none; max-height: none; margin: auto; padding: 0; display: none; }
+.n2-ws .n2-check { display: flex; margin: 0; }
 dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .n2-ws-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); }
 .n2-ws-body { flex: 1; display: flex; min-height: 0; }
