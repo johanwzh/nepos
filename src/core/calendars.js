@@ -73,3 +73,28 @@ export function columnDays(periodDays, dayCode) {
     return code.weekdays.includes(weekdayOf(d));
   });
 }
+/** ISO 8601 week number. @param {string} d */
+export function isoWeek(d) {
+  const x = toDate(d);
+  const day = x.getUTCDay() || 7;
+  x.setUTCDate(x.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(x.getUTCFullYear(), 0, 1));
+  return Math.ceil(((x.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+/** @param {string[]} days @returns {[string, string][]} */
+export function daysToRanges(days) {
+  return normalizeRanges([...new Set(days)].map((d) => /** @type {[string, string]} */ ([d, d])));
+}
+
+/** @param {Calendar} cal @param {string[]} days @param {boolean} on @returns {Calendar} */
+export function setDays(cal, days, on) {
+  const current = new Set(calendarDays(cal));
+  for (const d of days) { if (on) current.add(d); else current.delete(d); }
+  return { ...cal, ranges: daysToRanges([...current]) };
+}
+
+/** @param {[string, string][]} ranges @param {number} days */
+export function shiftRanges(ranges, days) {
+  return normalizeRanges(ranges.map(([a, b]) => /** @type {[string, string]} */ ([addDays(a, days), addDays(b, days)])));
+}

@@ -4,6 +4,7 @@ import { parseDayCode, isAllowedDayCode } from '../../src/core/day-codes.js';
 import { addDays, weekdayOf, isoDate, normalizeRanges, calendarDays, unionDays, columnDays } from '../../src/core/calendars.js';
 import { uuid5, NEPOS_NAMESPACE } from '../../src/core/uuid5.js';
 import { isValidDayCode } from '../../src/core/ern/validate.js';
+import { isoWeek, daysToRanges, setDays, shiftRanges } from '../../src/core/calendars.js';
 
 describe('holidays', () => {
   it('finds Easter and the Norwegian public holidays', () => {
@@ -12,7 +13,7 @@ describe('holidays', () => {
     const h = norwegianHolidays(2027);
     expect([...h.keys()]).toEqual(['20270101', '20270325', '20270326', '20270328', '20270329', '20270501',
       '20270506', '20270516', '20270517', '20271225', '20271226']);
-    expect(h.get('20270517')).toBe('Grunnlovsdag');
+    expect(h.get('20270517')).toBe('2. pinsedag, Grunnlovsdag'); // both holidays fall on 17 May 2027
   });
 });
 
@@ -73,5 +74,35 @@ describe('UUID v5', () => {
     expect(uuid5('www.example.com', '6ba7b810-9dad-11d1-80b4-00c04fd430c8')).toBe('2ed6657d-e927-568b-95e1-2665a8aea6a2');
     expect(uuid5('x')).toBe(uuid5('x', NEPOS_NAMESPACE));
     expect(uuid5('x')).not.toBe(uuid5('y'));
+  });
+});
+
+
+describe('calendar editing helpers', () => {
+  it('numbers ISO weeks, also week 53 and around New Year', () => {
+    expect(isoWeek('20261231')).toBe(53);
+    expect(isoWeek('20270101')).toBe(53);
+    expect(isoWeek('20270104')).toBe(1);
+    expect(isoWeek('20260101')).toBe(1);
+    expect(isoWeek('20280229')).toBe(9);
+  });
+
+  it('turns days into ranges and back', () => {
+    expect(daysToRanges(['20260103', '20260101', '20260102', '20260105'])).toEqual([['20260101', '20260103'], ['20260105', '20260105']]);
+  });
+
+  it('switches days on and off', () => {
+    const cal = { id: 'a', name: 'A', ranges: /** @type {[string, string][]} */ ([['20260101', '20260110']]) };
+    expect(setDays(cal, ['20260105'], false).ranges).toEqual([['20260101', '20260104'], ['20260106', '20260110']]);
+    expect(setDays(cal, ['20260111', '20260112'], true).ranges).toEqual([['20260101', '20260112']]);
+    expect(cal.ranges).toEqual([['20260101', '20260110']]); // unchanged
+  });
+
+  it('shifts ranges by whole weeks, keeping weekdays', () => {
+    expect(shiftRanges([['20260817', '20261220']], 364)).toEqual([['20270816', '20271219']]);
+  });
+
+  it('keeps both names when two holidays fall on one date', () => {
+    expect(norwegianHolidays(2027).get('20270517')).toBe('2. pinsedag, Grunnlovsdag');
   });
 });
