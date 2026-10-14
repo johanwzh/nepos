@@ -22,10 +22,10 @@ describe('stop IDs in route files', () => {
 
   it('writes them back unchanged', () => {
     const text = route(['NSR:Quay:7203', 'NSR:Quay:11972']);
-    // Nepos 2 adds #MOD and #UID and writes #PER without name and dates (line header spec §5,
+    // Nepos 2 adds #MOD, #UID, #EKS and #OFF and writes #PER without name and dates (line header spec §5,
     // structure spec §6); the stop IDs are written back as read.
     const out = serializeERN(parseERN(text), '50', { delivery: { name: 'Test', codespace: 'TST' } });
-    expect(out.replace(/^#(MOD|UID);[^\r\n]*\r\n/gm, '')).toBe(text.replace('#PER;;;;;;', '#PER;;;;;;'));
+    expect(out.replace(/^#(MOD|UID|EKS|OFF);[^\r\n]*\r\n/gm, '')).toBe(text.replace('#PER;;;;;;', '#PER;;;;;;'));
   });
 
   it('passes the integrity check', () => {

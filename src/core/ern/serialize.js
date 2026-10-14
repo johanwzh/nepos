@@ -28,6 +28,8 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     lines.push(`#RUT;${esc(rs.privateCode) || '-1'};${esc(rs.publicCode)};${esc(rs.routeName)};;${ernCode};`);
     if (rs.mode) lines.push(`#MOD;${esc(rs.mode)};${esc(rs.submode)}`);
     if (rs.brandingId) lines.push(`#BRA;${esc(rs.brandingId)}`);
+    // The line flags (navigation spec §4) are always written.
+    lines.push(`#EKS;${rs.exported === false ? 0 : 1}`, `#OFF;${rs.isPublic === false ? 0 : 1}`);
     const curId = rs.currency || 'neposcoin';
     // The rate read from the file wins; the 1.5.7 table is only the fallback for files without one.
     const curRate = rs.currencyRate ?? currencyRate(curId);

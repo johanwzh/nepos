@@ -264,6 +264,8 @@ function renderHeader() {
         <label class="rh-private-l">${esc(t('privateCodeLabel'))} <input class="rh-private" id="rh-private" value="${esc(rs.privateCode)}"${dis}></label>
       </div>
       <select class="rh-branding${rs.brandingId ? '' : ' empty'}" id="rh-branding"${dis}>${brandOptions}</select>
+      <div class="rh-flags"><label class="n2-check"><input type="checkbox" id="rh-exported"${rs.exported === false ? '' : ' checked'}${dis}> ${esc(t('flagExported'))}</label>
+        <label class="n2-check"><input type="checkbox" id="rh-public"${rs.isPublic === false ? '' : ' checked'}${dis}> ${esc(t('flagPublic'))}</label></div>
       <div class="rh-orgs" id="rh-orgs"></div>
     </div>
     <div class="rh-partb">
@@ -284,6 +286,8 @@ function renderHeader() {
   $('rh-name').addEventListener('change', () => { rs.routeName = $('rh-name').value.trim(); markDirty(); });
   $('rh-public').addEventListener('change', () => { rs.publicCode = $('rh-public').value.trim(); markDirty(); });
   $('rh-private').addEventListener('change', () => { rs.privateCode = $('rh-private').value.trim(); markDirty(); });
+  $('rh-exported').addEventListener('change', () => { rs.exported = $('rh-exported').checked; markDirty(); });
+  $('rh-public').addEventListener('change', () => { rs.isPublic = $('rh-public').checked; markDirty(); });
   $('rh-branding').addEventListener('change', () => { rs.brandingId = $('rh-branding').value; markDirty(); renderHeader(); });
   $('rh-mode-tile').addEventListener('click', () => openModeMenu($('rh-mode-tile'), { mode: rs.mode, submode: rs.submode, lang, onPick: (m, sub) => {
     rs.mode = m; rs.submode = sub; rs.transportMode = ernCodeFor(m, sub, rs.transportMode); markDirty(); renderHeader();

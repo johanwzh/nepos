@@ -10,7 +10,7 @@ import { UUID_PATTERN } from './serialize.js';
  */
 export function parseERN(text, { lang: _lang = 'en' } = {}) {
     const rs = {
-        routeName:'', publicCode:'', privateCode:'', mode:'', submode:'', brandingId:'', transportMode:6, kom:'', sek:[], footnotes:[],
+        routeName:'', publicCode:'', privateCode:'', mode:'', submode:'', brandingId:'', exported:true, isPublic:true, transportMode:6, kom:'', sek:[], footnotes:[],
         // Table sets (#TRA) with their periods (#PER + #KAL), one grid per period (timetable
         // structure spec §1–§4). Grids are keyed `${periodId}:${tableSetId}`.
         tableSets:[], periods:[], activeSet:null, activePer:null,
@@ -101,6 +101,12 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 break;
             case '#BRA':
                 rs.brandingId = (f[1]||'').trim();
+                break;
+            case '#EKS': // Eksporteres (navigation spec §4); only 0 means no
+                rs.exported = (f[1]||'').trim() !== '0';
+                break;
+            case '#OFF': // Offentlig
+                rs.isPublic = (f[1]||'').trim() !== '0';
                 break;
             case '#UID': {
                 // Belongs to the record directly before it: a table set (#TRA) or a column (#TUR).

@@ -5,7 +5,7 @@ const emptyGrid = () => ({ stops: [], cols: [] });
 /** @param {'no' | 'en' | string} _lang */
 export function newRouteState(_lang) {
   return {
-    routeName: '', publicCode: '', privateCode: '', mode: '', submode: '', brandingId: '', transportMode: 0,
+    routeName: '', publicCode: '', privateCode: '', mode: '', submode: '', brandingId: '', exported: true, isPublic: true, transportMode: 0,
     tableSets: [{ id: 1, name: '', uid: null }],
     periods: [{ id: 2, setId: 1, calendarIds: [] }],
     activeSet: 1, activePer: 2, nextId: 3,

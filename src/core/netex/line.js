@@ -41,7 +41,9 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
 
     // Element order per the NeTEx XSD (line header spec §7): BrandingRef → Name → TransportMode →
     // TransportSubmode → PublicCode → PrivateCode → OperatorRef → RepresentedByGroupRef
-    const lineXml = `      <Line id="${lineId}" version="1">${brandRef}
+    // Offentlig = nei: delivered, but not for public release (NeTEx PR 899).
+    const pubAttr = rs.isPublic === false ? ' publication="restricted"' : '';
+    const lineXml = `      <Line id="${lineId}" version="1"${pubAttr}>${brandRef}
         <Name>${xe(rs.routeName||routeCode)}</Name>
         <TransportMode>${lineMode}</TransportMode>${subEl}${pubEl}${privEl}${operRef}
         <RepresentedByGroupRef ref="${cs}:Network:${authOut ? xe(authorityNetworkLocalId(authOut.networkKey)) : cs}"/>
@@ -115,13 +117,13 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                 });
 
                 sjIds.add(sjId);
-                sjs.push(`      <ServiceJourney id="${sjId}" version="1">
+                sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>
         <TransportMode>${lineMode}</TransportMode>
         <JourneyPatternRef ref="${jpId}" version="1"/>
         <passingTimes>${ptXml}
         </passingTimes>
       </ServiceJourney>`);
-                for (const d of days) dsjs.push(`      <DatedServiceJourney id="${cs}:DatedServiceJourney:${uuid5(`${sjId}|${d}`)}" version="1">
+                for (const d of days) dsjs.push(`      <DatedServiceJourney id="${cs}:DatedServiceJourney:${uuid5(`${sjId}|${d}`)}" version="1"${pubAttr}>
         <ServiceJourneyRef ref="${sjId}" version="1"/>
         <OperatingDayRef ref="${cs}:OperatingDay:${isoDate(d)}"/>
       </DatedServiceJourney>`);

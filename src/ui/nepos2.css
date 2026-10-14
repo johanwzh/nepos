@@ -238,3 +238,6 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .mb-check { width: 14px; text-align: center; }
 .mb-hint { margin-left: auto; padding-left: 24px; color: var(--text-f); }
 .mb-sep { height: 1px; background: var(--border-lt); margin: 4px 0; }
+
+/* Line flags in the header (plan 4f) */
+.rh-flags { display: flex; gap: 12px; font-size: 12px; }

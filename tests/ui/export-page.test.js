@@ -87,6 +87,17 @@ describe('export page', () => {
     expect(await fs.list('exports')).toEqual([]);
   });
 
+  it('leaves a line that is not exported out, also when it has errors', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    await writeRoute(fs, '51', route('104').replace('#RUT;-1;50;', '#RUT;-1;51;').replace('#CUR;', '#EKS;0\r\n#CUR;'));
+    /** @type {HTMLInputElement} */ (document.getElementById('chk-zip')).checked = false;
+    document.getElementById('chk-zip')?.dispatchEvent(new Event('change'));
+    await click('btn-netex');
+    expect(document.getElementById('export-status').textContent).not.toContain('feilene');
+    const [dir] = await fs.list('exports');
+    expect(await fs.list(`exports/${dir.name}`)).toHaveLength(2); // shared + line 50 only
+  });
+
   it('writes a ZIP into the project folder', async () => {
     await openProjectWith(route('NSR:Quay:11972'));
     await click('btn-netex');

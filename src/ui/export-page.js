@@ -75,10 +75,12 @@ async function runCheck() {
     rs: r.status === 'damaged' ? null : parseERN(r.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) }),
   }));
   const orgsProblem = app.orgsError ? 'unreadable' : '';
-  const issues = checkForExport({ routes, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, brandings: app.brandings, brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars, calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, changedOnDisk });
+  // Lines set to "Eksporteres: nei" are left out entirely (navigation spec §4); damaged ones are still checked.
+  const exported = routes.filter((r) => r.rs?.exported !== false);
+  const issues = checkForExport({ routes: exported, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, brandings: app.brandings, brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars, calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, changedOnDisk });
   result = { fs, issues };
   refreshAll(); // the route list shows the files as they are now
-  return { routes: routes.map(({ code, rs }) => ({ code, rs })), issues };
+  return { routes: exported.map(({ code, rs }) => ({ code, rs })), issues };
 }
 
 async function runExport() {
