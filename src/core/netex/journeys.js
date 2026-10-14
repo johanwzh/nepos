@@ -39,10 +39,8 @@ export function isExportedTrip(grid, col) {
 /** Whether a route has at least one exported trip. @param {any} rs */
 export function routeHasTrips(rs) {
   for (const per of rs?.periods ?? []) {
-    for (const dir of rs.directions ?? []) {
-      const grid = rs.grids?.[`${per.id}:${dir.id}`];
-      if (grid?.cols.some((/** @type {any} */ col) => isExportedTrip(grid, col))) return true;
-    }
+    const grid = rs.grids?.[`${per.id}:${per.setId}`];
+    if (grid?.cols.some((/** @type {any} */ col) => isExportedTrip(grid, col))) return true;
   }
   return false;
 }

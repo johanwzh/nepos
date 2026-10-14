@@ -14,13 +14,13 @@ describe('integrity check: data a save would lose', () => {
     expect(checkRouteFile(nepos2).status).toBe('ok');
   });
 
-  it('flags a period with only a return table (save would turn it into outbound)', () => {
+  it('flags a return table (#TAB;1): Nepos 2 writes one #TAB;0 per period', () => {
     const text = nepos2.replace('#TAB;0;;;;\r\n#TUR;0;DX67', '#TAB;1;;;;\r\n#TUR;0;DX67');
-    expect(lost(text).map((i) => i.line)).toContain(8);
+    expect(lost(text).map((i) => i.line)).toContain(10);
   });
 
   it('flags a second outbound table in the same period (save would drop one)', () => {
-    const text = nepos2.replace('#PER;Sommer;20260601;20260831;;;\r\n#TAB;0;;;;', '#PER;Sommer;20260601;20260831;;;\r\n#TAB;0;;;;\r\n#TUR;0;D;0;0;0;0\r\n#TAB;0;;;;');
+    const text = nepos2.replace('#TAB;0;;;;\r\n', '#TAB;0;;;;\r\n#TUR;0;D;0;0;0;0\r\n#TAB;0;;;;\r\n');
     expect(checkRouteFile(text).status).toBe('damaged');
   });
 
@@ -29,7 +29,7 @@ describe('integrity check: data a save would lose', () => {
   });
 
   it('flags fields Nepos rewrites as constants', () => {
-    expect(lost(nepos2.replace('#PER;Vinter;20260101;20260531;;;', '#PER;Vinter;20260101;20260531;;;20251215')).length).toBe(1);
+    // (#PER fields are not kept on purpose: the period's days come from #KAL — structure spec §4)
     expect(lost(nepos2.replace('#TAB;0;;;;', '#TAB;0;Km;Sone;Kr')).length).toBe(1);
     expect(lost(nepos2.replace('#TUR;0;DX67;0;0;0;0', '#TUR;0;DX67;1;0;0;0')).length).toBe(1);
     expect(lost(nepos2.replace('#TRL;0;104;Florø skysstasjon;34;0;-1;-1;34;-1', '#TRL;0;104;Florø skysstasjon;34;0;-1;-1;34;B')).length).toBe(1);
@@ -50,7 +50,7 @@ describe('integrity check: data a save would lose', () => {
   });
 
   it('flags comment lines, which a save drops', () => {
-    expect(lost(nepos2.replace('#TRA;20\r\n', '#TRA;20\r\n// husk dette\r\n')).map((i) => i.line)).toEqual([7]);
+    expect(lost(nepos2.replace('#TRA;Florø - Eikefjord\r\n', '#TRA;Florø - Eikefjord\r\n// husk dette\r\n')).map((i) => i.line)).toEqual([7]);
   });
 
   it('does not flag a price written with fewer decimals', () => {

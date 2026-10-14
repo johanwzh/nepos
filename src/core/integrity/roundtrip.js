@@ -52,6 +52,7 @@ function keyRecords(text) {
     const norm = normalize(line);
     let where = '';
     if (record === '#PER') { per++; tab = -1; row = -1; where = `P${per}`; }
+    else if (record === '#KAL') where = `P${per}`;
     else if (record === '#TAB') { tab++; row = -1; where = `P${per}T${tab}`; }
     else if (record === '#TUR' || record === '#FOT' || record === '#UNT') where = `P${per}T${tab}`;
     else if (record === '#TRL') { row++; where = `P${per}T${tab}R${row}`; }

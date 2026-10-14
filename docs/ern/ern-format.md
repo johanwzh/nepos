@@ -632,10 +632,48 @@ Gives the record directly before it a stable ID that never changes and carries n
 `#TUR` it is the column's ID, and the NeTEx `ServiceJourney` ID is `<codespace>:ServiceJourney:<uuid>`.
 A column without a valid, unique `#UID` gets a new UUID when the file is saved.
 
-### #TRA *Nepos 2*
+### #TRA — table set *Nepos 2*
 
-Its value is kept as read and written back unchanged; its meaning in Nepos 2 is defined by the
-table-set design (plan 4c).
+```
+#TRA;table set name
+#UID;uuid
+```
+
+A route holds any number of table sets: master patterns the user navigates between, such as
+"Bergen–Oslo", "Oslo–Bergen" or "Oslo–Bergen–Kristiansand–Oslo". The single ERN field holds the
+name; `#UID` follows with the table set's stable ID. NeTEx: one `Route` per table set (Name = the
+table set's name, ID from its UUID). JourneyPatterns are worked out from the trips: one per distinct
+stop sequence in the table set, named `<table set name>-1`, `-2` … There is no fixed Tur/Retur
+pair and no DirectionType.
+
+### #PER and #KAL — period and calendars *Nepos 2*
+
+```
+#PER;;;;;;
+#KAL;calendar id
+#KAL;calendar id
+#TAB;0;;;;
+```
+
+A period belongs to the `#TRA` above it. Nepos writes `#PER` with no name and no dates and ignores
+them on read: the period's operating days are the union of the calendars named by the `#KAL`
+records directly after it (calendars live in `data/calendars.json`; a range `[from, to]` includes
+both days). Each period has exactly one `#TAB`, written `#TAB;0;;;;`; a second `#TAB` in the same
+period, or a return table (`#TAB;1`), is reported as damaged by the integrity check.
+
+### Day codes and operating days *Nepos 2*
+
+A column's operating days are its period's days filtered by its day code. Allowed: `D`, `DX` with
+1–3 weekday digits, 1–4 weekday digits, and the holiday forms `H` (Norwegian public holidays only),
+`DXH` and `DX…H` (holidays excluded). Holidays are calculated (fixed dates and the Easter-based
+days). `S` (school days) is not allowed. A trip after midnight (`+1`) belongs to the operating day
+it starts on.
+
+NeTEx: each trip is a `ServiceJourney` without day types, plus one `DatedServiceJourney` per
+operating day (`ServiceJourneyRef` + `OperatingDayRef`), with derived UUID v5 IDs. The shared file's
+`ServiceCalendarFrame` holds only `OperatingDay`s (`<cs>:OperatingDay:YYYY-MM-DD`). No `DayType`,
+`DayTypeAssignment` or `OperatingPeriod` is written. Footnote date exceptions (`#UNT`) are kept in
+the file but not exported.
 
 ### #LEV — Leveranse (Delivery) *Nepos*
 
@@ -747,6 +785,7 @@ The record codes come from Norwegian words:
 | MOD | Modus | Transport mode (Nepos 2) |
 | BRA | Branding | Branding (Nepos 2) |
 | UID | Unik ID | Stable ID (Nepos 2) |
+| KAL | Kalender | Calendar reference (Nepos 2) |
 | RIR | Rute i rute | Route in route |
 | FYL | Fylke | County |
 | REG | Region | Region |

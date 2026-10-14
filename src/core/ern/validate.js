@@ -1,12 +1,13 @@
 // Value rules for ERN fields. The day-code and time rules match what the Nepos 1.5.7 grid
 // accepted (nepos.html gValDC lines 4005–4010 and gParse lines 4011–4024).
 
+import { isAllowedDayCode } from '../day-codes.js';
+
 /** @param {string} code */
 export function isValidDayCode(code) {
-  if (code === '' || code === 'D') return true;
-  if (/^DX[1-7]{1,3}$/.test(code)) { const d = code.slice(2); return new Set(d).size === d.length; }
-  if (/^[1-7]{1,4}$/.test(code)) return new Set(code).size === code.length;
-  return false;
+  // Empty is allowed in a file (a column not yet filled in); otherwise the forms Nepos can turn
+  // into operating days, including the holiday (H) forms (timetable structure spec §5).
+  return code === '' || isAllowedDayCode(code);
 }
 
 /** @param {string} t HHMM or '|' */

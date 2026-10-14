@@ -19,7 +19,7 @@ describe('buildNeTExFiles', () => {
   });
 
   const nsrRoute = () => parseERN([
-    '#RUT;-1;50;Jernbanetorget - Oslo bussterminal;;1;', '#PER;P;20260101;20260131;;;', '#TAB;0;;;;', '#TUR;0;D;0;0;0;0',
+    '#RUT;-1;50;Jernbanetorget - Oslo bussterminal;;1;', '#PER;;;;;;', '#TAB;0;;;;', '#TUR;0;D;0;0;0;0',
     '#TRL;0;NSR:Quay:7203;Jernbanetorget;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0',
     '#TRL;1;-1;Uten ID;34;0;-1;-1;34;-1', '#TRC;0;0705;0;0;0;0;0',
     '#TRL;2;NSR:Quay:11972;Oslo bussterminal;34;0;-1;-1;34;-1', '#TRC;0;0710;0;0;0;0;0',

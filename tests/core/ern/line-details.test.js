@@ -10,18 +10,18 @@ const file = (extra = {}) => [
   `#RUT;${extra.priv ?? '1008'};X20;Oslo - Gol;;${extra.ern ?? '13'};`,
   ...(extra.mod === null ? [] : [extra.mod ?? '#MOD;bus;expressBus']),
   '#BRA;TST:Branding:aaaa',
-  '#SEK;NOG:Operator:x;Buss AS;0;1;0;0', '#CUR;neposcoin;1', '#TRA;gammel', '#PER;P;20260101;20260630;;;', '#TAB;0;;;;',
+  '#SEK;NOG:Operator:x;Buss AS;0;1;0;0', '#CUR;neposcoin;1', '#TRA;gammel', '#PER;;;;;;', '#TAB;0;;;;',
   '#TUR;0;D;0;0;0;0', `#UID;${U1}`, '#TUR;1;D;0;0;0;0',
   '#TRL;0;NSR:Quay:1;A;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0', '#TRC;1;0800;0;0;0;0;0',
   '#TRL;1;NSR:Quay:2;B;34;0;-1;-1;34;-1', '#TRC;0;0715;0;0;0;0;0', '#TRC;1;0815;0;0;0;0;0',
 ].join('\r\n') + '\r\n';
 const save = (/** @type {any} */ rs) => serializeERN(rs, 'r1', { delivery: { name: 'Test', codespace: 'TST' } });
-const grid0 = (/** @type {any} */ rs) => rs.grids[`${rs.periods[0].id}:${rs.directions[0].id}`];
+const grid0 = (/** @type {any} */ rs) => rs.grids[`${rs.periods[0].id}:${rs.periods[0].setId}`];
 
 describe('line details in ERN', () => {
   it('reads private code, public code, mode, branding and column IDs', () => {
     const rs = parseERN(file());
-    expect([rs.privateCode, rs.publicCode, rs.routeName, rs.mode, rs.submode, rs.brandingId, rs.tra])
+    expect([rs.privateCode, rs.publicCode, rs.routeName, rs.mode, rs.submode, rs.brandingId, rs.tableSets[0].name])
       .toEqual(['1008', 'X20', 'Oslo - Gol', 'bus', 'expressBus', 'TST:Branding:aaaa', 'gammel']);
     expect(grid0(rs).cols.map((/** @type {any} */ c) => c.uid)).toEqual([U1, null]);
   });
@@ -66,13 +66,15 @@ describe('line details in ERN', () => {
   it('gives a copied column (same UUID twice) a new UUID on save', () => {
     const rs = parseERN(file());
     grid0(rs).cols[1].uid = U1;
-    const ids = [...save(rs).matchAll(/#UID;([^\r\n]+)/g)].map((m) => m[1]);
+    // Column IDs only (the table set's #UID follows #TRA)
+    const ids = [...save(rs).matchAll(/#TUR;[^\r\n]*\r\n#UID;([^\r\n]+)/g)].map((m) => m[1]);
     expect(ids[0]).toBe(U1);
     expect(ids[1]).not.toBe(U1);
   });
 
   it('reports a #UID that does not follow a #TUR as out of order', () => {
-    const bad = file().replace('#TRA;gammel\r\n', `#TRA;gammel\r\n#UID;${U1}\r\n`);
+    // #UID may follow #TRA (a table set) or #TUR (a column), nothing else
+    const bad = file().replace('#CUR;neposcoin;1\r\n', `#CUR;neposcoin;1\r\n#UID;${U1}\r\n`);
     expect(checkRouteFile(bad).status).toBe('damaged');
   });
 

@@ -179,3 +179,22 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 
 .rl-top { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--accent); line-height: 1.4; }
 .rl-name { font-size: 12px; color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Table sets and calendars (plan 4c) */
+.ts-tabs { display: flex; gap: 2px; align-items: flex-end; padding: 4px 8px 0; border-bottom: 1px solid var(--border-lt); background: var(--bg-raised); }
+.ts-tab { display: flex; align-items: center; gap: 4px; padding: 4px 12px; border: 1px solid var(--border-lt); border-bottom: none;
+  border-radius: 6px 6px 0 0; cursor: pointer; background: var(--bg-hdr); color: var(--text-m); font-size: 12px; }
+.ts-tab.active { background: var(--bg-panel); color: var(--text); font-weight: 600; }
+.ts-del, .ts-add { border: none; background: transparent; color: var(--text-m); cursor: pointer; }
+.ts-add { padding: 4px 10px; font-size: 14px; }
+.per-cals { gap: 4px; flex-wrap: wrap; }
+.per-cal { border: 1px solid var(--border); border-radius: 999px; padding: 0 4px 0 8px; font-size: 11px; display: inline-flex; align-items: center; gap: 2px; }
+.per-cal.n2-missing { border-color: var(--g-dec-c); color: var(--g-dec-c); }
+.per-cal-x { border: none; background: transparent; color: var(--text-m); cursor: pointer; padding: 0 2px; }
+.cal-row { border-top: 1px solid var(--border-lt); padding: 6px 0; }
+.cal-head { display: flex; gap: 8px; align-items: center; }
+.cal-name { flex: 1; max-width: 320px; }
+.cal-name.invalid { border-color: var(--g-dec-c); }
+.cal-days { color: var(--text-m); font-size: 12px; }
+.cal-range { display: flex; gap: 6px; align-items: center; margin: 2px 0 0 12px; }
+.cal-range-add { margin: 4px 0 0 12px; }

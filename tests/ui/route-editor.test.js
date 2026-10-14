@@ -20,7 +20,7 @@ import { serializeERN } from '../../src/core/ern/serialize.js';
 const press = (key, opts = {}) => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...opts }));
 const typeKeys = (s) => [...s].forEach((k) => press(k));
 const route20 = serializeERN(parseERN(sample.routes[1].text), '20', { delivery: { name: 'Test', codespace: 'TST' }, orgs: sample.orgs });
-const damaged30 = route20.replace(';20;', ';30;').replace('#TRA;20\r\n', '#TRA;30\r\n#KOS;4;x;0\r\n');
+const damaged30 = route20.replace(';20;', ';30;').replace('#TRA;Florø - Eikefjord\r\n', '#TRA;Florø - Eikefjord\r\n#KOS;4;x;0\r\n');
 
 /** @type {any} */
 let fs;
@@ -142,18 +142,9 @@ describe('route editor — review fixes', () => {
     sel.dispatchEvent(new Event('change'));
     expect(cellTime(0, 0)).toBe('0900');
     document.getElementById('btn-del-per').click();
-    expect(app.routeState.periods.map((p) => p.name)).toEqual(['Vinter']);
+    expect(app.routeState.periods).toHaveLength(1);
     expect(cellTime(0, 0)).toBe('0700');
-    expect(app.routeState.grids[`${app.routeState.activePer}:${app.routeState.activeDir}`].cols[0].cells[0].time).toBe('0700');
-  });
-
-  it('deleting a direction keeps the remaining direction\'s trips', async () => {
-    await selectRoute('20');
-    document.getElementById('ef-dir').click(); // creates "Retur" with the stops reversed, no trips
-    expect(cellTime(0, 0)).toBe(undefined);
-    document.getElementById('ef-del-dir').click();
-    expect(app.routeState.directions).toHaveLength(1);
-    expect(cellTime(0, 0)).toBe('0700');
+    expect(app.routeState.grids[`${app.routeState.activePer}:${app.routeState.activeSet}`].cols[0].cells[0].time).toBe('0700');
   });
 
   it('keeps edits made while a save is running as unsaved', async () => {
@@ -318,5 +309,29 @@ describe('line header', () => {
     for (const id of ['rh-name', 'rh-public', 'rh-private', 'rh-branding', 'rh-mode-tile']) {
       expect(/** @type {any} */ (document.getElementById(id)).disabled, id).toBe(true);
     }
+  });
+});
+
+describe('period calendars', () => {
+  it('picks a calendar for the period and shows the period by its calendar names', async () => {
+    app.calendars = [{ id: 'c1', name: 'Vinter 26/27', ranges: [] }];
+    await selectRoute('20');
+    const sel = /** @type {HTMLSelectElement} */ (document.getElementById('per-add-cal'));
+    sel.value = 'c1';
+    sel.dispatchEvent(new Event('change'));
+    const per = app.routeState.periods.find((/** @type {any} */ p) => p.id === app.routeState.activePer);
+    expect(per.calendarIds).toContain('c1');
+    expect(app.dirty).toBe(true);
+    expect(document.getElementById('sel-period')?.textContent).toContain('Vinter 26/27');
+  });
+
+  it('removes a calendar from the period', async () => {
+    app.calendars = [{ id: 'c1', name: 'Vinter 26/27', ranges: [] }];
+    await selectRoute('20');
+    const per = app.routeState.periods.find((/** @type {any} */ p) => p.id === app.routeState.activePer);
+    per.calendarIds = ['c1'];
+    refreshAll();
+    /** @type {HTMLElement} */ (document.querySelector('.per-cal[data-cal="c1"] .per-cal-x')).click();
+    expect(per.calendarIds).toEqual([]);
   });
 });

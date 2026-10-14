@@ -1,8 +1,10 @@
 // Line timetable file generator, ported from Nepos 1.5.7 (nepos.html lines 6223–6483).
-import { xe, hhmm2t, ernModeNeTEx, dirType, pubDelivery, compositeFrame } from './xml.js';
+import { xe, hhmm2t, ernModeNeTEx, pubDelivery, compositeFrame } from './xml.js';
 import { authorityNetworkLocalId } from '../orgs.js';
 import { stopLocalId } from '../quays.js';
-import { journeyStops, dayTypeKey } from './journeys.js';
+import { journeyStops } from './journeys.js';
+import { uuid5 } from '../uuid5.js';
+import { isoDate } from '../calendars.js';
 import { submodeElement } from '../modes.js';
 import { UUID_PATTERN } from '../ern/serialize.js';
 
@@ -13,14 +15,13 @@ import { UUID_PATTERN } from '../ern/serialize.js';
  * @param {{ timestamp?: string }} [opts]
  */
 export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
-    const { cs, dayTypes, operPers } = data;
+    const { cs, colDays } = data;
     const lineId = `${cs}:Line:${routeCode}`;
 
     // Line from/to dates
-    const perFromDates = (rs.periods||[]).map(p=>p.from).filter(Boolean);
-    const perToDates   = (rs.periods||[]).map(p=>p.to).filter(Boolean);
-    const lineFrom = perFromDates.length ? perFromDates.reduce((a,b)=>a<b?a:b) : '';
-    const lineTo   = perToDates.length   ? perToDates.reduce((a,b)=>a>b?a:b)   : '';
+    // The line's validity: its trips' first and last operating day (timetable structure spec §7)
+    const myDays = (rs.periods||[]).flatMap((/** @type {any} */ per) => (rs.grids[`${per.id}:${per.setId}`]?.cols||[]).flatMap((/** @type {any} */ c) => colDays.get(c) ?? [])).sort();
+    const lineFrom = myDays[0] ?? '', lineTo = myDays[myDays.length - 1] ?? '';
 
     // Transmodel mode from #MOD (line header spec §3); files without it fall back to the ERN code.
     const fromErn = ernModeNeTEx(rs.transportMode||6);
@@ -52,26 +53,27 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     const sjs = []; // ServiceJourney XML for the TimetableFrame
     const sjIds = new Set(); // the ServiceJourneys actually written
     const ixs = []; // interchanges: written only when both journeys exist
+    const dsjs = []; // DatedServiceJourneys, one per trip per operating day
 
     /** A column's ServiceJourney ID: its #UID when it has one, else the old position-based ID. @param {any} col @param {number} di @param {any} per @param {number} ci */
     const sjIdOf = (col, di, per, ci) => col?.uid && UUID_PATTERN.test(col.uid) ? `${cs}:ServiceJourney:${col.uid}` : `${cs}:ServiceJourney:${routeCode}-${di}-${per.id}-${ci}`;
 
-    let jpCtr=0;
     const jpRegistry = new Map(); // "dirIdx:stopSeqKey" → jpId
 
-    for (let di=0; di<(rs.directions||[]).length; di++) {
-        const dir = rs.directions[di];
-        const dType = dirType(di);
-        const routeId = `${cs}:Route:${routeCode}-${di}`;
+    // One Route per table set (timetable structure spec §7); its JourneyPatterns are the distinct
+    // stop sequences of its trips.
+    for (let di=0; di<(rs.tableSets||[]).length; di++) {
+        const set = rs.tableSets[di];
+        const setKey = set.uid && UUID_PATTERN.test(set.uid) ? set.uid : `${routeCode}-${di}`;
+        const routeId = `${cs}:Route:${setKey}`;
+        let jpN = 0;
 
         // Collect all columns across all periods for this direction
         // to find unique JPs
         const jpMap = new Map(); // stopSeqKey → {jpId, stops: [{stopId,isDwellArr,name,forBrd,forAlt,isReq}], spijpIds:[]}
 
-        for (const per of rs.periods||[]) {
-            const grid = rs.grids[`${per.id}:${dir.id}`]||{stops:[],cols:[]};
-            const opKey = `${per.from}-${per.to}`;
-            const op = operPers.get(opKey);
+        for (const per of (rs.periods||[]).filter((/** @type {any} */ p) => p.setId === set.id)) {
+            const grid = rs.grids[`${per.id}:${set.id}`]||{stops:[],cols:[]};
 
             for (let ci=0; ci<grid.cols.length; ci++) {
                 const col = grid.cols[ci];
@@ -90,15 +92,15 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                 // JP key = sequence of stopIds
                 const jpKey = `${di}:${jpStopList.map(s=>s.stopId??s.name).join(':')}`;
                 if (!jpMap.has(jpKey)) {
-                    const jpId = `${cs}:JourneyPattern:${routeCode}-${di}-${++jpCtr}`;
-                    jpMap.set(jpKey, { jpId, stopList:jpStopList, routeId });
+                    const jpId = `${cs}:JourneyPattern:${uuid5(`${setKey}|${jpStopList.map(s=>s.stopId).join('|')}`)}`;
+                    jpMap.set(jpKey, { jpId, stopList:jpStopList, routeId, name: `${set.name}-${++jpN}` });
                 }
                 const { jpId, stopList } = jpMap.get(jpKey);
 
                 // Build ServiceJourney
-                const dtKey = dayTypeKey(rs, col, opKey); // the DayType collectNeTExData made for it
-                const dtEntry = dayTypes.get(dtKey);
-                if (!dtEntry) continue;
+                // The trip's operating days (collect.js): none → no trip
+                const days = colDays.get(col) ?? [];
+                if (!days.length) continue;
 
                 const sjId = sjIdOf(col, di, per, ci);
                 let ptXml = '';
@@ -115,11 +117,14 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                 sjIds.add(sjId);
                 sjs.push(`      <ServiceJourney id="${sjId}" version="1">
         <TransportMode>${lineMode}</TransportMode>
-        <dayTypes><DayTypeRef ref="${dtEntry.ntxId}"/></dayTypes>
         <JourneyPatternRef ref="${jpId}" version="1"/>
         <passingTimes>${ptXml}
         </passingTimes>
       </ServiceJourney>`);
+                for (const d of days) dsjs.push(`      <DatedServiceJourney id="${cs}:DatedServiceJourney:${uuid5(`${sjId}|${d}`)}" version="1">
+        <ServiceJourneyRef ref="${sjId}" version="1"/>
+        <OperatingDayRef ref="${cs}:OperatingDay:${isoDate(d)}"/>
+      </DatedServiceJourney>`);
 
                 // Interchanges from TRC bits 10/11
                 for (let ri=0; ri<grid.stops.length; ri++) {
@@ -159,15 +164,15 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
             <RoutePointRef ref="${cs}:RoutePoint:${stopLocalId(s.stopId)}" version="1"/>
           </PointOnRoute>`).join('\n');
         routesXml.push(`      <Route id="${routeId}" version="1">
+        <Name>${xe(set.name)}</Name>
         <LineRef ref="${lineId}" version="1"/>
-        <DirectionType>${dType}</DirectionType>
         <pointsInSequence>
 ${porXml}
         </pointsInSequence>
       </Route>`);
 
         // Emit JourneyPatterns
-        for (const [, { jpId, stopList }] of jpMap) {
+        for (const [, { jpId, stopList, name }] of jpMap) {
             const lastStop = stopList[stopList.length-1];
             const ddRef = lastStop?.stopId!=null
                 ? `\n          <DestinationDisplayRef ref="${cs}:DestinationDisplay:${stopLocalId(lastStop.stopId)}"/>` : '';
@@ -185,8 +190,8 @@ ${porXml}
             }).join('\n');
 
             jpsXml.push(`      <JourneyPattern id="${jpId}" version="1">
+        <Name>${xe(name)}</Name>
         <RouteRef ref="${routeId}" version="1"/>
-        <DirectionType>${dirType(di)}</DirectionType>
         <pointsInSequence>
 ${spijpList}
         </pointsInSequence>
@@ -229,7 +234,7 @@ ${jpsXml.join('\n')}
 
     const ttFrame = `    <TimetableFrame id="${cs}:TimetableFrame:Line_${routeCode}" version="1">
       <vehicleJourneys>
-${sjOnly.join('\n')}
+${[...sjOnly, ...dsjs].join('\n')}
       </vehicleJourneys>${ixOnly.length?`\n      <journeyInterchanges>\n${ixOnly.join('\n')}\n      </journeyInterchanges>`:''}
     </TimetableFrame>`;
 

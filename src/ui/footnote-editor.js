@@ -276,7 +276,7 @@ export function initFootnoteEditor() {
     if (removedId != null) {
       const rs = app.routeState;
       const stillUsedHere = grid.cols.some((/** @type {any} */ col) => col.footnoteId === removedId || col.cells.some((/** @type {any} */ c) => c?.footnoteId === removedId));
-      const usedElsewhere = Object.entries(rs.grids).some(([key, g]) => key !== `${rs.activePer}:${rs.activeDir}` &&
+      const usedElsewhere = Object.entries(rs.grids).some(([key, g]) => key !== `${rs.activePer}:${rs.activeSet}` &&
         /** @type {any} */ (g).cols.some((/** @type {any} */ col) => col.footnoteId === removedId || col.cells.some((/** @type {any} */ c) => c?.footnoteId === removedId)));
       if (!stillUsedHere && !usedElsewhere) rs.footnotes = rs.footnotes.filter((/** @type {any} */ f) => f.id !== removedId);
     }

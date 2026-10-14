@@ -8,18 +8,21 @@ const ORGS = projectCopy();
 const bus = (/** @type {string} */ id, /** @type {string} */ name) => ({ quayId: id, publicCode: 'A', stopPlaceId: 'NSR:StopPlace:1', stopPlaceName: name, mode: 'bus', lat: 0, lon: 0 });
 const NSR = new Map([['NSR:Quay:7203', bus('NSR:Quay:7203', 'Jernbanetorget')], ['NSR:Quay:11972', bus('NSR:Quay:11972', 'Oslo bussterminal')]]);
 
-/** A clean bus route: two NSR stops, one trip, authority and operator from the list. */
+const CAL = 'cccccccc-0000-4000-8000-0000000000c1';
+const CALENDARS = [{ id: CAL, name: 'Vinter', ranges: /** @type {[string, string][]} */ ([['20260101', '20260630']]) }];
+
+/** A clean bus route: one table set, one period on a calendar, two NSR stops, one trip. */
 const route = () => parseERN([
   '#RUT;-1;50;Jernbanetorget - Oslo bussterminal;;1;',
   '#SEK;NOG:Authority:aaaaaaaaaa1;Eksempel fylkeskommune;1;0;0;0', '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0',
-  '#PER;Vinter;20260101;20260630;;;', '#TAB;0;;;;', '#TUR;0;DX67;0;0;0;0',
+  '#TRA;Tur', '#PER;;;;;;', `#KAL;${CAL}`, '#TAB;0;;;;', '#TUR;0;DX67;0;0;0;0',
   '#TRL;0;NSR:Quay:7203;Jernbanetorget;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0',
   '#TRL;1;NSR:Quay:11972;Oslo bussterminal;34;0;-1;-1;34;-1', '#TRC;0;0710;0;0;0;0;0',
 ].join('\r\n') + '\r\n', { lang: 'no' });
-const grid0 = (/** @type {any} */ rs) => rs.grids[`${rs.periods[0].id}:${rs.directions[0].id}`];
+const grid0 = (/** @type {any} */ rs) => rs.grids[`${rs.periods[0].id}:${rs.periods[0].setId}`];
 
 /** @param {any} rs @param {object} [extra] */
-const check = (rs, extra = {}) => checkForExport({ routes: [{ code: '50', rs, status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], orgsProblem: '', quayInfo: NSR, ...extra });
+const check = (rs, extra = {}) => checkForExport({ routes: [{ code: '50', rs, status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], calendars: CALENDARS, orgsProblem: '', quayInfo: NSR, ...extra });
 const codes = (/** @type {any[]} */ issues) => issues.map((i) => `${i.level}:${i.code}`);
 
 describe('checkForExport', () => {
@@ -33,7 +36,7 @@ describe('checkForExport', () => {
       grid0(rs).stops[1].stopId = null;
       const issues = check(rs);
       expect(codes(issues)).toEqual(['error:stop-missing']);
-      expect(issues[0]).toMatchObject({ route: '50', where: { period: 'Vinter', direction: 'Tur' }, detail: 'Oslo bussterminal' });
+      expect(issues[0]).toMatchObject({ route: '50', where: { tableSet: 'Tur', period: 'Vinter' }, detail: 'Oslo bussterminal' });
     });
 
     it('blocks an old numeric stop ID', () => {
@@ -69,35 +72,13 @@ describe('checkForExport', () => {
       grid0(rs).cols[0].dayCode = '';
       const issues = check(rs);
       expect(codes(issues)).toEqual(['error:col-no-daycode']);
-      expect(issues[0].where).toEqual({ period: 'Vinter', direction: 'Tur', column: 1 });
+      expect(issues[0].where).toEqual({ tableSet: 'Tur', period: 'Vinter', column: 1 });
     });
 
     it('warns about a time earlier than the stop before it', () => {
       const rs = route();
       grid0(rs).cols[0].cells[1].time = '0650';
       expect(codes(check(rs))).toEqual(['warning:col-decreasing']);
-    });
-  });
-
-  describe('periods', () => {
-    it('blocks a missing date and a start after the end', () => {
-      const rs = route();
-      rs.periods[0].from = '';
-      expect(codes(check(rs))).toEqual(['error:period-dates']);
-      rs.periods[0].from = '20260701';
-      expect(codes(check(rs))).toEqual(['error:period-order']);
-    });
-
-    it('accepts a one-day period', () => {
-      const rs = route();
-      rs.periods[0].from = '20260630';
-      expect(check(rs)).toEqual([]);
-    });
-
-    it('warns about an incomplete alternative date range', () => {
-      const rs = route();
-      rs.periods[0].from2 = '20260801';
-      expect(codes(check(rs))).toEqual(['warning:alt-dates']);
     });
   });
 
@@ -163,7 +144,7 @@ describe('checkForExport', () => {
 
   describe('project', () => {
     it('blocks a damaged route', () => {
-      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: null, status: 'damaged' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], orgsProblem: '', quayInfo: NSR });
+      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: null, status: 'damaged' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], calendars: CALENDARS, orgsProblem: '', quayInfo: NSR });
       expect(codes(issues)).toEqual(['error:route-damaged']);
       expect(issues[0].route).toBe('60');
     });
@@ -194,13 +175,13 @@ describe('checkForExport', () => {
     it('warns that a route without trips is left out', () => {
       const empty = route();
       grid0(empty).cols = [];
-      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: empty, status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], orgsProblem: '', quayInfo: NSR });
+      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: empty, status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], calendars: CALENDARS, orgsProblem: '', quayInfo: NSR });
       expect(codes(issues)).toEqual(['warning:route-no-trips']);
       expect(issues[0].route).toBe('60');
     });
 
     it('blocks a route code that cannot be a NeTEx ID', () => {
-      const issues = checkForExport({ routes: [{ code: 'A&B 2', rs: route(), status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], orgsProblem: '', quayInfo: NSR });
+      const issues = checkForExport({ routes: [{ code: 'A&B 2', rs: route(), status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], calendars: CALENDARS, orgsProblem: '', quayInfo: NSR });
       expect(codes(issues)).toEqual(['error:route-code']);
     });
 
@@ -218,22 +199,41 @@ describe('checkForExport', () => {
       expect(codes(check(rs))).toEqual(['warning:col-exceptions-ignored']);
     });
 
-    it('warns about a "runs only" date outside the period', () => {
-      const rs = route();
-      rs.footnotes = [{ id: 1, text: '', exceptions: [{ runsOnly: true, from: '20260801', to: '20260801' }] }];
-      grid0(rs).cols[0].footnoteId = 1;
-      expect(codes(check(rs))).toEqual(['warning:col-date-outside']);
-    });
-
-    it('accepts a "runs only" date inside the period', () => {
-      const rs = route();
-      rs.footnotes = [{ id: 1, text: '', exceptions: [{ runsOnly: true, from: '20260301', to: '20260301' }] }];
-      grid0(rs).cols[0].footnoteId = 1;
-      expect(check(rs)).toEqual([]);
-    });
-
     it('warns about route files that changed on disk', () => {
       expect(codes(check(route(), { changedOnDisk: ['50'] }))).toEqual(['warning:route-changed-on-disk']);
+    });
+  });
+
+  describe('table sets, calendars and day codes', () => {
+    it('blocks a table set without a name', () => {
+      const rs = route();
+      rs.tableSets[0].name = '';
+      expect(codes(check(rs))).toEqual(['error:table-set-name']);
+    });
+
+    it('blocks a period without a calendar, or with a calendar that is not in the project', () => {
+      const rs = route();
+      rs.periods[0].calendarIds = [];
+      expect(codes(check(rs))).toContain('error:no-calendar');
+      rs.periods[0].calendarIds = ['gone'];
+      expect(codes(check(rs))).toContain('error:calendar-missing');
+    });
+
+    it('warns about an empty calendar and a trip with no operating days', () => {
+      expect(codes(check(route(), { calendars: [{ id: CAL, name: 'Tom', ranges: [] }] }))).toEqual(['warning:calendar-empty', 'warning:no-operating-days']);
+    });
+
+    it('blocks a day code Nepos cannot turn into dates (S)', () => {
+      const rs = route();
+      grid0(rs).cols[0].dayCode = 'S';
+      expect(codes(check(rs))).toContain('error:day-code');
+    });
+
+    it('warns that footnote date exceptions are not exported', () => {
+      const rs = route();
+      rs.footnotes = [{ id: 1, text: 'x', exceptions: [{ runsOnly: true, from: '20260105', to: '20260105' }] }];
+      grid0(rs).cols[0].footnoteId = 1;
+      expect(codes(check(rs))).toEqual(['warning:col-exceptions-ignored']);
     });
   });
 

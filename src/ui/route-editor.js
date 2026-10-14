@@ -6,7 +6,7 @@ import { app } from './state.js';
 import { $, onRefresh, refreshAll, runAction, markDirty, setBeforeLeave, beforeLeave, showMessage, currentPage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { grid, loadGrid, gridData, markGridClean, clearGrid, render as renderGrid, onGridChange, commitPending } from './grid.js';
-import { newRouteState, fillMissingPeriod, addPeriod, deletePeriod, addDirection, deleteDirection, periodHasData, directionHasData, gridKey } from './route-state.js';
+import { newRouteState, fillMissingPeriod, addPeriod, deletePeriod, periodHasData, gridKey, periodsOf } from './route-state.js';
 import { parseERN } from '../core/ern/parse.js';
 import { serializeERN } from '../core/ern/serialize.js';
 import { checkRouteFile } from '../core/integrity/check.js';
@@ -19,7 +19,6 @@ import { modeLabel, submodeLabel } from '../i18n/modes.js';
 import { writeOrgs } from '../project/orgs-store.js';
 import { pruneProjectCopy } from './org-register.js';
 import { compareRouteCodes } from '../core/route-codes.js';
-import { yyyymmddToInput, inputToYyyymmdd } from '../core/footnotes.js';
 import { writeRoute, deleteRoute as deleteRouteFile } from '../project/routes.js';
 import { showProjectCheck } from './project-ui.js';
 import { issueMessage } from './messages.js';
@@ -29,28 +28,53 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 
 const activeEntry = () => app.routes.find((r) => r.code === app.activeRoute) ?? null;
 const isReadOnly = () => activeEntry()?.status === 'damaged';
+/** Whether the open route is read-only (damaged). */
+export const isRouteReadOnly = () => isReadOnly();
 
 /** Store the visible grid back into the route state. */
 function saveGridToState() {
   if (app.routeState && grid.active) app.routeState.grids[gridKey(app.routeState)] = gridData();
 }
 
+/** Finish any typing in the grid and store it in the route state (before changing the structure). */
+export function storeGrid() {
+  commitPending();
+  saveGridToState();
+}
+
 /**
- * Show another period × direction.
+ * Show another period (of any table set: the table set follows the period).
  * @param {number} perId
- * @param {number} dirId
- * @param {{ store?: boolean }} [opts] store: false after deleting the shown period/direction —
+ * @param {{ store?: boolean }} [opts] store: false after deleting the shown period or table set —
  *   the grid on screen belongs to the deleted one and must not be stored under the new key
  */
-function switchPeriodDir(perId, dirId, { store = true } = {}) {
+function switchPeriod(perId, { store = true } = {}) {
   if (store) {
     commitPending();
     saveGridToState();
   }
-  app.routeState.activePer = perId;
-  app.routeState.activeDir = dirId;
-  loadGrid(app.routeState.grids[gridKey(app.routeState)] ?? { stops: [], cols: [] }, { readOnly: isReadOnly() });
+  const rs = app.routeState;
+  const per = rs.periods.find((/** @type {any} */ p) => p.id === perId) ?? periodsOf(rs, rs.activeSet)[0];
+  rs.activePer = per.id;
+  rs.activeSet = per.setId;
+  loadGrid(rs.grids[gridKey(rs)] ?? { stops: [], cols: [] }, { readOnly: isReadOnly() });
   refreshAll();
+}
+
+/**
+ * Show another table set, at its first period.
+ * @param {number} setId
+ * @param {{ store?: boolean }} [opts]
+ */
+export function switchTableSet(setId, opts = {}) {
+  const per = periodsOf(app.routeState, setId)[0];
+  if (per) switchPeriod(per.id, opts);
+}
+
+/** A period's label: its calendars' names (timetable structure spec §4). @param {any} per */
+export function periodLabel(per) {
+  const names = per.calendarIds.map((/** @type {string} */ id) => app.calendars.find((c) => c.id === id)?.name ?? '⚠ ' + id);
+  return names.length ? names.join(' + ') : t('periodNoCalendar');
 }
 
 let saving = false;
@@ -120,7 +144,7 @@ export async function selectRoute(code) {
   const entry = app.routes.find((r) => r.code === code);
   if (!entry) return false;
   const rs = parseERN(entry.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) });
-  fillMissingPeriod(rs, app.settings.lang);
+  fillMissingPeriod(rs);
   app.activeRoute = code;
   app.routeState = rs;
   app.dirty = false;
@@ -168,6 +192,14 @@ function renderHeader() {
   const dis = ro ? ' disabled' : '';
   const modeTitle = rs.mode ? [modeLabel(rs.mode, lang), rs.submode ? submodeLabel(rs.submode, lang) : ''].filter(Boolean).join(' · ') : t('pickMode');
   const brandKnown = app.brandings.some((b) => b.id === rs.brandingId);
+  // The active period's calendars (timetable structure spec §4): chips, and a picker for more.
+  const activePer = rs.periods.find((/** @type {any} */ p) => p.id === rs.activePer);
+  const calChips = (activePer?.calendarIds ?? []).map((/** @type {string} */ id) => {
+    const cal = app.calendars.find((c) => c.id === id);
+    return `<span class="per-cal${cal ? '' : ' n2-missing'}" data-cal="${esc(id)}">${esc(cal?.name ?? '⚠ ' + id)}${ro ? '' : `<button class="per-cal-x" title="${esc(t('removeCalendar'))}">×</button>`}</span>`;
+  }).join('');
+  const addable = app.calendars.filter((c) => !(activePer?.calendarIds ?? []).includes(c.id));
+  const perCals = calChips + (ro || !addable.length ? '' : `<select class="rh-select" id="per-add-cal"><option value="">${esc(t('addCalendar'))}</option>${addable.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>`);
   const brandOptions = [`<option value="">${esc(t('brandingNone'))}</option>`,
     ...[...app.brandings].sort((x, y) => x.name.localeCompare(y.name, 'nb')).map((b) => `<option value="${esc(b.id)}"${b.id === rs.brandingId ? ' selected' : ''}>${esc(b.name)}</option>`),
     ...(rs.brandingId && !brandKnown ? [`<option value="${esc(rs.brandingId)}" selected>⚠ ${esc(rs.brandingId)}</option>`] : [])].join('');
@@ -184,22 +216,15 @@ function renderHeader() {
     </div>
     <div class="rh-partb">
     <div class="rh-group"><span class="rh-label">${esc(t('periodLabel'))}:</span>
-      <select class="rh-select" id="sel-period">${rs.periods.map((/** @type {any} */ p) =>
-        `<option value="${p.id}"${p.id === rs.activePer ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
+      <select class="rh-select" id="sel-period">${periodsOf(rs, rs.activeSet).map((/** @type {any} */ p) =>
+        `<option value="${p.id}"${p.id === rs.activePer ? ' selected' : ''}>${esc(periodLabel(p))}</option>`).join('')}</select>
       ${ro ? '' : `<span class="rh-icon-btn" id="btn-add-per" title="${esc(t('newPeriod'))}">+</span>
       <span class="rh-icon-btn" id="btn-del-per" title="${esc(t('deletePeriod'))}" style="font-size:15px;line-height:1">×</span>`}</div>
-    <div class="rh-group">
-      <input type="date" class="rh-date" id="per-from" value="${yyyymmddToInput(per?.from || '')}" title="${esc(t('startDate'))}"${dis}>
-      <span class="rh-arrow">→</span>
-      <input type="date" class="rh-date" id="per-to" value="${yyyymmddToInput(per?.to || '')}" title="${esc(t('endDate'))}"${dis}></div>
-    <div class="rh-group"><span class="rh-label" style="font-size:10px;color:var(--text-f)">${esc(t('altDates'))}</span>
-      <input type="date" class="rh-date" id="per-from2" value="${yyyymmddToInput(per?.from2 || '')}" title="${esc(t('altStart'))}" style="width:100px"${dis}>
-      <span class="rh-arrow">→</span>
-      <input type="date" class="rh-date" id="per-to2" value="${yyyymmddToInput(per?.to2 || '')}" title="${esc(t('altEnd'))}" style="width:100px"${dis}></div>
+    <div class="rh-group per-cals">${perCals}</div>
     </div>`;
 
   for (const id of ['rh-name', 'rh-public', 'rh-private']) $(id).addEventListener('keydown', (/** @type {Event} */ e) => e.stopPropagation());
-  $('sel-period').addEventListener('change', () => switchPeriodDir(+$('sel-period').value, rs.activeDir));
+  $('sel-period').addEventListener('change', () => switchPeriod(+$('sel-period').value));
   renderOrgPickers();
   if (ro) return;
   $('rh-name').addEventListener('change', () => { rs.routeName = $('rh-name').value.trim(); markDirty(); });
@@ -209,29 +234,35 @@ function renderHeader() {
   $('rh-mode-tile').addEventListener('click', () => openModeMenu($('rh-mode-tile'), { mode: rs.mode, submode: rs.submode, lang, onPick: (m, sub) => {
     rs.mode = m; rs.submode = sub; rs.transportMode = ernCodeFor(m, sub, rs.transportMode); markDirty(); renderHeader();
   } }));
-  /** @type {[string, string][]} */
-  const dateFields = [['per-from', 'from'], ['per-to', 'to'], ['per-from2', 'from2'], ['per-to2', 'to2']];
-  for (const [id, field] of dateFields) {
-    $(id).addEventListener('change', () => { if (per) { per[field] = inputToYyyymmdd($(id).value); markDirty(); } });
-  }
-  $('btn-add-per').addEventListener('click', () => {
-    const name = prompt(t('periodNamePrompt'), t('periodDefault', rs.periods.length + 1));
-    if (!name?.trim()) return;
-    const active = rs.periods.find((/** @type {any} */ p) => p.id === rs.activePer);
-    const copy = confirm(t('copyTripsConfirm', active?.name ?? ''));
-    saveGridToState();
-    const id = addPeriod(rs, name.trim(), copy);
+  $('per-add-cal')?.addEventListener('change', () => {
+    const id = $('per-add-cal').value;
+    if (!id || !activePer) return;
+    activePer.calendarIds = [...activePer.calendarIds, id];
     markDirty();
-    switchPeriodDir(id, rs.activeDir);
+    renderHeader();
+  });
+  hdr.querySelectorAll('.per-cal-x').forEach((/** @type {HTMLElement} */ b) => b.addEventListener('click', () => {
+    const id = /** @type {HTMLElement} */ (b.closest('.per-cal')).dataset.cal;
+    activePer.calendarIds = activePer.calendarIds.filter((/** @type {string} */ c) => c !== id);
+    markDirty();
+    renderHeader();
+  }));
+  $('btn-add-per').addEventListener('click', () => {
+    const copy = confirm(t('copyTripsConfirm', periodLabel(rs.periods.find((/** @type {any} */ p) => p.id === rs.activePer))));
+    commitPending();
+    saveGridToState();
+    const id = addPeriod(rs, copy);
+    markDirty();
+    switchPeriod(id, { store: false });
   });
   $('btn-del-per').addEventListener('click', () => {
-    if (rs.periods.length <= 1) { showMessage(t('lastPeriod')); return; }
+    if (periodsOf(rs, rs.activeSet).length <= 1) { showMessage(t('lastPeriod')); return; }
+    storeGrid(); // the grid on screen counts as data too
     const active = rs.periods.find((/** @type {any} */ p) => p.id === rs.activePer);
-    if (periodHasData(rs, rs.activePer) && !confirm(t('deletePeriodConfirm', active?.name ?? ''))) return;
-    saveGridToState();
+    if (periodHasData(rs, rs.activePer) && !confirm(t('deletePeriodConfirm', periodLabel(active)))) return;
     deletePeriod(rs);
     markDirty();
-    switchPeriodDir(rs.activePer, rs.activeDir, { store: false });
+    switchPeriod(rs.activePer, { store: false });
   });
 }
 
@@ -270,37 +301,13 @@ function renderFooter() {
   if (!rs) { el.classList.remove('visible'); el.innerHTML = ''; return; }
   el.classList.add('visible');
   const ro = isReadOnly();
-  const cur = rs.directions.find((/** @type {any} */ d) => d.id === rs.activeDir);
-  const other = rs.directions.find((/** @type {any} */ d) => d.id !== rs.activeDir);
-  const dirLabel = other ? `${esc(cur?.name ?? '—')} ⇄ ${esc(other.name)}` : esc(t('createReturn'));
 
   el.innerHTML = `
-    <button class="ef-dir-btn" id="ef-dir">${dirLabel}</button>
-    ${other && !ro ? '<button class="ef-del-dir" id="ef-del-dir">×</button>' : ''}
-    <div class="ef-vsep2"></div>
     <div class="ef-spacer"></div>
     ${ro ? `<span class="n2-readonly-note">${esc(t('statusDamaged'))}</span>` : `
     <button class="ef-save-btn${app.dirty ? ' dirty' : ''}" id="ef-save">${app.dirty ? '● ' : ''}${esc(t('save'))}</button>
     <button class="ef-del-route" id="ef-del-route">${esc(t('deleteRoute'))}</button>`}`;
 
-  $('ef-dir').addEventListener('click', () => {
-    if (other) { switchPeriodDir(rs.activePer, other.id); return; }
-    if (ro) return;
-    saveGridToState();
-    const src = rs.grids[gridKey(rs)];
-    const copy = src?.stops?.length > 0 && confirm(t('copyStopsReversed', cur?.name ?? ''));
-    const id = addDirection(rs, t('returnName'), !!copy);
-    markDirty();
-    switchPeriodDir(rs.activePer, id);
-  });
-  $('ef-del-dir')?.addEventListener('click', () => {
-    if (rs.directions.length <= 1) { showMessage(t('lastDirection')); return; }
-    if (directionHasData(rs, rs.activeDir) && !confirm(t('deleteDirectionConfirm', cur?.name ?? ''))) return;
-    saveGridToState();
-    deleteDirection(rs);
-    markDirty();
-    switchPeriodDir(rs.activePer, rs.activeDir, { store: false });
-  });
   $('ef-save')?.addEventListener('click', () => saveRoute($('ef-save')));
   $('ef-del-route')?.addEventListener('click', () => deleteActiveRoute($('ef-del-route')));
 }

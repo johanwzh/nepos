@@ -9,7 +9,7 @@ describe('serializeERN', () => {
   it('replaces semicolons in names so records stay intact', () => {
     const rs = parseERN(sample.routes[0].text);
     rs.routeName = 'Bergen; Florø';
-    const firstStop = rs.grids[`${rs.periods[0].id}:${rs.directions[0].id}`].stops[0];
+    const firstStop = rs.grids[`${rs.periods[0].id}:${rs.periods[0].setId}`].stops[0];
     firstStop.name = 'Bergen; kai 2';
     const out = serializeERN(rs, '10', opts);
     expect(out).toContain('#RUT;-1;10;Bergen, Florø;;6;');

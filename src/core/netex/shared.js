@@ -8,7 +8,7 @@ import { authorityNetworkLocalId } from '../orgs.js';
  * @param {{ deliveryName?: string, timestamp?: string }} [opts]
  */
 export function genSharedXml(data, { deliveryName = '', timestamp } = {}) {
-    const { cs, orgs, orgMode, usedStops, destDisps, operDays, operPers, dayTypes, dtAssignments, overallFrom, overallTo } = data;
+    const { cs, orgs, orgMode, usedStops, destDisps, operDays, overallFrom, overallTo } = data;
 
     /** One organisation element (organisations spec §6.3): details only when it is in the project copy. */
     const orgXml = (/** @type {any} */ o) => {
@@ -74,52 +74,17 @@ ${psaXml}
       </stopAssignments>
     </ServiceFrame>`;
 
-    // ServiceCalendarFrame
-    // 1. DayTypes — day-of-week pattern OR specific-dates (no PropertyOfDay for the latter)
-    const dtXml = [...dayTypes.values()].map(dt=> {
-        const props = dt.daysOfWeek
-            ? `\n        <properties><PropertyOfDay><DaysOfWeek>${dt.daysOfWeek}</DaysOfWeek></PropertyOfDay></properties>` : '';
-        return `      <DayType id="${dt.ntxId}" version="1">${props}\n      </DayType>`;
+    // ServiceCalendarFrame: only the OperatingDays the DatedServiceJourneys refer to (timetable
+    // structure spec §7) — no DayTypes, OperatingPeriods or DayTypeAssignments.
+    const odXml = [...operDays.keys()].sort().map((k) => {
+        const od = operDays.get(k);
+        return `      <OperatingDay id="${od.ntxId}" version="1">\n        <CalendarDate>${od.date}</CalendarDate>\n      </OperatingDay>`;
     }).join('\n');
-
-    // 2. OperatingDays — one per real calendar date; ID = date (reusable across routes)
-    const odXml = [...operDays.values()].map(od=>
-        `      <OperatingDay id="${od.ntxId}" version="1">\n        <CalendarDate>${od.date}</CalendarDate>\n      </OperatingDay>`
-    ).join('\n');
-
-    // 3. OperatingPeriods — reference OperatingDays for from/to (avoids DateTime ambiguity)
-    const opXml = [...operPers.values()].map(op=>
-        `      <OperatingPeriod id="${op.ntxId}" version="1">
-        <FromOperatingDayRef ref="${op.fromDayId}" version="1"/>
-        <ToOperatingDayRef ref="${op.toDayId}" version="1"/>
-      </OperatingPeriod>`
-    ).join('\n');
-
-    // 4. DayTypeAssignments — either → OperatingPeriod (day-of-week) or → OperatingDay (specific date)
-    const dtaXml = dtAssignments.map((a,i)=> {
-        const ref = a.opDayNtxId
-            ? `<OperatingDayRef ref="${a.opDayNtxId}" version="1"/>`
-            : `<OperatingPeriodRef ref="${a.opNtxId}" version="1"/>`;
-        return `      <DayTypeAssignment id="${a.ntxId}" version="1" order="${i+1}">
-        ${ref}
-        <DayTypeRef ref="${a.dtNtxId}" version="1"/>
-      </DayTypeAssignment>`;
-    }).join('\n');
-
-    const calFrame = `    <ServiceCalendarFrame id="${cs}:ServiceCalendarFrame:shared" version="1">
-      <dayTypes>
-${dtXml}
-      </dayTypes>
+    const calFrame = odXml ? `    <ServiceCalendarFrame id="${cs}:ServiceCalendarFrame:shared" version="1">
       <operatingDays>
 ${odXml}
       </operatingDays>
-      <operatingPeriods>
-${opXml}
-      </operatingPeriods>
-      <dayTypeAssignments>
-${dtaXml}
-      </dayTypeAssignments>
-    </ServiceCalendarFrame>`;
+    </ServiceCalendarFrame>` : '';
 
     const frames = [resFrame, svcFrame, calFrame].filter(Boolean);
     const cf = compositeFrame(cs,'shared',overallFrom,overallTo,false,...frames);

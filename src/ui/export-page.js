@@ -75,7 +75,7 @@ async function runCheck() {
     rs: r.status === 'damaged' ? null : parseERN(r.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) }),
   }));
   const orgsProblem = app.orgsError ? 'unreadable' : '';
-  const issues = checkForExport({ routes, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, brandings: app.brandings, brandingsProblem: app.brandingsError ? 'unreadable' : '', quayInfo, changedOnDisk });
+  const issues = checkForExport({ routes, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, brandings: app.brandings, brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars, calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, changedOnDisk });
   result = { fs, issues };
   refreshAll(); // the route list shows the files as they are now
   return { routes: routes.map(({ code, rs }) => ({ code, rs })), issues };
@@ -89,7 +89,7 @@ async function runExport() {
     setStatus(t('exportBlocked'), true);
     return;
   }
-  const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: app.orgs, orgMode: orgExportMode(app.meta), brandings: app.brandings });
+  const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: app.orgs, orgMode: orgExportMode(app.meta), brandings: app.brandings, calendars: app.calendars });
   const asZip = app.settings.exportAsZip !== false;
   let written = '';
   const ok = await runAction(async () => { written = await writeExport(fs, files, { codespace: meta.codespace, asZip }); });
@@ -111,7 +111,7 @@ function renderStatus() {
 
 /** @param {import('../core/export-check.js').CheckIssue} i */
 function issueLine(i) {
-  const place = [i.route, i.where?.period, i.where?.direction, i.where?.column ? t('columnLabel', i.where.column) : '']
+  const place = [i.route, i.where?.tableSet, i.where?.period, i.where?.column ? t('columnLabel', i.where.column) : '']
     .filter(Boolean).join(' · ');
   return `<div class="n2-issue ${i.level}">
     <span class="n2-issue-ico">${i.level === 'error' ? '✖' : '⚠'}</span>
