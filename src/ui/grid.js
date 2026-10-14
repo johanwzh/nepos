@@ -255,12 +255,15 @@ function setStopId(ri) {
 /** "Finn stopp i NSR…": pick a Quay in the search window (spec §7.1). @param {number} ri */
 async function findStop(ri) {
   const stop = grid.stops[ri];
-  if (!stop || grid.readOnly || stop.isDwellArr) return;
+  // The arrival row of a dwell stop: pick for the departure row below, which sets both rows.
+  if (stop?.isDwellArr) return findStop(ri + 1);
+  if (!stop || grid.readOnly) return;
   const pick = await openWorkbench({ query: stop.name || '', ernMode: app.routeState?.transportMode ?? 0 });
   const at = grid.stops.indexOf(stop);
   if (!pick || at < 0) return; // closed, or another route was opened meanwhile
   if (pick.info) quayInfo.set(pick.quayId, pick.info);
-  else if (!quayInfo.has(pick.quayId)) quayInfo.set(pick.quayId, null); // typed, unknown to NSR: "not in NSR yet"
+  else if (pick.info === null) quayInfo.set(pick.quayId, null); // NSR answered: it does not know this Quay
+  else void loadQuays([pick.quayId]); // NSR has not answered yet: look it up; until then "not checked"
   // A dwell stop is two rows (arrival, departure): both get the Quay, so it stays one stop.
   const rows = grid.stops[at - 1]?.isDwellArr ? [grid.stops[at - 1], stop] : [stop];
   for (const r of rows) {

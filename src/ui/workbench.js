@@ -9,7 +9,11 @@ import { getStopPlace, lookupQuays } from '../services/nsr.js';
 import { NSR_QUAY_PATTERN, NSR_STOP_PLACE_PATTERN, modeMatches } from '../core/quays.js';
 import { ERN_MODES } from '../core/ern/modes.js';
 
-/** @typedef {{ quayId: string, name: string, info: import('../services/nsr.js').QuayInfo | null }} Pick */
+/**
+ * @typedef {{ quayId: string, name: string, info: import('../services/nsr.js').QuayInfo | null | undefined }} Pick
+ *   info: what NSR said; null when NSR answered it does not know the Quay; undefined when NSR has not
+ *   answered (still checking, or could not be reached) — then nothing is known yet.
+ */
 /** @typedef {{ show(points: { id: string, lat: number, lon: number, label: string }[], onClick: (id: string) => void): void }} WorkbenchMap */
 
 let services = { search: searchStopPlaces, getStopPlace, lookupQuays };
@@ -105,7 +109,9 @@ async function search() {
     try {
       const found = await services.lookupQuays([q], opts('nsr'));
       if (current()) { s.direct.info = found.get(q) ?? null; render(); }
-    } catch { /* stays "not checked"; still pickable */ }
+    } catch {
+      if (current()) { s.direct.failed = true; render(); } // stays "not checked"; still pickable
+    }
     return;
   }
 
@@ -133,6 +139,7 @@ async function search() {
 async function openPlace(id) {
   const s = session;
   if (!s) return;
+  clearTimeout(s.timer); // a pending typed search must not replace the stop place just clicked
   const seq = ++s.seq;
   setStatus(t('wsSearching'));
   try {
@@ -177,11 +184,12 @@ function render() {
 
   if (s.direct) {
     const info = s.direct.info;
-    const label = info ? `${info.stopPlaceName} ${info.publicCode}`.trim() : info === null ? t('wsNotSeen') : '';
+    const label = info ? `${info.stopPlaceName} ${info.publicCode}`.trim()
+      : info === null ? t('wsNotSeen') : s.direct.failed ? t('wsUnchecked') : t('wsChecking');
     list.appendChild(row(`${esc(t('wsUseId', s.direct.quayId))}<small>${esc(label)}</small>`,
-      () => finish({ quayId: s.direct.quayId, name: info?.stopPlaceName ?? '', info: info ?? null })));
+      () => finish({ quayId: s.direct.quayId, name: info?.stopPlaceName ?? '', info })));
     if (info?.lat != null && info.lon != null) points = [{ id: s.direct.quayId, lat: info.lat, lon: info.lon, label }];
-    onMapClick = () => finish({ quayId: s.direct.quayId, name: info?.stopPlaceName ?? '', info: info ?? null });
+    onMapClick = () => finish({ quayId: s.direct.quayId, name: info?.stopPlaceName ?? '', info });
   } else if (s.place) {
     const place = s.place;
     if (s.hits.length) list.appendChild(row(esc(t('wsBack')), () => { s.place = null; setStatus(''); render(); }, 'n2-ws-back'));
@@ -224,7 +232,12 @@ export function initWorkbench() {
   const q = /** @type {HTMLInputElement} */ ($('ws-q'));
   q.addEventListener('keydown', (e) => {
     e.stopPropagation(); // the grid and the shell must not see typing in the search box
-    if (e.key === 'Enter') { e.preventDefault(); search(); }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    // A second Enter on a pasted Quay ID picks it (no mouse needed).
+    const direct = session?.direct;
+    if (direct && q.value.trim() === direct.quayId) finish({ quayId: direct.quayId, name: direct.info?.stopPlaceName ?? '', info: direct.info });
+    else search();
   });
   q.addEventListener('input', () => {
     if (!session) return;
@@ -234,5 +247,6 @@ export function initWorkbench() {
   $('ws-only-mode').addEventListener('change', () => { if (session) { setStatus(''); render(); } });
   $('ws-close').addEventListener('click', () => finish(null));
   // Escape closes a modal dialog: 'cancel', then 'close'.
-  $('ws-dlg').addEventListener('close', () => finish(null));
+  // The close event arrives later; ignore it when a new session has already opened the window.
+  $('ws-dlg').addEventListener('close', () => { if (!$('ws-dlg').open) finish(null); });
 }

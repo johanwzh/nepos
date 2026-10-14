@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { loadAppMarkup, flush } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell } from '../../src/ui/shell.js';
+import { initShell, currentPage } from '../../src/ui/shell.js';
 import { initWorkbench, openWorkbench, setWorkbenchServices, setWorkbenchMap } from '../../src/ui/workbench.js';
 import { grid, initGrid, loadGrid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
@@ -147,8 +147,11 @@ describe('search window', () => {
     const pick = openWorkbench({ query: 'x', ernMode: 1 });
     await settle();
     expect(document.getElementById('ws-status').textContent).toContain('offline');
-    document.getElementById('ws-dlg').dispatchEvent(new Event('cancel'));
-    document.getElementById('ws-dlg').dispatchEvent(new Event('close'));
+    // Escape in a browser: 'cancel', the dialog closes, then 'close' fires.
+    const dlg = /** @type {HTMLDialogElement} */ (document.getElementById('ws-dlg'));
+    dlg.dispatchEvent(new Event('cancel'));
+    dlg.close();
+    dlg.dispatchEvent(new Event('close'));
     expect(await pick).toBe(null);
   });
 });
@@ -212,5 +215,51 @@ describe('picking a stop from the grid', () => {
     await settle();
     expect(grid.stops[0]).toMatchObject({ stopId: 'NSR:Quay:999999999', name: 'Sentrum' });
     expect(document.querySelector('.g-td-name[data-ri="0"]')?.classList.contains('n2-quay-notseen')).toBe(true);
+  });
+
+  it('starts the search from the departure row when the arrival row of a dwell stop is chosen', async () => {
+    await findStop(1);
+    expect(/** @type {HTMLDialogElement} */ (document.getElementById('ws-dlg')).open).toBe(true);
+    rows()[0].click();
+    await settle();
+    rows()[0].click();
+    await settle();
+    expect(grid.stops[1].stopId).toBe('NSR:Quay:7203');
+    expect(grid.stops[2].stopId).toBe('NSR:Quay:7203');
+  });
+
+  it('never marks a pasted Quay "not in NSR yet" when NSR has not answered', async () => {
+    setWorkbenchServices({ lookupQuays: () => new Promise(() => {}) }); // NSR never answers
+    await findStop(0);
+    await type('NSR:Quay:7203');
+    rows()[0].click();
+    await settle();
+    expect(grid.stops[0].stopId).toBe('NSR:Quay:7203');
+    const cell = document.querySelector('.g-td-name[data-ri="0"]');
+    expect(cell?.classList.contains('n2-quay-notseen')).toBe(false);
+    expect(cell?.classList.contains('n2-quay-unknown')).toBe(true);
+  });
+
+  it('never marks a pasted Quay "not in NSR yet" when NSR could not be reached', async () => {
+    setWorkbenchServices({ lookupQuays: async () => { throw new Error('offline'); } });
+    await findStop(0);
+    await type('NSR:Quay:7203');
+    rows()[0].click();
+    await settle();
+    expect(document.querySelector('.g-td-name[data-ri="0"]')?.classList.contains('n2-quay-notseen')).toBe(false);
+  });
+
+  it('picks a pasted Quay ID with a second Enter', async () => {
+    await findStop(0);
+    await type('NSR:Quay:999999999');
+    await type('NSR:Quay:999999999');
+    expect(grid.stops[0].stopId).toBe('NSR:Quay:999999999');
+  });
+
+  it('keeps F-keys from switching page behind the window', async () => {
+    await findStop(0);
+    document.getElementById('ws-list')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'F4', bubbles: true }));
+    expect(currentPage()).toBe('edit');
+    document.getElementById('ws-close').click();
   });
 });

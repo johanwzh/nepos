@@ -111,3 +111,4 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .n2-ws-back { padding: 6px 8px; cursor: pointer; color: var(--accent); }
 .n2-ws-place { padding: 6px 8px; font-weight: 600; }
 .n2-ws-map { flex: 1; position: relative; }
+.n2-ws .n2-check[hidden] { display: none; }
