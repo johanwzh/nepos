@@ -19,7 +19,7 @@ const route = () => parseERN([
 const grid0 = (/** @type {any} */ rs) => rs.grids[`${rs.periods[0].id}:${rs.directions[0].id}`];
 
 /** @param {any} rs @param {object} [extra] */
-const check = (rs, extra = {}) => checkForExport({ routes: [{ code: '50', rs, status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', orgsProblem: '', quayInfo: NSR, ...extra });
+const check = (rs, extra = {}) => checkForExport({ routes: [{ code: '50', rs, status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], orgsProblem: '', quayInfo: NSR, ...extra });
 const codes = (/** @type {any[]} */ issues) => issues.map((i) => `${i.level}:${i.code}`);
 
 describe('checkForExport', () => {
@@ -143,9 +143,27 @@ describe('checkForExport', () => {
     });
   });
 
+  describe('line details', () => {
+    it('blocks a line without a mode or without a name', () => {
+      const rs = route();
+      rs.mode = '';
+      expect(codes(check(rs))).toContain('error:no-mode');
+      const unnamed = route();
+      unnamed.routeName = '';
+      expect(codes(check(unnamed))).toContain('error:no-name');
+    });
+
+    it('blocks a branding that is not in the project', () => {
+      const rs = route();
+      rs.brandingId = 'TST:Branding:gone';
+      expect(codes(check(rs))).toEqual(['error:branding-missing']);
+      expect(codes(check(rs, { brandings: [{ id: 'TST:Branding:gone', name: 'X', shortName: '', description: '', url: '', imageUrl: '' }] }))).toEqual([]);
+    });
+  });
+
   describe('project', () => {
     it('blocks a damaged route', () => {
-      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: null, status: 'damaged' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', orgsProblem: '', quayInfo: NSR });
+      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: null, status: 'damaged' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], orgsProblem: '', quayInfo: NSR });
       expect(codes(issues)).toEqual(['error:route-damaged']);
       expect(issues[0].route).toBe('60');
     });
@@ -160,7 +178,7 @@ describe('checkForExport', () => {
       const rs = route();
       rs.routeName = '';
       grid0(rs).stops[1].stopId = null;
-      expect(codes(check(rs))).toEqual(['error:stop-missing', 'warning:no-name']);
+      expect(codes(check(rs))).toEqual(['error:no-name', 'error:stop-missing']); // no-name is an error (line header spec §7)
     });
   });
 
@@ -176,13 +194,13 @@ describe('checkForExport', () => {
     it('warns that a route without trips is left out', () => {
       const empty = route();
       grid0(empty).cols = [];
-      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: empty, status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', orgsProblem: '', quayInfo: NSR });
+      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: empty, status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], orgsProblem: '', quayInfo: NSR });
       expect(codes(issues)).toEqual(['warning:route-no-trips']);
       expect(issues[0].route).toBe('60');
     });
 
     it('blocks a route code that cannot be a NeTEx ID', () => {
-      const issues = checkForExport({ routes: [{ code: 'A&B 2', rs: route(), status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', orgsProblem: '', quayInfo: NSR });
+      const issues = checkForExport({ routes: [{ code: 'A&B 2', rs: route(), status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], orgsProblem: '', quayInfo: NSR });
       expect(codes(issues)).toEqual(['error:route-code']);
     });
 

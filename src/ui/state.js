@@ -16,6 +16,10 @@ export const app = {
   orgs: [],
   /** @type {null | 'unreadable'} */
   orgsError: null,
+  /** @type {import('../project/brandings-store.js').Branding[]} the project's brandings */
+  brandings: [],
+  /** @type {null | 'unreadable'} */
+  brandingsError: null,
   /** @type {{ companies: import('../core/orgs.js').Company[], fetchedAt: string } | null} Entur's register (browser cache) */
   orgRegister: null,
   /** @type {'idle' | 'loading' | 'ok' | 'failed'} */

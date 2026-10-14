@@ -27,11 +27,15 @@ export function genSharedXml(data, { deliveryName = '', timestamp } = {}) {
     };
     const all = [...orgs.values()];
     const authOrgs = all.filter((o) => o.role === 'Authority');
-    const resFrame = `    <ResourceFrame id="${cs}:ResourceFrame:shared" version="1">
-      <organisations>
-${[...authOrgs, ...all.filter((o) => o.role === 'Operator')].map(orgXml).join('\n')}
-      </organisations>
-    </ResourceFrame>`;
+    // Brandings (typesOfValue) come before organisations in a ResourceFrame (line header spec §6).
+    const brandXml = [...data.brandings.values()].map((/** @type {any} */ b) => {
+        const el = (/** @type {string} */ n, /** @type {string} */ v) => v ? `\n          <${n}>${xe(v)}</${n}>` : '';
+        return `        <Branding id="${xe(b.id)}" version="1">${el('Name', b.name)}${el('ShortName', b.shortName)}${el('Description', b.description)}${el('Url', b.url)}${el('Image', b.imageUrl)}
+        </Branding>`;
+    }).join('\n');
+    const typesXml = brandXml ? `\n      <typesOfValue>\n${brandXml}\n      </typesOfValue>` : '';
+    const orgsXml = orgMode === 'nog' ? '' : `\n      <organisations>\n${[...authOrgs, ...all.filter((o) => o.role === 'Operator')].map(orgXml).join('\n')}\n      </organisations>`;
+    const resFrame = typesXml || orgsXml ? `    <ResourceFrame id="${cs}:ResourceFrame:shared" version="1">${typesXml}${orgsXml}\n    </ResourceFrame>` : '';
 
     const addNetItems = authOrgs.map(o=>`      <Network id="${cs}:Network:${xe(authorityNetworkLocalId(o.networkKey))}" version="1">
         <Name>${xe(o.name)}</Name>
@@ -117,7 +121,7 @@ ${dtaXml}
       </dayTypeAssignments>
     </ServiceCalendarFrame>`;
 
-    const frames = orgMode === 'nog' ? [svcFrame, calFrame] : [resFrame, svcFrame, calFrame];
+    const frames = [resFrame, svcFrame, calFrame].filter(Boolean);
     const cf = compositeFrame(cs,'shared',overallFrom,overallTo,false,...frames);
     return pubDelivery(cs, `${cs} shared data`, cf, timestamp);
 }

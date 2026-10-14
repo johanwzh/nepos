@@ -3,6 +3,8 @@ import { xe, hhmm2t, ernModeNeTEx, dirType, pubDelivery, compositeFrame } from '
 import { authorityNetworkLocalId } from '../orgs.js';
 import { stopLocalId } from '../quays.js';
 import { journeyStops, dayTypeKey } from './journeys.js';
+import { submodeElement } from '../modes.js';
+import { UUID_PATTERN } from '../ern/serialize.js';
 
 /**
  * @param {string} routeCode
@@ -20,8 +22,14 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     const lineFrom = perFromDates.length ? perFromDates.reduce((a,b)=>a<b?a:b) : '';
     const lineTo   = perToDates.length   ? perToDates.reduce((a,b)=>a>b?a:b)   : '';
 
-    const { mode:lineMode, sub:lineSub } = ernModeNeTEx(rs.transportMode||6);
-    const subEl = lineSub ? `\n      <TransportSubmode>\n        <${lineMode.charAt(0).toUpperCase()+lineMode.slice(1)}Submode>${lineSub}</${lineMode.charAt(0).toUpperCase()+lineMode.slice(1)}Submode>\n      </TransportSubmode>` : '';
+    // Transmodel mode from #MOD (line header spec §3); files without it fall back to the ERN code.
+    const fromErn = ernModeNeTEx(rs.transportMode||6);
+    const lineMode = rs.mode || fromErn.mode;
+    const lineSub = rs.mode ? rs.submode : fromErn.sub;
+    const subEl = lineSub ? `\n      <TransportSubmode>\n        <${submodeElement(lineMode)}>${xe(lineSub)}</${submodeElement(lineMode)}>\n      </TransportSubmode>` : '';
+    const brandRef = rs.brandingId && data.brandings.has(rs.brandingId) ? `\n        <BrandingRef ref="${xe(rs.brandingId)}"/>` : '';
+    const pubEl = rs.publicCode ? `\n        <PublicCode>${xe(rs.publicCode)}</PublicCode>` : '';
+    const privEl = rs.privateCode ? `\n        <PrivateCode>${xe(rs.privateCode)}</PrivateCode>` : '';
     const firstOper = (rs.sek||[]).find(s=>s.isOperator);
     const firstAuth = (rs.sek||[]).find(s=>s.isAuthority);   // route's own authority
     // OperatorRef is cross-file (→ _shared_data.xml) — no version attribute
@@ -30,12 +38,11 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     const operRef = operOut ? `\n        <OperatorRef ref="${xe(operOut.id)}"/>` : '';
     const komRef  = rs.kom?.trim() ? `\n      <noticeAssignments>\n        <NoticeAssignment id="${cs}:NoticeAssignment:${routeCode}-kom" version="1">\n          <NoticeRef ref="${cs}:Notice:${routeCode}-kom" version="1"/>\n          <NoticedObjectRef ref="${lineId}" version="1"/>\n        </NoticeAssignment>\n      </noticeAssignments>` : '';
 
-    // Element order per Norwegian NeTEx profile:
-    // Name → TransportMode → TransportSubmode → PublicCode → OperatorRef → RepresentedByGroupRef
-    const lineXml = `      <Line id="${lineId}" version="1">
+    // Element order per the NeTEx XSD (line header spec §7): BrandingRef → Name → TransportMode →
+    // TransportSubmode → PublicCode → PrivateCode → OperatorRef → RepresentedByGroupRef
+    const lineXml = `      <Line id="${lineId}" version="1">${brandRef}
         <Name>${xe(rs.routeName||routeCode)}</Name>
-        <TransportMode>${lineMode}</TransportMode>${subEl}
-        <PublicCode>${xe(rs.publicCode||routeCode)}</PublicCode>${operRef}
+        <TransportMode>${lineMode}</TransportMode>${subEl}${pubEl}${privEl}${operRef}
         <RepresentedByGroupRef ref="${cs}:Network:${authOut ? xe(authorityNetworkLocalId(authOut.networkKey)) : cs}"/>
       </Line>`;
 
@@ -45,6 +52,9 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     const sjs = []; // ServiceJourney XML for the TimetableFrame
     const sjIds = new Set(); // the ServiceJourneys actually written
     const ixs = []; // interchanges: written only when both journeys exist
+
+    /** A column's ServiceJourney ID: its #UID when it has one, else the old position-based ID. @param {any} col @param {number} di @param {any} per @param {number} ci */
+    const sjIdOf = (col, di, per, ci) => col?.uid && UUID_PATTERN.test(col.uid) ? `${cs}:ServiceJourney:${col.uid}` : `${cs}:ServiceJourney:${routeCode}-${di}-${per.id}-${ci}`;
 
     let jpCtr=0;
     const jpRegistry = new Map(); // "dirIdx:stopSeqKey" → jpId
@@ -90,7 +100,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                 const dtEntry = dayTypes.get(dtKey);
                 if (!dtEntry) continue;
 
-                const sjId = `${cs}:ServiceJourney:${routeCode}-${di}-${per.id}-${ci}`;
+                const sjId = sjIdOf(col, di, per, ci);
                 let ptXml = '';
                 stopList.forEach((s,idx) => {
                     const spijpId = `${cs}:StopPointInJourneyPattern:${jpId.split(':').pop()}-${idx+1}`;
@@ -125,7 +135,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     const srcStop = grid.stops[ri];
                     if (!tgtStop||!srcStop) continue;
                     if (srcStop.stopId == null || tgtStop.stopId == null) continue; // no ScheduledStopPoint to refer to
-                    const toSjId = `${cs}:ServiceJourney:${routeCode}-${di}-${per.id}-${targetC}`;
+                    const toSjId = sjIdOf(grid.cols[targetC], di, per, targetC);
                     const staySeated = type==='stayseated' ? '\n        <StaySeated>true</StaySeated>' : '';
                     const guaranteed = type==='guaranteed'  ? '\n        <Guaranteed>true</Guaranteed>' : '';
                     ixs.push({ fromSjId: sjId, toSjId, xml: `      <!-- interchange from col ${ci} to col ${targetC} -->

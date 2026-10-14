@@ -7,11 +7,12 @@ import { genLineXml } from './line.js';
  * File names follow the Entur delivery convention: _CS-shared.xml and CS-Line-<id>.xml,
  * where CS is the codespace in upper case.
  * @param {{ codespace: string, deliveryName: string, routes: { code: string, rs: any }[],
- *           orgs: import('../orgs.js').Company[], orgMode?: 'codespace' | 'nog', timestamp?: string }} input
+ *           orgs: import('../orgs.js').Company[], orgMode?: 'codespace' | 'nog',
+ *           brandings?: import('../../project/brandings-store.js').Branding[], timestamp?: string }} input
  * @returns {{ name: string, xml: string }[]}
  */
-export function buildNeTExFiles({ codespace, deliveryName, routes, orgs, orgMode = 'codespace', timestamp }) {
-  const data = collectNeTExData({ codespace, routes, orgs, orgMode });
+export function buildNeTExFiles({ codespace, deliveryName, routes, orgs, orgMode = 'codespace', brandings = [], timestamp }) {
+  const data = collectNeTExData({ codespace, routes, orgs, orgMode, brandings });
   const CS = data.cs.toUpperCase();
   return [
     { name: `_${CS}-shared.xml`, xml: genSharedXml(data, { deliveryName, timestamp }) },

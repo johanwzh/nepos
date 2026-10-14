@@ -10,13 +10,21 @@ import { findRole, exportOrgId, netexOrgId } from '../orgs.js';
  * stop ID in the route file (an NSR Quay ID); rows without one are left out. No ServiceLinks are
  * produced (spec §8).
  * @param {{ codespace: string, routes: { code: string, rs: any }[],
- *           orgs?: import('../orgs.js').Company[], orgMode?: 'codespace' | 'nog' }} input
+ *           orgs?: import('../orgs.js').Company[], orgMode?: 'codespace' | 'nog',
+ *           brandings?: import('../../project/brandings-store.js').Branding[] }} input
  */
-export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList = [], orgMode = 'codespace' }) {
+export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList = [], orgMode = 'codespace', brandings: brandingList = [] }) {
     const cs = codespace || '1869';
 
     // Routes without a trip (two or more calls) have nothing to export: no line file at all
     const routes = inputRoutes.filter(({ rs }) => rs && rs.periods?.length && routeHasTrips(rs));
+
+    // Brandings used by the exported lines (line header spec §6)
+    const brandings = new Map();
+    for (const { rs } of routes) {
+        const b = brandingList.find((x) => x.id === rs.brandingId);
+        if (b) brandings.set(b.id, b);
+    }
 
     // Overall date range (min from / max to across all periods all routes)
     let overallFrom = '99999999', overallTo = '00000000';
@@ -167,6 +175,6 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
         }
     }
 
-    return { cs, routes, orgs, orgFor, orgMode, usedStops, destDisps, operDays, operPers, dayTypes,
+    return { cs, routes, orgs, orgFor, orgMode, brandings, usedStops, destDisps, operDays, operPers, dayTypes,
              dtAssignments, overallFrom, overallTo };
 }
