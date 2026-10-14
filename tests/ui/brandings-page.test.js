@@ -26,7 +26,7 @@ describe('brandings page', () => {
   it('switches section from organisations to brandings', () => {
     expect(body().textContent).toContain('Organisasjoner');
     openSection();
-    expect(body().textContent).toContain('Ingen profiler ennå');
+    expect(body().textContent).toContain('Ingen merkevarer ennå');
   });
 
   it('adds a branding, saves it once it has a name, and keeps the field in place', async () => {

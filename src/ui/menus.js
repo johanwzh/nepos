@@ -3,10 +3,10 @@ import { app } from './state.js';
 import { $, refreshAll, runAction, persistSettings, applyTheme, onRefresh } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { createMenuBar } from './menubar.js';
-import { pickAndOpen, openNewDialog, openRecent, closeProject, copyProject } from './project-ui.js';
+import { pickAndOpen, openNewDialog, openRecent, closeProject, copyProject, setOnRecentChanged } from './project-ui.js';
 import { newRoute, saveRoute, saveAllRoutes, discardAllChanges } from './route-editor.js';
 import { unsavedCodes } from './drafts.js';
-import { loadRecentFolders } from './recent-folders.js';
+import { loadRecentFolders, clearRecentFolders } from './recent-folders.js';
 import { loadColourTheme, saveColourTheme, applyColourTheme, openThemeDialog } from './theme.js';
 
 /** @type {{ name: string, handle: any }[]} */
@@ -33,7 +33,8 @@ const MENUS = [
     { label: t('newProjectItem'), action: () => { void openNewDialog(); } },
     { label: t('openProjectItem'), action: () => { void pickAndOpen(); } },
     { label: t('openRecent'), submenu: () => (recent.length
-      ? recent.map((f) => ({ label: f.name, action: () => { void openRecent(f.handle); } }))
+      ? [...recent.map((f) => /** @type {import('./menubar.js').MenuItem} */ ({ label: f.name, action: () => { void openRecent(f.handle); } })),
+        'separator', { label: t('recentClear'), action: () => { void clearRecentFolders().then(reloadRecent); } }]
       : [{ label: t('recentNone'), disabled: true }]) },
     'separator',
     { label: t('closeProject'), disabled: !app.meta, action: () => { void closeProject(); } },
@@ -66,6 +67,7 @@ const MENUS = [
 export function initMenus() {
   const relabel = createMenuBar($('menubar'), MENUS);
   onRefresh(relabel); // menu names follow the language
+  setOnRecentChanged(reloadRecent); // a folder opened or forgotten shows at once
   void reloadRecent();
 }
 

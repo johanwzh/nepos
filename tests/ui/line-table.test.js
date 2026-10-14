@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell, setPage } from '../../src/ui/shell.js';
+import { initShell, setPage, refreshAll } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
@@ -124,5 +124,22 @@ describe('lines pane, maxi view', () => {
     rows()[1].dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     expect(app.activeRoute).toBe('a');
     expect(table().hidden).toBe(true);
+  });
+});
+
+describe('lines pane language', () => {
+  it('follows a language switch, keeping the search', async () => {
+    key('F5');
+    const search = /** @type {HTMLInputElement} */ (document.getElementById('lt-search'));
+    search.value = 'berg';
+    search.dispatchEvent(new Event('input'));
+    app.settings.lang = 'en';
+    refreshAll();
+    expect(document.querySelector('#line-table th[data-col="name"]')?.textContent).toBe('Name');
+    expect(document.getElementById('lt-dup')?.textContent).toBe('Duplicate');
+    expect(/** @type {HTMLInputElement} */ (document.getElementById('lt-search')).value).toBe('berg');
+    expect(names()).toEqual(['Bergen']);
+    app.settings.lang = 'no';
+    refreshAll();
   });
 });

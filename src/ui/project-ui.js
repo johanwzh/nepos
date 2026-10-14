@@ -8,7 +8,14 @@ import { createProject } from '../project/create.js';
 import { findFileNameProblems, repairFileNames } from '../project/repair.js';
 import { summarizeIntegrity } from '../core/integrity/check.js';
 import { normalizeCodespace } from '../core/codespace.js';
-import { loadRecentFolders, rememberFolder } from './recent-folders.js';
+import { loadRecentFolders, rememberFolder, forgetFolder } from './recent-folders.js';
+
+/** @type {() => Promise<void>} the menu reloads its list */
+let onRecentChanged = async () => {};
+/** @param {() => Promise<void>} fn */
+export function setOnRecentChanged(fn) {
+  onRecentChanged = fn;
+}
 import { clearGrid } from './grid.js';
 import { loadProjectQuays } from './quays.js';
 import { syncProjectCopy } from './org-register.js';
@@ -51,6 +58,7 @@ export async function openFs(fs, { handle = null, sample = false } = {}) {
   if (result.migrated) pendingNotes.push(t('migrated'));
   if (handle) {
     await rememberFolder(handle);
+    await onRecentChanged();
     app.lastHandle = handle;
   }
   refreshAll();
@@ -148,7 +156,16 @@ export async function openRecent(handle) {
   if (!(await beforeLeave())) return false;
   let granted = false;
   try { granted = await hasPermission(handle, true); } catch { granted = false; }
-  if (!granted) { showMessage(t('recentNoAccess', handle.name)); return false; }
+  // A folder that was moved or deleted still has a handle; reading it fails.
+  let exists = true;
+  if (granted) try { await handle.values().next(); } catch { exists = false; }
+  if (!granted || !exists) {
+    if (confirm(t(exists ? 'recentNoAccessForget' : 'recentGoneForget', handle.name))) {
+      await forgetFolder(handle);
+      await onRecentChanged();
+    }
+    return false;
+  }
   return openFs(createHandleFs(handle), { handle });
 }
 
