@@ -4,6 +4,10 @@ import { loadAppMarkup, flush } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
 import { initShell } from '../../src/ui/shell.js';
 import { initWorkbench, openWorkbench, setWorkbenchServices, setWorkbenchMap } from '../../src/ui/workbench.js';
+import { grid, initGrid, loadGrid } from '../../src/ui/grid.js';
+import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
+import { newRouteState } from '../../src/ui/route-state.js';
+import { quayInfo } from '../../src/ui/quays.js';
 
 const hit = (/** @type {string} */ id, /** @type {string} */ mode, description = '') => ({ id, name: 'Jernbanetorget', context: 'Oslo, Oslo', description, modes: [mode], lat: 59.91, lon: 10.75 });
 const HITS = [hit('NSR:StopPlace:3990', 'metro'), hit('NSR:StopPlace:4000', 'bus', 'foran Oslo S'), hit('NSR:StopPlace:3986', 'tram')];
@@ -146,5 +150,67 @@ describe('search window', () => {
     document.getElementById('ws-dlg').dispatchEvent(new Event('cancel'));
     document.getElementById('ws-dlg').dispatchEvent(new Event('close'));
     expect(await pick).toBe(null);
+  });
+});
+
+describe('picking a stop from the grid', () => {
+  const stop = (/** @type {string} */ name, /** @type {string | null} */ stopId, extra = {}) => ({ name, stopId, bold: false, sep: false, isDwellArr: false, price: null, ...extra });
+  const cell = (/** @type {string} */ time) => ({ time, dayOffset: 0, suffix: '', interchange: null, footnoteId: null });
+  let footnotes = false;
+
+  beforeEach(() => {
+    initGrid();
+    if (!footnotes) { initFootnoteEditor(); footnotes = true; }
+    app.routeState = newRouteState('no');
+    quayInfo.clear();
+    loadGrid({
+      stops: [stop('Sentrum', null), stop('Torget', 'NSR:Quay:1', { isDwellArr: true }), stop('Torget', 'NSR:Quay:1')],
+      cols: [{ dayCode: 'D', footnote: '', footnoteId: null, cells: [cell('0700'), cell('0710'), cell('0715')] }],
+    });
+  });
+
+  /** @param {number} ri */
+  async function findStop(ri) {
+    document.querySelector(`.g-td-name[data-ri="${ri}"]`)?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+    document.getElementById('gc-findstop').click();
+    await settle();
+  }
+
+  it('searches for the row\'s name and writes the picked Quay into the row', async () => {
+    await findStop(0);
+    expect(searches).toEqual(['Sentrum']);
+    rows()[0].click();
+    await settle();
+    rows()[1].click();
+    await settle();
+    expect(grid.stops[0]).toMatchObject({ stopId: 'NSR:Quay:7202', name: 'Jernbanetorget' });
+    expect(quayInfo.get('NSR:Quay:7202')?.publicCode).toBe('D');
+    expect(document.querySelector('.g-td-name[data-ri="0"]')?.classList.contains('stop-unlinked')).toBe(false);
+  });
+
+  it('sets both rows of a dwell stop', async () => {
+    await findStop(2);
+    rows()[0].click();
+    await settle();
+    rows()[0].click();
+    await settle();
+    expect(grid.stops[1]).toMatchObject({ stopId: 'NSR:Quay:7203', name: 'Jernbanetorget', isDwellArr: true });
+    expect(grid.stops[2]).toMatchObject({ stopId: 'NSR:Quay:7203', name: 'Jernbanetorget' });
+  });
+
+  it('changes nothing when the window is closed', async () => {
+    await findStop(0);
+    document.getElementById('ws-close').click();
+    await settle();
+    expect(grid.stops[0]).toMatchObject({ stopId: null, name: 'Sentrum' });
+  });
+
+  it('keeps the row\'s name for a typed Quay ID NSR does not know, and marks it', async () => {
+    await findStop(0);
+    await type('NSR:Quay:999999999');
+    rows()[0].click();
+    await settle();
+    expect(grid.stops[0]).toMatchObject({ stopId: 'NSR:Quay:999999999', name: 'Sentrum' });
+    expect(document.querySelector('.g-td-name[data-ri="0"]')?.classList.contains('n2-quay-notseen')).toBe(true);
   });
 });

@@ -10,6 +10,7 @@ import { isValidDayCode } from '../core/ern/validate.js';
 import { parseCellInput } from '../core/grid-input.js';
 import { currentPage, showMessage } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
+import { openWorkbench } from './workbench.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
 import { fnById, footnoteSummary, openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
 import { interpolateTime, extrapolateTime, speedUnit, toKmh } from '../core/interpolate.js';
@@ -249,6 +250,24 @@ function setStopId(ri) {
     stop.name = info.stopPlaceName;
     render();
   });
+}
+
+/** "Finn stopp i NSR…": pick a Quay in the search window (spec §7.1). @param {number} ri */
+async function findStop(ri) {
+  const stop = grid.stops[ri];
+  if (!stop || grid.readOnly || stop.isDwellArr) return;
+  const pick = await openWorkbench({ query: stop.name || '', ernMode: app.routeState?.transportMode ?? 0 });
+  const at = grid.stops.indexOf(stop);
+  if (!pick || at < 0) return; // closed, or another route was opened meanwhile
+  if (pick.info) quayInfo.set(pick.quayId, pick.info);
+  else if (!quayInfo.has(pick.quayId)) quayInfo.set(pick.quayId, null); // typed, unknown to NSR: "not in NSR yet"
+  // A dwell stop is two rows (arrival, departure): both get the Quay, so it stays one stop.
+  const rows = grid.stops[at - 1]?.isDwellArr ? [grid.stops[at - 1], stop] : [stop];
+  for (const r of rows) {
+    r.stopId = pick.quayId;
+    if (pick.name) r.name = pick.name;
+  }
+  render();
 }
 
 // ─── Interchanges ───────────────────────────────────────────────────────────
@@ -878,6 +897,7 @@ export function initGrid() {
     hideCtx(); render();
   });
   $('gc-stopid').addEventListener('click', () => { hideCtx(); if (ctxStopRow >= 0) setStopId(ctxStopRow); });
+  $('gc-findstop').addEventListener('click', () => { hideCtx(); if (ctxStopRow >= 0) findStop(ctxStopRow); });
   $('gc-add-note').addEventListener('click', () => { hideCtx(); openFnEditor('cell', ctxR, ctxC); });
   $('gc-dc-note').addEventListener('click', () => { hideCtx(); openFnEditor('col', 0, ctxDCCol >= 0 ? ctxDCCol : dcCol); });
 }
