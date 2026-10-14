@@ -181,7 +181,16 @@ function togglePanel(side) {
 let curPage = 'edit';
 
 /** @param {string} id */
+/** @type {(() => void)[]} */
+const beforeViewChange = [];
+
+/** Run before the view changes away from the edit page (e.g. commit a half-typed cell). @param {() => void} fn */
+export function onBeforeViewChange(fn) {
+  beforeViewChange.push(fn);
+}
+
 export function setPage(id) {
+  if (curPage === 'edit' && id !== 'edit') for (const fn of beforeViewChange) fn();
   curPage = id;
   document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach((tab) => tab.classList.remove('active'));
@@ -266,22 +275,20 @@ export function initShell() {
     tab.addEventListener('click', () => setPage(/** @type {HTMLElement} */ (tab).dataset.page));
   });
 
+  // View and panel shortcuts (navigation spec §8). Capture phase, so they work from text fields and
+  // the grid never sees them; nothing changes behind an open window. F2 belongs to the grid.
   document.addEventListener('keydown', (e) => {
-    const tag = /** @type {HTMLElement} */ (e.target).tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-    if (document.querySelector('dialog[open]')) return; // nothing changes behind a window
-    if (e.key === 'F2') {
-      e.preventDefault();
-      if (curPage !== 'edit') {
-        setPage('edit');
-        e.stopImmediatePropagation(); // switching page only; the grid must not also act on this F2
-      }
+    if (document.querySelector('dialog[open]')) return;
+    /** @type {Record<string, string>} */
+    const byDigit = { 1: 'edit', 2: 'assets', 3: 'export' };
+    const view = e.altKey && !e.ctrlKey && !e.metaKey ? byDigit[e.key] : e.key === 'F3' ? 'assets' : e.key === 'F4' ? 'export' : null;
+    if (view) { e.preventDefault(); e.stopPropagation(); setPage(view); return; }
+    if (e.key === 'F5' || e.key === 'F6') {
+      e.preventDefault(); e.stopPropagation();
+      if (curPage !== 'edit') setPage('edit');
+      togglePanel(e.key === 'F5' ? 'left' : 'right');
     }
-    if (e.key === 'F3') { e.preventDefault(); setPage('assets'); }
-    if (e.key === 'F4') { e.preventDefault(); setPage('export'); }
-    if (e.key === 'F5' && curPage === 'edit') { e.preventDefault(); togglePanel('left'); }
-    if (e.key === 'F6' && curPage === 'edit') { e.preventDefault(); togglePanel('right'); }
-  });
+  }, true);
 
   window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 }

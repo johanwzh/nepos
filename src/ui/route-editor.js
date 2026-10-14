@@ -3,7 +3,7 @@
 // delete. Ported from Nepos 1.5.7 (nepos.html lines 2556–2643, 2694–2706, 3008–3048, 3153–3405)
 // with the Nepos 2 project layer, read-only damaged routes and a guard for unsaved changes.
 import { app } from './state.js';
-import { $, onRefresh, refreshAll, runAction, markDirty, setBeforeLeave, beforeLeave, showMessage, currentPage } from './shell.js';
+import { $, onRefresh, refreshAll, runAction, markDirty, setBeforeLeave, beforeLeave, showMessage, currentPage, onBeforeViewChange } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { grid, loadGrid, gridData, markGridClean, clearGrid, render as renderGrid, onGridChange, commitPending } from './grid.js';
 import { newRouteState, fillMissingPeriod, addPeriod, deletePeriod, periodHasData, gridKey, periodsOf } from './route-state.js';
@@ -467,12 +467,14 @@ export function initRouteEditor() {
   // Document and window listeners only once, also when tests reload the page markup.
   if (listenersWired) return;
   listenersWired = true;
+  // Ctrl+S saves the open line, also from text fields (navigation spec §2); not behind a window.
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's' && currentPage() === 'edit' && app.routeState) {
-      e.preventDefault();
-      saveRoute();
-    }
-  });
+    if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's' || document.querySelector('dialog[open]')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (currentPage() === 'edit' && app.activeRoute) void saveRoute();
+  }, true);
+  onBeforeViewChange(() => { if (app.routeState) commitPending(); });
   window.addEventListener('beforeunload', (e) => {
     if (unsavedCodes().length) { e.preventDefault(); e.returnValue = ''; }
   });
