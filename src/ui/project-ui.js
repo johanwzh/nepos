@@ -9,6 +9,7 @@ import { findFileNameProblems, repairFileNames } from '../project/repair.js';
 import { summarizeIntegrity } from '../core/integrity/check.js';
 import { normalizeCodespace } from '../core/codespace.js';
 import { loadLastFolder, saveLastFolder } from './last-folder.js';
+import { loadProjectQuays } from './quays.js';
 import { openFailureMessage, createFailureMessage, issueMessage, summaryMessage, fileNameMessage } from './messages.js';
 
 /** Notes to show in the next project check (settings reset, format upgraded). @type {string[]} */
@@ -50,6 +51,7 @@ export async function openFs(fs, { handle = null, sample = false } = {}) {
   }
   refreshAll();
   showProjectCheck();
+  void loadProjectQuays(); // advisory, in the background (spec §7.2)
   return true;
 }
 

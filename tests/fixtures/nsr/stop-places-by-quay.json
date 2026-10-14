@@ -1,0 +1,26 @@
+[
+  {
+    "id": "NSR:StopPlace:337",
+    "name": { "lang": "nor", "value": "Oslo S" },
+    "transportMode": "RAIL",
+    "stopPlaceType": "RAIL_STATION",
+    "quays": {
+      "quayRefOrQuay": [
+        { "id": "NSR:Quay:563", "publicCode": "15", "centroid": { "location": { "latitude": 59.910123, "longitude": 10.754734 } } },
+        { "id": "NSR:Quay:570", "publicCode": "2", "centroid": { "location": { "latitude": 59.911022, "longitude": 10.755594 } } }
+      ]
+    }
+  },
+  {
+    "id": "NSR:StopPlace:4000",
+    "name": { "lang": "nor", "value": "Jernbanetorget" },
+    "transportMode": "BUS",
+    "stopPlaceType": "ONSTREET_BUS",
+    "quays": {
+      "quayRefOrQuay": [
+        { "id": "NSR:Quay:100636", "publicCode": "B", "centroid": { "location": { "latitude": 59.911426, "longitude": 10.749848 } } },
+        { "id": "NSR:Quay:7203", "publicCode": "A", "centroid": { "location": { "latitude": 59.911425, "longitude": 10.749736 } } }
+      ]
+    }
+  }
+]

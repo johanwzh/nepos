@@ -70,3 +70,8 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 #edit-footer .n2-readonly-note { color: var(--g-dec-c); font-size: 11px; }
 .ef-org-chip.n2-missing .ef-org-name { color: var(--g-dec-c); }
 .ef-org-role { font-size: 10px; color: var(--text-m); margin: 0 4px; }
+
+/* A Quay NSR does not know yet (spec §7.2): allowed, but worth a second look. */
+.g-td-name.n2-quay-notseen { font-style: italic; text-decoration: underline dotted; }
+/* Not checked against NSR (still looking, or NSR could not be reached): muted, never like confirmed. */
+.g-td-name.n2-quay-unknown { color: var(--text-m); }

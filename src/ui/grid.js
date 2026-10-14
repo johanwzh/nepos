@@ -8,7 +8,9 @@
 import { t } from '../i18n/strings.js';
 import { isValidDayCode } from '../core/ern/validate.js';
 import { parseCellInput } from '../core/grid-input.js';
-import { currentPage } from './shell.js';
+import { currentPage, showMessage } from './shell.js';
+import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
+import { NSR_QUAY_PATTERN } from '../core/quays.js';
 import { fnById, footnoteSummary, openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
 
 /** The grid being edited: one period × direction of the open route. */
@@ -182,6 +184,55 @@ function cancelStopEdit() {
   render();
 }
 
+// ─── Stop marks (NSR status, spec §7.2) ─────────────────────────────────────
+const MARK_CLASSES = ['stop-unlinked', 'stop-broken', 'n2-quay-notseen', 'n2-quay-unknown'];
+
+/** @param {HTMLElement} td @param {any} stop */
+function applyStopMark(td, stop) {
+  td.classList.remove(...MARK_CLASSES);
+  td.removeAttribute('title');
+  if (stop.isDwellArr) return;
+  const mark = stopMark(stop);
+  if (mark.cls) td.classList.add(mark.cls);
+  td.title = mark.title;
+}
+
+/** New NSR results: update the marks in place, so nothing is rebuilt under the cursor. */
+function updateStopMarks() {
+  if (!grid.active) return;
+  document.querySelectorAll('#tbl .g-td-name[data-ri]').forEach((td) => {
+    const stop = grid.stops[Number(/** @type {HTMLElement} */ (td).dataset.ri)];
+    if (stop) applyStopMark(/** @type {HTMLElement} */ (td), stop);
+  });
+}
+
+/** "Set stop ID…": type an NSR Quay ID directly (spec §7.1); empty removes it. @param {number} ri */
+function setStopId(ri) {
+  const stop = grid.stops[ri];
+  if (!stop || grid.readOnly || stop.isDwellArr) return;
+  const answer = prompt(t('stopIdPrompt'), stop.stopId ?? '');
+  if (answer === null) return;
+  const id = answer.trim();
+  if (id && !NSR_QUAY_PATTERN.test(id)) { showMessage(t('stopIdInvalid')); return; }
+  stop.stopId = id || null;
+  // A dwell stop is two rows with the same ID (arrival, then departure). Keep them one stop:
+  // otherwise the file reopens with an extra call at the old Quay.
+  const arrival = grid.stops[ri - 1]?.isDwellArr ? grid.stops[ri - 1] : null;
+  if (arrival) {
+    arrival.stopId = stop.stopId;
+    if (!id) arrival.isDwellArr = false;
+  }
+  render();
+  if (!id) return;
+  loadQuays([id]).then(() => {
+    const info = quayInfo.get(id);
+    if (!info || stop.name.trim() || !grid.stops.includes(stop)) return;
+    if (inStopEdit) { updateStopMarks(); return; } // a name is being typed: never rebuild under it
+    stop.name = info.stopPlaceName;
+    render();
+  });
+}
+
 // ─── Interchanges ───────────────────────────────────────────────────────────
 /** @param {number} r @param {number} c @param {string} type */
 function enterIx(r, c, type) {
@@ -341,9 +392,9 @@ function renderStopRow(tbl, stop, ri, linked) {
     tdn.appendChild(input);
   } else {
     const isSel = inStopCol && ri === ancR;
-    const unlinked = !stop.isDwellArr && stop.stopId == null;
-    tdn.className = 'cw-name g-sticky1 g-td-name' + (stop.bold ? ' stop-bold' : '') + (isSel ? ' stop-sel' : '') + (unlinked ? ' stop-unlinked' : '');
-    if (unlinked) tdn.title = t('unlinkedStop');
+    tdn.className = 'cw-name g-sticky1 g-td-name' + (stop.bold ? ' stop-bold' : '') + (isSel ? ' stop-sel' : '');
+    tdn.dataset.ri = String(ri);
+    applyStopMark(tdn, stop);
     tdn.textContent = stop.name;
     tdn.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
@@ -733,12 +784,20 @@ function deleteRow(ri) {
 }
 
 /** Wire keyboard, paste and the context menu once at start-up. */
+let documentWired = false;
+
 export function initGrid() {
-  document.addEventListener('keydown', onKeyDown);
-  document.addEventListener('paste', onPaste);
-  document.addEventListener('mousedown', (e) => {
-    if (!/** @type {HTMLElement} */ (e.target).closest?.('#grid-ctx')) hideCtx();
-  });
+  // Page-wide listeners only once, also when tests reload the page markup; the menu items below
+  // belong to the markup and are wired on every call.
+  if (!documentWired) {
+    documentWired = true;
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('paste', onPaste);
+    document.addEventListener('mousedown', (e) => {
+      if (!/** @type {HTMLElement} */ (e.target).closest?.('#grid-ctx')) hideCtx();
+    });
+    onQuaysLoaded(updateStopMarks);
+  }
   $('gc-clear').addEventListener('click', () => { clearSelection(); hideCtx(); render(); });
   $('gc-offset').addEventListener('click', () => {
     hideCtx();
@@ -772,6 +831,7 @@ export function initGrid() {
     grid.stops[ctxStopRow].sep = !grid.stops[ctxStopRow].sep;
     hideCtx(); render();
   });
+  $('gc-stopid').addEventListener('click', () => { hideCtx(); if (ctxStopRow >= 0) setStopId(ctxStopRow); });
   $('gc-add-note').addEventListener('click', () => { hideCtx(); openFnEditor('cell', ctxR, ctxC); });
   $('gc-dc-note').addEventListener('click', () => { hideCtx(); openFnEditor('col', 0, ctxDCCol >= 0 ? ctxDCCol : dcCol); });
 }

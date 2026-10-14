@@ -85,6 +85,7 @@ export const sample = {
     { id: '103', name: 'Florø',             coords: [5.0328, 61.5996], mode: 'water', spt: 'ferryPort' },
     { id: '104', name: 'Florø skysstasjon', coords: [5.0350, 61.6000], mode: 'bus',   spt: 'onstreetBus' },
     { id: '105', name: 'Eikefjord',         coords: [5.4500, 61.5890], mode: 'bus',   spt: 'onstreetBus' },
+    { id: '999', name: 'Ukjent brygge',     coords: [5.2000, 61.4500], mode: 'water', spt: 'ferryPort' },
   ],
   routes: [
     { code: '10', text: route10 },

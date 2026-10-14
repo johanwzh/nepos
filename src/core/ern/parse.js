@@ -117,13 +117,16 @@ export function parseERN(text, { lang = 'en' } = {}) {
                 break;
             }
             case '#TRL': {
-                const sid  = parseInt(f[2]);
+                // Nepos 2: the stop ID is text (an NSR Quay ID such as NSR:Quay:12345; old files
+                // have numbers). Empty, 0 and negative numbers mean "no stop ID".
+                const rawId = (f[2] ?? '').trim();
+                const sid = rawId === '' || (/^-?\d+$/.test(rawId) && parseInt(rawId, 10) <= 0) ? null : rawId;
                 const priceField = parseFloat(f[6]);
                 const price = (!isNaN(priceField) && priceField >= 0) ? priceField : null;
                 // field[5]: Nepos flags bitmask (bit0=bold, bit1=sep). Negative/NaN → 0.
                 const flags = Math.max(0, parseInt(f[5]) || 0);
                 rows.push({
-                    name: f[3]||'', stopId: sid>0?sid:null,
+                    name: f[3]||'', stopId: sid,
                     bold: (flags & 1) !== 0, sep: (flags & 2) !== 0,
                     isDwellArr: false, price
                 });

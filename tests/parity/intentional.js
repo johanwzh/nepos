@@ -15,7 +15,7 @@ export function expectedRoundtrip(v1Text) {
 /**
  * Parsed route state: columns no longer carry vehicleId, #SEK org IDs are strings and keep the
  * name from the file, and the #CUR rate is kept as read (1.5.7 replaced it with its built-in
- * table value on write).
+ * table value on write). Stop IDs are text (NSR Quay IDs), not numbers.
  * @param {any} v1Parsed
  * @param {string} ernText the ERN file the state was parsed from
  */
@@ -23,6 +23,10 @@ export function expectedParsed(v1Parsed, ernText) {
   const copy = JSON.parse(JSON.stringify(v1Parsed));
   for (const grid of Object.values(copy.grids)) {
     for (const col of /** @type {any} */ (grid).cols) delete col.vehicleId;
+  }
+  // Stop IDs are text in Nepos 2 (NSR Quay IDs); 1.5.7 parsed them as numbers.
+  for (const grid of Object.values(copy.grids)) {
+    for (const stop of /** @type {any} */ (grid).stops) if (stop.stopId != null) stop.stopId = String(stop.stopId);
   }
   const rate = ernText.match(/^#CUR;[^;\r\n]*;([^;\r\n]+)/m)?.[1];
   if (rate) copy.currencyRate = rate;
@@ -38,8 +42,18 @@ export function expectedParsed(v1Parsed, ernText) {
 
 // Not a transform, but a deliberate difference all the same: 1.5.7 also wrote _stops.xml.
 // Nepos 2 never produces it (stops belong to NSR), so it is neither recorded nor compared.
-// Until Plan 3 switches stop references to NSR Quay IDs, the shared file's QuayRefs point at
-// Quays no file defines.
+// QuayRefs point at NSR Quays directly; the sample's old numeric IDs keep 1.5.7's CS:Quay:<id>.
+
+/**
+ * NeTEx: Nepos 2 produces no ServiceLinks (spec §8), so the shared file has no <serviceLinks>
+ * and journey patterns have no <linksInSequence>.
+ * @param {string} v1Xml
+ */
+export function expectedNetex(v1Xml) {
+  return v1Xml
+    .replace(/\n {6}<serviceLinks>[\s\S]*?\n {6}<\/serviceLinks>/g, '')
+    .replace(/\n {8}<linksInSequence>[\s\S]*?\n {8}<\/linksInSequence>/g, '');
+}
 
 /** NeTEx file names: Entur delivery convention. */
 export const NETEX_FILE_NAMES = {
