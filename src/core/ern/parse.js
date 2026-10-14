@@ -1,5 +1,6 @@
 // ERN parser, ported from Nepos 1.5.7 (nepos.html lines 2812–3005). See docs/ern/ern-format.md.
 import { orgRole } from '../orgs.js';
+import { modeFromErn } from '../modes.js';
 
 /**
  * Parse an ERN route file into a route state.
@@ -8,11 +9,12 @@ import { orgRole } from '../orgs.js';
  */
 export function parseERN(text, { lang = 'en' } = {}) {
     const rs = {
-        routeName:'', publicCode:'', transportMode:6, kom:'', sek:[], footnotes:[],
+        routeName:'', publicCode:'', privateCode:'', mode:'', submode:'', brandingId:'', tra:'', transportMode:6, kom:'', sek:[], footnotes:[],
         periods:[], directions:[], activePer:null, activeDir:null,
         nextId:1, grids:{}
     };
     let curPer = null, curDir = null;
+    let sawMod = false;
     let cols = [], rows = [], cellMap = {};
     const dirMap = {};
     let _fnParseMap = null, _fnPendingAttach = [];
@@ -23,7 +25,7 @@ export function parseERN(text, { lang = 'en' } = {}) {
         const colXtoIdx = {};
         cols.forEach((c,i) => { colXtoIdx[c.x] = i; });
         const gCols2 = cols.map(c => ({
-            dayCode: c.dayCode, footnote: '', footnoteId: null,
+            dayCode: c.dayCode, uid: c.uid ?? null, footnote: '', footnoteId: null,
             cells: rows.map((_,ri) => {
                 const cell = cellMap[`${c.x}:${ri}`];
                 return cell || null;
@@ -65,8 +67,10 @@ export function parseERN(text, { lang = 'en' } = {}) {
         switch (f[0]) {
             case '#LEV': break; // handled by publicationdelivery.json
             case '#RUT':
+                rs.privateCode   = (f[1]||'').trim() === '-1' ? '' : (f[1]||'').trim();
+                rs.publicCode    = f[2]||'';
                 rs.routeName     = f[3]||'';
-                rs.transportMode = parseInt(f[5])||6;
+                rs.transportMode = f[5] === undefined || f[5].trim() === '' ? 6 : (parseInt(f[5]) || 0);
                 break;
             case '#SEK': {
                 // Nepos 2: the org ID is text, normally a full NeTEx ID whose role wins over the flags.
@@ -82,8 +86,20 @@ export function parseERN(text, { lang = 'en' } = {}) {
                 break;
             }
             case '#TRA':
-                rs.publicCode = f[1]||'';
+                rs.tra = f[1]||'';   // kept as read; plan 4c gives it its meaning
                 break;
+            case '#MOD':
+                rs.mode = (f[1]||'').trim(); rs.submode = (f[2]||'').trim(); sawMod = true;
+                break;
+            case '#BRA':
+                rs.brandingId = (f[1]||'').trim();
+                break;
+            case '#UID': {
+                // Belongs to the #TUR directly before it (a column's stable ID).
+                const last = cols[cols.length - 1];
+                if (last && last.uid == null) last.uid = (f[1]||'').trim() || null;
+                break;
+            }
             case '#KOM':
                 if (!rs.kom) rs.kom = f[1]||'';  // first #KOM = route-wide comment
                 break;
@@ -113,7 +129,7 @@ export function parseERN(text, { lang = 'en' } = {}) {
             }
             case '#TUR': {
                 // Field 6 (1.x vehicle reference) is ignored; vehicles are dropped in Nepos 2.
-                cols.push({ x:parseInt(f[1])||cols.length, dayCode:f[2]||'' });
+                cols.push({ x:parseInt(f[1])||cols.length, dayCode:f[2]||'', uid:null });
                 break;
             }
             case '#TRL': {
@@ -183,6 +199,7 @@ export function parseERN(text, { lang = 'en' } = {}) {
         }
     }
     finalizeTAB();
+    if (!sawMod) { const m = modeFromErn(rs.transportMode); rs.mode = m.mode; rs.submode = m.submode; }
     return rs;
 
     function buildXtoIdx() {

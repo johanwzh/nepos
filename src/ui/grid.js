@@ -76,6 +76,8 @@ export function selectedColumn() {
 export function loadGrid(data, { readOnly = false } = {}) {
   grid.stops = JSON.parse(JSON.stringify(data.stops));
   grid.cols = JSON.parse(JSON.stringify(data.cols));
+  // Every column on screen has its stable ID, so saving twice writes the same text.
+  for (const col of grid.cols) if (!col.uid) col.uid = crypto.randomUUID();
   grid.readOnly = readOnly;
   grid.active = true;
   baseline = snapshot();
@@ -786,7 +788,7 @@ function hideCtx() {
 // ─── Insert / delete ────────────────────────────────────────────────────────
 /** @param {number} at */
 function insertCol(at) {
-  grid.cols.splice(at, 0, { dayCode: '', footnote: '', footnoteId: null, cells: grid.stops.map(() => null) });
+  grid.cols.splice(at, 0, { dayCode: '', uid: crypto.randomUUID(), footnote: '', footnoteId: null, cells: grid.stops.map(() => null) });
   for (const col of grid.cols) for (const cell of col.cells) if (cell && cell.interchange && cell.interchange.targetC >= at) cell.interchange.targetC++;
   if (!inDC) { if (ancC >= at && grid.cols.length > 1) ancC++; if (endC >= at && grid.cols.length > 1) endC++; } else if (dcCol >= at) dcCol++;
   ancC = clampC(ancC); endC = clampC(endC);

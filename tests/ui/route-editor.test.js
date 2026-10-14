@@ -109,7 +109,7 @@ describe('route editor', () => {
     await flush();
     await flush();
     expect(app.activeRoute).toBe('31');
-    expect(await readRoute(fs, '31')).toContain('#RUT;-1;31;');
+    expect(await readRoute(fs, '31')).toContain('#RUT;-1;;') // a new line has no public code yet;
   });
 
   it('deletes a route after asking, keeping a backup', async () => {
