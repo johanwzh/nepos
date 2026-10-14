@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { lookupQuays, getStopPlace } from '../../src/services/nsr.js';
+import { lookupQuays, getStopPlace, getStopPlaces } from '../../src/services/nsr.js';
 
 const recorded = JSON.parse(readFileSync('tests/fixtures/nsr/stop-places-by-quay.json', 'utf8'));
 const opts = { baseUrl: 'https://api.entur.io/stop-places/v1/read/', clientName: 'test-nepos' };
@@ -79,5 +79,27 @@ describe('getStopPlace', () => {
   it('fails loudly on other errors', async () => {
     const { fn } = fakeFetch({}, { ok: false, status: 500 });
     await expect(getStopPlace('NSR:StopPlace:4000', { ...opts, fetch: fn })).rejects.toThrow('500');
+  });
+});
+
+describe('getStopPlaces', () => {
+  const place = JSON.parse(readFileSync('tests/fixtures/nsr/stop-place-4000.json', 'utf8'));
+
+  it('asks for the stop places by ID in batches of 50', async () => {
+    const { fn, calls } = fakeFetch([place]);
+    const ids = Array.from({ length: 51 }, (_, i) => `NSR:StopPlace:${i + 1}`);
+    const result = await getStopPlaces(ids, { ...opts, fetch: fn });
+    expect(calls).toHaveLength(2);
+    const url = new URL(calls[0].url);
+    expect(url.pathname).toBe('/stop-places/v1/read/stop-places');
+    expect(url.searchParams.get('count')).toBe('50');
+    expect(url.searchParams.get('ids')?.split(',')).toHaveLength(50);
+    expect(calls[0].headers['ET-Client-Name']).toBe('test-nepos');
+    expect(result[0].quays.map((q) => q.publicCode)).toEqual(['B', 'C', 'A', 'D']);
+  });
+
+  it('fails loudly on an error response', async () => {
+    const { fn } = fakeFetch({}, { ok: false, status: 500 });
+    await expect(getStopPlaces(['NSR:StopPlace:1'], { ...opts, fetch: fn })).rejects.toThrow('500');
   });
 });

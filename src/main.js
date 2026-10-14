@@ -16,8 +16,7 @@ import { initFootnoteEditor } from './ui/footnote-editor.js';
 import { initRouteEditor } from './ui/route-editor.js';
 import { initExportPage } from './ui/export-page.js';
 import { initMapPanel } from './ui/map-panel.js';
-import { initWorkbench, setWorkbenchMap } from './ui/workbench.js';
-import { createWorkbenchMap } from './ui/workbench-map.js';
+import { initStopPicker } from './ui/stop-picker.js';
 import { initOrgRegister } from './ui/org-register.js';
 import { initMenus } from './ui/menus.js';
 
@@ -37,8 +36,7 @@ initFootnoteEditor();
 initRouteEditor();
 initExportPage();
 initMapPanel();
-initWorkbench();
-setWorkbenchMap(createWorkbenchMap);
+initStopPicker();
 
 // Development only: /?sample opens an in-memory sample project, so the screens can be checked
 // without the browser's folder picker. Never active in a production build.

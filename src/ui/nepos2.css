@@ -95,9 +95,6 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .n2-tiles.n2-map-dark .leaflet-tile-pane { opacity: .75; filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); }
 
 /* Search window (spec §7.1): search and results beside a large map */
-dialog.n2-ws { width: min(1100px, 95vw); height: min(720px, 90vh); max-width: none; max-height: none; margin: auto; padding: 0; display: none; }
-.n2-ws .n2-check { display: flex; margin: 0; }
-dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .n2-ws-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); }
 .n2-ws-body { flex: 1; display: flex; min-height: 0; }
 .n2-ws-left { width: 380px; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-right: 1px solid var(--border); min-height: 0; }
@@ -272,3 +269,33 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .lt-table .mode-icon { width: 18px; height: 18px; vertical-align: middle; }
 .lt-status.has-errors { color: var(--danger, #c62828); }
 .lt-empty { color: var(--text-f); font-style: italic; }
+
+/* Stop picking in the map pane (plan 4g) */
+#panel-right { display: flex; flex-direction: column; }
+#panel-right #map-inner { flex: 1; min-height: 200px; }
+.sp { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-bottom: 1px solid var(--border-lt); max-height: 55%; overflow: auto; font-size: 12px; }
+.sp[hidden] { display: none; }
+.sp-head { font-weight: 600; }
+#sp-q { height: 26px; padding: 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text); font: inherit; }
+.sp-mode { display: flex; margin: 0; }
+.sp-status { color: var(--text-f); }
+.sp-status:empty { display: none; }
+.sp-list { display: flex; flex-direction: column; }
+.sp-row { padding: 4px 6px; cursor: pointer; border-radius: 3px; }
+.sp-row:hover, .sp-row.on { background: var(--accent-bg); }
+.sp-row small, .sp-place small { display: block; color: var(--text-f); }
+.sp-place { padding: 4px 6px; font-weight: 600; }
+.sp-card { border: 1px dashed var(--accent); border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.sp-card[hidden] { display: none; }
+.sp-card button { align-self: flex-start; }
+#sp-clear { align-self: flex-start; }
+
+/* Map symbols while picking (stop picking spec §5): stop places round with the mode icon, Quays square */
+.pm { display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.pm-place { border-radius: 50%; background: #fff; border: 2px solid var(--accent); color: var(--accent); cursor: pointer; }
+.pm-place svg { width: 16px; height: 16px; }
+.pm-place.pm-browse { opacity: .6; border-style: solid; border-color: #888; color: #555; }
+.pm-quay { border-radius: 3px; background: var(--accent); color: var(--accent-text, #fff); font: 600 10px/1 system-ui, sans-serif; cursor: pointer; border: 1px solid #fff; }
+.pm-line { border-radius: 50%; background: rgba(120,120,120,.55); color: #fff; font: 600 10px/1 system-ui, sans-serif; }
+.pm-current { border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--accent); }
+.pm-candidate { border-radius: 50%; border: 3px dashed var(--accent); background: transparent; pointer-events: none; }

@@ -17,6 +17,25 @@ export async function searchStopPlaces(text, { baseUrl, clientName, limit = 20, 
   const res = await doFetch(`${baseUrl.replace(/\/$/, '')}/autocomplete?${params}`, {
     headers: { 'ET-Client-Name': clientName, Accept: 'application/json' },
   });
+  return toHits(res);
+}
+
+/**
+ * The stop places around a point (stop picking spec §4: browsing the map), nearest first, at most 50.
+ * @param {{ lat: number, lon: number, radiusKm: number }} at
+ * @param {{ baseUrl: string, clientName: string, fetch?: (url: string, init?: any) => Promise<any> }} opts
+ * @returns {Promise<StopPlaceHit[]>}
+ */
+export async function nearbyStopPlaces({ lat, lon, radiusKm }, { baseUrl, clientName, fetch: doFetch = (url, init) => fetch(url, init) }) {
+  const params = new URLSearchParams({ lat: String(lat), lon: String(lon), radius: String(radiusKm), limit: '50', layers: 'stopPlace', multimodal: 'child' });
+  const res = await doFetch(`${baseUrl.replace(/\/$/, '')}/reverse?${params}`, {
+    headers: { 'ET-Client-Name': clientName, Accept: 'application/json' },
+  });
+  return toHits(res);
+}
+
+/** @param {any} res @returns {Promise<StopPlaceHit[]>} */
+async function toHits(res) {
   if (!res.ok) throw new Error(`The geocoder answered ${res.status}`);
   const body = await res.json();
   return (body.features ?? []).map((/** @type {any} */ f) => {

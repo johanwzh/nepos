@@ -5,7 +5,7 @@ import { app } from '../../src/ui/state.js';
 import { initShell } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
-import { initGrid, grid } from '../../src/ui/grid.js';
+import { initGrid, grid, setStopOnRow, clearStopOnRow } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
 import { setQuayLookup, quayInfo } from '../../src/ui/quays.js';
@@ -129,15 +129,14 @@ describe('stop marks', () => {
 });
 
 describe('typing a stop ID', () => {
-  /** @param {number} ri @param {string | null} answer */
+  /** Set a Quay ID on a row as the map pane does (stop picking spec), or remove it. @param {number} ri @param {string | null} answer */
   async function setStopId(ri, answer) {
-    nameCell(ri).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
-    window.prompt = vi.fn(() => answer);
-    document.getElementById('gc-stopid').click();
+    if (answer) setStopOnRow(ri, { quayId: answer });
+    else clearStopOnRow(ri);
     await flush();
   }
 
-  it('sets an NSR Quay ID from the stop menu', async () => {
+  it('sets an NSR Quay ID on a row', async () => {
     await openProjectWith(fakeLookup);
     await flush();
     await selectRoute('50');
@@ -145,16 +144,6 @@ describe('typing a stop ID', () => {
     expect(grid.stops[4].stopId).toBe('NSR:Quay:7203');
     expect(app.dirty).toBe(true);
     expect(nameCell(4).classList.contains('stop-unlinked')).toBe(false);
-  });
-
-  it('refuses something that is not an NSR Quay ID', async () => {
-    await openProjectWith(fakeLookup);
-    await flush();
-    await selectRoute('50');
-    await setStopId(4, 'Quay 7203');
-    expect(grid.stops[4].stopId).toBe(null);
-    expect(app.dirty).toBe(false);
-    expect(document.getElementById('msg-text').textContent).toContain('NSR:Quay:12345');
   });
 
   it('removes the stop ID when the answer is empty', async () => {
@@ -182,6 +171,7 @@ describe('typing a stop ID', () => {
     setQuayLookup(d.fn);
     grid.stops[4].name = '';
     await setStopId(4, 'NSR:Quay:11972'); // not looked up yet: the answer is still on its way
+    nameCell(4).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 })); // select the stop cell
     press('Enter');                       // the stop column is selected: start typing its name
     const input = document.querySelector('.g-stop-input');
     expect(document.activeElement).toBe(input);
@@ -203,11 +193,10 @@ describe('dwell stops', () => {
     '#TRL;3;NSR:Quay:563;Oslo S;34;0;-1;-1;34;-1', '#TRC;0;0730;0;0;0;0;0',
   ].join('\r\n') + '\r\n';
 
-  /** @param {number} ri @param {string} answer */
+  /** Set a Quay ID on a row as the map pane does (stop picking spec), or remove it. @param {number} ri @param {string} answer */
   async function setStopId(ri, answer) {
-    nameCell(ri).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
-    window.prompt = vi.fn(() => answer);
-    document.getElementById('gc-stopid').click();
+    if (answer) setStopOnRow(ri, { quayId: answer });
+    else clearStopOnRow(ri);
     await flush();
   }
 

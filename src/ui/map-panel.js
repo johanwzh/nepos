@@ -10,6 +10,9 @@ import { grid, selectedColumn, onGridRender } from './grid.js';
 import { quayInfo, onQuaysLoaded } from './quays.js';
 import { tripOnMap } from '../core/map-model.js';
 import { DEFAULT_SETTINGS } from '../project/settings.js';
+import { pickerState, setPickerMap } from './stop-picker.js';
+import { pickerMapModel } from '../core/picker-map-model.js';
+import { modeIconSvg } from './mode-icons.js';
 
 
 /** @type {any} */ let map = null;
@@ -32,6 +35,7 @@ function ensureMap() {
     zoomControl: true, attributionControl: true,
     keyboard: false, // arrow keys, digits and +/- belong to the grid, never to the map
   }).setView([62.5, 13], 5);
+  map.on('moveend', () => { for (const fn of viewListeners) fn(); }); // browsing (stop picking spec §4)
 }
 
 function ensureTiles() {
@@ -49,7 +53,47 @@ function ensureTiles() {
   tileTheme = want;
 }
 
-/** Draw the selected trip. Never touches the grid. */
+/** @type {(kind: 'place' | 'quay', id: string) => void} */
+let onPick = () => {};
+/** @type {(() => void)[]} */
+const viewListeners = [];
+let pickKey = '';
+
+/** @param {string} cls @param {string} html @param {number} size */
+const icon = (cls, html, size) => L.divIcon({ className: `pm ${cls}`, html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
+
+/** While a stop row is being picked (stop picking spec §5): the picker's symbols. */
+function drawPicker() {
+  const s = pickerState();
+  const lineStops = grid.stops.map((st, i) => ({ n: i + 1, stopId: st.stopId == null ? null : String(st.stopId), name: st.name,
+    info: st.stopId ? quayInfo.get(String(st.stopId)) ?? null : null }));
+  const model = pickerMapModel({ ...s, lineStops });
+  $('map-missing').hidden = true;
+  /** @type {HTMLElement | null} */ (document.querySelector('#map-inner .map-hint-overlay')).style.display = 'none';
+  if (model.line.length > 1) layers.push(L.polyline(model.line, { color: '#888', weight: 2, opacity: 0.5, dashArray: '4 4' }).addTo(map));
+  for (const m of model.markers) {
+    /** @type {any} */ let marker;
+    if (m.kind === 'line') marker = L.marker([m.lat, m.lon], { icon: icon('pm-line', String(m.n), 18), keyboard: false });
+    else if (m.kind === 'current') marker = L.marker([m.lat, m.lon], { icon: icon('pm-current', '', 18), keyboard: false, zIndexOffset: 800 });
+    else if (m.kind === 'candidate') marker = L.marker([m.lat, m.lon], { icon: icon('pm-candidate', '', 26), keyboard: false, zIndexOffset: 1000 });
+    else if (m.kind === 'quay') marker = L.marker([m.lat, m.lon], { icon: icon('pm-quay', esc(m.label || '·'), 20), keyboard: false, zIndexOffset: 500 });
+    else marker = L.marker([m.lat, m.lon], { icon: icon(m.kind === 'place' ? 'pm-place' : 'pm-place pm-browse', modeIconSvg(m.mode ?? '', ''), 26), keyboard: false });
+    marker.bindTooltip(esc(m.label), { direction: 'top', offset: [0, -10] });
+    if (m.kind === 'place' || m.kind === 'browsePlace') marker.on('click', () => onPick('place', m.id));
+    if (m.kind === 'quay') marker.on('click', () => onPick('quay', m.id));
+    layers.push(marker.addTo(map));
+  }
+  // Fit when what is being looked at changes (a new row, new hits, another stop place) — never
+  // while the user pans and zooms to browse.
+  const key = `${s.row}|${s.place?.id ?? ''}|${s.hits.map((h) => h.id).join(',')}|${s.current?.quayId ?? ''}`;
+  if (key !== pickKey && model.fit) {
+    pickKey = key;
+    if (model.fit.length === 1) map.setView(model.fit[0], Math.max(map.getZoom(), 17));
+    else map.fitBounds(L.latLngBounds(model.fit), { padding: [30, 30], maxZoom: 17 });
+  }
+}
+
+/** Draw the selected trip, or the picker. Never touches the grid. */
 function update() {
   scheduled = false;
   if (!panelOpen('right') || currentPage() !== 'edit') return;
@@ -59,6 +103,8 @@ function update() {
 
   for (const layer of layers) layer.remove();
   layers = [];
+  if (pickerState().row != null) { lastKey = ''; drawPicker(); return; }
+  pickKey = '';
   const ci = selectedColumn();
   const col = grid.active ? grid.cols[ci] : null;
   const trip = col ? tripOnMap(grid, col, quayInfo) : { points: [], missing: [] };
@@ -94,6 +140,18 @@ function schedule() {
 }
 
 export function initMapPanel() {
+  setPickerMap({
+    show: () => schedule(),
+    onPick: (fn) => { onPick = fn; },
+    view: () => {
+      if (!map || !panelOpen('right')) return null;
+      const c = map.getCenter();
+      const b = map.getBounds();
+      return { lat: c.lat, lon: c.lng, zoom: map.getZoom(), radiusKm: b.getNorthEast().distanceTo(b.getSouthWest()) / 2000 };
+    },
+    onViewChange: (fn) => { viewListeners.push(fn); },
+    zoomTo: (lat, lon, zoom) => { ensureMap(); map.setView([lat, lon], zoom); },
+  });
   onGridRender(schedule);
   // The panel slides open (CSS width transition): fit again once it has its final size.
   onPanelToggle(() => {
