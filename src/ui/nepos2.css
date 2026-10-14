@@ -333,3 +333,50 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .rh-add-per { width: auto; padding: 0 8px; font-size: 12px; }
 .n2-dlg-help { color: var(--text-m); font-size: 12px; max-width: 420px; }
 .lt-table td.lt-flag { text-align: center; }
+
+/* ── Polish after the user test (2026-10-15): chips, one type scale on the resource pages, the
+   problem list on the Export page. ─────────────────────────────────────────────────────────── */
+.org-pick-btn { display: inline-flex; align-items: center; gap: 6px; max-width: 280px; height: 28px; padding: 0 10px 0 12px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--bg-raised); color: var(--text);
+  font: inherit; font-size: 13px; cursor: pointer; }
+.org-pick-btn:hover:not(:disabled) { border-color: var(--accent); }
+.org-pick-btn:disabled { cursor: default; opacity: .7; }
+.org-pick-role { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-f); }
+.org-pick-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.org-pick-caret { color: var(--text-f); font-size: 10px; }
+.org-pick.invalid .org-pick-btn { border-color: var(--g-dec-c); color: var(--text); background: color-mix(in srgb, var(--g-dec-c) 7%, var(--bg-raised)); }
+.org-pick.invalid .org-pick-name { color: var(--g-dec-c); }
+.rh-orgs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.rh-branding { height: 28px; font-size: 13px; }
+
+/* Resource pages */
+.assets-body { font-size: 13px; line-height: 1.45; }
+.assets-hint { font-size: 12px; }
+.assets-subtitle { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-m); margin: 18px 0 4px; }
+.org-status { font-size: 13px; }
+.org-missing-note { font-size: 12px; margin: 0 0 6px; }
+.org-row { padding: 10px 0; }
+.org-row-head { align-items: baseline; gap: 10px; }
+.org-row-head b { font-size: 14px; font-weight: 600; }
+.org-num, .org-used { font-size: 12px; }
+.org-role-line { margin: 6px 0 0 0; gap: 10px; }
+.org-role { width: 80px; font-size: 12px; color: var(--text-m); }
+.org-alias-label { font-size: 12px; color: var(--text-m); }
+.org-alias-in { font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+.org-mark { font-size: 11px; border: none; border-radius: 999px; padding: 2px 8px; background: var(--bg-raised); }
+.org-mark.bad { color: var(--g-dec-c); background: color-mix(in srgb, var(--g-dec-c) 10%, transparent); }
+.org-details { font-size: 12px; }
+.brand-row { gap: 8px; margin: 6px 0; }
+.cal-list { border: 1px solid var(--border-lt); border-radius: 6px; padding: 4px; }
+.cal-item { padding: 6px 8px; align-items: baseline; }
+.cal-item .cal-days { font-size: 11px; }
+.cal-list > button { margin: 6px 4px 2px; }
+.cal-editor > .assets-hint { margin-top: 8px; font-size: 13px; }
+.cal-toolbar { flex-wrap: wrap; }
+
+/* Export page: a problem is icon · where · text, the place as a quiet tag above the text */
+.n2-issue { display: grid; grid-template-columns: 16px 1fr; column-gap: 6px; align-items: start; padding: 5px 0; font-size: 12px; }
+.n2-issue-ico { grid-row: span 2; }
+.n2-issue-where { font-size: 11px; color: var(--text-f); white-space: normal; }
+.n2-issue-text { grid-column: 2; }
+.n2-issue-summary { font-size: 12px; }

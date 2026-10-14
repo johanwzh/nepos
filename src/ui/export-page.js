@@ -2,7 +2,7 @@
 // exports/<time>/ in the project folder. Errors block the export; warnings never do.
 import { app } from './state.js';
 import { $, onRefresh, refreshAll, runAction, beforeLeave, persistSettings, showMessage, currentPage } from './shell.js';
-import { projectIssues } from './line-info.js';
+import { projectIssues, lineLabel } from './line-info.js';
 import { t } from '../i18n/strings.js';
 import { parseERN } from '../core/ern/parse.js';
 import { orgExportMode, writeOrgExportMode } from '../project/meta.js';
@@ -114,11 +114,11 @@ function renderStatus() {
 
 /** @param {import('../core/export-check.js').CheckIssue} i */
 function issueLine(i) {
-  const place = [i.route, i.where?.tableSet, i.where?.period, i.where?.column ? t('columnLabel', i.where.column) : '']
+  const place = [i.route ? lineLabel(i.route) : '', i.where?.tableSet, i.where?.period, i.where?.column ? t('columnLabel', i.where.column) : '']
     .filter(Boolean).join(' · ');
   return `<div class="n2-issue ${i.level}">
     <span class="n2-issue-ico">${i.level === 'error' ? '✖' : '⚠'}</span>
-    ${place ? `<span class="n2-issue-where">[${esc(place)}]</span>` : ''}
+    ${place ? `<span class="n2-issue-where">${esc(place)}</span>` : ''}
     <span class="n2-issue-text">${esc(t(`chk:${i.code}`, i.detail ?? ''))}</span>
   </div>`;
 }

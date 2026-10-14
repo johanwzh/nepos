@@ -8,7 +8,7 @@ import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
-import { lineIssues, lineState, projectIssues } from '../../src/ui/line-info.js';
+import { lineIssues, lineState, projectIssues, lineLabel } from '../../src/ui/line-info.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
@@ -93,5 +93,14 @@ describe('line info', () => {
     const issues = projectIssues();
     expect(issues.some((i) => i.route === '20')).toBe(true);
     expect(issues.some((i) => i.route === '21')).toBe(false);
+  });
+});
+
+describe('line labels', () => {
+  it('names a line by its public code and name, never its ID', () => {
+    expect(lineLabel('20')).toBe('20 A - B');
+    app.routes = app.routes.map((r) => (r.code === '20' ? { ...r, text: r.text.replace('#RUT;-1;20;', '#RUT;-1;;') } : r));
+    expect(lineLabel('20')).toBe('A - B');
+    expect(lineLabel('nope')).toBe('nope');
   });
 });
