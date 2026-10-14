@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup, flush } from './dom-setup.js';
 import { initShell, setPage, panelOpen } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
@@ -168,5 +168,55 @@ describe('stop picking in the map pane', () => {
     await settle();
     expect(lastModel.row).toBe(3);
     expect(lastModel.candidate?.quayId).toBe('NSR:Quay:55');
+  });
+});
+
+describe('browsing the map', () => {
+  it('asks for the stop places in view once per settled view, from street level, and caches them', async () => {
+    vi.useFakeTimers();
+    try {
+      /** @type {any} */
+      let view = { lat: 59.91, lon: 10.75, radiusKm: 0.5, zoom: 16 };
+      /** @type {() => void} */
+      let changed = () => {};
+      /** @type {any[]} */
+      const asked = [];
+      setPickerServices({ nearby: async (at) => { asked.push(at); return [hit(SKOYEN_PLACE)]; }, getStopPlaces: async () => [] });
+      setPickerMap({ show: (m) => { lastModel = m; }, onPick: () => {}, view: () => view, onViewChange: (fn) => { changed = fn; }, zoomTo: () => {} });
+      pickRow(3);
+      changed(); changed(); changed();            // a fast pan: many move events
+      await vi.advanceTimersByTimeAsync(600);
+      expect(asked).toHaveLength(1);
+      expect(lastModel.browse.map((/** @type {any} */ b) => b.id)).toEqual([SKOYEN_PLACE.id]);
+      changed();                                  // the same view again: cached
+      await vi.advanceTimersByTimeAsync(600);
+      expect(asked).toHaveLength(1);
+      view = { ...view, zoom: 13 };               // zoomed out: no browsing
+      changed();
+      await vi.advanceTimersByTimeAsync(600);
+      expect(asked).toHaveLength(1);
+      expect(lastModel.browse).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('fetches the Quays of the stop places in view when zoomed in far', async () => {
+    vi.useFakeTimers();
+    try {
+      /** @type {() => void} */
+      let changed = () => {};
+      /** @type {string[][]} */
+      const asked = [];
+      setPickerServices({ nearby: async () => [hit(BIG_PLACE)], getStopPlaces: async (ids) => { asked.push(ids); return [BIG_PLACE]; } });
+      setPickerMap({ show: (m) => { lastModel = m; }, onPick: () => {}, view: () => ({ lat: 59.93, lon: 10.7, radiusKm: 0.1, zoom: 17 }), onViewChange: (fn) => { changed = fn; }, zoomTo: () => {} });
+      pickRow(3);
+      changed();
+      await vi.advanceTimersByTimeAsync(600);
+      expect(asked).toEqual([[BIG_PLACE.id]]);
+      expect(lastModel.browseQuays.map((/** @type {any} */ p) => p.id)).toEqual([BIG_PLACE.id]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -46,6 +46,45 @@ export function onPickerViewChange(fn) {
 }
 function onViewChange() {
   for (const fn of viewListeners) fn();
+  // Browsing (spec §4): once the view has settled, not on every move event.
+  clearTimeout(browseTimer);
+  browseTimer = setTimeout(() => { void browse(); }, 400);
+}
+
+/** @type {Map<string, StopPlaceHit[]>} nearby answers per view, for this session */
+const browseCache = new Map();
+/** @type {Map<string, StopPlace | null>} stop places with their Quays, for this session */
+const quayCache = new Map();
+/** @type {any} */
+let browseTimer = null;
+let browseSeq = 0;
+
+/** The stop places in view from street level (zoom ≥ 15), and their Quays from zoom 17. */
+async function browse() {
+  const v = map?.view() ?? null;
+  const my = ++browseSeq;
+  if (state.row == null || !v || v.zoom < 15) {
+    if (state.browse.length || state.browseQuays.length) { state.browse = []; state.browseQuays = []; render(); }
+    return;
+  }
+  const key = `${v.lat.toFixed(3)},${v.lon.toFixed(3)},${v.radiusKm.toFixed(2)}`;
+  let hits = browseCache.get(key);
+  if (!hits) {
+    try { hits = await services.nearby({ lat: v.lat, lon: v.lon, radiusKm: v.radiusKm }, opts('geocoder')); } catch { return; }
+    browseCache.set(key, hits);
+  }
+  if (my !== browseSeq) return;
+  state.browse = hits;
+  if (v.zoom >= 17) {
+    const missing = hits.map((h) => h.id).filter((id) => !quayCache.has(id));
+    if (missing.length) {
+      try { for (const p of await services.getStopPlaces(missing, opts('nsr'))) quayCache.set(p.id, p); } catch { /* shown without Quays */ }
+      for (const id of missing) if (!quayCache.has(id)) quayCache.set(id, null);
+    }
+    if (my !== browseSeq) return;
+    state.browseQuays = /** @type {StopPlace[]} */ (hits.map((h) => quayCache.get(h.id)).filter(Boolean));
+  } else state.browseQuays = [];
+  render();
 }
 
 /** @type {PickerState} */
