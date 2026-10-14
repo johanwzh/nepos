@@ -24,7 +24,8 @@ The ERN file format is documented in [docs/ern/ern-format.md](docs/ern/ern-forma
 All planned functionality for 2.0 is built and merged on `main`: projects and the project check,
 organisations, timetable editing, NSR stops (search window, status marks), map panel, filling
 times, and NeTEx export. Since then: organisations come from Entur's register (NOG), with two
-export modes (plan 4a). The user is testing it with a real project; findings go into the backlog.
+export modes (plan 4a); line details with Transmodel modes and Entur icons, codes, brandings and
+UUID IDs (plan 4b). The user is testing it with a real project; findings go into the backlog.
 Not yet online: publishing to GitHub Pages waits for the user's go-ahead.
 
 ## Credits

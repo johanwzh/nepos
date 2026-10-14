@@ -104,12 +104,12 @@ describe('route editor', () => {
     expect(app.activeRoute).toBe('30');
   });
 
-  it('creates a new route with the next number and opens it', async () => {
+  it('creates a new route with a UUID as its ID and opens it', async () => {
     document.getElementById('btn-new-route').click();
     await flush();
-    await flush();
-    expect(app.activeRoute).toBe('31');
-    expect(await readRoute(fs, '31')).toContain('#RUT;-1;;') // a new line has no public code yet;
+    expect(app.activeRoute).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    expect(await readRoute(fs, /** @type {string} */ (app.activeRoute))).toContain('#RUT;-1;;');
+    expect(app.routeState.mode).toBe('');
   });
 
   it('deletes a route after asking, keeping a backup', async () => {

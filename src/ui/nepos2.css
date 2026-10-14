@@ -176,3 +176,6 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .mode-item, .mode-sub { padding: 4px 10px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
 .mode-item.active, .mode-item:hover, .mode-sub:hover { background: var(--accent-bg); }
 .mode-sub.current { font-weight: 600; }
+
+.rl-top { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--accent); line-height: 1.4; }
+.rl-name { font-size: 12px; color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

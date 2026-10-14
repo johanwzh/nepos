@@ -18,7 +18,7 @@ import { ernCodeFor } from '../core/modes.js';
 import { modeLabel, submodeLabel } from '../i18n/modes.js';
 import { writeOrgs } from '../project/orgs-store.js';
 import { pruneProjectCopy } from './org-register.js';
-import { nextRouteCode, compareRouteCodes } from '../core/route-codes.js';
+import { compareRouteCodes } from '../core/route-codes.js';
 import { yyyymmddToInput, inputToYyyymmdd } from '../core/footnotes.js';
 import { writeRoute, deleteRoute as deleteRouteFile } from '../project/routes.js';
 import { showProjectCheck } from './project-ui.js';
@@ -133,7 +133,8 @@ export async function selectRoute(code) {
 export async function newRoute(trigger = null) {
   if (!app.fs || !app.meta) return;
   if (!(await beforeLeave())) return;
-  const code = nextRouteCode(app.routes.map((r) => r.code));
+  // IDs carry no data and never change (line header spec §4): the route ID is a UUID.
+  const code = crypto.randomUUID();
   const text = serializeERN(newRouteState(app.settings.lang), code, { delivery: { name: app.meta.name, codespace: app.meta.codespace }, orgs: [] });
   const fs = app.fs;
   const ok = await runAction(() => writeRoute(fs, code, text), trigger);
