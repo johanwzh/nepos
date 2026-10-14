@@ -10,7 +10,7 @@ const file = (extra = {}) => [
   `#RUT;${extra.priv ?? '1008'};X20;Oslo - Gol;;${extra.ern ?? '13'};`,
   ...(extra.mod === null ? [] : [extra.mod ?? '#MOD;bus;expressBus']),
   '#BRA;TST:Branding:aaaa',
-  '#SEK;NOG:Operator:x;Buss AS;0;1;0;0', '#CUR;neposcoin;1', '#TRA;gammel', '#PER;P;20260101;20260630;;;', '#TAB;0;;;;',
+  '#SEK;NOG:Operator:x;Buss AS;0;1;0;0', '#CUR;neposcoin;1', '#TRA;gammel', '#PER;;;;;;', '#TAB;0;;;;',
   '#TUR;0;D;0;0;0;0', `#UID;${U1}`, '#TUR;1;D;0;0;0;0',
   '#TRL;0;NSR:Quay:1;A;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0', '#TRC;1;0800;0;0;0;0;0',
   '#TRL;1;NSR:Quay:2;B;34;0;-1;-1;34;-1', '#TRC;0;0715;0;0;0;0;0', '#TRC;1;0815;0;0;0;0;0',

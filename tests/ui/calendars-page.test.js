@@ -7,6 +7,7 @@ import { initAssetsNav } from '../../src/ui/assets-nav.js';
 import { initOrgsPage } from '../../src/ui/orgs-page.js';
 import { initCalendarsPage } from '../../src/ui/calendars-page.js';
 import { createMemoryFs, readText } from '../../src/project/fs.js';
+import { writeCalendars } from '../../src/project/calendars-store.js';
 
 /** @type {any} */ let fs;
 const body = () => /** @type {HTMLElement} */ (document.getElementById('assets-body'));
@@ -56,5 +57,26 @@ describe('calendars page', () => {
     await flush();
     expect(/** @type {any} */ (window.confirm).mock.calls[0][0]).toContain('1 perioder');
     expect(JSON.parse(await readText(fs, 'data/calendars.json'))).toEqual([]);
+  });
+});
+
+describe('calendar editing that must not lose data', () => {
+  it('keeps the old name when the name is blanked, so the calendar stays in the file', async () => {
+    app.calendars = [{ id: 'c1', name: 'Vinter', ranges: [['20260101', '20260131']] }];
+    await writeCalendars(fs, app.calendars);
+    openSection();
+    change(body().querySelector('.cal-name'), '');
+    await flush();
+    expect(JSON.parse(await readText(fs, 'data/calendars.json'))[0].name).toBe('Vinter');
+    expect(/** @type {HTMLInputElement} */ (body().querySelector('.cal-name')).value).toBe('Vinter');
+  });
+
+  it('swaps a range whose start is after its end, so it is saved', async () => {
+    app.calendars = [{ id: 'c1', name: 'Vinter', ranges: [['', '']] }];
+    openSection();
+    change(body().querySelector('.cal-from'), '2026-03-10');
+    change(body().querySelector('.cal-to'), '2026-03-01');
+    await flush();
+    expect(JSON.parse(await readText(fs, 'data/calendars.json'))[0].ranges).toEqual([['20260301', '20260310']]);
   });
 });

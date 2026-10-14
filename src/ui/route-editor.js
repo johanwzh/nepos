@@ -257,6 +257,7 @@ function renderHeader() {
   });
   $('btn-del-per').addEventListener('click', () => {
     if (periodsOf(rs, rs.activeSet).length <= 1) { showMessage(t('lastPeriod')); return; }
+    storeGrid(); // the grid on screen counts as data too
     const active = rs.periods.find((/** @type {any} */ p) => p.id === rs.activePer);
     if (periodHasData(rs, rs.activePer) && !confirm(t('deletePeriodConfirm', periodLabel(active)))) return;
     deletePeriod(rs);

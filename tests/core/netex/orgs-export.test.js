@@ -7,7 +7,7 @@ const ern = [
   '#LEV;Test;TST', '#RUT;-1;50;A - B;;1;',
   '#SEK;NOG:Authority:aaaaaaaaaa1;Eksempel fylkeskommune;1;0;0;0',
   '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0',
-  '#CUR;neposcoin;1', '#TRA;50', '#PER;P;20260101;20260630;;;', '#TAB;0;;;;', '#TUR;0;D;0;0;0;0',
+  '#CUR;neposcoin;1', '#TRA;50', '#PER;;;;;;', '#TAB;0;;;;', '#TUR;0;D;0;0;0;0',
   '#TRL;0;NSR:Quay:7203;A;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0',
   '#TRL;1;NSR:Quay:11972;B;34;0;-1;-1;34;-1', '#TRC;0;0715;0;0;0;0;0',
 ].join('\r\n');

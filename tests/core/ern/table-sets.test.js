@@ -40,3 +40,10 @@ describe('table sets and periods in ERN', () => {
     expect(checkRouteFile(bad).status).toBe('damaged');
   });
 });
+
+describe('old dated periods', () => {
+  it('marks a period with a name or dates as damaged, since a save would drop them', () => {
+    const old = '#LEV;T;TST\r\n#RUT;-1;1;A;;1;\r\n#TRA;1\r\n#PER;Sommer;20260101;20260601;;;\r\n#TAB;0;;;;\r\n#TUR;0;D;0;0;0;0\r\n#TRL;0;NSR:Quay:1;A;34;0;-1;-1;34;-1\r\n#TRC;0;0700;0;0;0;0;0\r\n';
+    expect(checkRouteFile(old).status).toBe('damaged');
+  });
+});

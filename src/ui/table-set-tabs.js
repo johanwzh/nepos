@@ -29,6 +29,7 @@ export function renderTableSetTabs() {
       if (next == null || next.trim() === set.name) return;
       set.name = next.trim();
       markDirty();
+      renderTableSetTabs();
     });
     tab.appendChild(name);
     if (!ro && set.id === rs.activeSet && rs.tableSets.length > 1) {
@@ -37,6 +38,7 @@ export function renderTableSetTabs() {
       del.textContent = '×';
       del.title = t('deleteTableSet');
       del.addEventListener('click', () => {
+        storeGrid(); // the grid on screen counts as data too
         if (tableSetHasData(rs, set.id) && !confirm(t('deleteTableSetConfirm', set.name || t('tableSetUnnamed')))) return;
         if (!deleteTableSet(rs)) { showMessage(t('lastTableSet')); return; }
         markDirty();

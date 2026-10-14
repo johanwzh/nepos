@@ -66,3 +66,24 @@ describe('table-set tabs', () => {
     expect(document.querySelector('.ts-del')).toBe(null);
   });
 });
+
+describe('table-set tab safety', () => {
+  it('asks before deleting a table set whose unsaved grid has stops', () => {
+    window.prompt = vi.fn(() => 'Ny');
+    /** @type {HTMLElement} */ (document.querySelector('.ts-add')).click(); // reversed copy: has stops on screen
+    // The stored state of the new set is empty; only the grid on screen has stops (typed, unsaved).
+    const rs = app.routeState;
+    rs.grids[`${rs.activePer}:${rs.activeSet}`] = { stops: [], cols: [] };
+    window.confirm = vi.fn(() => false);
+    /** @type {HTMLElement} */ (document.querySelector('.ts-del')).click();
+    expect(window.confirm).toHaveBeenCalled();
+    expect(app.routeState.tableSets).toHaveLength(3);
+  });
+
+  it('shows a new name at once after renaming', () => {
+    app.dirty = true; // a rename while there are other unsaved edits must still show
+    window.prompt = vi.fn(() => 'Nytt navn');
+    tabs()[0].querySelector('.ts-name')?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(tabs()[0].querySelector('.ts-name')?.textContent).toBe('Nytt navn');
+  });
+});

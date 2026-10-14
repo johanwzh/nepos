@@ -6,7 +6,7 @@ import { checkRouteFile } from '../../../src/core/integrity/check.js';
 /** A one-trip route whose stops have the given IDs. @param {string[]} ids */
 const route = (ids) => [
   '#LEV;Test;TST', '#RUT;-1;50;A - B;;1;', '#SEK;-1;;0;0;0;0', '#CUR;neposcoin;1', '#TRA;50',
-  '#PER;P;20260101;20260131;;;', '#TAB;0;;;;', '#TUR;0;D;0;0;0;0',
+  '#PER;;;;;;', '#TAB;0;;;;', '#TUR;0;D;0;0;0;0',
   ...ids.flatMap((id, i) => [`#TRL;${i};${id};Stopp ${i};34;0;-1;-1;34;-1`, `#TRC;0;07${10 + i};0;0;0;0;0`]),
 ].join('\r\n') + '\r\n';
 
@@ -25,7 +25,7 @@ describe('stop IDs in route files', () => {
     // Nepos 2 adds #MOD and #UID and writes #PER without name and dates (line header spec §5,
     // structure spec §6); the stop IDs are written back as read.
     const out = serializeERN(parseERN(text), '50', { delivery: { name: 'Test', codespace: 'TST' } });
-    expect(out.replace(/^#(MOD|UID);[^\r\n]*\r\n/gm, '')).toBe(text.replace('#PER;P;20260101;20260131;;;', '#PER;;;;;;'));
+    expect(out.replace(/^#(MOD|UID);[^\r\n]*\r\n/gm, '')).toBe(text.replace('#PER;;;;;;', '#PER;;;;;;'));
   });
 
   it('passes the integrity check', () => {

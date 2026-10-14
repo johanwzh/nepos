@@ -39,7 +39,15 @@ export function renderCalendarsPage() {
     name.placeholder = t('calNamePh');
     name.classList.toggle('invalid', !cal.name.trim());
     name.addEventListener('keydown', (e) => e.stopPropagation());
-    name.addEventListener('change', () => { cal.name = name.value.trim(); name.classList.toggle('invalid', !cal.name); save(); });
+    name.addEventListener('change', () => {
+      // A calendar that has a name keeps it until a new one is typed: blanking it would drop the
+      // calendar from the file while periods still use it.
+      const next = name.value.trim();
+      if (!next && cal.name) { name.value = cal.name; return; }
+      cal.name = next;
+      name.classList.toggle('invalid', !cal.name);
+      save();
+    });
     const count = el('span', 'cal-days');
     const showCount = () => { count.textContent = t('calDays', calendarDays(cal).length); };
     showCount();
@@ -61,8 +69,12 @@ export function renderCalendarsPage() {
       from.value = yyyymmddToInput(range[0]); to.value = yyyymmddToInput(range[1]);
       const set = () => {
         const a = inputToYyyymmdd(from.value), b = inputToYyyymmdd(to.value);
-        // A single day when only one end is filled in: from and to are both inclusive.
-        cal.ranges[i] = [a || b, b || a];
+        // A single day when only one end is filled in (both ends are inclusive); a start after the
+        // end is swapped, so the range is never silently dropped when saved.
+        const lo = a && b && a > b ? b : (a || b), hi = a && b && a > b ? a : (b || a);
+        cal.ranges[i] = [lo, hi];
+        if (lo !== a || hi !== b) { from.value = yyyymmddToInput(lo); to.value = yyyymmddToInput(hi); }
+        from.classList.toggle('invalid', !lo); to.classList.toggle('invalid', !hi);
         showCount();
         save();
       };
