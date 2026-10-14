@@ -21,6 +21,10 @@ describe('NSR Quay IDs', () => {
     const text = '#TRL;0;NSR:Quay:7203;A;34;0;-1;-1;34;-1\r\n#TRL;1;101;B;34;0;-1;-1;34;-1\r\n#TRL;2;NSR:Quay:7203;A;34;0;-1;-1;34;-1\r\n#TRL;3;NSR:Quay:563;C;34;0;-1;-1;34;-1\r\n';
     expect(quayIdsInErn(text)).toEqual(['NSR:Quay:7203', 'NSR:Quay:563']);
   });
+
+  it('finds IDs with spaces around them, as the parser reads them', () => {
+    expect(quayIdsInErn(' #TRL;0; NSR:Quay:7203 ;A;34;0;-1;-1;34;-1\r\n')).toEqual(['NSR:Quay:7203']);
+  });
 });
 
 describe('Quay status', () => {

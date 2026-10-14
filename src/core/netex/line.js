@@ -146,8 +146,10 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     const { targetC, targetR, type } = cell.interchange;
                     if (targetC<0||targetC>=grid.cols.length) continue;
                     // Skip if the target column has no times — no ServiceJourney was generated for it
-                    const tgtColHasTimes = grid.cols[targetC]?.cells?.some(c=>c?.time&&c.time!=='|');
-                    if (!tgtColHasTimes) continue;
+                    // The target cell itself needs a time: otherwise the target stop is not in the
+                    // target journey (and may not be exported at all).
+                    const tgtCell = grid.cols[targetC]?.cells?.[targetR];
+                    if (!tgtCell?.time || tgtCell.time === '|') continue;
                     const tgtStop = grid.stops[targetR];
                     const srcStop = grid.stops[ri];
                     if (!tgtStop||!srcStop) continue;

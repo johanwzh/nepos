@@ -28,7 +28,7 @@ export function quayRef(id, cs) {
  * @param {string} text
  */
 export function quayIdsInErn(text) {
-  return [...new Set([...text.matchAll(/^#TRL;[^;\r\n]*;(NSR:Quay:\d+);/gm)].map((m) => m[1]))];
+  return [...new Set([...text.matchAll(/^[ \t]*#TRL;[^;\r\n]*;[ \t]*(NSR:Quay:\d+)[ \t]*;/gm)].map((m) => m[1]))];
 }
 
 /**

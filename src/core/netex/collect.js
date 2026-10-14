@@ -143,7 +143,13 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
                     for (let ri=0; ri<grid.stops.length; ri++) {
                         const stop = grid.stops[ri];
                         const cell = col.cells[ri];
-                        if (stop.isDwellArr) continue;
+                        // A dwell arrival row is skipped only where the departure row below has a
+                        // time in this column (a true dwell); otherwise it is an ordinary stop —
+                        // exactly as genLineXml builds the journey pattern.
+                        if (stop.isDwellArr) {
+                            const next = col.cells[ri + 1];
+                            if (next?.time && next.time !== '|') continue;
+                        }
                         if (!cell?.time || cell.time==='|') continue;
                         if (stop.stopId == null || stop.stopId === '') continue;
                         const stopId = String(stop.stopId);
