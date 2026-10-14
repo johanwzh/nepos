@@ -143,3 +143,5 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .org-alias-msg { color: var(--g-dec-c); font-size: 12px; }
 .org-details { margin: 4px 0 0 12px; font-size: 12px; color: var(--text-m); }
 .assets-subtitle { font-weight: 600; margin-top: 12px; }
+
+.mode-icon { width: 1em; height: 1em; vertical-align: -0.125em; }

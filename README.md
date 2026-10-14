@@ -26,3 +26,7 @@ organisations, timetable editing, NSR stops (search window, status marks), map p
 times, and NeTEx export. Since then: organisations come from Entur's register (NOG), with two
 export modes (plan 4a). The user is testing it with a real project; findings go into the backlog.
 Not yet online: publishing to GitHub Pages waits for the user's go-ahead.
+
+## Credits
+
+Transport mode icons: Entur's icon set ([@entur/icons](https://www.npmjs.com/package/@entur/icons), EUPL-1.2), recoloured to follow the Nepos theme.
