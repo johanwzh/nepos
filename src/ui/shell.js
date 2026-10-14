@@ -255,7 +255,13 @@ export function initShell() {
   document.addEventListener('keydown', (e) => {
     const tag = /** @type {HTMLElement} */ (e.target).tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-    if (e.key === 'F2') { e.preventDefault(); setPage('edit'); }
+    if (e.key === 'F2') {
+      e.preventDefault();
+      if (curPage !== 'edit') {
+        setPage('edit');
+        e.stopImmediatePropagation(); // switching page only; the grid must not also act on this F2
+      }
+    }
     if (e.key === 'F3') { e.preventDefault(); setPage('assets'); }
     if (e.key === 'F4') { e.preventDefault(); setPage('export'); }
     if (e.key === 'F5' && curPage === 'edit') { e.preventDefault(); togglePanel('left'); }

@@ -159,6 +159,8 @@ function enterStopEdit(ri, initVal = null) {
   const preselect = initVal == null;
   stopPrevName = grid.stops[ri].name;
   inStopEdit = true; inStopCol = false; stopEditRow = ri;
+  // The edited row becomes the selected row, so what is typed after the name goes into this row.
+  inDC = false; ancR = ri; endR = ri;
   stopBuf = preselect ? grid.stops[ri].name : initVal;
   render();
   const input = /** @type {HTMLInputElement | null} */ (document.querySelector('.g-stop-input'));

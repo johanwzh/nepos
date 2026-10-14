@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell } from '../../src/ui/shell.js';
+import { initShell, setPage, currentPage } from '../../src/ui/shell.js';
 import { grid, initGrid, loadGrid, onGridChange, gridData } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { newRouteState } from '../../src/ui/route-state.js';
@@ -73,5 +73,26 @@ describe('grid', () => {
     expect(grid.cols[0].cells[0].time).toBe('0700');
     expect(changes).toBe(0);
     expect(document.querySelectorAll('.g-ibtn')).toHaveLength(0);
+  });
+
+  it('types into a new stop row after naming it, never into another row', () => {
+    document.querySelector('.g-row-bot .g-ibtn').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    const input = /** @type {HTMLInputElement} */ (document.querySelector('.g-stop-input'));
+    input.value = 'Ny holdeplass';
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    press('ArrowRight'); // from the new row's name into its first time
+    typeKeys('0800');
+    press('Enter');
+    expect(grid.stops[2].name).toBe('Ny holdeplass');
+    expect(grid.cols[0].cells[2]?.time).toBe('0800');
+    expect(grid.cols[0].cells[0].time).toBe('0700');
+  });
+
+  it('only switches page when F2 is pressed on another page', () => {
+    setPage('export');
+    press('F2');
+    expect(currentPage()).toBe('edit');
+    expect(document.querySelector('.g-stop-input')).toBe(null);
   });
 });
