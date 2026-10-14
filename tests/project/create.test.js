@@ -11,6 +11,7 @@ describe('createProject', () => {
     expect(JSON.parse(await readText(fs, 'data/orgs.json'))).toEqual({ companies: [] });
     expect(await fs.list('data')).toEqual([
       { name: 'backups', kind: 'directory' },
+      { name: 'brandings.json', kind: 'file' },
       { name: 'nepos-project.json', kind: 'file' },
       { name: 'orgs.json', kind: 'file' },
       { name: 'routes', kind: 'directory' },

@@ -4,9 +4,9 @@ import { newRouteState, fillMissingPeriod, addPeriod, deletePeriod, addDirection
 const stop = (name) => ({ name, stopId: null, bold: false, sep: false, isDwellArr: false, price: null });
 
 describe('route state', () => {
-  it('starts a new route as a bus route with one period and one direction', () => {
+  it('starts a new route without a transport mode, with one period and one direction', () => {
     const rs = newRouteState('no');
-    expect(rs.transportMode).toBe(1);
+    expect([rs.mode, rs.submode, rs.transportMode]).toEqual(['', '', 0]);
     expect(rs.periods).toEqual([{ id: 1, name: 'Periode 1', from: '', to: '', from2: '', to2: '' }]);
     expect(rs.directions).toEqual([{ id: 2, name: 'Tur' }]);
     expect(gridKey(rs)).toBe('1:2');
@@ -62,5 +62,16 @@ describe('route state', () => {
     rs.grids['1:2'].stops.push(stop('A'));
     expect(periodHasData(rs, 1)).toBe(true);
     expect(directionHasData(rs, 2)).toBe(true);
+  });
+});
+
+describe('column IDs', () => {
+  it('gives the trips of a copied period their own IDs', () => {
+    const rs = newRouteState('no');
+    rs.grids['1:2'].cols = [{ dayCode: 'D', uid: 'aaaaaaaa-0000-4000-8000-000000000001', footnote: '', footnoteId: null, cells: [] }];
+    const id = addPeriod(rs, 'Sommer', true);
+    const copied = rs.grids[`${id}:2`].cols[0].uid;
+    expect(copied).not.toBe('aaaaaaaa-0000-4000-8000-000000000001');
+    expect(copied).toMatch(/^[0-9a-f-]{36}$/);
   });
 });

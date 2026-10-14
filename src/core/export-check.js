@@ -10,7 +10,7 @@ import { journeyStops, runsOnlyDates } from './netex/journeys.js';
 export const CHECK_CODES = [
   'orgs-unreadable', 'route-damaged', 'no-trips', 'route-code', 'no-period', 'period-dates',
   'period-order', 'no-authority', 'no-operator', 'stop-missing', 'stop-not-nsr', 'stop-id-clash', 'col-no-daycode',
-  'col-one-stop', 'no-name', 'alt-dates', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'stop-not-seen', 'stop-mode',
+  'col-one-stop', 'no-name', 'alt-dates', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'no-mode', 'branding-missing', 'brandings-unreadable', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'col-exceptions-ignored', 'col-date-outside', 'route-no-trips',
   'route-changed-on-disk',
 ];
@@ -31,16 +31,18 @@ const minutes = (cell) => (cell.dayOffset || 0) * 1440 + Number(cell.time.slice(
  * @param {{ routes: { code: string, rs: any | null, status: string }[],
  *           orgs: import('./orgs.js').Company[], register: import('./orgs.js').Company[] | null,
  *           orgMode: 'codespace' | 'nog', codespace: string, orgsProblem: '' | 'unreadable',
+ *           brandings: { id: string }[], brandingsProblem?: '' | 'unreadable',
  *           quayInfo: Map<string, any>, changedOnDisk?: string[] }} input
  * @returns {CheckIssue[]} errors first, then warnings
  */
-export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, quayInfo, changedOnDisk = [] }) {
+export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', quayInfo, changedOnDisk = [] }) {
   /** @type {CheckIssue[]} */
   const issues = [];
   /** @param {'error' | 'warning'} level @param {string} code @param {Partial<CheckIssue>} [extra] */
   const add = (level, code, extra = {}) => { issues.push({ level, code, ...extra }); };
 
   if (orgsProblem === 'unreadable') add('error', 'orgs-unreadable');
+  if (brandingsProblem === 'unreadable') add('error', 'brandings-unreadable');
   if (!register) add('warning', 'org-register-missing');
   /** @type {Set<string>} organisation IDs the exported routes use */
   const usedOrgIds = new Set();
@@ -53,7 +55,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     if (status === 'damaged' || !rs) { add('error', 'route-damaged', { route: code }); damaged++; continue; }
     // The route code becomes part of NeTEx IDs and the line file name.
     if (!ROUTE_CODE_PATTERN.test(code)) add('error', 'route-code', { route: code });
-    const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, quayInfo, add, localIds, usedOrgIds });
+    const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, brandings, quayInfo, add, localIds, usedOrgIds });
     if (!routeTrips) add('warning', 'route-no-trips', { route: code });
     trips += routeTrips;
   }
@@ -71,13 +73,16 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
 /**
  * @param {string} code
  * @param {any} rs
- * @param {{ orgs: import('./orgs.js').Company[], quayInfo: Map<string, any>, localIds: Map<string, string>, usedOrgIds: Set<string>, copy: import('./orgs.js').Company[] | null,
+ * @param {{ orgs: import('./orgs.js').Company[], quayInfo: Map<string, any>, localIds: Map<string, string>, usedOrgIds: Set<string>, copy: import('./orgs.js').Company[] | null, brandings: { id: string }[],
  *           add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void }} ctx
  * @returns {number} trips (columns with times) in the route
  */
-function checkRoute(code, rs, { orgs, copy, quayInfo, add, localIds, usedOrgIds }) {
+function checkRoute(code, rs, { orgs, copy, brandings, quayInfo, add, localIds, usedOrgIds }) {
   const r = { route: code };
-  if (!rs.routeName?.trim()) add('warning', 'no-name', r);
+  // Line details (line header spec §7)
+  if (!rs.routeName?.trim()) add('error', 'no-name', r);
+  if (!rs.mode) add('error', 'no-mode', r);
+  if (rs.brandingId && !brandings.some((b) => b.id === rs.brandingId)) add('error', 'branding-missing', { ...r, detail: rs.brandingId });
   if (!rs.periods?.length) { add('error', 'no-period', r); return 0; }
 
   for (const per of rs.periods) {

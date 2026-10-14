@@ -4,6 +4,7 @@
 // (or "update") rewrites it. Issues carry codes; the UI translates them.
 import { isValidDayCode, isValidCellTime, isValidDate } from '../ern/validate.js';
 import { findLostRecords } from './roundtrip.js';
+import { isValidMode } from '../modes.js';
 
 /**
  * @typedef {{ code: string, severity: 'damaged' | 'outdated' | 'note', line?: number, detail?: string }} IntegrityIssue
@@ -11,7 +12,7 @@ import { findLostRecords } from './roundtrip.js';
  */
 
 // Records the Nepos parser reads and writes back. Anything else would be dropped on save.
-const KNOWN = new Set(['#LEV', '#RUT', '#SEK', '#CUR', '#TRA', '#KOM', '#PER', '#TAB', '#TUR', '#TRL', '#TRC', '#FOT', '#UNT']);
+const KNOWN = new Set(['#LEV', '#RUT', '#SEK', '#CUR', '#TRA', '#KOM', '#PER', '#TAB', '#TUR', '#TRL', '#TRC', '#FOT', '#UNT', '#MOD', '#BRA', '#UID']);
 
 /**
  * @param {string} text decoded route file
@@ -33,6 +34,7 @@ export function checkRouteFile(text) {
   const outdated = (code, line) => issues.push(clean({ code, severity: 'outdated', line }));
 
   let seenLEV = false, seenRUT = false, seenPER = false, inTAB = false, haveTUR = false, haveTRL = false, komCount = 0;
+  let lastRec = ''; // #UID belongs to the record directly before it
 
   text.split(/\r?\n/).forEach((raw, i) => {
     const n = i + 1;
@@ -83,11 +85,18 @@ export function checkRouteFile(text) {
       case '#FOT':
         if (!haveTUR) damaged('out-of-order', n, rec);
         break;
+      case '#MOD':
+        if (!isValidMode(f[1] ?? '', f[2] ?? '')) damaged('invalid-mode', n, `${f[1] ?? ''} ${f[2] ?? ''}`.trim());
+        break;
+      case '#UID':
+        if (lastRec !== '#TUR') damaged('out-of-order', n, rec);
+        break;
       case '#UNT':
         if (!haveTUR) damaged('out-of-order', n, rec);
         if (!isValidDate(f[3] ?? '') || !isValidDate(f[5] ?? '')) damaged('invalid-date', n);
         break;
     }
+    lastRec = rec;
   });
 
   // Anything else a save would lose or change (see roundtrip.js). Lines already reported as

@@ -16,12 +16,18 @@ export const app = {
   orgs: [],
   /** @type {null | 'unreadable'} */
   orgsError: null,
+  /** @type {import('../project/brandings-store.js').Branding[]} the project's brandings */
+  brandings: [],
+  /** @type {null | 'unreadable'} */
+  brandingsError: null,
   /** @type {{ companies: import('../core/orgs.js').Company[], fetchedAt: string } | null} Entur's register (browser cache) */
   orgRegister: null,
   /** @type {'idle' | 'loading' | 'ok' | 'failed'} */
   orgRegisterStatus: 'idle',
   /** @type {{ changed: string[], missing: string[] }} found by the last register refresh */
   orgChanges: { changed: [], missing: [] },
+  /** @type {'orgs' | 'brandings'} the section shown on Ressurser */
+  assetsSection: 'orgs',
   /** @type {import('../project/open.js').RouteEntry[]} */
   routes: [],
   /** @type {{ fileName: string, problem: string, rename: string | null }[]} */

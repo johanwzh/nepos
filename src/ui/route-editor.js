@@ -9,13 +9,16 @@ import { grid, loadGrid, gridData, markGridClean, clearGrid, render as renderGri
 import { newRouteState, fillMissingPeriod, addPeriod, deletePeriod, addDirection, deleteDirection, periodHasData, directionHasData, gridKey } from './route-state.js';
 import { parseERN } from '../core/ern/parse.js';
 import { serializeERN } from '../core/ern/serialize.js';
-import { ERN_MODES } from '../core/ern/modes.js';
 import { checkRouteFile } from '../core/integrity/check.js';
 import { orgNameList, findRole, addToCopy } from '../core/orgs.js';
 import { createOrgPicker } from './org-picker.js';
+import { openModeMenu } from './mode-menu.js';
+import { modeIconSvg } from './mode-icons.js';
+import { ernCodeFor } from '../core/modes.js';
+import { modeLabel, submodeLabel } from '../i18n/modes.js';
 import { writeOrgs } from '../project/orgs-store.js';
 import { pruneProjectCopy } from './org-register.js';
-import { nextRouteCode, compareRouteCodes } from '../core/route-codes.js';
+import { compareRouteCodes } from '../core/route-codes.js';
 import { yyyymmddToInput, inputToYyyymmdd } from '../core/footnotes.js';
 import { writeRoute, deleteRoute as deleteRouteFile } from '../project/routes.js';
 import { showProjectCheck } from './project-ui.js';
@@ -130,7 +133,8 @@ export async function selectRoute(code) {
 export async function newRoute(trigger = null) {
   if (!app.fs || !app.meta) return;
   if (!(await beforeLeave())) return;
-  const code = nextRouteCode(app.routes.map((r) => r.code));
+  // IDs carry no data and never change (line header spec §4): the route ID is a UUID.
+  const code = crypto.randomUUID();
   const text = serializeERN(newRouteState(app.settings.lang), code, { delivery: { name: app.meta.name, codespace: app.meta.codespace }, orgs: [] });
   const fs = app.fs;
   const ok = await runAction(() => writeRoute(fs, code, text), trigger);
@@ -162,15 +166,23 @@ function renderHeader() {
   const lang = app.settings.lang === 'en' ? 'en' : 'no';
   const per = rs.periods.find((/** @type {any} */ p) => p.id === rs.activePer);
   const dis = ro ? ' disabled' : '';
+  const modeTitle = rs.mode ? [modeLabel(rs.mode, lang), rs.submode ? submodeLabel(rs.submode, lang) : ''].filter(Boolean).join(' · ') : t('pickMode');
+  const brandKnown = app.brandings.some((b) => b.id === rs.brandingId);
+  const brandOptions = [`<option value="">${esc(t('brandingNone'))}</option>`,
+    ...[...app.brandings].sort((x, y) => x.name.localeCompare(y.name, 'nb')).map((b) => `<option value="${esc(b.id)}"${b.id === rs.brandingId ? ' selected' : ''}>${esc(b.name)}</option>`),
+    ...(rs.brandingId && !brandKnown ? [`<option value="${esc(rs.brandingId)}" selected>⚠ ${esc(rs.brandingId)}</option>`] : [])].join('');
   hdr.innerHTML = `
-    <div class="rh-group"><span class="rh-label">${esc(t('routeNameLabel'))}:</span>
-      <input class="rh-input" id="rh-name" value="${esc(rs.routeName)}" placeholder="${esc(t('routeNamePh'))}" style="width:150px"${dis}></div>
-    <div class="rh-group"><span class="rh-label">${esc(t('publicCodeLabel'))}:</span>
-      <input class="rh-input" id="rh-line" value="${esc(rs.publicCode)}" placeholder="${esc(t('publicCodePh'))}" style="width:100px"${dis}></div>
-    <div class="rh-group"><span class="rh-label">${esc(t('modeLabel'))}:</span>
-      <select class="rh-select" id="rh-mode"${dis}>${Object.entries(ERN_MODES).map(([k, v]) =>
-        `<option value="${k}"${+k === rs.transportMode ? ' selected' : ''}>${esc(v[lang] || v.en)}</option>`).join('')}</select></div>
-    <div class="rh-vsep"></div>
+    <div class="rh-parta">
+      <input class="rh-name" id="rh-name" value="${esc(rs.routeName)}" placeholder="${esc(t('routeNamePh'))}"${dis}>
+      <div class="rh-row">
+        <button class="rh-mode-tile${rs.mode ? '' : ' empty'}" id="rh-mode-tile" title="${esc(modeTitle)}"${dis}>${modeIconSvg(rs.mode, rs.submode)}</button>
+        <input class="rh-public" id="rh-public" value="${esc(rs.publicCode)}" placeholder="${esc(t('publicCodePh'))}"${dis}>
+        <label class="rh-private-l">${esc(t('privateCodeLabel'))} <input class="rh-private" id="rh-private" value="${esc(rs.privateCode)}"${dis}></label>
+      </div>
+      <select class="rh-branding${rs.brandingId ? '' : ' empty'}" id="rh-branding"${dis}>${brandOptions}</select>
+      <div class="rh-orgs" id="rh-orgs"></div>
+    </div>
+    <div class="rh-partb">
     <div class="rh-group"><span class="rh-label">${esc(t('periodLabel'))}:</span>
       <select class="rh-select" id="sel-period">${rs.periods.map((/** @type {any} */ p) =>
         `<option value="${p.id}"${p.id === rs.activePer ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
@@ -183,14 +195,20 @@ function renderHeader() {
     <div class="rh-group"><span class="rh-label" style="font-size:10px;color:var(--text-f)">${esc(t('altDates'))}</span>
       <input type="date" class="rh-date" id="per-from2" value="${yyyymmddToInput(per?.from2 || '')}" title="${esc(t('altStart'))}" style="width:100px"${dis}>
       <span class="rh-arrow">→</span>
-      <input type="date" class="rh-date" id="per-to2" value="${yyyymmddToInput(per?.to2 || '')}" title="${esc(t('altEnd'))}" style="width:100px"${dis}></div>`;
+      <input type="date" class="rh-date" id="per-to2" value="${yyyymmddToInput(per?.to2 || '')}" title="${esc(t('altEnd'))}" style="width:100px"${dis}></div>
+    </div>`;
 
-  for (const id of ['rh-name', 'rh-line', 'rh-mode']) $(id).addEventListener('keydown', (/** @type {Event} */ e) => e.stopPropagation());
+  for (const id of ['rh-name', 'rh-public', 'rh-private']) $(id).addEventListener('keydown', (/** @type {Event} */ e) => e.stopPropagation());
   $('sel-period').addEventListener('change', () => switchPeriodDir(+$('sel-period').value, rs.activeDir));
+  renderOrgPickers();
   if (ro) return;
   $('rh-name').addEventListener('change', () => { rs.routeName = $('rh-name').value.trim(); markDirty(); });
-  $('rh-line').addEventListener('change', () => { rs.publicCode = $('rh-line').value.trim(); markDirty(); });
-  $('rh-mode').addEventListener('change', () => { rs.transportMode = +$('rh-mode').value; markDirty(); });
+  $('rh-public').addEventListener('change', () => { rs.publicCode = $('rh-public').value.trim(); markDirty(); });
+  $('rh-private').addEventListener('change', () => { rs.privateCode = $('rh-private').value.trim(); markDirty(); });
+  $('rh-branding').addEventListener('change', () => { rs.brandingId = $('rh-branding').value; markDirty(); renderHeader(); });
+  $('rh-mode-tile').addEventListener('click', () => openModeMenu($('rh-mode-tile'), { mode: rs.mode, submode: rs.submode, lang, onPick: (m, sub) => {
+    rs.mode = m; rs.submode = sub; rs.transportMode = ernCodeFor(m, sub, rs.transportMode); markDirty(); renderHeader();
+  } }));
   /** @type {[string, string][]} */
   const dateFields = [['per-from', 'from'], ['per-to', 'to'], ['per-from2', 'from2'], ['per-to2', 'to2']];
   for (const [id, field] of dateFields) {
@@ -260,13 +278,40 @@ function renderFooter() {
     <button class="ef-dir-btn" id="ef-dir">${dirLabel}</button>
     ${other && !ro ? '<button class="ef-del-dir" id="ef-del-dir">×</button>' : ''}
     <div class="ef-vsep2"></div>
-    <div class="ef-orgs" id="ef-orgs"></div>
     <div class="ef-spacer"></div>
     ${ro ? `<span class="n2-readonly-note">${esc(t('statusDamaged'))}</span>` : `
     <button class="ef-save-btn${app.dirty ? ' dirty' : ''}" id="ef-save">${app.dirty ? '● ' : ''}${esc(t('save'))}</button>
     <button class="ef-del-route" id="ef-del-route">${esc(t('deleteRoute'))}</button>`}`;
 
-  const orgsEl = $('ef-orgs');
+  $('ef-dir').addEventListener('click', () => {
+    if (other) { switchPeriodDir(rs.activePer, other.id); return; }
+    if (ro) return;
+    saveGridToState();
+    const src = rs.grids[gridKey(rs)];
+    const copy = src?.stops?.length > 0 && confirm(t('copyStopsReversed', cur?.name ?? ''));
+    const id = addDirection(rs, t('returnName'), !!copy);
+    markDirty();
+    switchPeriodDir(rs.activePer, id);
+  });
+  $('ef-del-dir')?.addEventListener('click', () => {
+    if (rs.directions.length <= 1) { showMessage(t('lastDirection')); return; }
+    if (directionHasData(rs, rs.activeDir) && !confirm(t('deleteDirectionConfirm', cur?.name ?? ''))) return;
+    saveGridToState();
+    deleteDirection(rs);
+    markDirty();
+    switchPeriodDir(rs.activePer, rs.activeDir, { store: false });
+  });
+  $('ef-save')?.addEventListener('click', () => saveRoute($('ef-save')));
+  $('ef-del-route')?.addEventListener('click', () => deleteActiveRoute($('ef-del-route')));
+}
+
+/** The authority and operator pickers in the header (organisations spec §4, line header spec §2). */
+function renderOrgPickers() {
+  const rs = app.routeState;
+  const orgsEl = $('rh-orgs');
+  if (!rs || !orgsEl) return;
+  orgsEl.innerHTML = '';
+  const ro = isReadOnly();
   const register = app.orgRegister?.companies ?? app.orgs;
   for (const role of /** @type {('authority' | 'operator')[]} */ (['authority', 'operator'])) {
     const ofRole = rs.sek.filter((/** @type {any} */ s) => (role === 'authority' ? s.isAuthority : s.isOperator));
@@ -292,7 +337,7 @@ function renderFooter() {
         x.addEventListener('click', () => {
           rs.sek = rs.sek.filter((/** @type {any} */ s) => s === first || !(role === 'authority' ? s.isAuthority : s.isOperator));
           markDirty();
-          renderFooter();
+          renderOrgPickers();
         });
         note.appendChild(x);
       }
@@ -300,26 +345,6 @@ function renderFooter() {
     }
   }
 
-  $('ef-dir').addEventListener('click', () => {
-    if (other) { switchPeriodDir(rs.activePer, other.id); return; }
-    if (ro) return;
-    saveGridToState();
-    const src = rs.grids[gridKey(rs)];
-    const copy = src?.stops?.length > 0 && confirm(t('copyStopsReversed', cur?.name ?? ''));
-    const id = addDirection(rs, t('returnName'), !!copy);
-    markDirty();
-    switchPeriodDir(rs.activePer, id);
-  });
-  $('ef-del-dir')?.addEventListener('click', () => {
-    if (rs.directions.length <= 1) { showMessage(t('lastDirection')); return; }
-    if (directionHasData(rs, rs.activeDir) && !confirm(t('deleteDirectionConfirm', cur?.name ?? ''))) return;
-    saveGridToState();
-    deleteDirection(rs);
-    markDirty();
-    switchPeriodDir(rs.activePer, rs.activeDir, { store: false });
-  });
-  $('ef-save')?.addEventListener('click', () => saveRoute($('ef-save')));
-  $('ef-del-route')?.addEventListener('click', () => deleteActiveRoute($('ef-del-route')));
 }
 
 /**
@@ -337,7 +362,7 @@ function pickOrg(role, company) {
     { orgId: entry.id, isAuthority: role === 'authority', isOperator: role === 'operator', name: company.name },
   ];
   markDirty();
-  renderFooter();
+  renderOrgPickers();
   const fs = app.fs;
   const next = addToCopy(app.orgs, company, role);
   if (fs && !app.orgsError && next !== app.orgs) {

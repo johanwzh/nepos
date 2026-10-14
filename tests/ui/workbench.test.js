@@ -164,7 +164,7 @@ describe('picking a stop from the grid', () => {
   beforeEach(() => {
     initGrid();
     if (!footnotes) { initFootnoteEditor(); footnotes = true; }
-    app.routeState = newRouteState('no');
+    app.routeState = { ...newRouteState('no'), mode: 'bus', submode: 'localBus', transportMode: 1 }; // a bus line (new routes have no mode)
     quayInfo.clear();
     loadGrid({
       stops: [stop('Sentrum', null), stop('Torget', 'NSR:Quay:1', { isDwellArr: true }), stop('Torget', 'NSR:Quay:1')],

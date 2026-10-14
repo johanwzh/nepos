@@ -1,3 +1,4 @@
+import { modeFromErn } from '../../src/core/modes.js';
 // Every deliberate difference between Nepos 2 output and the recorded 1.5.7 baseline.
 // Parity tests apply these to the baseline, so anything NOT listed here must still match exactly.
 
@@ -37,6 +38,18 @@ export function expectedParsed(v1Parsed, ernText) {
     // #SEK keeps the organisation name from the file, so a save never blanks it.
     s.name = sekLines.find((f) => f[1].trim() === s.orgId)?.[2] || '';
   }
+  // Line details (line header spec §5): #RUT fields 0 and 1 are read as private and public code,
+  // #TRA is kept as read, the Transmodel mode comes from the ERN code (no #MOD in 1.x files), and
+  // every column has a stable ID (none in 1.x files).
+  const rut = ernText.match(/^#RUT;([^;\r\n]*);([^;\r\n]*)/m);
+  copy.privateCode = rut?.[1].trim() === '-1' ? '' : (rut?.[1].trim() ?? '');
+  copy.publicCode = rut?.[2] ?? '';
+  copy.tra = ernText.match(/^#TRA;([^\r\n]*)/m)?.[1] ?? '';
+  const m = modeFromErn(copy.transportMode);
+  copy.mode = m.mode;
+  copy.submode = m.submode;
+  copy.brandingId = '';
+  for (const grid of Object.values(copy.grids)) for (const col of /** @type {any} */ (grid).cols) col.uid = null;
   return copy;
 }
 
@@ -88,3 +101,12 @@ export const NETEX_FILE_NAMES = {
   'Line-TST_10_timetable.xml': 'TST-Line-10.xml',
   'Line-TST_20_timetable.xml': 'TST-Line-20.xml',
 };
+
+/**
+ * ERN text: Nepos 2 adds #MOD (Transmodel mode), #BRA (branding) and #UID (column IDs), line header
+ * spec §5. They are removed before comparing a save with the 1.5.7 baseline.
+ * @param {string} text
+ */
+export function withoutNewRecords(text) {
+  return text.replace(/^#(MOD|BRA|UID);[^\r\n]*\r?\n/gm, '');
+}

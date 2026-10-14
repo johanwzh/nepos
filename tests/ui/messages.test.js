@@ -7,7 +7,7 @@ afterEach(() => setLang('no'));
 // Every code Plans 2a and 2b-1 can produce. A code missing here is a code the user would see raw.
 const ISSUE_CODES = [
   'unreadable-line', 'unsupported-record', 'extra-comment', 'unsupported-field', 'out-of-order',
-  'invalid-date', 'invalid-day-code', 'invalid-time', 'missing-route-record', 'lost-on-save',
+  'invalid-date', 'invalid-day-code', 'invalid-mode', 'invalid-time', 'missing-route-record', 'lost-on-save',
   'unreadable-file', 'personal-data-in-lev', 'vehicle-field', 'missing-lev', 'no-periods',
 ];
 const OPEN_REASONS = ['not-nepos-project', 'invalid-project-file', 'invalid-codespace', 'newer-format'];

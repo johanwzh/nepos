@@ -9,7 +9,12 @@ export function newRouteState(lang) {
   return {
     routeName: '',
     publicCode: '',
-    transportMode: 1, // ERN #RUT field 4; 1 = bus
+    privateCode: '',
+    mode: '', // no transport mode until the user picks one (line header spec §2)
+    submode: '',
+    brandingId: '',
+    tra: '',
+    transportMode: 0, // ERN #RUT field 4, kept in step with mode
     periods: [{ id: 1, name: en ? 'Period 1' : 'Periode 1', from: '', to: '', from2: '', to2: '' }],
     directions: [{ id: 2, name: en ? 'Outbound' : 'Tur' }],
     activePer: 1,
@@ -56,7 +61,10 @@ export function addPeriod(rs, name, copyFromActive) {
   rs.periods.push({ id, name, from: '', to: '', from2: '', to2: '' });
   for (const d of rs.directions) {
     const src = rs.grids[`${rs.activePer}:${d.id}`];
-    rs.grids[`${id}:${d.id}`] = copyFromActive && src ? JSON.parse(JSON.stringify(src)) : emptyGrid();
+    const copy = copyFromActive && src ? JSON.parse(JSON.stringify(src)) : emptyGrid();
+    // Copied trips are new trips: each gets its own stable ID (line header spec §4).
+    for (const col of copy.cols) col.uid = crypto.randomUUID();
+    rs.grids[`${id}:${d.id}`] = copy;
   }
   return id;
 }

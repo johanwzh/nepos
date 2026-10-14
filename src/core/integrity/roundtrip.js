@@ -18,6 +18,8 @@ function normalize(line) {
       return f.slice(0, 3).join(';');
     case '#TUR': // the 1.x vehicle field is removed on purpose
       return f.slice(0, 7).join(';');
+    case '#UID': // a valid column ID is kept; an invalid or duplicated one is replaced on purpose
+      return '#UID';
     case '#SEK': { // the ID is trimmed; a full NeTEx ID decides the role flags
       f[1] = (f[1] ?? '').trim();
       const role = orgRole(f[1]);

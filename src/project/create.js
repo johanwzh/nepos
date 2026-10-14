@@ -1,5 +1,5 @@
 import { writeJson } from './fs.js';
-import { PROJECT_FILE, ORGS_FILE, ROUTES_DIR, BACKUPS_DIR } from './layout.js';
+import { PROJECT_FILE, ORGS_FILE, BRANDINGS_FILE, ROUTES_DIR, BACKUPS_DIR } from './layout.js';
 import { DEFAULT_SETTINGS, writeSettings, writeSecrets } from './settings.js';
 import { CURRENT_FORMAT_VERSION } from './format.js';
 import { normalizeCodespace } from '../core/codespace.js';
@@ -25,6 +25,7 @@ export async function createProject(fs, { name, codespace }) {
   const meta = { formatVersion: CURRENT_FORMAT_VERSION, name: String(name ?? '').trim(), codespace: cs.value, orgExportMode: 'codespace' };
   await writeJson(fs, PROJECT_FILE, meta);
   await writeJson(fs, ORGS_FILE, { companies: [] });
+  await writeJson(fs, BRANDINGS_FILE, []);
   await fs.mkdir(ROUTES_DIR);
   await fs.mkdir(BACKUPS_DIR);
   await writeSettings(fs, { ...DEFAULT_SETTINGS });

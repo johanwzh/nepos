@@ -22,7 +22,9 @@ describe('stop IDs in route files', () => {
 
   it('writes them back unchanged', () => {
     const text = route(['NSR:Quay:7203', 'NSR:Quay:11972']);
-    expect(serializeERN(parseERN(text), '50', { delivery: { name: 'Test', codespace: 'TST' } })).toBe(text);
+    // Nepos 2 adds #MOD and #UID (line header spec §5); everything else is written back as read.
+    const out = serializeERN(parseERN(text), '50', { delivery: { name: 'Test', codespace: 'TST' } });
+    expect(out.replace(/^#(MOD|UID);[^\r\n]*\r\n/gm, '')).toBe(text);
   });
 
   it('passes the integrity check', () => {

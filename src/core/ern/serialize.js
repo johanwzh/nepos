@@ -1,5 +1,9 @@
 // ERN serializer, ported from Nepos 1.5.7 (nepos.html lines 2720–2809). See docs/ern/ern-format.md.
 import { currencyRate } from './currency.js';
+import { ernCodeFor } from '../modes.js';
+
+/** A column's stable ID (#UID). */
+export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function fnByIdInRs(rs, id) { return id!=null ? (rs.footnotes||[]).find(f=>f.id===id)||null : null; }
 
@@ -17,7 +21,13 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     const lines = [];
 
     lines.push(`#LEV;${esc(d.name)};${esc(d.codespace)}`);
-    lines.push(`#RUT;-1;${esc(routeCode)};${esc(rs.routeName)};;${rs.transportMode||6};`);
+    // #RUT as ERN defines it: private code (-1 = none), public code, name, nearest ERN mode code;
+    // the Transmodel mode and the branding in their own records (line header spec §5).
+    const ernCode = ernCodeFor(rs.mode || '', rs.submode || '', rs.transportMode);
+    rs.transportMode = ernCode;
+    lines.push(`#RUT;${esc(rs.privateCode) || '-1'};${esc(rs.publicCode)};${esc(rs.routeName)};;${ernCode};`);
+    if (rs.mode) lines.push(`#MOD;${esc(rs.mode)};${esc(rs.submode)}`);
+    if (rs.brandingId) lines.push(`#BRA;${esc(rs.brandingId)}`);
     const curId = rs.currency || 'neposcoin';
     // The rate read from the file wins; the 1.5.7 table is only the fallback for files without one.
     const curRate = rs.currencyRate ?? currencyRate(curId);
@@ -31,7 +41,8 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
         lines.push(`#SEK;-1;;0;0;0;0`);
     }
     lines.push(`#CUR;${curId};${curRate}`);
-    lines.push(`#TRA;${esc(rs.publicCode||routeCode)}`);
+    lines.push(`#TRA;${esc(rs.tra)}`);
+    const usedUids = new Set();
 
     for (const per of rs.periods) {
         lines.push(`#PER;${esc(per.name)};${per.from||''};${per.to||''};${per.from2||''};${per.to2||''};`);
@@ -48,6 +59,10 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
             grid.cols.forEach((col, ci) => {
                 // Fields: X ; dayCode ; requestRoute ; CO2 ; comfort ; replacementTransport
                 lines.push(`#TUR;${ci};${esc(col.dayCode)};0;0;0;0`);
+                // The column's stable ID: new when missing, invalid or already used here (a copy).
+                if (!col.uid || !UUID_PATTERN.test(col.uid) || usedUids.has(col.uid)) col.uid = crypto.randomUUID();
+                usedUids.add(col.uid);
+                lines.push(`#UID;${col.uid}`);
             });
 
             grid.stops.forEach((stop, ri) => {

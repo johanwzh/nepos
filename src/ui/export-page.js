@@ -75,7 +75,7 @@ async function runCheck() {
     rs: r.status === 'damaged' ? null : parseERN(r.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) }),
   }));
   const orgsProblem = app.orgsError ? 'unreadable' : '';
-  const issues = checkForExport({ routes, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, quayInfo, changedOnDisk });
+  const issues = checkForExport({ routes, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, brandings: app.brandings, brandingsProblem: app.brandingsError ? 'unreadable' : '', quayInfo, changedOnDisk });
   result = { fs, issues };
   refreshAll(); // the route list shows the files as they are now
   return { routes: routes.map(({ code, rs }) => ({ code, rs })), issues };
@@ -89,7 +89,7 @@ async function runExport() {
     setStatus(t('exportBlocked'), true);
     return;
   }
-  const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: app.orgs, orgMode: orgExportMode(app.meta) });
+  const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: app.orgs, orgMode: orgExportMode(app.meta), brandings: app.brandings });
   const asZip = app.settings.exportAsZip !== false;
   let written = '';
   const ok = await runAction(async () => { written = await writeExport(fs, files, { codespace: meta.codespace, asZip }); });

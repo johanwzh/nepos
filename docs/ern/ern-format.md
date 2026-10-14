@@ -591,6 +591,52 @@ Key observations from R100.TXT:
 
 Nepos reads and writes the records above with the following extensions and known deviations.
 
+**Rule for Nepos additions (Nepos 2).** Nepos never reuses or extends an ERN field for another
+purpose. Where ERN defines a field, Nepos uses it exactly as defined. Information ERN has no field
+for gets a **new record**, documented here together with its NeTEx mapping.
+
+### #RUT fields 0 and 1 — private and public code *Nepos 2*
+
+Used as ERN defines them: field 0 is the line's private code (NeTEx `PrivateCode`; `-1` = none)
+and field 1 its public code (NeTEx `PublicCode`; empty = none — many lines, e.g. boats, have no
+line number). Field 4 keeps the nearest ERN mode code for the Transmodel mode in `#MOD` (`0` when
+the mode has no ERN code), so the file stays readable as ERN.
+
+### #MOD — transport mode *Nepos 2*
+
+```
+#MOD;mode;submode
+```
+
+Directly after `#RUT`. Transmodel values as Entur accepts them, e.g. `#MOD;bus;expressBus`;
+`submode` is empty when not specified. NeTEx: `TransportMode` and `TransportSubmode` on the Line.
+A file without `#MOD` gets the mode from `#RUT` field 4.
+
+### #BRA — branding *Nepos 2*
+
+```
+#BRA;branding id
+```
+
+After `#MOD`, only when the line has a branding (its commonly used name, e.g. "Sørlandsekspressen").
+The ID refers to `data/brandings.json`. NeTEx: `BrandingRef` on the Line, and the `Branding` in the
+shared file's `ResourceFrame/typesOfValue`.
+
+### #UID — stable ID *Nepos 2*
+
+```
+#UID;uuid
+```
+
+Gives the record directly before it a stable ID that never changes and carries no data. After a
+`#TUR` it is the column's ID, and the NeTEx `ServiceJourney` ID is `<codespace>:ServiceJourney:<uuid>`.
+A column without a valid, unique `#UID` gets a new UUID when the file is saved.
+
+### #TRA *Nepos 2*
+
+Its value is kept as read and written back unchanged; its meaning in Nepos 2 is defined by the
+table-set design (plan 4c).
+
 ### #LEV — Leveranse (Delivery) *Nepos*
 
 Always the first record in a Nepos file.
@@ -698,6 +744,9 @@ The record codes come from Norwegian words:
 | UNT | Unntak | Exception |
 | DAG | Dag | Special day / holiday |
 | MCT | Minste overgangstid | Minimum connection time |
+| MOD | Modus | Transport mode (Nepos 2) |
+| BRA | Branding | Branding (Nepos 2) |
+| UID | Unik ID | Stable ID (Nepos 2) |
 | RIR | Rute i rute | Route in route |
 | FYL | Fylke | County |
 | REG | Region | Region |
