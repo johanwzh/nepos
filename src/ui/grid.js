@@ -10,7 +10,6 @@ import { isValidDayCode } from '../core/ern/validate.js';
 import { parseCellInput } from '../core/grid-input.js';
 import { currentPage, showMessage, isMaxiOpen } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
-import { openWorkbench } from './workbench.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
 import { fnById, footnoteSummary, openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
 import { interpolateTime, extrapolateTime, speedUnit, toKmh } from '../core/interpolate.js';
@@ -227,52 +226,66 @@ function updateStopMarks() {
   });
 }
 
-/** "Set stop ID…": type an NSR Quay ID directly (spec §7.1); empty removes it. @param {number} ri */
-function setStopId(ri) {
-  const stop = grid.stops[ri];
-  if (!stop || grid.readOnly || stop.isDwellArr) return;
-  const answer = prompt(t('stopIdPrompt'), stop.stopId ?? '');
-  if (answer === null) return;
-  const id = answer.trim();
-  if (id && !NSR_QUAY_PATTERN.test(id)) { showMessage(t('stopIdInvalid')); return; }
-  stop.stopId = id || null;
-  // A dwell stop is two rows with the same ID (arrival, then departure). Keep them one stop:
-  // otherwise the file reopens with an extra call at the old Quay.
-  const arrival = grid.stops[ri - 1]?.isDwellArr ? grid.stops[ri - 1] : null;
-  if (arrival) {
-    arrival.stopId = stop.stopId;
-    if (!id) arrival.isDwellArr = false;
-  }
-  render();
-  if (!id) return;
-  loadQuays([id]).then(() => {
-    const info = quayInfo.get(id);
-    if (!info || stop.name.trim() || !grid.stops.includes(stop)) return;
-    if (inStopEdit) { updateStopMarks(); return; } // a name is being typed: never rebuild under it
-    stop.name = info.stopPlaceName;
-    render();
-  });
+/** The selected stop row (the stop-name column), or null (stop picking spec §1). */
+export function selectedStopRow() {
+  return grid.active && inStopCol && !inStopEdit && grid.stops[ancR] ? ancR : null;
 }
 
-/** "Finn stopp i NSR…": pick a Quay in the search window (spec §7.1). @param {number} ri */
-async function findStop(ri) {
-  const stop = grid.stops[ri];
-  // The arrival row of a dwell stop: pick for the departure row below, which sets both rows.
-  if (stop?.isDwellArr) return findStop(ri + 1);
-  if (!stop || grid.readOnly) return;
-  const pick = await openWorkbench({ query: stop.name || '', ernMode: app.routeState?.transportMode ?? 0 });
-  const at = grid.stops.indexOf(stop);
-  if (!pick || at < 0) return; // closed, or another route was opened meanwhile
+/** The rows a stop is set on: a dwell stop is two rows (arrival, departure) and stays one stop. @param {number} ri */
+function stopRows(ri) {
+  const at = grid.stops[ri]?.isDwellArr ? ri + 1 : ri;
+  const stop = grid.stops[at];
+  if (!stop) return [];
+  return grid.stops[at - 1]?.isDwellArr ? [grid.stops[at - 1], stop] : [stop];
+}
+
+/**
+ * Put a Quay into a row (stop picking spec §3: only on Bruk). An empty name is filled from NSR.
+ * @param {number} ri
+ * @param {{ quayId: string, name?: string, info?: import('../services/nsr.js').QuayInfo | null }} pick
+ *   info: what NSR said (null: it does not know the Quay); undefined: not asked yet
+ */
+export function setStopOnRow(ri, pick) {
+  const rows = stopRows(ri);
+  if (!rows.length || grid.readOnly) return;
   if (pick.info) quayInfo.set(pick.quayId, pick.info);
-  else if (pick.info === null) quayInfo.set(pick.quayId, null); // NSR answered: it does not know this Quay
-  else void loadQuays([pick.quayId]); // NSR has not answered yet: look it up; until then "not checked"
-  // A dwell stop is two rows (arrival, departure): both get the Quay, so it stays one stop.
-  const rows = grid.stops[at - 1]?.isDwellArr ? [grid.stops[at - 1], stop] : [stop];
+  else if (pick.info === null) quayInfo.set(pick.quayId, null);
   for (const r of rows) {
     r.stopId = pick.quayId;
     if (pick.name) r.name = pick.name;
   }
   render();
+  if (pick.info !== undefined) return;
+  const stop = rows[rows.length - 1];
+  loadQuays([pick.quayId]).then(() => {
+    const info = quayInfo.get(pick.quayId);
+    if (!info || stop.name.trim() || !grid.stops.includes(stop)) return;
+    if (inStopEdit) { updateStopMarks(); return; } // a name is being typed: never rebuild under it
+    for (const r of rows) r.name = info.stopPlaceName;
+    render();
+  });
+}
+
+/** Remove the stop from a row; the name stays as a plain label. @param {number} ri */
+export function clearStopOnRow(ri) {
+  const rows = stopRows(ri);
+  if (!rows.length || grid.readOnly) return;
+  for (const r of rows) r.stopId = null;
+  if (rows.length === 2) rows[0].isDwellArr = false; // no longer one stop
+  render();
+}
+
+/** Give the keyboard back to the grid (Esc in the map pane). */
+export function focusGrid() {
+  const el = /** @type {HTMLElement | null} */ (document.activeElement);
+  if (el && el !== document.body) el.blur();
+}
+
+/** @type {((text: string) => void) | null} */
+let stopTypeHandler = null;
+/** Typing in a selected stop cell goes to the map pane's search (spec §2). @param {((text: string) => void) | null} fn */
+export function setStopTypeHandler(fn) {
+  stopTypeHandler = fn;
 }
 
 // ─── Interchanges ───────────────────────────────────────────────────────────
@@ -630,7 +643,10 @@ function keyStopCol(e) {
       if (grid.stops[ancR] && !grid.stops[ancR].isDwellArr) { grid.stops[ancR].name = ''; grid.stops[ancR].stopId = null; render(); }
       break;
     default:
-      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && grid.stops[ancR] && !grid.stops[ancR].isDwellArr) { e.preventDefault(); enterStopEdit(ancR, e.key); }
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && grid.stops[ancR] && !grid.stops[ancR].isDwellArr) {
+        e.preventDefault();
+        if (stopTypeHandler) stopTypeHandler(e.key); else enterStopEdit(ancR, e.key);
+      }
   }
 }
 
@@ -901,8 +917,6 @@ export function initGrid() {
     grid.stops[ctxStopRow].sep = !grid.stops[ctxStopRow].sep;
     hideCtx(); render();
   });
-  $('gc-stopid').addEventListener('click', () => { hideCtx(); if (ctxStopRow >= 0) setStopId(ctxStopRow); });
-  $('gc-findstop').addEventListener('click', () => { hideCtx(); if (ctxStopRow >= 0) findStop(ctxStopRow); });
   $('gc-add-note').addEventListener('click', () => { hideCtx(); openFnEditor('cell', ctxR, ctxC); });
   $('gc-dc-note').addEventListener('click', () => { hideCtx(); openFnEditor('col', 0, ctxDCCol >= 0 ? ctxDCCol : dcCol); });
 }

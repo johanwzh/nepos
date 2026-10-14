@@ -67,6 +67,15 @@
               <span class="panel-hdr-title" data-lk="panelMap"></span>
               <span class="panel-close" id="close-right" title="F6">✕</span>
             </div>
+            <div id="sp" class="sp" hidden>
+              <div class="sp-head"><span id="sp-head"></span></div>
+              <input type="text" id="sp-q" autocomplete="off" spellcheck="false">
+              <label class="n2-check sp-mode"><input type="checkbox" id="sp-only-mode" checked> <span id="sp-only-mode-label"></span></label>
+              <div class="sp-status" id="sp-status"></div>
+              <div class="sp-list" id="sp-list"></div>
+              <div class="sp-card" id="sp-card" hidden></div>
+              <button class="pop-btn" id="sp-clear" data-lk="spClear"></button>
+            </div>
             <div id="map-inner">
               <div id="leaflet-map" class="n2-tiles"></div>
               <div class="map-hint-overlay"><div class="map-hint" data-lk="mapHint"></div></div>
@@ -176,9 +185,6 @@
       <div id="gctx-stop">
         <div class="gci" id="gc-bold"></div>
         <div class="gci" id="gc-sep"></div>
-        <div class="gcs"></div>
-        <div class="gci" id="gc-stopid" data-lk="ctxStopId"></div>
-        <div class="gci" id="gc-findstop" data-lk="ctxFindStop"></div>
       </div>
       <div id="gctx-dc">
         <div class="gci" id="gc-dc-note" data-lk="ctxNote"></div>
@@ -190,21 +196,6 @@
       <div class="n2-actions"><button class="pop-btn primary" id="msg-close" data-lk="close"></button></div>
     </dialog>
 
-    <dialog id="ws-dlg" class="n2-dialog n2-ws">
-      <div class="n2-ws-head">
-        <strong data-lk="wsTitle"></strong>
-        <button class="pop-btn" id="ws-close" data-lk="close"></button>
-      </div>
-      <div class="n2-ws-body">
-        <div class="n2-ws-left">
-          <input type="text" id="ws-q" autocomplete="off" spellcheck="false">
-          <label class="n2-check"><input type="checkbox" id="ws-only-mode"> <span id="ws-only-mode-label"></span></label>
-          <div class="n2-ws-status" id="ws-status"></div>
-          <div class="n2-ws-list" id="ws-list"></div>
-        </div>
-        <div class="n2-ws-map n2-tiles" id="ws-map"></div>
-      </div>
-    </dialog>
 
     <dialog class="n2-dialog" id="new-dlg">
       <h2 data-lk="newProjectTitle"></h2>

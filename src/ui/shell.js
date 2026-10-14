@@ -170,6 +170,11 @@ const panels = {
 const panelListeners = [];
 
 /** @param {'left' | 'right'} side */
+/** Open a side panel if it is closed. @param {'left' | 'right'} side */
+export function openPanel(side) {
+  if (!panels[side].open) togglePanel(side);
+}
+
 export function panelOpen(side) {
   return panels[side].open;
 }

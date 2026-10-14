@@ -272,3 +272,23 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .lt-table .mode-icon { width: 18px; height: 18px; vertical-align: middle; }
 .lt-status.has-errors { color: var(--danger, #c62828); }
 .lt-empty { color: var(--text-f); font-style: italic; }
+
+/* Stop picking in the map pane (plan 4g) */
+#panel-right { display: flex; flex-direction: column; }
+#panel-right #map-inner { flex: 1; min-height: 200px; }
+.sp { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-bottom: 1px solid var(--border-lt); max-height: 55%; overflow: auto; font-size: 12px; }
+.sp[hidden] { display: none; }
+.sp-head { font-weight: 600; }
+#sp-q { height: 26px; padding: 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text); font: inherit; }
+.sp-mode { display: flex; margin: 0; }
+.sp-status { color: var(--text-f); }
+.sp-status:empty { display: none; }
+.sp-list { display: flex; flex-direction: column; }
+.sp-row { padding: 4px 6px; cursor: pointer; border-radius: 3px; }
+.sp-row:hover, .sp-row.on { background: var(--accent-bg); }
+.sp-row small, .sp-place small { display: block; color: var(--text-f); }
+.sp-place { padding: 4px 6px; font-weight: 600; }
+.sp-card { border: 1px dashed var(--accent); border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.sp-card[hidden] { display: none; }
+.sp-card button { align-self: flex-start; }
+#sp-clear { align-self: flex-start; }
