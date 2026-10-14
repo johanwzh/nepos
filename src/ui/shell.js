@@ -242,7 +242,23 @@ export function currentPage() {
 /** Wire up the shell once at start-up. */
 let keysWired = false;
 
+const TEXT_FIELDS = 'input:not([type]), input[type=text], input[type=search]';
+/** Chrome offers the user's own name and address for fields it guesses are "name" fields, and
+ * ignores autocomplete="off" for them; a value it does not know switches its autofill off. */
+function noAutofill(/** @type {ParentNode} */ root) {
+  if (root instanceof HTMLInputElement && root.matches(TEXT_FIELDS)) root.setAttribute('autocomplete', 'nepos-no-autofill');
+  root.querySelectorAll?.(TEXT_FIELDS).forEach((el) => el.setAttribute('autocomplete', 'nepos-no-autofill'));
+}
+let autofillWatched = false;
+
 export function initShell() {
+  noAutofill(document);
+  if (!autofillWatched) {
+    autofillWatched = true;
+    new MutationObserver((records) => {
+      for (const r of records) for (const n of r.addedNodes) if (n.nodeType === 1) noAutofill(/** @type {Element} */ (n));
+    }).observe(document.body, { childList: true, subtree: true });
+  }
   $('el-ver').textContent = `v${VERSION}`;
 
 

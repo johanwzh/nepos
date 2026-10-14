@@ -244,6 +244,31 @@ async function deleteActiveRoute(trigger = null) {
   closeRoute();
 }
 
+// ─── New period (timetable structure spec §2) ───────────────────────────────
+/** A period is another set of trips in the table set, run on its own calendars (e.g. summer). */
+function openPeriodDialog() {
+  const rs = app.routeState;
+  if (!rs || isReadOnly()) return;
+  commitPending();
+  saveGridToState();
+  const active = rs.periods.find((/** @type {any} */ p) => p.id === rs.activePer);
+  const hasTrips = grid.cols.length > 0;
+  $('per-copy-label').textContent = t('periodCopyTrips', active ? periodLabel(active) : '');
+  $('per-copy').parentElement.hidden = !hasTrips;
+  $('per-copy').checked = hasTrips;
+  $('per-empty').checked = !hasTrips;
+  $('per-dlg').showModal();
+}
+
+function createPeriodFromDialog() {
+  const rs = app.routeState;
+  $('per-dlg').close();
+  if (!rs) return;
+  const id = addPeriod(rs, $('per-copy').checked);
+  markDirty();
+  switchPeriod(id, { store: false });
+}
+
 // ─── Route header ───────────────────────────────────────────────────────────
 function renderHeader() {
   const hdr = $('route-hdr');
@@ -284,7 +309,7 @@ function renderHeader() {
     <div class="rh-group"><span class="rh-label">${esc(t('periodLabel'))}:</span>
       <select class="rh-select" id="sel-period">${periodsOf(rs, rs.activeSet).map((/** @type {any} */ p) =>
         `<option value="${p.id}"${p.id === rs.activePer ? ' selected' : ''}>${esc(periodLabel(p))}</option>`).join('')}</select>
-      ${ro ? '' : `<span class="rh-icon-btn" id="btn-add-per" title="${esc(t('newPeriod'))}">+</span>
+      ${ro ? '' : `<span class="rh-icon-btn rh-add-per" id="btn-add-per" title="${esc(t('newPeriodHint'))}">${esc(t('addPeriodBtn'))}</span>
       <span class="rh-icon-btn" id="btn-del-per" title="${esc(t('deletePeriod'))}" style="font-size:15px;line-height:1">×</span>`}</div>
     <div class="rh-group per-cals">${perCals}</div>
     </div>`;
@@ -316,14 +341,7 @@ function renderHeader() {
     markDirty();
     renderHeader();
   }));
-  $('btn-add-per').addEventListener('click', () => {
-    const copy = confirm(t('copyTripsConfirm', periodLabel(rs.periods.find((/** @type {any} */ p) => p.id === rs.activePer))));
-    commitPending();
-    saveGridToState();
-    const id = addPeriod(rs, copy);
-    markDirty();
-    switchPeriod(id, { store: false });
-  });
+  $('btn-add-per').addEventListener('click', openPeriodDialog);
   $('btn-del-per').addEventListener('click', () => {
     if (periodsOf(rs, rs.activeSet).length <= 1) { showMessage(t('lastPeriod')); return; }
     storeGrid(); // the grid on screen counts as data too
@@ -479,6 +497,8 @@ function renderEditor() {
 let listenersWired = false;
 
 export function initRouteEditor() {
+  $('per-ok').addEventListener('click', createPeriodFromDialog);
+  $('per-cancel').addEventListener('click', () => $('per-dlg').close());
   onRefresh(renderEditor);
   onGridChange(() => { if (app.dirty) notifyLinesChanged(); else markDirty(); });
   setBeforeLeave(confirmLeave);
