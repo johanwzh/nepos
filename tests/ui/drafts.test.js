@@ -7,11 +7,12 @@ import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
-import { initRouteEditor, selectRoute, saveAllRoutes, discardAllChanges } from '../../src/ui/route-editor.js';
+import { initRouteEditor, selectRoute, saveAllRoutes, discardAllChanges, newRoute } from '../../src/ui/route-editor.js';
+import { initCalendarReplace, openCalendarReplace } from '../../src/ui/calendar-replace-ui.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute, readRoute } from '../../src/project/routes.js';
-import { sample } from '../fixtures/sample-project.js';
+import { sample, CAL_SOMMER } from '../fixtures/sample-project.js';
 import { parseERN } from '../../src/core/ern/parse.js';
 import { serializeERN } from '../../src/core/ern/serialize.js';
 
@@ -31,6 +32,7 @@ beforeEach(async () => {
   await initProjectUi({ restoreLast: false });
   if (!wired) { initGrid(); initFootnoteEditor(); wired = true; }
   initRouteEditor();
+  initCalendarReplace();
   window.confirm = vi.fn(() => true);
   fs = createMemoryFs();
   await createProject(fs, { name: 'Test', codespace: 'TST' });
@@ -38,6 +40,33 @@ beforeEach(async () => {
   await writeRoute(fs, '21', route20);
   await openFs(fs);
   /** @type {any} */ (document.getElementById('check-dlg')).close();
+});
+
+describe('unsaved edits per line (review fixes)', () => {
+  it('replaces a calendar in a parked draft too, so saving it later keeps the new calendar (review I2)', async () => {
+    await selectRoute('20');
+    typeKeys('0811'); press('Enter');           // line 20 now has a draft
+    await selectRoute('21');
+    app.calendars = [{ id: CAL_SOMMER, name: 'Sommer', ranges: [] }, { id: 'NEW-CAL', name: 'Ny', ranges: [] }];
+    openCalendarReplace(CAL_SOMMER);
+    /** @type {HTMLSelectElement} */ (document.getElementById('cal-replace-to')).value = 'NEW-CAL';
+    document.getElementById('cal-replace-ok')?.click();
+    await flush(); await flush();
+    await saveAllRoutes();
+    const saved = /** @type {string} */ (await readRoute(fs, '20'));
+    expect(saved).toContain('NEW-CAL');
+    expect(saved).not.toContain(CAL_SOMMER);
+  });
+
+  it('creates a new line without asking and keeps the open line’s edits (review I4)', async () => {
+    window.confirm = vi.fn(() => false);
+    await selectRoute('20');
+    typeKeys('0811'); press('Enter');
+    await newRoute();
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(app.routes).toHaveLength(3);
+    expect(app.drafts.has('20')).toBe(true);
+  });
 });
 
 describe('unsaved edits per line', () => {

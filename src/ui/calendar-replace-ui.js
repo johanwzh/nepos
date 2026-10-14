@@ -48,6 +48,8 @@ async function apply() {
       failed.push(r.code);
     }
   }
+  // Parked unsaved lines get the same change, or saving them later would bring the old calendar back.
+  for (const draft of app.drafts.values()) total += replaceCalendarInState(draft, old, to);
   if (app.routeState && app.activeRoute) {
     if (isRouteReadOnly()) { if (app.routeState.periods.some((/** @type {any} */ p) => p.calendarIds.includes(old))) skipped.push(app.activeRoute); }
     else {

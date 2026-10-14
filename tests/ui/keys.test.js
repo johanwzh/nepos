@@ -10,7 +10,7 @@ import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
-import { writeRoute } from '../../src/project/routes.js';
+import { writeRoute, readRoute } from '../../src/project/routes.js';
 import { sample } from '../fixtures/sample-project.js';
 import { parseERN } from '../../src/core/ern/parse.js';
 import { serializeERN } from '../../src/core/ern/serialize.js';
@@ -74,6 +74,21 @@ describe('keys', () => {
     key('s', { ctrlKey: true }, document.getElementById('new-name') ?? document);
     await flush();
     expect(app.dirty).toBe(true);
+  });
+
+  it('keeps a typed line name on Ctrl+S and on a view switch (review I1)', async () => {
+    await selectRoute('20');
+    let name = /** @type {HTMLInputElement} */ (document.getElementById('rh-name'));
+    name.focus();
+    name.value = 'Nytt navn';                 // typed, no change event yet
+    key('s', { ctrlKey: true }, name);
+    await flush(); await flush();
+    expect(parseERN(/** @type {string} */ (await readRoute(fs, '20'))).routeName).toBe('Nytt navn');
+    name = /** @type {HTMLInputElement} */ (document.getElementById('rh-name'));
+    name.focus();
+    name.value = 'Enda nyere';
+    key('2', { altKey: true }, name);
+    expect(app.routeState.routeName).toBe('Enda nyere');
   });
 
   it('commits a half-typed cell before switching view', async () => {

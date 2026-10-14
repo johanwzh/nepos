@@ -201,9 +201,15 @@ export async function selectRoute(code) {
 }
 
 /** @param {HTMLButtonElement | null} [trigger] */
+/** Header and footnote fields keep their text on "change" (blur); Ctrl+S and view keys commit it first. */
+function commitFocusedField() {
+  const el = document.activeElement;
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
 export async function newRoute(trigger = null) {
   if (!app.fs || !app.meta) return;
-  if (!(await beforeLeave())) return;
+  // Like switching lines, a new line never asks: the open line's edits are parked (navigation spec §2).
   // IDs carry no data and never change (line header spec §4): the route ID is a UUID.
   const code = crypto.randomUUID();
   const text = serializeERN(newRouteState(app.settings.lang), code, { delivery: { name: app.meta.name, codespace: app.meta.codespace }, orgs: [] });
@@ -212,7 +218,6 @@ export async function newRoute(trigger = null) {
   if (!ok) return;
   const { status, issues } = checkRouteFile(text);
   app.routes = [...app.routes, { code, text, status, issues }].sort((a, b) => compareRouteCodes(a.code, b.code));
-  app.activeRoute = null;
   await selectRoute(code);
 }
 
@@ -470,9 +475,9 @@ export function initRouteEditor() {
     if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's' || document.querySelector('dialog[open]')) return;
     e.preventDefault();
     e.stopPropagation();
-    if (currentPage() === 'edit' && app.activeRoute) void saveRoute();
+    if (currentPage() === 'edit' && app.activeRoute) { commitFocusedField(); void saveRoute(); }
   }, true);
-  onBeforeViewChange(() => { if (app.routeState) commitPending(); });
+  onBeforeViewChange(() => { commitFocusedField(); if (app.routeState) commitPending(); });
   window.addEventListener('beforeunload', (e) => {
     if (unsavedCodes().length) { e.preventDefault(); e.returnValue = ''; }
   });
