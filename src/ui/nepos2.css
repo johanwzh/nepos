@@ -299,3 +299,27 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .pm-line { border-radius: 50%; background: rgba(120,120,120,.55); color: #fff; font: 600 10px/1 system-ui, sans-serif; }
 .pm-current { border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--accent); }
 .pm-candidate { border-radius: 50%; border: 3px dashed var(--accent); background: transparent; pointer-events: none; }
+
+/* Form controls on the newer pages and dialogs: one base look. :where() keeps it the weakest rule,
+   so any class-specific style (the grid, the menu bar, the primary buttons) still wins. */
+:where(#page-assets, #page-export, .n2-dialog, #route-hdr, .line-table, .sp) :where(input:not([type=checkbox]):not([type=radio]):not([type=color]), select) {
+  font: inherit; font-size: 13px; height: 28px; padding: 0 8px; box-sizing: border-box;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text);
+}
+:where(#page-assets, #page-export, .n2-dialog, #route-hdr, .line-table, .sp) :where(textarea) {
+  font: inherit; font-size: 13px; padding: 6px 8px; box-sizing: border-box;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text);
+}
+:where(#page-assets, #page-export, .n2-dialog, #route-hdr, .line-table, .sp) :where(input, select, textarea):focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+:where(#page-assets, #page-export, .n2-dialog, .line-table, .sp) :where(button) {
+  font: inherit; font-size: 13px; padding: 4px 12px; min-height: 28px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text);
+}
+:where(#page-assets, #page-export, .n2-dialog, .line-table, .sp) :where(button):hover:not(:disabled) { background: var(--accent-bg); }
+:where(#page-assets, #page-export, .n2-dialog, .line-table, .sp) :where(button):disabled { opacity: .5; cursor: default; }
+.brand-add { margin-top: 8px; }
+.n2-field { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.n2-org-mode { border: 1px solid var(--border-lt); border-radius: 6px; padding: 8px 12px 10px; margin: 12px 0 16px; max-width: 560px; }
+.n2-org-mode legend { padding: 0 4px; font-weight: 600; }
+.n2-org-mode .n2-check { display: flex; margin: 4px 0; }
+.n2-org-mode-help { display: block; color: var(--text-m); font-size: 11px; margin-top: 4px; }
