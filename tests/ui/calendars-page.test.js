@@ -8,6 +8,8 @@ import { initOrgsPage } from '../../src/ui/orgs-page.js';
 import { initCalendarsPage } from '../../src/ui/calendars-page.js';
 import { createMemoryFs, readText } from '../../src/project/fs.js';
 import { writeCalendars } from '../../src/project/calendars-store.js';
+import { writeRoute, readRoute } from '../../src/project/routes.js';
+import { initCalendarReplace } from '../../src/ui/calendar-replace-ui.js';
 
 /** @type {any} */ let fs;
 const body = () => /** @type {HTMLElement} */ (document.getElementById('assets-body'));
@@ -17,7 +19,7 @@ const change = (el, v) => { const i = /** @type {HTMLInputElement} */ (el); i.va
 
 beforeEach(() => {
   loadAppMarkup();
-  initShell(); initAssetsNav(); initOrgsPage(); initCalendarsPage();
+  initShell(); initAssetsNav(); initOrgsPage(); initCalendarsPage(); initCalendarReplace();
   fs = createMemoryFs();
   Object.assign(app, { fs, meta: { formatVersion: 1, name: 'X', codespace: 'TST' }, calendars: [], calendarsError: null, assetsSection: 'orgs', calendarSelected: null, calendarYear: 0,
     routes: [], orgs: [], orgsError: null });
@@ -81,5 +83,23 @@ describe('calendars page', () => {
     await flush();
     expect(/** @type {any} */ (window.confirm).mock.calls[0][0]).toContain('1 perioder');
     expect(JSON.parse(await readText(fs, 'data/calendars.json'))).toEqual([]);
+  });
+  it('replaces a calendar in every saved route, telling which file could not be saved', async () => {
+    const r1 = '#TRA;A\r\n#PER;;;;;;\r\n#KAL;c1\r\n#TAB;0;;;;\r\n', r2 = '#TRA;B\r\n#PER;;;;;;\r\n#KAL;c1\r\n#TAB;0;;;;\r\n';
+    await writeRoute(fs, 'r1', r1);
+    await writeRoute(fs, 'r2', r2);
+    app.routes = [{ code: 'r1', text: r1, status: 'ok', issues: [] }, { code: 'r2', text: r2, status: 'ok', issues: [] }];
+    app.calendars = [{ id: 'c1', name: 'Gammel', ranges: [] }, { id: 'c2', name: 'Ny', ranges: [] }];
+    app.calendarSelected = 'c1';
+    const write = fs.writeBytes;
+    fs.writeBytes = async (/** @type {string} */ p, /** @type {Uint8Array} */ b) => { if (p.includes('r2')) throw new Error('låst'); return write(p, b); };
+    openSection();
+    /** @type {HTMLElement} */ (body().querySelector('.cal-replace')).click();
+    /** @type {HTMLSelectElement} */ (document.getElementById('cal-replace-to')).value = 'c2';
+    /** @type {HTMLElement} */ (document.getElementById('cal-replace-ok')).click();
+    await flush(); await flush();
+    expect(await readRoute(fs, 'r1')).toContain('#KAL;c2');
+    expect(app.routes[0].text).toContain('#KAL;c2');
+    expect(document.getElementById('msg-text')?.textContent).toContain('r2');
   });
 });
