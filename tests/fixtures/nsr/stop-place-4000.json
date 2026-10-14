@@ -1,0 +1,57 @@
+{
+  "id": "NSR:StopPlace:4000",
+  "name": {
+    "lang": "nor",
+    "value": "Jernbanetorget"
+  },
+  "description": {
+    "lang": "nor",
+    "value": "foran Oslo S"
+  },
+  "transportMode": "BUS",
+  "stopPlaceType": "ONSTREET_BUS",
+  "quays": {
+    "quayRefOrQuay": [
+      {
+        "id": "NSR:Quay:100636",
+        "publicCode": "B",
+        "centroid": {
+          "location": {
+            "latitude": 59.911426,
+            "longitude": 10.749848
+          }
+        }
+      },
+      {
+        "id": "NSR:Quay:100635",
+        "publicCode": "C",
+        "centroid": {
+          "location": {
+            "latitude": 59.911702,
+            "longitude": 10.750283
+          }
+        }
+      },
+      {
+        "id": "NSR:Quay:7203",
+        "publicCode": "A",
+        "centroid": {
+          "location": {
+            "latitude": 59.911425,
+            "longitude": 10.749736
+          }
+        }
+      },
+      {
+        "id": "NSR:Quay:7202",
+        "publicCode": "D",
+        "centroid": {
+          "location": {
+            "latitude": 59.911701,
+            "longitude": 10.750412
+          }
+        }
+      }
+    ]
+  }
+}

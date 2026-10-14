@@ -1,0 +1,109 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          10.751147,
+          59.912244
+        ]
+      },
+      "properties": {
+        "id": "NSR:StopPlace:3990",
+        "names": {
+          "default": "Jernbanetorget",
+          "display": "Jernbanetorget, Oslo"
+        },
+        "layer": "stopPlace",
+        "source": "nsr",
+        "address": {
+          "locality": "Oslo",
+          "county": "Oslo"
+        },
+        "transportModes": [
+          {
+            "mode": "metro"
+          }
+        ],
+        "stopPlaceTypes": [
+          "metroStation"
+        ],
+        "stopPlaceRole": "child"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          10.749009,
+          59.909414
+        ]
+      },
+      "properties": {
+        "id": "NSR:StopPlace:4013",
+        "names": {
+          "default": "Jernbanetorget",
+          "display": "Jernbanetorget, Oslo"
+        },
+        "layer": "stopPlace",
+        "source": "nsr",
+        "address": {
+          "locality": "Oslo",
+          "county": "Oslo"
+        },
+        "transportModes": [
+          {
+            "mode": "bus"
+          }
+        ],
+        "stopPlaceTypes": [
+          "onstreetBus"
+        ],
+        "stopPlaceRole": "child",
+        "description": {
+          "nor": "i Strandgata",
+          "eng": "in Strandgata"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          10.749892,
+          59.912282
+        ]
+      },
+      "properties": {
+        "id": "NSR:StopPlace:3986",
+        "names": {
+          "default": "Jernbanetorget",
+          "display": "Jernbanetorget, Oslo"
+        },
+        "layer": "stopPlace",
+        "source": "nsr",
+        "address": {
+          "locality": "Oslo",
+          "county": "Oslo"
+        },
+        "transportModes": [
+          {
+            "mode": "tram"
+          }
+        ],
+        "stopPlaceTypes": [
+          "onstreetTram"
+        ],
+        "stopPlaceRole": "child",
+        "description": {
+          "nor": "ved Europarådets plass",
+          "eng": "at Europarådets square"
+        }
+      }
+    }
+  ]
+}
