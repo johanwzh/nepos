@@ -45,14 +45,41 @@ export function expectedParsed(v1Parsed, ernText) {
 // QuayRefs point at NSR Quays directly; the sample's old numeric IDs keep 1.5.7's CS:Quay:<id>.
 
 /**
+ * 1.5.7 dropped a trip whose column note says "runs only" on single dates: it filed the trip
+ * under a DayType of those dates but looked it up by its day code, found nothing and wrote no
+ * ServiceJourney (while an interchange still pointed at it). Nepos 2 writes it, on the DayType of
+ * its dates. In the sample this is route 10, column 1 (runs only 15 June).
+ */
+const RESTORED_RUNS_ONLY_TRIP = `      <ServiceJourney id="TST:ServiceJourney:10-0-1-1" version="1">
+        <TransportMode>water</TransportMode>
+        <dayTypes><DayTypeRef ref="TST:DayType:2"/></dayTypes>
+        <JourneyPatternRef ref="TST:JourneyPattern:10-0-2" version="1"/>
+        <passingTimes>
+          <TimetabledPassingTime id="TST:TimetabledPassingTime:10-0-1-1-1" version="1">
+            <StopPointInJourneyPatternRef ref="TST:StopPointInJourneyPattern:10-0-2-1" version="1"/>
+            <DepartureTime>14:00:00</DepartureTime>
+          </TimetabledPassingTime>
+          <TimetabledPassingTime id="TST:TimetabledPassingTime:10-0-1-1-2" version="1">
+            <StopPointInJourneyPatternRef ref="TST:StopPointInJourneyPattern:10-0-2-2" version="1"/>
+            <ArrivalTime>16:30:00</ArrivalTime>
+            <DepartureTime>16:45:00</DepartureTime>
+          </TimetabledPassingTime>
+        </passingTimes>
+      </ServiceJourney>
+`;
+
+/**
  * NeTEx: Nepos 2 produces no ServiceLinks (spec §8), so the shared file has no <serviceLinks>
- * and journey patterns have no <linksInSequence>.
+ * and journey patterns have no <linksInSequence>; and it writes the "runs only" trip 1.5.7
+ * dropped (see above).
  * @param {string} v1Xml
  */
 export function expectedNetex(v1Xml) {
-  return v1Xml
+  const withoutLinks = v1Xml
     .replace(/\n {6}<serviceLinks>[\s\S]*?\n {6}<\/serviceLinks>/g, '')
     .replace(/\n {8}<linksInSequence>[\s\S]*?\n {8}<\/linksInSequence>/g, '');
+  const anchor = '      <ServiceJourney id="TST:ServiceJourney:10-0-1-2" version="1">';
+  return withoutLinks.includes(anchor) ? withoutLinks.replace(anchor, RESTORED_RUNS_ONLY_TRIP + anchor) : withoutLinks;
 }
 
 /** NeTEx file names: Entur delivery convention. */

@@ -2,6 +2,7 @@
 import { xe, hhmm2t, ernModeNeTEx, dirType, pubDelivery, compositeFrame } from './xml.js';
 import { netexOrgId, authorityNetworkLocalId } from '../orgs.js';
 import { stopLocalId } from '../quays.js';
+import { journeyStops, dayTypeKey } from './journeys.js';
 
 /**
  * @param {string} routeCode
@@ -39,7 +40,9 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     // Per-direction: routes, routePoints, journeyPatterns
     const routePointsMap = new Map(); // stopId → used as RoutePoint
     const routesXml = [], jpsXml = [], noticeSvcXml = [];
-    const sjs = []; // [{sjXml}] for TimetableFrame
+    const sjs = []; // ServiceJourney XML for the TimetableFrame
+    const sjIds = new Set(); // the ServiceJourneys actually written
+    const ixs = []; // interchanges: written only when both journeys exist
 
     let jpCtr=0;
     const jpRegistry = new Map(); // "dirIdx:stopSeqKey" → jpId
@@ -60,51 +63,17 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
 
             for (let ci=0; ci<grid.cols.length; ci++) {
                 const col = grid.cols[ci];
-                // Collect stops with times (skip pipe, skip null, handle dwell)
-                const jpStopList = []; // {stopId, name, arrIdx, depIdx, forBrd, forAlt, isReq}
-                let pendingDwellTime = null; // time from isDwellArr row
-
-                for (let ri=0; ri<grid.stops.length; ri++) {
-                    const stop = grid.stops[ri];
-                    const cell = col.cells[ri];
-
-                    if (stop.isDwellArr) {
-                        // Arrival row of a dwell pair — but only treat it as such for THIS column
-                        // if the NEXT row also has a time in this column (true dwell).
-                        // If the next row has no time here (e.g. stay-seated split where arrival
-                        // and departure belong to different columns), fall through and treat as
-                        // a regular stop so the interchange has a valid FromPoint reference.
-                        const nextCell = col.cells[ri + 1];
-                        const nextTimedHere = nextCell?.time && nextCell.time !== '|';
-                        if (nextTimedHere) {
-                            // True dwell for this column: capture arrival time, skip this row
-                            if (cell?.time && cell.time!=='|') pendingDwellTime = cell;
-                            continue;
-                        }
-                        // Not a dwell for this column — fall through to normal stop processing
-                    }
-
-                    if (!cell?.time || cell.time==='|') { pendingDwellTime=null; continue; }
-
-                    const arrCell = pendingDwellTime; // may be null
-                    pendingDwellTime = null;
-
-                    // A row without a stop ID is left out (mirrors collectNeTExData)
-                    if (stop.stopId == null || stop.stopId === '') { pendingDwellTime = null; continue; }
-                    const resolvedId = String(stop.stopId);
-                    jpStopList.push({
-                        stopId: resolvedId,
-                        name:   stop.name,
-                        arrCell,
-                        depCell: cell,
-                        forBoarding:  cell.suffix !== 'a',
-                        forAlighting: cell.suffix !== 'p',
-                        requestStop:  cell.suffix === 'x',
-                    });
-                    routePointsMap.set(resolvedId, stop.name);
-                }
-
-                if (jpStopList.length < 2) continue;
+                // The trip's calls, exactly as the whole export defines them (journeys.js). A column
+                // with fewer than two calls is not a trip.
+                const calls = journeyStops(grid, col);
+                if (calls.length < 2) continue;
+                const jpStopList = calls.map(({ stopId, name, arrCell, depCell }) => ({
+                    stopId, name, arrCell, depCell,
+                    forBoarding:  depCell.suffix !== 'a',
+                    forAlighting: depCell.suffix !== 'p',
+                    requestStop:  depCell.suffix === 'x',
+                }));
+                for (const st of jpStopList) routePointsMap.set(st.stopId, st.name);
 
                 // JP key = sequence of stopIds
                 const jpKey = `${di}:${jpStopList.map(s=>s.stopId??s.name).join(':')}`;
@@ -115,7 +84,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                 const { jpId, stopList } = jpMap.get(jpKey);
 
                 // Build ServiceJourney
-                const dtKey = `${col.dayCode||'D'}:${opKey}`;
+                const dtKey = dayTypeKey(rs, col, opKey); // the DayType collectNeTExData made for it
                 const dtEntry = dayTypes.get(dtKey);
                 if (!dtEntry) continue;
 
@@ -131,6 +100,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
           </TimetabledPassingTime>`;
                 });
 
+                sjIds.add(sjId);
                 sjs.push(`      <ServiceJourney id="${sjId}" version="1">
         <TransportMode>${lineMode}</TransportMode>
         <dayTypes><DayTypeRef ref="${dtEntry.ntxId}"/></dayTypes>
@@ -145,7 +115,6 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     if (!cell?.interchange) continue;
                     const { targetC, targetR, type } = cell.interchange;
                     if (targetC<0||targetC>=grid.cols.length) continue;
-                    // Skip if the target column has no times — no ServiceJourney was generated for it
                     // The target cell itself needs a time: otherwise the target stop is not in the
                     // target journey (and may not be exported at all).
                     const tgtCell = grid.cols[targetC]?.cells?.[targetR];
@@ -157,16 +126,19 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     const toSjId = `${cs}:ServiceJourney:${routeCode}-${di}-${per.id}-${targetC}`;
                     const staySeated = type==='stayseated' ? '\n        <StaySeated>true</StaySeated>' : '';
                     const guaranteed = type==='guaranteed'  ? '\n        <Guaranteed>true</Guaranteed>' : '';
-                    sjs.push(`      <!-- interchange from col ${ci} to col ${targetC} -->
+                    ixs.push({ fromSjId: sjId, toSjId, xml: `      <!-- interchange from col ${ci} to col ${targetC} -->
       <ServiceJourneyInterchange id="${cs}:ServiceJourneyInterchange:${sjId.split(':').pop()}-${targetC}" version="1">${staySeated}${guaranteed}
         <FromPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(srcStop.stopId)}"/>
         <ToPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(tgtStop.stopId)}"/>
         <FromJourneyRef ref="${sjId}" version="1"/>
         <ToJourneyRef ref="${toSjId}" version="1"/>
-      </ServiceJourneyInterchange>`);
+      </ServiceJourneyInterchange>` });
                 }
             }
         }
+
+        // A direction without trips gets no Route (an empty pointsInSequence is not valid NeTEx)
+        if (!jpMap.size) continue;
 
         // Route: RoutePoints sequence (unique stops in JP order, first JP of this direction)
         const firstJP = jpMap.values().next().value;
@@ -239,9 +211,9 @@ ${jpsXml.join('\n')}
       </journeyPatterns>
     </ServiceFrame>`;
 
-    // Separate interchanges from sjs
-    const sjOnly  = sjs.filter(x=>!x.includes('ServiceJourneyInterchange'));
-    const ixOnly  = sjs.filter(x=>x.includes('ServiceJourneyInterchange'));
+    // Interchanges only between journeys that were written (no dangling FromJourneyRef/ToJourneyRef)
+    const sjOnly  = sjs;
+    const ixOnly  = ixs.filter(x=>sjIds.has(x.fromSjId) && sjIds.has(x.toSjId)).map(x=>x.xml);
 
     const ttFrame = `    <TimetableFrame id="${cs}:TimetableFrame:Line_${routeCode}" version="1">
       <vehicleJourneys>

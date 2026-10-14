@@ -2,6 +2,7 @@
 // Pure: takes the parsed routes and stop database as input instead of reading app state.
 import { yyyymmdd2d } from './xml.js';
 import { expandDayCode } from './daycodes.js';
+import { journeyStops, routeHasTrips, runsOnlyDates } from './journeys.js';
 
 /**
  * Collect everything the NeTEx files need from the parsed routes. Stops are identified by their
@@ -12,8 +13,8 @@ import { expandDayCode } from './daycodes.js';
 export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList = [] }) {
     const cs = codespace || '1869';
 
-    // Routes without periods have nothing to export
-    const routes = inputRoutes.filter(({ rs }) => rs && rs.periods?.length);
+    // Routes without a trip (two or more calls) have nothing to export: no line file at all
+    const routes = inputRoutes.filter(({ rs }) => rs && rs.periods?.length && routeHasTrips(rs));
 
     // Overall date range (min from / max to across all periods all routes)
     let overallFrom = '99999999', overallTo = '00000000';
@@ -136,42 +137,19 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
                 const dir = rs.directions[di];
                 const grid = rs.grids[`${per.id}:${dir.id}`]||{stops:[],cols:[]};
 
-                // Collect stops and dest displays PER COLUMN, mirroring what genLineXml does when
-                // building each JourneyPattern (each column may stop at different stops).
+                // Stops, destination displays and day types of every exported trip, from the same
+                // definition of a trip that genLineXml uses (journeys.js).
                 for (const col of grid.cols||[]) {
-                    const colStops = [];
-                    for (let ri=0; ri<grid.stops.length; ri++) {
-                        const stop = grid.stops[ri];
-                        const cell = col.cells[ri];
-                        // A dwell arrival row is skipped only where the departure row below has a
-                        // time in this column (a true dwell); otherwise it is an ordinary stop —
-                        // exactly as genLineXml builds the journey pattern.
-                        if (stop.isDwellArr) {
-                            const next = col.cells[ri + 1];
-                            if (next?.time && next.time !== '|') continue;
-                        }
-                        if (!cell?.time || cell.time==='|') continue;
-                        if (stop.stopId == null || stop.stopId === '') continue;
-                        const stopId = String(stop.stopId);
-                        ensureStop(stopId, stop.name);
-                        colStops.push({ stopId, name: stop.name });
-                    }
-                    if (colStops.length > 0) {
-                        const last = colStops[colStops.length-1];
-                        destDisps.set(last.stopId, last.name);
-                    }
+                    const calls = journeyStops(grid, col);
+                    if (calls.length < 2) continue;
+                    for (const call of calls) ensureStop(call.stopId, call.name);
+                    const last = calls[calls.length-1];
+                    destDisps.set(last.stopId, last.name);
                 }
-
-                // Collect day types per column — check for UNT Kjører kun (specific dates)
                 for (const col of grid.cols||[]) {
-                    const hasTime = col.cells?.some(c=>c?.time&&c.time!=='|');
-                    if (!hasTime) continue;
-                    // Gather specific operating dates from footnote exceptions (runsOnly=true, single-day)
-                    const fn = rs.footnotes?.find(f=>f.id===col.footnoteId);
-                    const specific = fn?.exceptions
-                        ?.filter(ex=>ex.runsOnly && ex.from && ex.from===ex.to)
-                        .map(ex=>ex.from) || [];
-                    ensureDayType(col.dayCode||'D', opKey, specific, per.from, per.to);
+                    if (journeyStops(grid, col).length < 2) continue;
+                    // "Runs only" single dates from the column's note give a DayType of their own
+                    ensureDayType(col.dayCode||'D', opKey, runsOnlyDates(rs, col), per.from, per.to);
                 }
             }
         }
