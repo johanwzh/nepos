@@ -41,20 +41,24 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
         lines.push(`#SEK;-1;;0;0;0;0`);
     }
     lines.push(`#CUR;${curId};${curRate}`);
-    lines.push(`#TRA;${esc(rs.tra)}`);
     const usedUids = new Set();
+    let komWritten = false;
 
-    for (const per of rs.periods) {
-        lines.push(`#PER;${esc(per.name)};${per.from||''};${per.to||''};${per.from2||''};${per.to2||''};`);
-        // Write route-wide comment once in first period block
-        if (rs.kom?.trim() && per === rs.periods[0]) lines.push(`#KOM;${esc(rs.kom)}`);
+    // Table sets (#TRA + #UID), each with its periods (#PER + #KAL) and one table per period
+    // (timetable structure spec §6).
+    for (const set of rs.tableSets) {
+        lines.push(`#TRA;${esc(set.name)}`);
+        if (!set.uid || !UUID_PATTERN.test(set.uid) || usedUids.has(set.uid)) set.uid = crypto.randomUUID();
+        usedUids.add(set.uid);
+        lines.push(`#UID;${set.uid}`);
+        for (const per of rs.periods.filter((/** @type {any} */ p) => p.setId === set.id)) {
+            lines.push('#PER;;;;;;');
+            for (const id of per.calendarIds) lines.push(`#KAL;${esc(id)}`);
+            // The route-wide comment once, in the first period
+            if (rs.kom?.trim() && !komWritten) { lines.push(`#KOM;${esc(rs.kom)}`); komWritten = true; }
+            lines.push('#TAB;0;;;;');
 
-        for (let di = 0; di < rs.directions.length; di++) {
-            const dir   = rs.directions[di];
-            const isRet = di > 0 ? 1 : 0;
-            lines.push(`#TAB;${isRet};;;;`);
-
-            const grid = rs.grids[`${per.id}:${dir.id}`] || { stops:[], cols:[] };
+            const grid = rs.grids[`${per.id}:${set.id}`] || { stops:[], cols:[] };
 
             grid.cols.forEach((col, ci) => {
                 // Fields: X ; dayCode ; requestRoute ; CO2 ; comfort ; replacementTransport

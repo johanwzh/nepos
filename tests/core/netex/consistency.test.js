@@ -2,17 +2,20 @@ import { describe, it, expect } from 'vitest';
 import { parseERN } from '../../../src/core/ern/parse.js';
 import { buildNeTExFiles } from '../../../src/core/netex/export.js';
 
+// One table set, one period on a January calendar (timetable structure spec §6).
+const calendars = [{ id: 'jan', name: 'Januar', ranges: /** @type {[string, string][]} */ ([['20260101', '20260131']]) }];
+const head = ['#RUT;-1;70;Test;;1;', '#TRA;Test', '#PER;;;;;;', '#KAL;jan', '#TAB;0;;;;'];
 /** @param {string[]} lines */
 const build = (lines) => buildNeTExFiles({
-  codespace: 'TST', deliveryName: 'Test', orgs: [], timestamp: '2026-01-01T00:00:00',
-  routes: [{ code: '70', rs: parseERN(['#RUT;-1;70;Test;;1;', '#PER;P;20260101;20260131;;;', '#TAB;0;;;;', '#TUR;0;D;0;0;0;0', '#TUR;1;D;0;0;0;0', ...lines].join('\r\n') + '\r\n') }],
+  codespace: 'TST', deliveryName: 'Test', orgs: [], calendars, timestamp: '2026-01-01T00:00:00',
+  routes: [{ code: '70', rs: parseERN([...head, '#TUR;0;D;0;0;0;0', '#TUR;1;D;0;0;0;0', ...lines].join('\r\n') + '\r\n') }],
 });
 
 /** Every ref to a stop point, destination display or route point must be defined in the files. */
 function undefinedRefs(/** @type {{ xml: string }[]} */ files) {
   const all = files.map((f) => f.xml).join('\n');
   const ids = new Set([...all.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]));
-  return [...all.matchAll(/ref="(TST:(?:ScheduledStopPoint|DestinationDisplay|RoutePoint|ServiceJourney|JourneyPattern|DayType|Route):[^"]+)"/g)]
+  return [...all.matchAll(/ref="(TST:(?:ScheduledStopPoint|DestinationDisplay|RoutePoint|ServiceJourney|JourneyPattern|OperatingDay|Route):[^"]+)"/g)]
     .map((m) => m[1]).filter((ref) => !ids.has(ref));
 }
 
@@ -49,21 +52,6 @@ describe('NeTEx references', () => {
     expect(undefinedRefs(files)).toEqual([]);
   });
 
-  it('exports a "runs only" trip on its date, also when it is alone with its day code', () => {
-    // Column 1 runs only on 15 June (note 1); column 0 runs on weekdays.
-    const files = build([
-      '#TRL;0;NSR:Quay:7203;A;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0', '#TRC;1;0800;0;0;0;0;0',
-      '#TRL;1;NSR:Quay:11972;B;34;0;-1;-1;34;-1', '#TRC;0;0710;0;0;0;0;0', '#TRC;1;0810;0;0;0;0;0',
-      '#UNT;1;-1;20260115;8192;20260115;8192;0;0;',
-    ]);
-    expect(files[1].xml).toContain('ServiceJourney:70-0-1-1');
-    expect(undefinedRefs(files)).toEqual([]);
-    // The runs-only trip refers to a day type with exactly that one date, not the weekday one.
-    const sj = /<ServiceJourney id="TST:ServiceJourney:70-0-1-1"[\s\S]*?<DayTypeRef ref="([^"]+)"/.exec(files[1].xml)?.[1];
-    const assignment = new RegExp(`<OperatingDayRef ref="([^"]+)" version="1"/>\\s*<DayTypeRef ref="${sj}"`, 'g');
-    expect([...files[0].xml.matchAll(assignment)].map((m) => m[1])).toEqual(['TST:OperatingDay:2026-01-15']);
-  });
-
   it('leaves out an interchange to a trip that is not exported', () => {
     // Column 1 has only one time, so it is not a trip; the interchange to it must go too.
     const files = build([
@@ -74,19 +62,19 @@ describe('NeTEx references', () => {
     expect(undefinedRefs(files)).toEqual([]);
   });
 
-  it('writes no empty Route for a direction without trips', () => {
-    const rs = parseERN(['#RUT;-1;70;Test;;1;', '#PER;P;20260101;20260131;;;', '#TAB;0;;;;', '#TUR;0;D;0;0;0;0',
+  it('writes no empty Route for a table set without trips', () => {
+    const rs = parseERN([...head, '#TUR;0;D;0;0;0;0',
       '#TRL;0;NSR:Quay:7203;A;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0',
       '#TRL;1;NSR:Quay:11972;B;34;0;-1;-1;34;-1', '#TRC;0;0710;0;0;0;0;0',
-      '#TAB;1;;;;'].join('\r\n') + '\r\n');
-    const files = buildNeTExFiles({ codespace: 'TST', deliveryName: 'Test', orgs: [], timestamp: '2026-01-01T00:00:00', routes: [{ code: '70', rs }] });
+      '#TRA;Tom', '#PER;;;;;;', '#KAL;jan', '#TAB;0;;;;'].join('\r\n') + '\r\n');
+    const files = buildNeTExFiles({ codespace: 'TST', deliveryName: 'Test', orgs: [], calendars, timestamp: '2026-01-01T00:00:00', routes: [{ code: '70', rs }] });
     expect(files[1].xml.match(/<Route id=/g)).toHaveLength(1);
   });
 
   it('writes no line file for a route without trips', () => {
-    const rs = parseERN(['#RUT;-1;71;Tom;;1;', '#PER;P;20260101;20260131;;;', '#TAB;0;;;;', '#TUR;0;D;0;0;0;0',
+    const rs = parseERN(['#RUT;-1;71;Tom;;1;', '#TRA;Tom', '#PER;;;;;;', '#KAL;jan', '#TAB;0;;;;', '#TUR;0;D;0;0;0;0',
       '#TRL;0;NSR:Quay:7203;A;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0'].join('\r\n') + '\r\n');
-    const files = buildNeTExFiles({ codespace: 'TST', deliveryName: 'Test', orgs: [], timestamp: '2026-01-01T00:00:00', routes: [{ code: '71', rs }] });
+    const files = buildNeTExFiles({ codespace: 'TST', deliveryName: 'Test', orgs: [], timestamp: '2026-01-01T00:00:00', calendars, routes: [{ code: '71', rs }] });
     expect(files.map((f) => f.name)).toEqual(['_TST-shared.xml']);
   });
 });

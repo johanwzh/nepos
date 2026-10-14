@@ -8,11 +8,12 @@ import { genLineXml } from './line.js';
  * where CS is the codespace in upper case.
  * @param {{ codespace: string, deliveryName: string, routes: { code: string, rs: any }[],
  *           orgs: import('../orgs.js').Company[], orgMode?: 'codespace' | 'nog',
- *           brandings?: import('../../project/brandings-store.js').Branding[], timestamp?: string }} input
+ *           brandings?: import('../../project/brandings-store.js').Branding[],
+ *           calendars?: import('../calendars.js').Calendar[], timestamp?: string }} input
  * @returns {{ name: string, xml: string }[]}
  */
-export function buildNeTExFiles({ codespace, deliveryName, routes, orgs, orgMode = 'codespace', brandings = [], timestamp }) {
-  const data = collectNeTExData({ codespace, routes, orgs, orgMode, brandings });
+export function buildNeTExFiles({ codespace, deliveryName, routes, orgs, orgMode = 'codespace', brandings = [], calendars = [], timestamp }) {
+  const data = collectNeTExData({ codespace, routes, orgs, orgMode, brandings, calendars });
   const CS = data.cs.toUpperCase();
   return [
     { name: `_${CS}-shared.xml`, xml: genSharedXml(data, { deliveryName, timestamp }) },

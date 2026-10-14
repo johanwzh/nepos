@@ -79,7 +79,7 @@ function update() {
   });
 
   // Fit only when another trip is shown, so the user's own zoom/pan survives edits.
-  const key = `${app.activeRoute}|${app.routeState?.activePer}|${app.routeState?.activeDir}|${ci}|${trip.points.map((p) => p.stopId).join(',')}`;
+  const key = `${app.activeRoute}|${app.routeState?.activePer}|${app.routeState?.activeSet}|${ci}|${trip.points.map((p) => p.stopId).join(',')}`;
   if (key !== lastKey) {
     map.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24], maxZoom: 14 });
     lastKey = key;

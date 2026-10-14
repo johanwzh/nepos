@@ -12,7 +12,7 @@ const route = (ids) => [
 
 const stopIds = (/** @type {string} */ text) => {
   const rs = parseERN(text);
-  return rs.grids[`${rs.periods[0].id}:${rs.directions[0].id}`].stops.map((/** @type {any} */ s) => s.stopId);
+  return rs.grids[`${rs.periods[0].id}:${rs.periods[0].setId}`].stops.map((/** @type {any} */ s) => s.stopId);
 };
 
 describe('stop IDs in route files', () => {
@@ -22,9 +22,10 @@ describe('stop IDs in route files', () => {
 
   it('writes them back unchanged', () => {
     const text = route(['NSR:Quay:7203', 'NSR:Quay:11972']);
-    // Nepos 2 adds #MOD and #UID (line header spec §5); everything else is written back as read.
+    // Nepos 2 adds #MOD and #UID and writes #PER without name and dates (line header spec §5,
+    // structure spec §6); the stop IDs are written back as read.
     const out = serializeERN(parseERN(text), '50', { delivery: { name: 'Test', codespace: 'TST' } });
-    expect(out.replace(/^#(MOD|UID);[^\r\n]*\r\n/gm, '')).toBe(text);
+    expect(out.replace(/^#(MOD|UID);[^\r\n]*\r\n/gm, '')).toBe(text.replace('#PER;P;20260101;20260131;;;', '#PER;;;;;;'));
   });
 
   it('passes the integrity check', () => {

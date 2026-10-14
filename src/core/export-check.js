@@ -4,20 +4,22 @@
 import { quayStatus, stopLocalId } from './quays.js';
 import { findRole, aliasIssues, orgRole } from './orgs.js';
 import { ROUTE_CODE_PATTERN } from './route-names.js';
-import { journeyStops, runsOnlyDates } from './netex/journeys.js';
+import { journeyStops } from './netex/journeys.js';
+import { calendarDays, unionDays, columnDays } from './calendars.js';
+import { isAllowedDayCode } from './day-codes.js';
 
 /** Every code the check can give; each has a text 'chk:<code>' in both languages. */
 export const CHECK_CODES = [
-  'orgs-unreadable', 'route-damaged', 'no-trips', 'route-code', 'no-period', 'period-dates',
-  'period-order', 'no-authority', 'no-operator', 'stop-missing', 'stop-not-nsr', 'stop-id-clash', 'col-no-daycode',
-  'col-one-stop', 'no-name', 'alt-dates', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'no-mode', 'branding-missing', 'brandings-unreadable', 'stop-not-seen', 'stop-mode',
-  'stop-unchecked', 'col-decreasing', 'col-exceptions-ignored', 'col-date-outside', 'route-no-trips',
+  'orgs-unreadable', 'route-damaged', 'no-trips', 'route-code', 'no-period', 'no-authority', 'no-operator', 'stop-missing', 'stop-not-nsr', 'stop-id-clash', 'col-no-daycode',
+  'col-one-stop', 'no-name', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'no-mode', 'branding-missing', 'brandings-unreadable', 'table-set-name', 'no-calendar',
+  'calendar-missing', 'calendar-empty', 'day-code', 'no-operating-days', 'calendars-unreadable', 'stop-not-seen', 'stop-mode',
+  'stop-unchecked', 'col-decreasing', 'col-exceptions-ignored', 'route-no-trips',
   'route-changed-on-disk',
 ];
 
 /**
  * @typedef {{ level: 'error' | 'warning', code: string, route?: string,
- *             where?: { period: string, direction: string, column?: number }, detail?: string }} CheckIssue
+ *             where?: { tableSet: string, period: string, column?: number }, detail?: string }} CheckIssue
  */
 
 /** @param {any} cell */
@@ -32,10 +34,11 @@ const minutes = (cell) => (cell.dayOffset || 0) * 1440 + Number(cell.time.slice(
  *           orgs: import('./orgs.js').Company[], register: import('./orgs.js').Company[] | null,
  *           orgMode: 'codespace' | 'nog', codespace: string, orgsProblem: '' | 'unreadable',
  *           brandings: { id: string }[], brandingsProblem?: '' | 'unreadable',
+ *           calendars: import('./calendars.js').Calendar[], calendarsProblem?: '' | 'unreadable',
  *           quayInfo: Map<string, any>, changedOnDisk?: string[] }} input
  * @returns {CheckIssue[]} errors first, then warnings
  */
-export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', quayInfo, changedOnDisk = [] }) {
+export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', calendars = [], calendarsProblem = '', quayInfo, changedOnDisk = [] }) {
   /** @type {CheckIssue[]} */
   const issues = [];
   /** @param {'error' | 'warning'} level @param {string} code @param {Partial<CheckIssue>} [extra] */
@@ -43,6 +46,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
 
   if (orgsProblem === 'unreadable') add('error', 'orgs-unreadable');
   if (brandingsProblem === 'unreadable') add('error', 'brandings-unreadable');
+  if (calendarsProblem === 'unreadable') add('error', 'calendars-unreadable');
   if (!register) add('warning', 'org-register-missing');
   /** @type {Set<string>} organisation IDs the exported routes use */
   const usedOrgIds = new Set();
@@ -55,7 +59,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     if (status === 'damaged' || !rs) { add('error', 'route-damaged', { route: code }); damaged++; continue; }
     // The route code becomes part of NeTEx IDs and the line file name.
     if (!ROUTE_CODE_PATTERN.test(code)) add('error', 'route-code', { route: code });
-    const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, brandings, quayInfo, add, localIds, usedOrgIds });
+    const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, brandings, calendars, quayInfo, add, localIds, usedOrgIds });
     if (!routeTrips) add('warning', 'route-no-trips', { route: code });
     trips += routeTrips;
   }
@@ -73,23 +77,16 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
 /**
  * @param {string} code
  * @param {any} rs
- * @param {{ orgs: import('./orgs.js').Company[], quayInfo: Map<string, any>, localIds: Map<string, string>, usedOrgIds: Set<string>, copy: import('./orgs.js').Company[] | null, brandings: { id: string }[],
+ * @param {{ orgs: import('./orgs.js').Company[], quayInfo: Map<string, any>, localIds: Map<string, string>, usedOrgIds: Set<string>, copy: import('./orgs.js').Company[] | null, brandings: { id: string }[], calendars: import('./calendars.js').Calendar[],
  *           add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void }} ctx
  * @returns {number} trips (columns with times) in the route
  */
-function checkRoute(code, rs, { orgs, copy, brandings, quayInfo, add, localIds, usedOrgIds }) {
+function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add, localIds, usedOrgIds }) {
   const r = { route: code };
   // Line details (line header spec §7)
   if (!rs.routeName?.trim()) add('error', 'no-name', r);
   if (!rs.mode) add('error', 'no-mode', r);
   if (rs.brandingId && !brandings.some((b) => b.id === rs.brandingId)) add('error', 'branding-missing', { ...r, detail: rs.brandingId });
-  if (!rs.periods?.length) { add('error', 'no-period', r); return 0; }
-
-  for (const per of rs.periods) {
-    if (!per.from || !per.to) add('error', 'period-dates', { ...r, detail: per.name });
-    else if (per.from > per.to) add('error', 'period-order', { ...r, detail: per.name });
-    if ((per.from2 || per.to2) && (!per.from2 || !per.to2 || per.from2 > per.to2)) add('warning', 'alt-dates', { ...r, detail: per.name });
-  }
 
   const sek = rs.sek ?? [];
   if (!sek.some((/** @type {any} */ s) => s.isAuthority)) add('error', 'no-authority', r);
@@ -103,12 +100,24 @@ function checkRoute(code, rs, { orgs, copy, brandings, quayInfo, add, localIds, 
     usedOrgIds.add(s.orgId);
   }
 
+  // Table sets, their periods and calendars (timetable structure spec §8)
   let trips = 0;
-  for (const per of rs.periods) {
-    for (const dir of rs.directions ?? []) {
-      const grid = rs.grids[`${per.id}:${dir.id}`];
+  for (const set of rs.tableSets ?? []) {
+    if (!set.name?.trim()) add('error', 'table-set-name', r);
+    const pers = (rs.periods ?? []).filter((/** @type {any} */ p) => p.setId === set.id);
+    if (!pers.length) add('error', 'no-period', { ...r, detail: set.name });
+    for (const per of pers) {
+      const label = per.calendarIds.map((/** @type {string} */ id) => calendars.find((c) => c.id === id)?.name ?? id).join(' + ');
+      const where = { tableSet: set.name, period: label };
+      if (!per.calendarIds.length) add('error', 'no-calendar', { ...r, where });
+      for (const id of per.calendarIds) {
+        const cal = calendars.find((c) => c.id === id);
+        if (!cal) add('error', 'calendar-missing', { ...r, where, detail: id });
+        else if (!calendarDays(cal).length) add('warning', 'calendar-empty', { ...r, where, detail: cal.name });
+      }
+      const periodDays = unionDays(calendars.filter((c) => per.calendarIds.includes(c.id)));
+      const grid = rs.grids[`${per.id}:${per.setId}`];
       if (!grid) continue;
-      const where = { period: per.name, direction: dir.name };
 
       /** @type {Record<string, string[]>} */
       const byStatus = { missing: [], 'not-nsr': [], 'not-seen': [], 'mode-mismatch': [], unknown: [] };
@@ -143,6 +152,8 @@ function checkRoute(code, rs, { orgs, copy, brandings, quayInfo, add, localIds, 
         checkExceptions(rs, per, col, at, (level, c, extra) => add(level, c, { ...r, ...extra }));
         // An empty day code would be exported as "every day" — never what the user meant.
         if (!col.dayCode) add('error', 'col-no-daycode', { ...r, where: at });
+        else if (!isAllowedDayCode(col.dayCode)) add('error', 'day-code', { ...r, where: at, detail: col.dayCode });
+        else if (journeyStops(grid, col).length >= 2 && !columnDays(periodDays, col.dayCode).length) add('warning', 'no-operating-days', { ...r, where: at });
         let prev = -1;
         grid.stops.forEach((/** @type {any} */ stop, /** @type {number} */ ri) => {
           const cell = col.cells[ri];
@@ -158,18 +169,14 @@ function checkRoute(code, rs, { orgs, copy, brandings, quayInfo, add, localIds, 
 }
 
 /**
- * Date exceptions the export cannot apply: only "runs only" single dates in a column's note
- * become operating days; "does not run", date ranges and notes on single times are not exported.
- * @param {any} rs @param {any} per @param {any} col
- * @param {{ period: string, direction: string, column: number }} at
+ * Footnote date exceptions are not exported (timetable structure spec §4: dates live in calendars).
+ * @param {any} rs @param {any} _per @param {any} col
+ * @param {{ tableSet: string, period: string, column: number }} at
  * @param {(level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void} add
  */
-function checkExceptions(rs, per, col, at, add) {
+function checkExceptions(rs, _per, col, at, add) {
   const fnOf = (/** @type {number | null} */ id) => rs.footnotes?.find((/** @type {any} */ f) => f.id === id);
-  const colExceptions = fnOf(col.footnoteId)?.exceptions ?? [];
-  const cellExceptions = col.cells.flatMap((/** @type {any} */ c) => (c?.footnoteId != null ? fnOf(c.footnoteId)?.exceptions ?? [] : []));
-  const ignored = colExceptions.filter((/** @type {any} */ ex) => !(ex.runsOnly && ex.from && ex.from === ex.to)).length + cellExceptions.length;
-  if (ignored) add('warning', 'col-exceptions-ignored', { where: at, detail: String(ignored) });
-  const outside = runsOnlyDates(rs, col).filter((d) => (per.from && d < per.from) || (per.to && d > per.to));
-  if (outside.length) add('warning', 'col-date-outside', { where: at, detail: outside.join(', ') });
+  const count = (fnOf(col.footnoteId)?.exceptions ?? []).length
+    + col.cells.reduce((/** @type {number} */ n, /** @type {any} */ c) => n + (c?.footnoteId != null ? fnOf(c.footnoteId)?.exceptions?.length ?? 0 : 0), 0);
+  if (count) add('warning', 'col-exceptions-ignored', { where: at, detail: String(count) });
 }

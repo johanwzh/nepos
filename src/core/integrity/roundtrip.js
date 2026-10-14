@@ -20,6 +20,8 @@ function normalize(line) {
       return f.slice(0, 7).join(';');
     case '#UID': // a valid column ID is kept; an invalid or duplicated one is replaced on purpose
       return '#UID';
+    case '#PER': // name and dates are not kept: the period's days come from #KAL (structure spec §4)
+      return '#PER;;;;;;';
     case '#SEK': { // the ID is trimmed; a full NeTEx ID decides the role flags
       f[1] = (f[1] ?? '').trim();
       const role = orgRole(f[1]);
@@ -52,6 +54,7 @@ function keyRecords(text) {
     const norm = normalize(line);
     let where = '';
     if (record === '#PER') { per++; tab = -1; row = -1; where = `P${per}`; }
+    else if (record === '#KAL') where = `P${per}`;
     else if (record === '#TAB') { tab++; row = -1; where = `P${per}T${tab}`; }
     else if (record === '#TUR' || record === '#FOT' || record === '#UNT') where = `P${per}T${tab}`;
     else if (record === '#TRL') { row++; where = `P${per}T${tab}R${row}`; }

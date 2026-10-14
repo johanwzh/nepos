@@ -20,7 +20,7 @@ import { serializeERN } from '../../src/core/ern/serialize.js';
 const press = (key, opts = {}) => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...opts }));
 const typeKeys = (s) => [...s].forEach((k) => press(k));
 const route20 = serializeERN(parseERN(sample.routes[1].text), '20', { delivery: { name: 'Test', codespace: 'TST' }, orgs: sample.orgs });
-const damaged30 = route20.replace(';20;', ';30;').replace('#TRA;20\r\n', '#TRA;30\r\n#KOS;4;x;0\r\n');
+const damaged30 = route20.replace(';20;', ';30;').replace('#TRA;Florø - Eikefjord\r\n', '#TRA;Florø - Eikefjord\r\n#KOS;4;x;0\r\n');
 
 /** @type {any} */
 let fs;
@@ -142,18 +142,9 @@ describe('route editor — review fixes', () => {
     sel.dispatchEvent(new Event('change'));
     expect(cellTime(0, 0)).toBe('0900');
     document.getElementById('btn-del-per').click();
-    expect(app.routeState.periods.map((p) => p.name)).toEqual(['Vinter']);
+    expect(app.routeState.periods).toHaveLength(1);
     expect(cellTime(0, 0)).toBe('0700');
-    expect(app.routeState.grids[`${app.routeState.activePer}:${app.routeState.activeDir}`].cols[0].cells[0].time).toBe('0700');
-  });
-
-  it('deleting a direction keeps the remaining direction\'s trips', async () => {
-    await selectRoute('20');
-    document.getElementById('ef-dir').click(); // creates "Retur" with the stops reversed, no trips
-    expect(cellTime(0, 0)).toBe(undefined);
-    document.getElementById('ef-del-dir').click();
-    expect(app.routeState.directions).toHaveLength(1);
-    expect(cellTime(0, 0)).toBe('0700');
+    expect(app.routeState.grids[`${app.routeState.activePer}:${app.routeState.activeSet}`].cols[0].cells[0].time).toBe('0700');
   });
 
   it('keeps edits made while a save is running as unsaved', async () => {

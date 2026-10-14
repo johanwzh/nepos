@@ -24,7 +24,7 @@ describe('checkRouteFile', () => {
   });
 
   it('marks records Nepos would drop on save as damaged, with their line', () => {
-    const text = nepos2.replace('#TRA;10\r\n', '#TRA;10\r\n#KOS;4;Byttes i Florø;0\r\n');
+    const text = nepos2.replace('#TRA;Bergen - Florø\r\n', '#TRA;Bergen - Florø\r\n#KOS;4;Byttes i Florø;0\r\n');
     const result = checkRouteFile(text);
     expect(result.status).toBe('damaged');
     expect(result.issues).toContainEqual({ code: 'unsupported-record', severity: 'damaged', line: 8, detail: '#KOS' });
@@ -42,16 +42,17 @@ describe('checkRouteFile', () => {
   it('marks invalid day codes, times and dates as damaged', () => {
     expect(codes(nepos2.replace('#TUR;1;DX67;', '#TUR;1;XX;'))).toContain('invalid-day-code');
     expect(codes(nepos2.replace('#TRC;0;0800;', '#TRC;0;0860;'))).toContain('invalid-time');
-    expect(codes(nepos2.replace('20260831', '20260931'))).toContain('invalid-date');
+    // #PER dates are not used any more (structure spec §4); exception dates still are
+    expect(codes(nepos2.replace('20260706', '20260732'))).toContain('invalid-date');
   });
 
   it('marks records in the wrong place as damaged', () => {
-    const tabFirst = nepos2.replace('#PER;Sommer', '#TAB;0;;;;\r\n#PER;Sommer');
-    expect(checkRouteFile(tabFirst).issues).toContainEqual({ code: 'out-of-order', severity: 'damaged', line: 8, detail: '#TAB' });
+    const tabFirst = nepos2.replace('#PER;;;;;;', '#TAB;0;;;;\r\n#PER;;;;;;');
+    expect(checkRouteFile(tabFirst).issues).toContainEqual({ code: 'out-of-order', severity: 'damaged', line: 9, detail: '#TAB' });
   });
 
   it('marks lines that are not records as damaged', () => {
-    expect(codes(nepos2.replace('#TRA;10', 'hello'))).toContain('unreadable-line');
+    expect(codes(nepos2.replace('#TRA;Bergen - Florø', 'hello'))).toContain('unreadable-line');
   });
 
   it('marks a file with no #RUT as damaged', () => {

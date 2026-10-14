@@ -83,7 +83,7 @@ describe('updateOutdatedRoutes', () => {
 
   it('never touches a damaged route', async () => {
     const fs = await newProject();
-    const damaged = sample.routes[0].text.replace('#TRA;10\r\n', '#TRA;10\r\n#KOS;4;x;0\r\n');
+    const damaged = sample.routes[0].text.replace('#TRA;Bergen - Florø\r\n', '#TRA;Bergen - Florø\r\n#KOS;4;x;0\r\n');
     await writeRoute(fs, '10', damaged, { now });
     const opened = await openProject(fs);
     if (!opened.ok) throw new Error('should open');

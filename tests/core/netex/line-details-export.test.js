@@ -5,14 +5,14 @@ import { buildNeTExFiles } from '../../../src/core/netex/export.js';
 const U = ['5f0c2e1a-1111-4aaa-8bbb-000000000001', '5f0c2e1a-1111-4aaa-8bbb-000000000002'];
 const ern = (/** @type {string} */ head) => [
   '#LEV;Test;TST', head, '#BRA;TST:Branding:b1',
-  '#SEK;TST:Authority:1;Fylket;1;0;0;0', '#SEK;TST:Operator:1;Buss AS;0;1;0;0', '#CUR;neposcoin;1', '#TRA;', '#PER;P;20260101;20260630;;;', '#TAB;0;;;;',
+  '#SEK;TST:Authority:1;Fylket;1;0;0;0', '#SEK;TST:Operator:1;Buss AS;0;1;0;0', '#CUR;neposcoin;1', '#TRA;A - B', '#PER;;;;;;', '#KAL;h1', '#TAB;0;;;;',
   '#TUR;0;D;0;0;0;0', `#UID;${U[0]}`, '#TUR;1;D;0;0;0;0', `#UID;${U[1]}`,
   '#TRL;0;NSR:Quay:1;A;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0', '#TRC;1;0800;0;0;0;0;0',
   '#TRL;1;NSR:Quay:2;B;34;0;-1;-1;34;-1', '#TRC;0;0715;0;0;0;0;0', '#TRC;1;0815;0;0;0;0;0',
 ].join('\r\n') + '\r\n';
 const brandings = [{ id: 'TST:Branding:b1', name: 'Sørlandsekspressen', shortName: '', description: '', url: 'https://ex.no', imageUrl: '' }];
 /** @param {string} head */
-const build = (head) => buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs: parseERN(ern(head)) }], orgs: [], brandings, timestamp: '2026-10-14T00:00:00' });
+const build = (head) => buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs: parseERN(ern(head)) }], orgs: [], brandings, calendars: [{ id: 'h1', name: 'Vår', ranges: [['20260101', '20260630']] }], timestamp: '2026-10-14T00:00:00' });
 
 describe('line details in the export', () => {
   it('writes the Line elements in NeTEx order, with branding, codes and Transmodel mode', () => {
@@ -53,7 +53,7 @@ describe('interchanges between columns with IDs', () => {
   it('points the interchange at the target column\'s ServiceJourney', () => {
     // Column 0 arrives at B 07:15 and has a guaranteed interchange (mask bit 10) to column 1 at A (dx 1, dy -1).
     const text = ern('#RUT;-1;X20;A;;13;\r\n#MOD;bus;expressBus').replace('#TRC;0;0715;0;0;0;0;0', '#TRC;0;0715;0;0;1;-1;1024');
-    const line = buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs: parseERN(text) }], orgs: [], brandings, timestamp: '2026-10-14T00:00:00' })[1].xml;
+    const line = buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs: parseERN(text) }], orgs: [], brandings, calendars: [{ id: 'h1', name: 'Vår', ranges: [['20260101', '20260630']] }], timestamp: '2026-10-14T00:00:00' })[1].xml;
     expect(line).toContain(`<FromJourneyRef ref="TST:ServiceJourney:${U[0]}" version="1"/>`);
     expect(line).toContain(`<ToJourneyRef ref="TST:ServiceJourney:${U[1]}" version="1"/>`);
   });

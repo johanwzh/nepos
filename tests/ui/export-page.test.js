@@ -14,13 +14,14 @@ import { createMemoryFs, readText } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
 import { writeOrgs } from '../../src/project/orgs-store.js';
+import { writeCalendars } from '../../src/project/calendars-store.js';
 import { projectCopy, registerCompanies } from '../fixtures/orgs.js';
 
 /** @param {string} secondStopId */
 const route = (secondStopId) => [
   '#LEV;Test;TST', '#RUT;-1;50;Jernbanetorget - Oslo bussterminal;;1;',
-  '#SEK;NOG:Authority:aaaaaaaaaa1;Eksempel fylkeskommune;1;0;0;0', '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0', '#CUR;neposcoin;1', '#TRA;50',
-  '#PER;Vinter;20260101;20260630;;;', '#TAB;0;;;;', '#TUR;0;DX67;0;0;0;0',
+  '#SEK;NOG:Authority:aaaaaaaaaa1;Eksempel fylkeskommune;1;0;0;0', '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0', '#CUR;neposcoin;1', '#TRA;Tur',
+  '#PER;;;;;;', '#KAL;cal-vinter', '#TAB;0;;;;', '#TUR;0;DX67;0;0;0;0',
   '#TRL;0;NSR:Quay:7203;Jernbanetorget;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0',
   `#TRL;1;${secondStopId};Oslo bussterminal;34;0;-1;-1;34;-1`, '#TRC;0;0710;0;0;0;0;0',
 ].join('\r\n') + '\r\n';
@@ -42,6 +43,7 @@ async function openProjectWith(text) {
   fs = createMemoryFs();
   await createProject(fs, { name: 'Test', codespace: 'TST' });
   await writeOrgs(fs, projectCopy());
+  await writeCalendars(fs, [{ id: 'cal-vinter', name: 'Vinter', ranges: [['20260101', '20260630']] }]);
   await writeRoute(fs, '50', text);
   await openFs(fs);
   app.orgRegister = { companies: registerCompanies(), fetchedAt: '2026-10-14T12:00:00Z' };

@@ -6,23 +6,25 @@ import { UUID_PATTERN } from './serialize.js';
 /**
  * Parse an ERN route file into a route state.
  * @param {string} text decoded file contents
- * @param {{ lang?: 'en' | 'no' }} [opts] language for the default direction names
+ * @param {{ lang?: 'en' | 'no' }} [opts] kept for callers; table sets are named in the file
  */
-export function parseERN(text, { lang = 'en' } = {}) {
+export function parseERN(text, { lang: _lang = 'en' } = {}) {
     const rs = {
-        routeName:'', publicCode:'', privateCode:'', mode:'', submode:'', brandingId:'', tra:'', transportMode:6, kom:'', sek:[], footnotes:[],
-        periods:[], directions:[], activePer:null, activeDir:null,
+        routeName:'', publicCode:'', privateCode:'', mode:'', submode:'', brandingId:'', transportMode:6, kom:'', sek:[], footnotes:[],
+        // Table sets (#TRA) with their periods (#PER + #KAL), one grid per period (timetable
+        // structure spec §1–§4). Grids are keyed `${periodId}:${tableSetId}`.
+        tableSets:[], periods:[], activeSet:null, activePer:null,
         nextId:1, grids:{}
     };
-    let curPer = null, curDir = null;
+    let curPer = null, curSet = null, inTab = false, lastRec = '';
     let sawMod = false;
     let cols = [], rows = [], cellMap = {};
-    const dirMap = {};
     let _fnParseMap = null, _fnPendingAttach = [];
 
     function finalizeTAB() {
-        if (!curPer || !curDir) return;
-        const key = `${curPer.id}:${curDir.id}`;
+        if (!curPer || !curSet || !inTab) return;
+        inTab = false;
+        const key = `${curPer.id}:${curSet.id}`;
         const colXtoIdx = {};
         cols.forEach((c,i) => { colXtoIdx[c.x] = i; });
         const gCols2 = cols.map(c => ({
@@ -87,7 +89,12 @@ export function parseERN(text, { lang = 'en' } = {}) {
                 break;
             }
             case '#TRA':
-                rs.tra = f[1]||'';   // kept as read; plan 4c gives it its meaning
+                // A table set: a master pattern the user navigates between (spec §2).
+                finalizeTAB();
+                curSet = { id: rs.nextId++, name: f[1]||'', uid: null };
+                rs.tableSets.push(curSet);
+                if (rs.activeSet == null) rs.activeSet = curSet.id;
+                curPer = null;
                 break;
             case '#MOD':
                 rs.mode = (f[1]||'').trim(); rs.submode = (f[2]||'').trim(); sawMod = true;
@@ -96,35 +103,32 @@ export function parseERN(text, { lang = 'en' } = {}) {
                 rs.brandingId = (f[1]||'').trim();
                 break;
             case '#UID': {
-                // Belongs to the #TUR directly before it (a column's stable ID).
-                const last = cols[cols.length - 1];
-                if (last && last.uid == null) last.uid = (f[1]||'').trim() || null;
+                // Belongs to the record directly before it: a table set (#TRA) or a column (#TUR).
+                const uid = (f[1]||'').trim() || null;
+                if (lastRec === '#TRA' && curSet && curSet.uid == null) curSet.uid = uid;
+                else if (lastRec === '#TUR') { const last = cols[cols.length - 1]; if (last && last.uid == null) last.uid = uid; }
                 break;
             }
+            case '#KAL':
+                if (curPer && (f[1]||'').trim()) curPer.calendarIds.push(f[1].trim());
+                break;
             case '#KOM':
                 if (!rs.kom) rs.kom = f[1]||'';  // first #KOM = route-wide comment
                 break;
             case '#PER': {
+                // A period: its days come from its calendars (#KAL); name and dates are not used.
                 finalizeTAB();
-                const id = rs.nextId++;
-                curPer = { id, name:f[1]||'', from:f[2]||'', to:f[3]||'', from2:f[4]||'', to2:f[5]||'' };
+                if (!curSet) { curSet = { id: rs.nextId++, name: '', uid: null }; rs.tableSets.push(curSet); if (rs.activeSet == null) rs.activeSet = curSet.id; }
+                curPer = { id: rs.nextId++, setId: curSet.id, calendarIds: [] };
                 rs.periods.push(curPer);
-                if (!rs.activePer) rs.activePer = id;
-                curDir = null;
+                if (rs.activePer == null) rs.activePer = curPer.id;
                 break;
             }
             case '#TAB': {
+                // Exactly one table per period. A second one replaces the first, which the
+                // integrity check reports as data a save would lose.
                 finalizeTAB();
-                const isRet = f[1]==='1';
-                const dKey  = isRet ? 1 : 0;
-                if (!dirMap[dKey]) {
-                    const id = rs.nextId++;
-                    const name = isRet ? (lang==='no'?'Retur':'Return') : (lang==='no'?'Tur':'Outbound');
-                    dirMap[dKey] = id;
-                    rs.directions.push({ id, name });
-                }
-                curDir = rs.directions.find(d=>d.id===dirMap[dKey]);
-                if (!rs.activeDir) rs.activeDir = curDir.id;
+                inTab = !!curPer;
                 cols=[]; rows=[]; cellMap={};
                 break;
             }
@@ -198,12 +202,18 @@ export function parseERN(text, { lang = 'en' } = {}) {
                 break;
             }
         }
+        lastRec = f[0];
     }
     finalizeTAB();
     if (!sawMod) { const m = modeFromErn(rs.transportMode); rs.mode = m.mode; rs.submode = m.submode; }
     // A column ID that is not a UUID, or is used twice, is replaced now so every save writes the same
     // text; a missing one is filled in when the grid is shown (line header spec §4).
     const seenUids = new Set();
+    for (const set of rs.tableSets) {
+        if (set.uid == null) continue;
+        if (!UUID_PATTERN.test(set.uid) || seenUids.has(set.uid)) set.uid = null;
+        else seenUids.add(set.uid);
+    }
     for (const grid of Object.values(rs.grids)) {
         for (const col of /** @type {any} */ (grid).cols) {
             if (col.uid == null) continue;

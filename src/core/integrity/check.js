@@ -12,7 +12,7 @@ import { isValidMode } from '../modes.js';
  */
 
 // Records the Nepos parser reads and writes back. Anything else would be dropped on save.
-const KNOWN = new Set(['#LEV', '#RUT', '#SEK', '#CUR', '#TRA', '#KOM', '#PER', '#TAB', '#TUR', '#TRL', '#TRC', '#FOT', '#UNT', '#MOD', '#BRA', '#UID']);
+const KNOWN = new Set(['#LEV', '#RUT', '#SEK', '#CUR', '#TRA', '#KOM', '#PER', '#TAB', '#TUR', '#TRL', '#TRC', '#FOT', '#UNT', '#MOD', '#BRA', '#UID', '#KAL']);
 
 /**
  * @param {string} text decoded route file
@@ -59,9 +59,11 @@ export function checkRouteFile(text) {
         komCount++;
         if (komCount > 1) damaged('extra-comment', n);
         break;
-      case '#PER':
+      case '#PER': // name and dates are not used (the period's days come from #KAL)
         seenPER = true; inTAB = false; haveTUR = false; haveTRL = false;
-        if ([f[2], f[3], f[4], f[5]].some((d) => !isValidDate(d ?? ''))) damaged('invalid-date', n);
+        break;
+      case '#KAL': // belongs to the #PER above it
+        if (lastRec !== '#PER' && lastRec !== '#KAL') damaged('out-of-order', n, rec);
         break;
       case '#TAB':
         if (!seenPER) damaged('out-of-order', n, rec);
@@ -89,7 +91,7 @@ export function checkRouteFile(text) {
         if (!isValidMode(f[1] ?? '', f[2] ?? '')) damaged('invalid-mode', n, `${f[1] ?? ''} ${f[2] ?? ''}`.trim());
         break;
       case '#UID':
-        if (lastRec !== '#TUR') damaged('out-of-order', n, rec);
+        if (lastRec !== '#TUR' && lastRec !== '#TRA') damaged('out-of-order', n, rec);
         break;
       case '#UNT':
         if (!haveTUR) damaged('out-of-order', n, rec);
