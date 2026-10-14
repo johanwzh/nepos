@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup, flush } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell } from '../../src/ui/shell.js';
+import { initShell, refreshAll } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid, grid } from '../../src/ui/grid.js';
@@ -13,7 +13,7 @@ import { createProject } from '../../src/project/create.js';
 import { writeRoute, readRoute } from '../../src/project/routes.js';
 import { writeOrgs } from '../../src/project/orgs-store.js';
 import { sample } from '../fixtures/sample-project.js';
-import { projectCopy } from '../fixtures/orgs.js';
+import { projectCopy, registerCompanies } from '../fixtures/orgs.js';
 import { parseERN } from '../../src/core/ern/parse.js';
 import { serializeERN } from '../../src/core/ern/serialize.js';
 
@@ -231,4 +231,56 @@ describe('route editor — review fixes', () => {
     expect(cellTime(0, 0)).toBe('0930');
   });
 
+});
+
+describe('organisation pickers', () => {
+  beforeEach(async () => {
+    const sek = ['#SEK;NOG:Authority:aaaaaaaaaa1;Eksempel fylkeskommune;1;0;0;0', '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0', '#SEK;TST:Operator:9;Gammel;0;1;0;0'].join('\r\n') + '\r\n';
+    const text = route20.replace(/^#SEK;.*\r\n/gm, '').replace('#CUR;', sek + '#CUR;').replace(';20;', ';70;');
+    await writeRoute(fs, '70', text);
+    await openFs(fs);
+    /** @type {any} */ (document.getElementById('check-dlg')).close();
+    app.orgRegister = { companies: registerCompanies(), fetchedAt: 'x' };
+    await selectRoute('70');
+  });
+
+  it('picking an operator replaces every operator on the line and adds the company to the project copy', async () => {
+    // route has two operators: NOG:Operator:bbbbbbbbbb2 and TST:Operator:9
+    document.getElementById('ef-pick-operator')?.querySelector('.org-pick-btn')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const input = /** @type {HTMLInputElement} */ (document.querySelector('#ef-pick-operator .org-pick-search'));
+    input.value = 'Fjord';
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await flush();
+    expect(app.routeState.sek.filter((/** @type {any} */ s) => s.isOperator).map((/** @type {any} */ s) => s.orgId)).toEqual(['NOG:Operator:ddddddddd4']);
+    expect(app.dirty).toBe(true);
+    expect(JSON.parse(await readText(fs, 'data/orgs.json')).companies.map((/** @type {any} */ c) => c.name)).toContain('Fjord AS');
+  });
+
+  it('offers to remove extra organisations of a role', async () => {
+    // same two-operator route
+    expect(document.querySelector('.ef-org-extra')?.textContent).toContain('2 operatører');
+    /** @type {HTMLElement} */ (document.querySelector('.ef-org-extra-x')).click();
+    expect(app.routeState.sek.filter((/** @type {any} */ s) => s.isOperator)).toHaveLength(1);
+  });
+
+  it('marks an organisation that is not in the register', async () => {
+    // same two-operator route, but the first operator removed from the register
+    app.orgRegister = { companies: registerCompanies().filter((c) => c.name !== 'Eksempel Buss AS'), fetchedAt: 'x' };
+    refreshAll();
+    expect(document.getElementById('ef-pick-operator')?.classList.contains('invalid')).toBe(true);
+  });
+
+  it('never overwrites an unreadable organisation file when picking', async () => {
+    app.orgsError = 'unreadable';
+    const before = await readText(fs, 'data/orgs.json');
+    // pick Fjord AS as operator as in the first test
+    document.getElementById('ef-pick-operator')?.querySelector('.org-pick-btn')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const input = /** @type {HTMLInputElement} */ (document.querySelector('#ef-pick-operator .org-pick-search'));
+    input.value = 'Fjord';
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await flush();
+    expect(await readText(fs, 'data/orgs.json')).toBe(before);
+  });
 });
