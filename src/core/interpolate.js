@@ -31,10 +31,13 @@ function segment(/** @type {any} */ a, /** @type {any} */ b, /** @type {PosOf} *
   return haversineM(pa, pb);
 }
 
-/** The nearest row above (-1) or below (+1) with a real time, skipping dwell arrival rows. */
+/**
+ * The nearest row above (-1) or below (+1) with a real time, skipping dwell arrival rows — except
+ * the arrival row right above a dwell departure: the departure can never be earlier than that.
+ */
 function anchor(/** @type {any} */ grid, /** @type {number} */ ci, /** @type {number} */ ri, /** @type {1 | -1} */ step) {
   for (let r = ri + step; r >= 0 && r < grid.stops.length; r += step) {
-    if (grid.stops[r].isDwellArr) continue;
+    if (grid.stops[r].isDwellArr && !(step === -1 && r === ri - 1)) continue;
     if (cellToMins(grid.cols[ci].cells[r]) !== null) return r;
   }
   return -1;
@@ -54,9 +57,12 @@ export function interpolateTime(grid, ci, ri, posOf) {
   const col = grid.cols[ci];
   const tA = /** @type {number} */ (cellToMins(col.cells[ra]));
   let tB = /** @type {number} */ (cellToMins(col.cells[rb]));
-  if (tB < tA) tB += 1440; // crosses midnight without a day offset
+  // Earlier below than above: a midnight crossing without a day offset — but only when the
+  // crossing is plausible; a big step backwards is a typing error, and no time is guessed.
+  if (tB < tA) tB += 1440;
+  if (tB - tA > 720) return null;
   const span = [];
-  for (let r = ra; r <= rb; r++) if (!grid.stops[r].isDwellArr) span.push(r);
+  for (let r = ra; r <= rb; r++) if (!grid.stops[r].isDwellArr || r === ra) span.push(r);
   const idx = span.indexOf(ri);
   if (idx < 0 || span.length < 2) return null;
   const cum = [0];
@@ -91,7 +97,7 @@ export function extrapolateTime(grid, ci, ri, direction, kmh, posOf) {
   const mins = (dist / 1000 / kmh) * 60;
   const t = /** @type {number} */ (cellToMins(col.cells[r]));
   let result = direction === 'fwd' ? t + mins : t - mins;
-  if (result < 0) result += 1440; // went back past midnight
+  if (result < 0) return null; // before midnight of the first day: no time to give
   return minsToCell(Math.round(result));
 }
 

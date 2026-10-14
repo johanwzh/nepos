@@ -28,7 +28,10 @@ function theme() {
 
 function ensureMap() {
   if (map) return;
-  map = L.map($('leaflet-map'), { zoomControl: true, attributionControl: true }).setView([62.5, 13], 5);
+  map = L.map($('leaflet-map'), {
+    zoomControl: true, attributionControl: true,
+    keyboard: false, // arrow keys, digits and +/- belong to the grid, never to the map
+  }).setView([62.5, 13], 5);
 }
 
 function ensureTiles() {

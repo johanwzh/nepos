@@ -38,6 +38,20 @@ describe('interpolateTime', () => {
     expect(interpolateTime(oneSide, 0, 1, posOf)).toBe(null);
   });
 
+  it('treats two times going backwards by more than 12 hours as a typing error, not midnight', () => {
+    const grid = { stops: [stop('A'), stop('B'), stop('C')], cols: [{ cells: [cell('0730'), null, cell('0720')] }] };
+    expect(interpolateTime(grid, 0, 1, posOf)).toBe(null);
+  });
+
+  it('never fills a dwell departure before its arrival', () => {
+    // B arrives 0715; the departure row of B is empty
+    const grid = {
+      stops: [stop('A'), stop('B', { isDwellArr: true }), stop('B'), stop('C')],
+      cols: [{ cells: [cell('0700'), cell('0715'), null, cell('0730')] }],
+    };
+    expect(interpolateTime(grid, 0, 2, posOf)?.time).toBe('0715');
+  });
+
   it('treats a dwell pair as one place', () => {
     // B arrives and departs (two rows, same stop): the dwell arrival row is skipped
     const grid = {
@@ -56,6 +70,13 @@ describe('extrapolateTime', () => {
     expect(extrapolateTime(grid(), 0, 2, 'fwd', 60, posOf)?.time).toBe('0720');
     // A → B is 10 km; at 60 km/h that is 10 minutes before
     expect(extrapolateTime(grid(), 0, 0, 'bwd', 60, posOf)?.time).toBe('0650');
+  });
+
+  it('refuses to go back past midnight of the first day', () => {
+    const early = { stops: [stop('A'), stop('B')], cols: [{ cells: [null, cell('0005')] }] };
+    expect(extrapolateTime(early, 0, 0, 'bwd', 60, posOf)).toBe(null);
+    const nextDay = { stops: [stop('A'), stop('B')], cols: [{ cells: [null, cell('0005', 1)] }] };
+    expect(extrapolateTime(nextDay, 0, 0, 'bwd', 60, posOf)).toEqual(cell('2355'));
   });
 
   it('is not possible without an anchor, a position or a speed', () => {
