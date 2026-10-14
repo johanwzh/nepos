@@ -145,3 +145,7 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .assets-subtitle { font-weight: 600; margin-top: 12px; }
 
 .mode-icon { width: 1em; height: 1em; vertical-align: -0.125em; }
+
+.brand-row { display: flex; gap: 6px; margin: 4px 0; }
+.brand-in { flex: 1; min-width: 0; }
+.brand-in.invalid { border-color: var(--g-dec-c); }

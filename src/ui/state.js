@@ -26,6 +26,8 @@ export const app = {
   orgRegisterStatus: 'idle',
   /** @type {{ changed: string[], missing: string[] }} found by the last register refresh */
   orgChanges: { changed: [], missing: [] },
+  /** @type {'orgs' | 'brandings'} the section shown on Ressurser */
+  assetsSection: 'orgs',
   /** @type {import('../project/open.js').RouteEntry[]} */
   routes: [],
   /** @type {{ fileName: string, problem: string, rename: string | null }[]} */

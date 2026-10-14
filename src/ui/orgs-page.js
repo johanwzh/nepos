@@ -70,7 +70,7 @@ function aliasProblem(input, role) {
 }
 
 export function renderOrgsPage() {
-  if (currentPage() !== 'assets') return;
+  if (currentPage() !== 'assets' || app.assetsSection !== 'orgs') return;
   const body = $('assets-body');
   body.innerHTML = '';
   body.appendChild(el('div', 'assets-title', t('orgTitle')));
