@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   clientName: '',
   geocoderUrl: 'https://api.entur.io/geocoder/v3',
   stopPlacesUrl: 'https://api.entur.io/stop-places/v1/read',
+  exportAsZip: true,
 });
 
 /** @type {Record<string, string[]>} */
@@ -47,6 +48,10 @@ export async function readSettings(fs) {
       settings[key] = DEFAULT_SETTINGS[key];
       recovered = true;
     }
+  }
+  if (typeof settings.exportAsZip !== 'boolean') {
+    settings.exportAsZip = DEFAULT_SETTINGS.exportAsZip;
+    recovered = true;
   }
   return { settings, recovered };
 }
