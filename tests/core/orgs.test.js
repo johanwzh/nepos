@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { orgRole, netexOrgId, authorityNetworkLocalId, validateOrgs } from '../../src/core/orgs.js';
+import { orgRole, netexOrgId, authorityNetworkLocalId } from '../../src/core/orgs.js';
 import { groupCompanies, findRole, generatedAlias, exportOrgId, aliasIssues, searchCompanies,
   addToCopy, refreshCopy, pruneCopy, orgNameList } from '../../src/core/orgs.js';
 import { registerCompanies, projectCopy } from '../fixtures/orgs.js';
@@ -26,45 +26,10 @@ describe('organisation IDs', () => {
   });
 });
 
-describe('validateOrgs', () => {
-  it('accepts full authority and operator IDs', () => {
-    expect(validateOrgs([
-      { id: 'RUT:Authority:1', name: 'Ruter' },
-      { id: 'INN:Operator:62', name: 'Innlandsbuss' },
-    ])).toEqual([]);
-  });
-
-  it('flags empty, malformed and duplicate IDs', () => {
-    expect(validateOrgs([
-      { id: '', name: 'A' },
-      { id: 'Ruter', name: 'B' },
-      { id: 'RUT:Authority:1', name: 'C' },
-      { id: 'RUT:Authority:1', name: 'D' },
-    ])).toEqual([
-      { index: 0, code: 'id-required' },
-      { index: 1, code: 'id-format' },
-      { index: 3, code: 'id-duplicate' },
-    ]);
-  });
-
-  it('flags IDs with surrounding spaces or wrong case instead of accepting them', () => {
-    expect(validateOrgs([
-      { id: ' RUT:Authority:1', name: 'A' },
-      { id: 'rut:authority:1', name: 'B' },
-      { id: 'RUT:Authority:1;', name: 'C' },
-    ]).map((i) => i.code)).toEqual(['id-format', 'id-format', 'id-format']);
-  });
-});
-
 describe('organisation ID characters', () => {
   it('only allows letters, digits, _ and - after the role', () => {
-    expect(validateOrgs([
-      { id: 'RUT:Operator:A&B', name: 'x' },
-      { id: 'RUT:Operator:a<b', name: 'y' },
-      { id: 'RUT:Operator:62.1', name: 'z' },
-      { id: 'RUT:Operator:Øst', name: 'w' },
-    ]).map((i) => i.code)).toEqual(['id-format', 'id-format', 'id-format', 'id-format']);
-    expect(validateOrgs([{ id: 'RUT:Operator:Ab_9-x', name: 'ok' }])).toEqual([]);
+    for (const id of ['RUT:Operator:A&B', 'RUT:Operator:a<b', 'RUT:Operator:62.1', 'RUT:Operator:Øst']) expect(orgRole(id), id).toBe(null);
+    expect(orgRole('RUT:Operator:Ab_9-x')).toBe('operator');
   });
 });
 

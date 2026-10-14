@@ -35,26 +35,6 @@ export function authorityNetworkLocalId(authorityId) {
   return `authority-${String(authorityId).replace(/:/g, '-')}`;
 }
 
-/**
- * Check the organisation list as the user typed it. IDs are checked exactly as stored —
- * surrounding spaces or wrong case are reported, never silently fixed.
- * @param {{ id: any, name: string }[]} orgs
- * @returns {{ index: number, code: 'id-required' | 'id-format' | 'id-duplicate' }[]}
- */
-export function validateOrgs(orgs) {
-  /** @type {{ index: number, code: 'id-required' | 'id-format' | 'id-duplicate' }[]} */
-  const issues = [];
-  const seen = new Set();
-  orgs.forEach((org, index) => {
-    const id = String(org.id ?? '');
-    if (!id.trim()) { issues.push({ index, code: 'id-required' }); return; }
-    if (!ORG_ID_PATTERN.test(id)) issues.push({ index, code: 'id-format' });
-    if (seen.has(id)) issues.push({ index, code: 'id-duplicate' });
-    seen.add(id);
-  });
-  return issues;
-}
-
 
 /** @typedef {{ email: string, phone: string, url: string }} OrgContact */
 /** @typedef {{ id: string, version: string, contact: OrgContact, alias?: string }} OrgRoleEntry */

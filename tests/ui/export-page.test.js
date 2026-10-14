@@ -171,4 +171,14 @@ describe('export page', () => {
     expect(await first.list('exports')).toEqual([]);
     expect(await fs.list('exports')).toEqual([]);
   });
+
+  it('stores the organisation export mode in the project file', async () => {
+    const nog = /** @type {HTMLInputElement} */ (document.getElementById('org-mode-nog'));
+    expect(/** @type {HTMLInputElement} */ (document.getElementById('org-mode-codespace')).checked).toBe(true);
+    nog.checked = true;
+    nog.dispatchEvent(new Event('change'));
+    await flush();
+    expect(JSON.parse(await readText(fs, 'data/nepos-project.json')).orgExportMode).toBe('nog');
+    expect(app.meta.orgExportMode).toBe('nog');
+  });
 });

@@ -108,6 +108,12 @@
             <div class="exp-title" data-lk="exportTitle"></div>
             <p class="exp-desc" data-lk="exportDesc"></p>
             <label class="n2-check"><input type="checkbox" id="chk-zip"> <span data-lk="exportAsZip"></span></label>
+            <fieldset class="n2-org-mode">
+              <legend data-lk="orgModeTitle"></legend>
+              <label class="n2-check"><input type="radio" name="org-mode" id="org-mode-codespace" value="codespace"> <span data-lk="orgModeCodespace"></span></label>
+              <label class="n2-check"><input type="radio" name="org-mode" id="org-mode-nog" value="nog"> <span data-lk="orgModeNog"></span></label>
+              <small class="n2-org-mode-help" data-lk="orgModeNogHelp"></small>
+            </fieldset>
             <button class="exp-btn primary" id="btn-netex"><span class="ico">↓</span><span data-lk="exportNetex"></span></button>
             <div class="assets-status" id="export-status"></div>
           </div>

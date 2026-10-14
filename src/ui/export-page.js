@@ -4,7 +4,7 @@ import { app } from './state.js';
 import { $, onRefresh, refreshAll, runAction, beforeLeave, persistSettings, showMessage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { parseERN } from '../core/ern/parse.js';
-import { orgExportMode } from '../project/meta.js';
+import { orgExportMode, writeOrgExportMode } from '../project/meta.js';
 import { checkForExport } from '../core/export-check.js';
 import { buildNeTExFiles } from '../core/netex/export.js';
 import { writeExport } from '../project/export.js';
@@ -136,6 +136,11 @@ function renderExportPage() {
   $('btn-netex').disabled = !open || busy;
   $('chk-zip').disabled = !open;
   $('chk-zip').checked = app.settings.exportAsZip !== false;
+  const mode = orgExportMode(app.meta);
+  for (const id of ['org-mode-codespace', 'org-mode-nog']) {
+    $(id).disabled = !open;
+    $(id).checked = $(id).value === mode;
+  }
   renderResults();
   renderStatus();
 }
@@ -148,5 +153,13 @@ export function initExportPage() {
     app.settings.exportAsZip = $('chk-zip').checked;
     runAction(persistSettings);
   });
+  for (const id of ['org-mode-codespace', 'org-mode-nog']) {
+    $(id).addEventListener('change', () => {
+      const fs = app.fs, meta = app.meta;
+      if (!fs || !meta || !$(id).checked) return;
+      const mode = /** @type {'codespace' | 'nog'} */ ($(id).value);
+      void runAction(async () => { app.meta = await writeOrgExportMode(fs, meta, mode); });
+    });
+  }
   renderExportPage();
 }
