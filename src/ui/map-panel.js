@@ -76,7 +76,7 @@ function drawPicker() {
     if (m.kind === 'line') marker = L.marker([m.lat, m.lon], { icon: icon('pm-line', String(m.n), 18), keyboard: false });
     else if (m.kind === 'current') marker = L.marker([m.lat, m.lon], { icon: icon('pm-current', '', 18), keyboard: false, zIndexOffset: 800 });
     else if (m.kind === 'candidate') marker = L.marker([m.lat, m.lon], { icon: icon('pm-candidate', '', 26), keyboard: false, zIndexOffset: 1000 });
-    else if (m.kind === 'quay') marker = L.marker([m.lat, m.lon], { icon: icon('pm-quay', esc(m.label || '·'), 20), keyboard: false, zIndexOffset: 500 });
+    else if (m.kind === 'quay') marker = L.marker([m.lat, m.lon], { icon: icon(`pm-quay${m.state ? ` pm-quay-${m.state}` : ''}`, esc(m.label || '·'), 22), keyboard: false, zIndexOffset: m.state ? 900 : 500 });
     else marker = L.marker([m.lat, m.lon], { icon: icon(m.kind === 'place' ? 'pm-place' : 'pm-place pm-browse', modeIconSvg(m.mode ?? '', ''), 26), keyboard: false });
     marker.bindTooltip(esc(m.label), { direction: 'top', offset: [0, -10] });
     if (m.kind === 'place' || m.kind === 'browsePlace') marker.on('click', () => onPick('place', m.id));

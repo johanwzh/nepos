@@ -6,7 +6,8 @@ import { modeMatches } from './quays.js';
 
 /**
  * @typedef {{ kind: 'line' | 'current' | 'candidate' | 'place' | 'browsePlace' | 'quay', id: string,
- *             lat: number, lon: number, label: string, mode?: string, n?: number }} PickerMarker
+ *             lat: number, lon: number, label: string, mode?: string, n?: number,
+ *             state?: '' | 'current' | 'candidate' }} PickerMarker   state: a Quay that is the row's stop or the candidate
  */
 
 /** @param {{ lat: number | null, lon: number | null } | null | undefined} p */
@@ -30,7 +31,18 @@ export function pickerMapModel(s) {
     if (st === rowStop) continue;
     markers.push({ kind: 'line', id: String(st.stopId), lat: st.info.lat, lon: st.info.lon, label: st.name || st.info.stopPlaceName, n: st.n });
   }
-  if (placed(s.current)) markers.push({ kind: 'current', id: s.current.quayId, lat: s.current.lat, lon: s.current.lon, label: `${s.current.stopPlaceName} ${s.current.publicCode}`.trim() });
+  // Quays shown as squares: the row's stop and the candidate mark their own square (spec §5).
+  /** @type {PickerMarker[]} */
+  const quays = [];
+  for (const place of [s.place, ...s.browseQuays]) {
+    for (const q of place?.quays ?? []) {
+      if (quays.some((m) => m.id === q.quayId) || !placed(q)) continue;
+      const state = s.candidate?.quayId === q.quayId ? 'candidate' : s.current?.quayId === q.quayId ? 'current' : '';
+      quays.push({ kind: 'quay', id: q.quayId, lat: q.lat, lon: q.lon, label: q.publicCode, mode: place.mode, state });
+    }
+  }
+  const shownAsQuay = (/** @type {any} */ x) => quays.some((m) => m.id === x?.quayId);
+  if (placed(s.current) && !shownAsQuay(s.current)) markers.push({ kind: 'current', id: s.current.quayId, lat: s.current.lat, lon: s.current.lon, label: `${s.current.stopPlaceName} ${s.current.publicCode}`.trim() });
 
   /** @param {any} h */
   const modeOk = (h) => !s.onlyMode || !s.ernMode || !h.modes?.length || h.modes.some((/** @type {string} */ m) => modeMatches(s.ernMode, m));
@@ -46,15 +58,8 @@ export function pickerMapModel(s) {
     seen.add(h.id);
     markers.push({ kind: 'browsePlace', id: h.id, lat: h.lat, lon: h.lon, label: h.name, mode: h.modes?.[0] ?? '' });
   }
-  const quaysSeen = new Set();
-  for (const place of [s.place, ...s.browseQuays]) {
-    for (const q of place?.quays ?? []) {
-      if (quaysSeen.has(q.quayId) || !placed(q)) continue;
-      quaysSeen.add(q.quayId);
-      markers.push({ kind: 'quay', id: q.quayId, lat: q.lat, lon: q.lon, label: q.publicCode, mode: place.mode });
-    }
-  }
-  if (placed(s.candidate)) markers.push({ kind: 'candidate', id: s.candidate.quayId, lat: s.candidate.lat, lon: s.candidate.lon, label: `${s.candidate.stopPlaceName} ${s.candidate.publicCode}`.trim() });
+  markers.push(...quays);
+  if (placed(s.candidate) && !shownAsQuay(s.candidate)) markers.push({ kind: 'candidate', id: s.candidate.quayId, lat: s.candidate.lat, lon: s.candidate.lon, label: `${s.candidate.stopPlaceName} ${s.candidate.publicCode}`.trim() });
 
   // What the view should show: the open stop place, else the hits, else the row's stop.
   /** @type {[number, number][] | null} */

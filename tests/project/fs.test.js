@@ -70,3 +70,42 @@ for (const [label, make] of Object.entries(implementations)) {
     });
   });
 }
+
+describe('writing through the folder handle (user test 2026-10-15: Ctrl+S failed)', () => {
+  /** Like Chrome: closing a writable fails when the file changed after it was opened. */
+  function strictFile(/** @type {any} */ file, { failOnce = false } = {}) {
+    let version = 0;
+    let fail = failOnce;
+    file.createWritable = async () => {
+      const start = version;
+      let pending = new Uint8Array();
+      return {
+        write: async (/** @type {Uint8Array} */ b) => { pending = new Uint8Array(b); await new Promise((r) => setTimeout(r, 5)); },
+        close: async () => {
+          if (fail) { fail = false; throw new DOMException('state changed', 'InvalidStateError'); }
+          if (version !== start) throw new DOMException('state changed', 'InvalidStateError');
+          version++;
+          file.data = pending;
+        },
+      };
+    };
+  }
+
+  it('writes one file at a time, so two saves of the same file both succeed', async () => {
+    const root = new FakeDir();
+    const fs = createHandleFs(root);
+    await writeText(fs, 'data/orgs.json', 'first');
+    strictFile((await (await root.getDirectoryHandle('data')).getFileHandle('orgs.json')));
+    await Promise.all([writeText(fs, 'data/orgs.json', 'a'), writeText(fs, 'data/orgs.json', 'b')]);
+    expect(await readText(fs, 'data/orgs.json')).toBe('b');
+  });
+
+  it('tries again once when the file changed underneath (a sync tool, another tab)', async () => {
+    const root = new FakeDir();
+    const fs = createHandleFs(root);
+    await writeText(fs, 'data/x.txt', 'first');
+    strictFile((await (await root.getDirectoryHandle('data')).getFileHandle('x.txt')), { failOnce: true });
+    await writeText(fs, 'data/x.txt', 'second');
+    expect(await readText(fs, 'data/x.txt')).toBe('second');
+  });
+});

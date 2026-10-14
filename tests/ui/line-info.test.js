@@ -47,17 +47,15 @@ const typeKeys = (/** @type {string} */ s) => [...s].forEach(press);
 const problems = (/** @type {string} */ code) => lineIssues(code).length;
 
 describe('review fixes', () => {
-  it('keeps the public flag when the public code is edited; the Offentlig box sets it (review C1)', async () => {
+  it('keeps the public flag when the public code is edited; the flags are not in the header (review C1, user test)', async () => {
     await selectRoute('20');
     const code = /** @type {HTMLInputElement} */ (document.querySelector('input.rh-public'));
     code.value = '99';
     code.dispatchEvent(new Event('change'));
     expect(app.routeState.publicCode).toBe('99');
     expect(app.routeState.isPublic).toBe(true);
-    const box = /** @type {HTMLInputElement} */ (document.getElementById('rh-ispublic'));
-    box.checked = false;
-    box.dispatchEvent(new Event('change'));
-    expect(app.routeState.isPublic).toBe(false);
+    expect(document.getElementById('rh-ispublic')).toBeNull();
+    expect(document.getElementById('rh-exported')).toBeNull();
   });
 
   it('checks grid edits on the open line at once, and the list follows (review I2)', async () => {

@@ -55,8 +55,8 @@ function matches(r) {
   if (status === 'problems' && !(r.errors || r.warnings || r.damaged)) return false;
   if (status === 'expired' && !r.expired) return false;
   if (status === 'unsaved' && !r.unsaved) return false;
-  if (exp && r.exported !== (exp === '1')) return false;
-  if (pub && r.isPublic !== (pub === '1')) return false;
+  if (exp && !r.exported !== (exp === '1')) return false; // '1' = Eksporter ikke is set
+  if (pub && !r.isPublic !== (pub === '1')) return false;
   return true;
 }
 
@@ -105,7 +105,7 @@ function render() {
     <td class="lt-code">${esc(r.publicCode)}</td><td class="lt-name">${esc(r.name)}</td><td>${esc(r.brand)}</td>
     <td>${esc(r.authority)}</td><td>${esc(r.operator)}</td>
     <td class="lt-valid">${r.firstDay ? `${day(r.firstDay)} – ${day(r.lastDay)}` : ''}</td>
-    <td>${t(r.exported ? 'yes' : 'no')}</td><td>${t(r.isPublic ? 'yes' : 'no')}</td>
+    <td class="lt-flag lt-flag-exp">${r.exported ? '' : '✓'}</td><td class="lt-flag lt-flag-pub">${r.isPublic ? '' : '✓'}</td>
     <td class="lt-status${r.errors || r.damaged ? ' has-errors' : ''}">${esc(statusText(r))}</td></tr>`).join('')
     || `<tr><td colspan="11" class="lt-empty">${esc(t('noMatches'))}</td></tr>`;
 
@@ -212,7 +212,7 @@ export function initLineTable() {
     field(id).addEventListener('change', () => {
       const v = field(id).value;
       field(id).value = '';
-      if (v) batch((rs) => { rs[prop] = v === '1'; });
+      if (v) batch((rs) => { rs[prop] = v !== '1'; }); // '1' sets the flag: not exported / not public
     });
   }
   field('lt-brand').addEventListener('change', () => {
