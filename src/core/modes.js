@@ -39,7 +39,9 @@ export function isValidMode(mode, submode) {
 /** @param {number} code */
 export function modeFromErn(code) {
   const m = /** @type {any} */ (ERN_MODES)[code];
-  return m ? { mode: m.mode, submode: m.sub } : { mode: '', submode: '' };
+  if (!m) return { mode: '', submode: '' };
+  // Some old ERN submodes are not Transmodel values (code 16 "replacementBus"): leave the submode out.
+  return { mode: m.mode, submode: isValidMode(m.mode, m.sub) ? m.sub : '' };
 }
 
 /**
@@ -47,13 +49,13 @@ export function modeFromErn(code) {
  * @param {string} mode @param {string} submode @param {number} [current]
  */
 export function ernCodeFor(mode, submode, current = 0) {
-  const all = /** @type {[string, { mode: string, sub: string }][]} */ (Object.entries(ERN_MODES));
-  const cur = /** @type {any} */ (ERN_MODES)[current];
-  if (cur && cur.mode === mode && cur.sub === submode) return current;
-  const exact = all.find(([, m]) => m.mode === mode && m.sub === submode);
-  if (exact) return Number(exact[0]);
-  const sameMode = all.find(([, m]) => m.mode === mode);
-  return sameMode ? Number(sameMode[0]) : 0;
+  const codes = Object.keys(ERN_MODES).map(Number);
+  const fits = (/** @type {number} */ c) => { const m = modeFromErn(c); return m.mode === mode && m.submode === submode; };
+  if (codes.includes(current) && fits(current)) return current;
+  const exact = codes.find(fits);
+  if (exact !== undefined) return exact;
+  const sameMode = codes.find((c) => modeFromErn(c).mode === mode);
+  return sameMode ?? 0;
 }
 
 /** @param {string} mode */

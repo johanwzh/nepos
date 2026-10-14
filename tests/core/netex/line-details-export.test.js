@@ -58,3 +58,11 @@ describe('interchanges between columns with IDs', () => {
     expect(line).toContain(`<ToJourneyRef ref="TST:ServiceJourney:${U[1]}" version="1"/>`);
   });
 });
+
+describe('branding element order', () => {
+  it('writes Image before Url, as the NeTEx TypeOfValue group orders them', () => {
+    const withImage = [{ ...brandings[0], imageUrl: 'https://ex.no/logo.png' }];
+    const shared = buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs: parseERN(ern('#RUT;-1;X20;A;;13;\r\n#MOD;bus;expressBus')) }], orgs: [], brandings: withImage, timestamp: '2026-10-14T00:00:00' })[0].xml;
+    expect(shared.indexOf('<Image>')).toBeLessThan(shared.indexOf('<Url>'));
+  });
+});

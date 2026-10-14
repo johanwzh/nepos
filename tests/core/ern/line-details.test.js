@@ -88,3 +88,26 @@ describe('an invalid column ID', () => {
     expect(save(parseERN(text))).not.toContain('not-a-uuid');
   });
 });
+
+describe('every ERN mode code', () => {
+  it('opens, saves and passes the integrity check, keeping its code', () => {
+    for (let code = 1; code <= 19; code++) {
+      const text = file({ mod: null, ern: String(code) });
+      const out = save(parseERN(text));
+      expect(checkRouteFile(out).status, `code ${code}`).toBe('ok');
+      expect(out, `code ${code}`).toContain(`;;${code};`);
+    }
+  });
+});
+
+describe('invalid or duplicated column IDs in a file', () => {
+  it('are replaced when the file is read, so saving twice gives the same text', () => {
+    const text = file().replace(`#UID;${U1}`, '#UID;abc');
+    const rs = parseERN(text);
+    expect(UUID_PATTERN.test(grid0(rs).cols[0].uid)).toBe(true);
+    const dup = parseERN(file().replace('#TUR;1;D;0;0;0;0', `#TUR;1;D;0;0;0;0\r\n#UID;${U1}`));
+    const ids = grid0(dup).cols.map((/** @type {any} */ c) => c.uid);
+    expect(ids[0]).toBe(U1);
+    expect(ids[1]).not.toBe(U1);
+  });
+});

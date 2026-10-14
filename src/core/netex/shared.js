@@ -30,7 +30,7 @@ export function genSharedXml(data, { deliveryName = '', timestamp } = {}) {
     // Brandings (typesOfValue) come before organisations in a ResourceFrame (line header spec §6).
     const brandXml = [...data.brandings.values()].map((/** @type {any} */ b) => {
         const el = (/** @type {string} */ n, /** @type {string} */ v) => v ? `\n          <${n}>${xe(v)}</${n}>` : '';
-        return `        <Branding id="${xe(b.id)}" version="1">${el('Name', b.name)}${el('ShortName', b.shortName)}${el('Description', b.description)}${el('Url', b.url)}${el('Image', b.imageUrl)}
+        return `        <Branding id="${xe(b.id)}" version="1">${el('Name', b.name)}${el('ShortName', b.shortName)}${el('Description', b.description)}${el('Image', b.imageUrl)}${el('Url', b.url)}
         </Branding>`;
     }).join('\n');
     const typesXml = brandXml ? `\n      <typesOfValue>\n${brandXml}\n      </typesOfValue>` : '';

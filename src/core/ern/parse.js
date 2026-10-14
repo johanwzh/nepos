@@ -1,6 +1,7 @@
 // ERN parser, ported from Nepos 1.5.7 (nepos.html lines 2812–3005). See docs/ern/ern-format.md.
 import { orgRole } from '../orgs.js';
 import { modeFromErn } from '../modes.js';
+import { UUID_PATTERN } from './serialize.js';
 
 /**
  * Parse an ERN route file into a route state.
@@ -200,6 +201,16 @@ export function parseERN(text, { lang = 'en' } = {}) {
     }
     finalizeTAB();
     if (!sawMod) { const m = modeFromErn(rs.transportMode); rs.mode = m.mode; rs.submode = m.submode; }
+    // A column ID that is not a UUID, or is used twice, is replaced now so every save writes the same
+    // text; a missing one is filled in when the grid is shown (line header spec §4).
+    const seenUids = new Set();
+    for (const grid of Object.values(rs.grids)) {
+        for (const col of /** @type {any} */ (grid).cols) {
+            if (col.uid == null) continue;
+            if (!UUID_PATTERN.test(col.uid) || seenUids.has(col.uid)) col.uid = crypto.randomUUID();
+            seenUids.add(col.uid);
+        }
+    }
     return rs;
 
     function buildXtoIdx() {

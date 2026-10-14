@@ -22,10 +22,25 @@ beforeEach(() => {
 describe('route list', () => {
   it('shows the mode icon, the public code or branding, and the name — not the UUID', () => {
     const items = [...document.querySelectorAll('.route-item')];
-    expect(items[0].querySelector('svg.mode-icon')).not.toBe(null);
-    expect(items[0].textContent).toContain('X20');
-    expect(items[0].textContent).toContain('Oslo - Gol');
-    expect(items[1].textContent).toContain('Randsfjordferja');
+    const gol = /** @type {Element} */ (items.find((i) => i.textContent?.includes('Oslo - Gol')));
+    const ferje = /** @type {Element} */ (items.find((i) => i.textContent?.includes('Ferjerute')));
+    expect(gol.querySelector('svg.mode-icon')).not.toBe(null);
+    expect(gol.textContent).toContain('X20');
+    expect(gol.textContent).toContain('Oslo - Gol');
+    expect(ferje.textContent).toContain('Randsfjordferja');
     expect(items.map((i) => i.textContent).join('')).not.toContain('aaaaaaaa-');
+  });
+});
+
+describe('route list filter and order', () => {
+  it('does not match the UUID, and sorts by public code then name by default', () => {
+    /** @type {HTMLInputElement} */ (document.getElementById('route-filter-input')).value = '0000';
+    document.getElementById('route-filter-input')?.dispatchEvent(new Event('input'));
+    expect(document.querySelectorAll('.route-item')).toHaveLength(0);
+    /** @type {HTMLInputElement} */ (document.getElementById('route-filter-input')).value = '';
+    app.routes = [...app.routes].reverse();
+    refreshAll();
+    const names = [...document.querySelectorAll('.rl-name')].map((e) => e.textContent);
+    expect(names).toEqual(['Ferjerute', 'Oslo - Gol']); // no public code sorts first, then X20
   });
 });

@@ -26,11 +26,14 @@ export function renderRouteList() {
   const sortBy = $('route-sort-sel').value || 'id';
   let rows = app.routes.map((r) => ({ ...r, ...routeSummary(r.text) }));
   if (filter) {
-    rows = rows.filter((r) => [r.code, r.name, r.publicCode].some((v) => v.toLowerCase().includes(filter)));
+    // The ID is a UUID (line header spec §4): filter on what the list shows.
+    const brandName = (/** @type {any} */ r) => app.brandings.find((b) => b.id === r.brandingId)?.name ?? '';
+    rows = rows.filter((r) => [r.name, r.publicCode, brandName(r)].some((v) => v.toLowerCase().includes(filter)));
   }
   if (sortBy === 'name') rows.sort((a, b) => (a.name || a.code).localeCompare(b.name || b.code, 'nb'));
   if (sortBy === 'code') rows.sort((a, b) => a.publicCode.localeCompare(b.publicCode, 'nb'));
-  // 'id' keeps the order from listRoutes (numbers first, numerically)
+  // 'id' (the default): public code, then name — the IDs are UUIDs and carry no order.
+  if (sortBy === 'id') rows.sort((a, b) => a.publicCode.localeCompare(b.publicCode, 'nb', { numeric: true }) || a.name.localeCompare(b.name, 'nb'));
 
   if (rows.length === 0) {
     el.innerHTML = `<div class="route-list-hint" style="font-style:italic">${esc(t('noMatches'))}</div>`;
