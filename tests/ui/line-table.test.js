@@ -95,14 +95,17 @@ describe('lines pane, maxi view', () => {
     expect(names()).toEqual(['Alta']);
   });
 
-  it('sets a flag on the selected lines, unsaved', () => {
+  it('sets "Eksporter ikke" on the selected lines, unsaved', () => {
     key('F5');
+    expect(document.querySelector('#line-table th[data-col="exported"]')?.textContent).toBe('Eksporter ikke');
+    expect(document.querySelector('#line-table th[data-col="public"]')?.textContent).toBe('Ikke åpen rute');
     rows()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
     const exp = /** @type {HTMLSelectElement} */ (document.getElementById('lt-exp'));
-    exp.value = '0';
+    exp.value = '1';
     exp.dispatchEvent(new Event('change'));
     expect(app.drafts.get('b')?.exported).toBe(false);
     expect(rows()[0].textContent).toContain('●');
+    expect(rows()[0].querySelector('.lt-flag-exp')?.textContent).toBe('✓');
   });
 
   it('does not pass keys to the grid behind it (review I4)', async () => {

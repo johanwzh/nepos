@@ -138,6 +138,19 @@ export function createHandleFs(root) {
     return handle;
   }
 
+  /** @type {Map<string, Promise<void>>} the write in progress per file */
+  const writing = new Map();
+
+  /** @param {string} path @param {Uint8Array} bytes */
+  async function writeOnce(path, bytes) {
+    const p = parts(path);
+    const name = p.pop();
+    const dir = await dirHandle(p, true);
+    const writable = await (await dir.getFileHandle(/** @type {string} */ (name), { create: true })).createWritable();
+    await writable.write(bytes);
+    await writable.close();
+  }
+
   return {
     async readBytes(path) {
       const p = parts(path);
@@ -152,12 +165,24 @@ export function createHandleFs(root) {
       }
     },
     async writeBytes(path, bytes) {
-      const p = parts(path);
-      const name = p.pop();
-      const dir = await dirHandle(p, true);
-      const writable = await (await dir.getFileHandle(name, { create: true })).createWritable();
-      await writable.write(bytes);
-      await writable.close();
+      const key = parts(path).join('/');
+      // One write per file at a time: Chrome fails a write whose file changed after it was opened
+      // (InvalidStateError) — two saves of orgs.json at once, or a sync tool touching the file.
+      const previous = writing.get(key) ?? Promise.resolve();
+      const run = previous.catch(() => {}).then(async () => {
+        try {
+          await writeOnce(path, bytes);
+        } catch (e) {
+          if (/** @type {any} */ (e)?.name !== 'InvalidStateError') throw e;
+          await writeOnce(path, bytes); // once more, with a fresh handle
+        }
+      });
+      writing.set(key, run);
+      try {
+        await run;
+      } finally {
+        if (writing.get(key) === run) writing.delete(key);
+      }
     },
     async mkdir(dirPath) {
       await dirHandle(parts(dirPath), true);

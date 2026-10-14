@@ -247,7 +247,6 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .route-item.rl-not-exported .rl-code { opacity: .55; text-decoration: line-through; }
 
 /* Lines pane, maxi view (plan 4f) */
-#page-edit { position: relative; }
 .line-table { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; background: var(--bg-panel); color: var(--text);
   box-shadow: 4px 0 16px rgba(0,0,0,.25); }
 .line-table[hidden] { display: none; }
@@ -273,15 +272,16 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 
 /* Stop picking in the map pane (plan 4g) */
 #panel-right { display: flex; flex-direction: column; }
-#panel-right #map-inner { flex: 1; min-height: 200px; }
-.sp { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-bottom: 1px solid var(--border-lt); max-height: 55%; overflow: auto; font-size: 12px; }
+#panel-right #map-inner { flex: 1 1 40%; min-height: 240px; }
+.sp { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-bottom: 1px solid var(--border-lt); max-height: 60%; min-height: 0; overflow: hidden; font-size: 12px; flex: 0 1 auto; }
+.sp-head { order: 1; } #sp-q { order: 2; } .sp-mode { order: 3; } .sp-status { order: 4; } .sp-card { order: 5; } .sp-list { order: 6; } #sp-clear { order: 7; }
 .sp[hidden] { display: none; }
 .sp-head { font-weight: 600; }
 #sp-q { height: 26px; padding: 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text); font: inherit; }
 .sp-mode { display: flex; margin: 0; }
 .sp-status { color: var(--text-f); }
 .sp-status:empty { display: none; }
-.sp-list { display: flex; flex-direction: column; }
+.sp-list { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .sp-row { padding: 4px 6px; cursor: pointer; border-radius: 3px; }
 .sp-row:hover, .sp-row.on { background: var(--accent-bg); }
 .sp-row small, .sp-place small { display: block; color: var(--text-f); }
@@ -291,15 +291,20 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .sp-card button { align-self: flex-start; }
 #sp-clear { align-self: flex-start; }
 
-/* Map symbols while picking (stop picking spec §5): stop places round with the mode icon, Quays square */
-.pm { display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
-.pm-place { border-radius: 50%; background: #fff; border: 2px solid var(--accent); color: var(--accent); cursor: pointer; }
-.pm-place svg { width: 16px; height: 16px; }
-.pm-place.pm-browse { opacity: .6; border-style: solid; border-color: #888; color: #555; }
-.pm-quay { border-radius: 3px; background: var(--accent); color: var(--accent-text, #fff); font: 600 10px/1 system-ui, sans-serif; cursor: pointer; border: 1px solid #fff; }
-.pm-line { border-radius: 50%; background: rgba(120,120,120,.55); color: #fff; font: 600 10px/1 system-ui, sans-serif; }
-.pm-current { border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--accent); }
-.pm-candidate { border-radius: 50%; border: 3px dashed var(--accent); background: transparent; pointer-events: none; }
+/* Map symbols while picking (stop picking spec §5): stop places round with the mode icon, Quays
+   square with the platform code. Leaflet's own stylesheet sets markers to display:block, so these
+   rules name .leaflet-marker-icon to win. The row's stop and the candidate mark their own square. */
+.leaflet-marker-icon.pm { display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.leaflet-marker-icon.pm-place { border-radius: 50%; background: #fff; border: 2px solid var(--accent); color: var(--accent); cursor: pointer; }
+.leaflet-marker-icon.pm-place svg { width: 16px; height: 16px; }
+.leaflet-marker-icon.pm-place.pm-browse { opacity: .65; border-color: #888; color: #555; }
+.leaflet-marker-icon.pm-quay { border-radius: 4px; background: var(--accent); color: var(--accent-text, #fff); border: 1.5px solid #fff;
+  font: 700 11px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.leaflet-marker-icon.pm-quay-current { outline: 2px solid var(--accent); outline-offset: 2px; }
+.leaflet-marker-icon.pm-quay-candidate { background: #fff; color: var(--accent); border: 2px solid var(--accent); outline: 2px dashed var(--accent); outline-offset: 3px; }
+.leaflet-marker-icon.pm-line { border-radius: 50%; background: rgba(120,120,120,.6); color: #fff; font: 600 10px/1 system-ui, sans-serif; }
+.leaflet-marker-icon.pm-current { border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--accent); }
+.leaflet-marker-icon.pm-candidate { border-radius: 50%; background: #fff; border: 3px dashed var(--accent); }
 
 /* Form controls on the newer pages and dialogs: one base look. :where() keeps it the weakest rule,
    so any class-specific style (the grid, the menu bar, the primary buttons) still wins. */
@@ -327,3 +332,4 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 
 .rh-add-per { width: auto; padding: 0 8px; font-size: 12px; }
 .n2-dlg-help { color: var(--text-m); font-size: 12px; max-width: 420px; }
+.lt-table td.lt-flag { text-align: center; }
