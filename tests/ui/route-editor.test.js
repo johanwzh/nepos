@@ -7,7 +7,7 @@ import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid, grid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
-import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
+import { initRouteEditor, selectRoute, newRoute } from '../../src/ui/route-editor.js';
 import { createMemoryFs, readText } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute, readRoute } from '../../src/project/routes.js';
@@ -84,28 +84,20 @@ describe('route editor', () => {
     expect(await readRoute(fs, '30')).toBe(damaged30);
   });
 
-  it('asks before switching away from unsaved changes, and stays when declined', async () => {
+  it('switches lines without asking, keeping the unsaved edits with their line', async () => {
     await selectRoute('20');
     typeKeys('0810');
     press('Enter');
     window.confirm = vi.fn(() => false);
-    expect(await selectRoute('30')).toBe(false);
-    expect(app.activeRoute).toBe('20');
-    expect(app.dirty).toBe(true);
-  });
-
-  it('saves before switching when the user agrees', async () => {
-    await selectRoute('20');
-    typeKeys('0815');
-    press('Enter');
-    window.confirm = vi.fn(() => true);
     expect(await selectRoute('30')).toBe(true);
-    expect(await readRoute(fs, '20')).toContain('#TRC;0;0815;');
-    expect(app.activeRoute).toBe('30');
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(await selectRoute('20')).toBe(true);
+    expect(app.dirty).toBe(true);
+    expect(cellTime(0, 0)).toBe('0810');
   });
 
   it('creates a new route with a UUID as its ID and opens it', async () => {
-    document.getElementById('btn-new-route').click();
+    await newRoute(); // "Ny linje" in the Linjer menu
     await flush();
     expect(app.activeRoute).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(await readRoute(fs, /** @type {string} */ (app.activeRoute))).toContain('#RUT;-1;;');
@@ -200,13 +192,13 @@ describe('route editor — review fixes', () => {
     expect(document.getElementById('fn-editor').classList.contains('open')).toBe(false);
   });
 
-  it('treats a half-typed time as an unsaved change', async () => {
+  it('keeps a half-typed time when switching lines', async () => {
     await selectRoute('20');
     typeKeys('0930');
-    window.confirm = vi.fn(() => false);
-    expect(await selectRoute('30')).toBe(false);
-    expect(window.confirm).toHaveBeenCalled();
+    expect(await selectRoute('30')).toBe(true);
+    expect(await selectRoute('20')).toBe(true);
     expect(cellTime(0, 0)).toBe('0930');
+    expect(app.dirty).toBe(true);
   });
 
   it('keeps a half-typed time when switching period', async () => {

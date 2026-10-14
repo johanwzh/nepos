@@ -3,7 +3,7 @@
 // delete. Ported from Nepos 1.5.7 (nepos.html lines 2556–2643, 2694–2706, 3008–3048, 3153–3405)
 // with the Nepos 2 project layer, read-only damaged routes and a guard for unsaved changes.
 import { app } from './state.js';
-import { $, onRefresh, refreshAll, runAction, markDirty, setBeforeLeave, beforeLeave, showMessage, currentPage } from './shell.js';
+import { $, onRefresh, refreshAll, runAction, markDirty, setBeforeLeave, beforeLeave, showMessage, currentPage, onBeforeViewChange } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { grid, loadGrid, gridData, markGridClean, clearGrid, render as renderGrid, onGridChange, commitPending } from './grid.js';
 import { newRouteState, fillMissingPeriod, addPeriod, deletePeriod, periodHasData, gridKey, periodsOf } from './route-state.js';
@@ -22,6 +22,7 @@ import { compareRouteCodes } from '../core/route-codes.js';
 import { writeRoute, deleteRoute as deleteRouteFile } from '../project/routes.js';
 import { showProjectCheck } from './project-ui.js';
 import { issueMessage } from './messages.js';
+import { parkOpenLine, takeDraft, unsavedCodes } from './drafts.js';
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -118,10 +119,54 @@ function currentText() {
 /** Ask to save unsaved changes. Resolves false when the user wants to stay. */
 /** @param {string} [reason] */
 async function confirmLeave(reason) {
-  commitPending(); // a half-typed time or name counts as a change
-  if (!app.dirty) return true;
-  if (!confirm(t(reason === 'export' ? 'saveBeforeExport' : 'saveBeforeSwitch', app.activeRoute))) return false;
-  return saveRoute();
+  if (app.routeState) storeGrid(); // a half-typed time or name counts as a change
+  const n = unsavedCodes().length;
+  if (!n) return true;
+  if (!confirm(t(reason === 'export' ? 'saveAllBeforeExport' : 'saveAllBeforeLeave', n))) return false;
+  return saveAllRoutes();
+}
+
+/**
+ * Save the open line and every line with unsaved changes (navigation spec §2). Returns false when
+ * any could not be saved; the message names them.
+ * @param {HTMLButtonElement | null} [trigger]
+ */
+export async function saveAllRoutes(trigger = null) {
+  if (!app.fs || !app.meta) return false;
+  const fs = app.fs, meta = app.meta;
+  /** @type {string[]} */ const failed = [];
+  if (app.routeState && app.dirty && !(await saveRoute(trigger))) failed.push(/** @type {string} */ (app.activeRoute));
+  for (const [code, rs] of [...app.drafts]) {
+    const text = serializeERN(rs, code, { delivery: { name: meta.name, codespace: meta.codespace }, orgs: orgNameList(app.orgs) });
+    const { status, issues } = checkRouteFile(text);
+    if (status === 'damaged') { failed.push(code); continue; }
+    try {
+      await writeRoute(fs, code, text);
+      app.routes = app.routes.map((r) => (r.code === code ? { code, text, status, issues } : r));
+      app.drafts.delete(code);
+    } catch {
+      failed.push(code);
+    }
+  }
+  if (failed.length) showMessage(t('saveAllFailed', failed.join(', ')));
+  refreshAll();
+  return !failed.length;
+}
+
+/** Throw away every unsaved change, after asking; the open line is read again from its file. */
+export function discardAllChanges() {
+  const n = unsavedCodes().length;
+  if (!n || !confirm(t('discardAllConfirm', n))) return;
+  app.drafts.clear();
+  const entry = activeEntry();
+  if (entry) {
+    const rs = parseERN(entry.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) });
+    fillMissingPeriod(rs);
+    app.routeState = rs;
+    loadGrid(rs.grids[gridKey(rs)] ?? { stops: [], cols: [] }, { readOnly: entry.status === 'damaged' }); // drops a half-typed cell too
+  }
+  app.dirty = false;
+  refreshAll();
 }
 
 /** Close the open route (after the leave check has passed). */
@@ -140,23 +185,31 @@ export function closeRoute() {
  */
 export async function selectRoute(code) {
   if (code === app.activeRoute) return true;
-  if (!(await beforeLeave())) return false;
   const entry = app.routes.find((r) => r.code === code);
   if (!entry) return false;
-  const rs = parseERN(entry.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) });
+  // Switching lines never asks (navigation spec §2): unsaved edits stay with their line.
+  if (app.routeState) { storeGrid(); parkOpenLine(); }
+  const draft = takeDraft(code);
+  const rs = draft ?? parseERN(entry.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) });
   fillMissingPeriod(rs);
   app.activeRoute = code;
   app.routeState = rs;
-  app.dirty = false;
+  app.dirty = !!draft;
   loadGrid(rs.grids[gridKey(rs)] ?? { stops: [], cols: [] }, { readOnly: entry.status === 'damaged' });
   refreshAll();
   return true;
 }
 
 /** @param {HTMLButtonElement | null} [trigger] */
+/** Header and footnote fields keep their text on "change" (blur); Ctrl+S and view keys commit it first. */
+function commitFocusedField() {
+  const el = document.activeElement;
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
 export async function newRoute(trigger = null) {
   if (!app.fs || !app.meta) return;
-  if (!(await beforeLeave())) return;
+  // Like switching lines, a new line never asks: the open line's edits are parked (navigation spec §2).
   // IDs carry no data and never change (line header spec §4): the route ID is a UUID.
   const code = crypto.randomUUID();
   const text = serializeERN(newRouteState(app.settings.lang), code, { delivery: { name: app.meta.name, codespace: app.meta.codespace }, orgs: [] });
@@ -165,7 +218,6 @@ export async function newRoute(trigger = null) {
   if (!ok) return;
   const { status, issues } = checkRouteFile(text);
   app.routes = [...app.routes, { code, text, status, issues }].sort((a, b) => compareRouteCodes(a.code, b.code));
-  app.activeRoute = null;
   await selectRoute(code);
 }
 
@@ -215,6 +267,7 @@ function renderHeader() {
       <div class="rh-orgs" id="rh-orgs"></div>
     </div>
     <div class="rh-partb">
+    <button class="rh-save-state${app.dirty ? ' unsaved' : ''}" id="rh-save-state"${dis}>${esc(t(app.dirty ? 'unsavedDot' : 'savedTick'))}</button>
     <div class="rh-group"><span class="rh-label">${esc(t('periodLabel'))}:</span>
       <select class="rh-select" id="sel-period">${periodsOf(rs, rs.activeSet).map((/** @type {any} */ p) =>
         `<option value="${p.id}"${p.id === rs.activePer ? ' selected' : ''}>${esc(periodLabel(p))}</option>`).join('')}</select>
@@ -225,6 +278,7 @@ function renderHeader() {
 
   for (const id of ['rh-name', 'rh-public', 'rh-private']) $(id).addEventListener('keydown', (/** @type {Event} */ e) => e.stopPropagation());
   $('sel-period').addEventListener('change', () => switchPeriod(+$('sel-period').value));
+  $('rh-save-state').addEventListener('click', () => { if (!ro && app.dirty) void saveRoute($('rh-save-state')); });
   renderOrgPickers();
   if (ro) return;
   $('rh-name').addEventListener('change', () => { rs.routeName = $('rh-name').value.trim(); markDirty(); });
@@ -413,18 +467,18 @@ export function initRouteEditor() {
   onRefresh(renderEditor);
   onGridChange(markDirty);
   setBeforeLeave(confirmLeave);
-  $('btn-new-route').disabled = false;
-  $('btn-new-route').onclick = () => newRoute($('btn-new-route'));
   // Document and window listeners only once, also when tests reload the page markup.
   if (listenersWired) return;
   listenersWired = true;
+  // Ctrl+S saves the open line, also from text fields (navigation spec §2); not behind a window.
   document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's' && currentPage() === 'edit' && app.routeState) {
-      e.preventDefault();
-      saveRoute();
-    }
-  });
+    if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's' || document.querySelector('dialog[open]')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (currentPage() === 'edit' && app.activeRoute) { commitFocusedField(); void saveRoute(); }
+  }, true);
+  onBeforeViewChange(() => { commitFocusedField(); if (app.routeState) commitPending(); });
   window.addEventListener('beforeunload', (e) => {
-    if (app.dirty) { e.preventDefault(); e.returnValue = ''; }
+    if (unsavedCodes().length) { e.preventDefault(); e.returnValue = ''; }
   });
 }

@@ -89,10 +89,11 @@ describe('grid', () => {
     expect(grid.cols[0].cells[0].time).toBe('0700');
   });
 
-  it('only switches page when F2 is pressed on another page', () => {
+  it('does not switch page with F2 any more (F2 only edits a cell; views are Alt+1/2/3)', () => {
     setPage('export');
     press('F2');
-    expect(currentPage()).toBe('edit');
+    expect(currentPage()).toBe('export');
     expect(document.querySelector('.g-stop-input')).toBe(null);
+    setPage('edit');
   });
 });

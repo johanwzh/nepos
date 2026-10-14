@@ -8,7 +8,8 @@ import { createProject } from '../project/create.js';
 import { findFileNameProblems, repairFileNames } from '../project/repair.js';
 import { summarizeIntegrity } from '../core/integrity/check.js';
 import { normalizeCodespace } from '../core/codespace.js';
-import { loadLastFolder, saveLastFolder } from './last-folder.js';
+import { loadRecentFolders, rememberFolder } from './recent-folders.js';
+import { clearGrid } from './grid.js';
 import { loadProjectQuays } from './quays.js';
 import { syncProjectCopy } from './org-register.js';
 import { openFailureMessage, createFailureMessage, issueMessage, summaryMessage, fileNameMessage } from './messages.js';
@@ -42,14 +43,14 @@ export async function openFs(fs, { handle = null, sample = false } = {}) {
     orgs: result.orgs, orgsError: result.orgsError,
     brandings: result.brandings, brandingsError: result.brandingsError,
     calendars: result.calendars, calendarsError: result.calendarsError,
-    routes: result.routes, activeRoute: null, routeState: null, dirty: false,
+    routes: result.routes, activeRoute: null, routeState: null, dirty: false, drafts: new Map(),
     fileNameProblems: await findFileNameProblems(fs),
   });
   pendingNotes = [];
   if (result.settingsRecovered) pendingNotes.push(t('settingsRecovered'));
   if (result.migrated) pendingNotes.push(t('migrated'));
   if (handle) {
-    await saveLastFolder(handle);
+    await rememberFolder(handle);
     app.lastHandle = handle;
   }
   refreshAll();
@@ -135,12 +136,24 @@ async function hasPermission(handle, ask) {
 
 /** @param {any} handle */
 async function openHandle(handle) {
+  return openRecent(handle);
+}
+
+/**
+ * Open a remembered folder ("Åpne nylig", "Reopen"). A refused permission keeps the current
+ * project and says so.
+ * @param {any} handle
+ */
+export async function openRecent(handle) {
   if (!(await beforeLeave())) return false;
-  if (!(await hasPermission(handle, true))) return false;
+  let granted = false;
+  try { granted = await hasPermission(handle, true); } catch { granted = false; }
+  if (!granted) { showMessage(t('recentNoAccess', handle.name)); return false; }
   return openFs(createHandleFs(handle), { handle });
 }
 
-async function pickAndOpen() {
+
+export async function pickAndOpen() {
   if (!(await beforeLeave())) return;
   try {
     const handle = await /** @type {any} */ (window).showDirectoryPicker({ mode: 'readwrite', id: 'nepos-project' });
@@ -150,8 +163,43 @@ async function pickAndOpen() {
   }
 }
 
+/** Close the open project (after the unsaved-changes check). */
+export async function closeProject() {
+  if (!app.meta || !(await beforeLeave())) return;
+  Object.assign(app, { fs: null, handle: null, meta: null, routes: [], orgs: [], orgsError: null, brandings: [], brandingsError: null,
+    calendars: [], calendarsError: null, activeRoute: null, routeState: null, dirty: false, drafts: new Map(), fileNameProblems: [], sampleMode: false });
+  clearGrid();
+  refreshAll();
+}
+
+/** Copy the project's data/ into an empty folder the user picks, then open the copy (navigation spec §6). */
+export async function copyProject() {
+  if (!app.fs || !app.meta || !(await beforeLeave())) return;
+  const from = app.fs;
+  let handle;
+  try {
+    handle = await /** @type {any} */ (window).showDirectoryPicker({ mode: 'readwrite', id: 'nepos-copy' });
+  } catch (e) {
+    if (/** @type {Error} */ (e).name !== 'AbortError') showMessage(t('open:error', /** @type {Error} */ (e).message));
+    return;
+  }
+  const to = createHandleFs(handle);
+  const found = (await to.list('')).filter((e) => !/^(desktop\.ini|thumbs\.db|\.ds_store)$/i.test(e.name));
+  if (found.length) { showMessage(t('create:folder-not-empty', found.slice(0, 5).map((e) => e.name).join(', '))); return; }
+  /** @param {string} dir */
+  const copyTree = async (dir) => {
+    for (const entry of await from.list(dir)) {
+      const path = `${dir}/${entry.name}`;
+      if (entry.kind === 'directory') await copyTree(path);
+      else { const bytes = await from.readBytes(path); if (bytes) await to.writeBytes(path, bytes); }
+    }
+  };
+  if (!(await runAction(() => copyTree('data')))) return;
+  await openFs(to, { handle });
+}
+
 // ─── New project dialog ─────────────────────────────────────────────────────
-async function openNewDialog() {
+export async function openNewDialog() {
   if (!(await beforeLeave())) return;
   $('new-name').value = '';
   $('new-cs').value = '';
@@ -234,18 +282,12 @@ function escapeHtml(s) {
  * @param {{ restoreLast?: boolean }} [opts]
  */
 export async function initProjectUi({ restoreLast = true } = {}) {
-  $('btn-open').addEventListener('click', pickAndOpen);
-  $('btn-new').addEventListener('click', openNewDialog);
   $('new-cancel').addEventListener('click', () => $('new-dlg').close());
   $('new-create').addEventListener('click', createFromDialog);
   onRefresh(renderPlaceholder);
   if (!restoreLast) return;
-  if (!supported()) {
-    $('btn-open').disabled = true;
-    $('btn-new').disabled = true;
-    return;
-  }
-  const last = await loadLastFolder();
+  if (!supported()) return;
+  const last = (await loadRecentFolders())[0]?.handle;
   if (!last) return;
   app.lastHandle = last;
   if (await hasPermission(last, false)) await openFs(createHandleFs(last), { handle: last });

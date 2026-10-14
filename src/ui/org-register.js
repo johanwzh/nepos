@@ -49,12 +49,13 @@ async function saveCopy(next) {
   await runAction(() => writeOrgs(fs, next));
 }
 
-/** Organisation IDs the project's lines use: every saved route file and the open (maybe unsaved) line. */
+/** Organisation IDs the project's lines use: every saved route file, the open line and parked unsaved lines. */
 function usedOrgIds() {
   /** @type {Set<string>} */
   const used = new Set();
   for (const r of app.routes) for (const m of r.text.matchAll(/^[ \t]*#SEK;([^;\r\n]*)/gm)) used.add(m[1].trim());
   for (const s of app.routeState?.sek ?? []) used.add(String(s.orgId));
+  for (const d of app.drafts?.values() ?? []) for (const s of d.sek ?? []) used.add(String(s.orgId));
   return used;
 }
 

@@ -87,6 +87,15 @@ describe('organisations the lines use', () => {
     expect(JSON.parse(await readText(app.fs, 'data/orgs.json')).companies).toHaveLength(1);
   });
 
+  it('keeps an organisation a parked, unsaved line uses when pruning (review I3)', async () => {
+    app.routes = [];
+    app.routeState = null;
+    app.drafts = new Map([['7', /** @type {any} */ ({ sek: [{ orgId: 'NOG:Operator:bbbbbbbbbb2', isAuthority: false, isOperator: true, name: 'Eksempel Buss AS' }] })]]);
+    await pruneProjectCopy();
+    expect(app.orgs.map((c) => c.name)).toEqual(['Eksempel Buss AS']);
+    app.drafts = new Map();
+  });
+
   it('keeps an organisation the open, unsaved line uses when pruning', async () => {
     app.routes = [];
     app.routeState = { sek: [{ orgId: 'NOG:Operator:bbbbbbbbbb2', isAuthority: false, isOperator: true, name: 'Eksempel Buss AS' }] };

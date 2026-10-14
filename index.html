@@ -12,19 +12,16 @@
         <span class="tb-brand">Nepos</span>
         <span class="tb-ver" id="el-ver"></span>
         <div class="tb-sep"></div>
-        <button class="tb-btn" id="btn-open" data-lk="openProject"></button>
-        <button class="tb-btn" id="btn-new" data-lk="newProject"></button>
+        <nav id="menubar"></nav>
         <button id="delivery-btn"></button>
         <div class="tb-spacer"></div>
-        <button class="tb-btn" id="btn-lang"></button>
-        <button class="tb-btn" id="btn-theme"></button>
       </div>
       <div class="n2-banner" id="sample-banner" data-lk="sampleMode" hidden></div>
 
       <div id="tabbar">
-        <div class="tab active" data-page="edit"><span class="fk">F2</span><span data-lk="tabEdit"></span></div>
-        <div class="tab" data-page="assets"><span class="fk">F3</span><span data-lk="tabAssets"></span></div>
-        <div class="tab" data-page="export"><span class="fk">F4</span><span data-lk="tabExport"></span></div>
+        <div class="tab active" data-page="edit"><span class="fk">Alt+1</span><span data-lk="tabEdit"></span></div>
+        <div class="tab" data-page="assets"><span class="fk">Alt+2</span><span data-lk="tabAssets"></span></div>
+        <div class="tab" data-page="export"><span class="fk">Alt+3</span><span data-lk="tabExport"></span></div>
         <div id="panel-btns">
           <button class="ptbtn" id="btn-p5"><span class="fk">F5</span><span data-lk="panelRoutes"></span></button>
           <button class="ptbtn" id="btn-p6"><span class="fk">F6</span><span data-lk="panelMap"></span></button>
@@ -51,9 +48,6 @@
               </select>
             </div>
             <div class="route-list" id="route-list"></div>
-            <div class="panel-foot">
-              <button class="panel-foot-btn" id="btn-new-route" data-lk="newRoute" disabled></button>
-            </div>
           </div>
 
           <div class="rz-handle" id="rh-left" data-side="left"></div>
@@ -245,6 +239,13 @@
       <label class="n2-check"><input type="radio" name="ts-stops" value="reversed"> <span data-lk="tsStopsReversed"></span></label>
       <label class="n2-check"><input type="radio" name="ts-stops" value="empty"> <span data-lk="tsStopsEmpty"></span></label>
       <div class="n2-actions"><button class="pop-btn" id="ts-dlg-cancel" data-lk="cancel"></button><button class="pop-btn primary" id="ts-dlg-ok" data-lk="ok"></button></div>
+    </dialog>
+
+    <dialog class="n2-dialog" id="theme-dlg">
+      <p><strong data-lk="themeDlgTitle"></strong></p>
+      <label class="n2-field"><span data-lk="themeMain"></span> <input type="color" id="theme-main"></label>
+      <label class="n2-check"><input type="checkbox" id="theme-second-on"> <span data-lk="themeSecond"></span> <input type="color" id="theme-second"></label>
+      <div class="n2-actions"><button class="pop-btn" id="theme-reset" data-lk="themeReset"></button><button class="pop-btn" id="theme-cancel" data-lk="cancel"></button><button class="pop-btn primary" id="theme-ok" data-lk="ok"></button></div>
     </dialog>
 
     <dialog class="n2-dialog" id="cal-replace-dlg">

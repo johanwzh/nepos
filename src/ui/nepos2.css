@@ -221,3 +221,20 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .cal-toolbar { display: flex; gap: 8px; align-items: center; margin: 6px 0 10px; }
 .cal-year { min-width: 3em; text-align: center; }
 .yv-day.on.sun, .yv-day.on.hol { color: #b00000; }
+
+.rh-save-state { border: none; background: transparent; color: var(--text-m); cursor: pointer; font-size: 12px; }
+.rh-save-state.unsaved { color: var(--accent); font-weight: 600; }
+.rl-unsaved { color: var(--accent); margin-left: auto; }
+
+/* Menu bar (plan 4e) */
+#menubar { display: flex; gap: 2px; align-items: center; }
+.mb-menu { background: transparent; border: none; padding: 4px 10px; color: var(--text); cursor: pointer; border-radius: 4px; font: inherit; }
+.mb-menu:hover, .mb-menu.open { background: var(--accent-2, var(--accent-bg)); }
+.mb-drop { position: fixed; z-index: 70; min-width: 230px; background: var(--bg-panel); color: var(--text); border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0,0,0,.2); padding: 4px 0; font-size: 13px; }
+.mb-item { display: flex; gap: 8px; align-items: center; padding: 5px 14px 5px 6px; cursor: pointer; }
+.mb-item.active, .mb-item:hover { background: var(--accent-bg); }
+.mb-item.disabled { color: var(--text-f); pointer-events: none; }
+.mb-check { width: 14px; text-align: center; }
+.mb-hint { margin-left: auto; padding-left: 24px; color: var(--text-f); }
+.mb-sep { height: 1px; background: var(--border-lt); margin: 4px 0; }
