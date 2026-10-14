@@ -1,20 +1,27 @@
 import { readText, writeJson } from './fs.js';
 import { ORGS_FILE } from './layout.js';
 
+/** @param {any} e */
+const isEntry = (e) => e === null || (e && typeof e === 'object' && typeof e.id === 'string' && e.contact && typeof e.contact === 'object');
+/** @param {any} c */
+const isCompany = (c) => c && typeof c === 'object' && typeof c.name === 'string' && typeof c.organisationId === 'string'
+  && isEntry(c.authority) && isEntry(c.operator);
+
 /**
- * The organisation list. A missing file is an empty list; an unreadable one is reported, so the
- * UI can refuse to save over it.
+ * The project's copy of the organisations its lines use (organisations spec §3.2). A missing file
+ * is an empty copy; an unreadable one is reported, so the UI never saves over it.
  * @param {import('./fs.js').ProjectFs} fs
- * @returns {Promise<{ orgs: { id: string, name: string }[], error: null | 'unreadable' }>}
+ * @returns {Promise<{ orgs: import('../core/orgs.js').Company[], error: null | 'unreadable' }>}
  */
 export async function readOrgs(fs) {
   const text = await readText(fs, ORGS_FILE);
   if (text === null) return { orgs: [], error: null };
   try {
     const value = JSON.parse(text);
-    const isOrg = (/** @type {any} */ o) => o !== null && typeof o === 'object' && typeof o.id === 'string' && typeof o.name === 'string';
-    if (!Array.isArray(value) || !value.every(isOrg)) return { orgs: [], error: 'unreadable' };
-    return { orgs: value, error: null };
+    if (!value || Array.isArray(value) || !Array.isArray(value.companies) || !value.companies.every(isCompany)) {
+      return { orgs: [], error: 'unreadable' };
+    }
+    return { orgs: value.companies, error: null };
   } catch {
     return { orgs: [], error: 'unreadable' };
   }
@@ -22,8 +29,8 @@ export async function readOrgs(fs) {
 
 /**
  * @param {import('./fs.js').ProjectFs} fs
- * @param {{ id: string, name: string }[]} orgs
+ * @param {import('../core/orgs.js').Company[]} companies
  */
-export async function writeOrgs(fs, orgs) {
-  await writeJson(fs, ORGS_FILE, orgs);
+export async function writeOrgs(fs, companies) {
+  await writeJson(fs, ORGS_FILE, { companies });
 }

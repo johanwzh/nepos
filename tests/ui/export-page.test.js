@@ -14,11 +14,12 @@ import { createMemoryFs, readText } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
 import { writeOrgs } from '../../src/project/orgs-store.js';
+import { projectCopy, registerCompanies } from '../fixtures/orgs.js';
 
 /** @param {string} secondStopId */
 const route = (secondStopId) => [
   '#LEV;Test;TST', '#RUT;-1;50;Jernbanetorget - Oslo bussterminal;;1;',
-  '#SEK;TST:Authority:1;Fylket;1;0;0;0', '#SEK;TST:Operator:1;Buss AS;0;1;0;0', '#CUR;neposcoin;1', '#TRA;50',
+  '#SEK;NOG:Authority:aaaaaaaaaa1;Eksempel fylkeskommune;1;0;0;0', '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0', '#CUR;neposcoin;1', '#TRA;50',
   '#PER;Vinter;20260101;20260630;;;', '#TAB;0;;;;', '#TUR;0;DX67;0;0;0;0',
   '#TRL;0;NSR:Quay:7203;Jernbanetorget;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0',
   `#TRL;1;${secondStopId};Oslo bussterminal;34;0;-1;-1;34;-1`, '#TRC;0;0710;0;0;0;0;0',
@@ -40,9 +41,10 @@ async function openProjectWith(text) {
   setQuayLookup(lookup);
   fs = createMemoryFs();
   await createProject(fs, { name: 'Test', codespace: 'TST' });
-  await writeOrgs(fs, [{ id: 'TST:Authority:1', name: 'Fylket' }, { id: 'TST:Operator:1', name: 'Buss AS' }]);
+  await writeOrgs(fs, projectCopy());
   await writeRoute(fs, '50', text);
   await openFs(fs);
+  app.orgRegister = { companies: registerCompanies(), fetchedAt: '2026-10-14T12:00:00Z' };
   /** @type {any} */ (document.getElementById('check-dlg')).close();
   await settle();
 }
@@ -168,5 +170,15 @@ describe('export page', () => {
     await settle();
     expect(await first.list('exports')).toEqual([]);
     expect(await fs.list('exports')).toEqual([]);
+  });
+
+  it('stores the organisation export mode in the project file', async () => {
+    const nog = /** @type {HTMLInputElement} */ (document.getElementById('org-mode-nog'));
+    expect(/** @type {HTMLInputElement} */ (document.getElementById('org-mode-codespace')).checked).toBe(true);
+    nog.checked = true;
+    nog.dispatchEvent(new Event('change'));
+    await flush();
+    expect(JSON.parse(await readText(fs, 'data/nepos-project.json')).orgExportMode).toBe('nog');
+    expect(app.meta.orgExportMode).toBe('nog');
   });
 });

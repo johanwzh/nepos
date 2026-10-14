@@ -1,6 +1,6 @@
 // Line timetable file generator, ported from Nepos 1.5.7 (nepos.html lines 6223–6483).
 import { xe, hhmm2t, ernModeNeTEx, dirType, pubDelivery, compositeFrame } from './xml.js';
-import { netexOrgId, authorityNetworkLocalId } from '../orgs.js';
+import { authorityNetworkLocalId } from '../orgs.js';
 import { stopLocalId } from '../quays.js';
 import { journeyStops, dayTypeKey } from './journeys.js';
 
@@ -25,7 +25,9 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     const firstOper = (rs.sek||[]).find(s=>s.isOperator);
     const firstAuth = (rs.sek||[]).find(s=>s.isAuthority);   // route's own authority
     // OperatorRef is cross-file (→ _shared_data.xml) — no version attribute
-    const operRef = firstOper ? `\n        <OperatorRef ref="${xe(netexOrgId(firstOper.orgId,'Operator',cs))}"/>` : '';
+    const operOut = firstOper ? data.orgFor(firstOper, 'Operator') : null;
+    const authOut = firstAuth ? data.orgFor(firstAuth, 'Authority') : null;
+    const operRef = operOut ? `\n        <OperatorRef ref="${xe(operOut.id)}"/>` : '';
     const komRef  = rs.kom?.trim() ? `\n      <noticeAssignments>\n        <NoticeAssignment id="${cs}:NoticeAssignment:${routeCode}-kom" version="1">\n          <NoticeRef ref="${cs}:Notice:${routeCode}-kom" version="1"/>\n          <NoticedObjectRef ref="${lineId}" version="1"/>\n        </NoticeAssignment>\n      </noticeAssignments>` : '';
 
     // Element order per Norwegian NeTEx profile:
@@ -34,7 +36,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
         <Name>${xe(rs.routeName||routeCode)}</Name>
         <TransportMode>${lineMode}</TransportMode>${subEl}
         <PublicCode>${xe(rs.publicCode||routeCode)}</PublicCode>${operRef}
-        <RepresentedByGroupRef ref="${cs}:Network:${firstAuth ? xe(authorityNetworkLocalId(firstAuth.orgId)) : cs}"/>
+        <RepresentedByGroupRef ref="${cs}:Network:${authOut ? xe(authorityNetworkLocalId(authOut.networkKey)) : cs}"/>
       </Line>`;
 
     // Per-direction: routes, routePoints, journeyPatterns

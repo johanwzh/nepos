@@ -112,3 +112,34 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .n2-ws-place { padding: 6px 8px; font-weight: 600; }
 .n2-ws-map { flex: 1; position: relative; }
 .n2-ws .n2-check[hidden] { display: none; }
+
+.ef-orgs { display: flex; align-items: center; gap: 8px; }
+.org-pick { position: relative; }
+.org-pick-btn { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.org-pick.invalid .org-pick-btn { border-color: var(--g-dec-c); color: var(--g-dec-c); }
+.org-pick-pop { position: absolute; bottom: 100%; left: 0; z-index: 50; width: 320px; background: var(--bg-panel);
+  border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,.2); padding: 6px; }
+.org-pick-search { width: 100%; box-sizing: border-box; margin-bottom: 4px; }
+.org-pick-list { max-height: 300px; overflow-y: auto; }
+.org-pick-section { font-size: 11px; color: var(--text-m); padding: 4px 6px; text-transform: uppercase; }
+.org-pick-row { padding: 4px 6px; cursor: pointer; display: flex; flex-direction: column; }
+.org-pick-row small { color: var(--text-m); }
+.org-pick-row.active, .org-pick-row:hover { background: var(--accent-bg); }
+.org-pick-row.current b::after { content: ' ✓'; }
+.ef-org-extra { font-size: 12px; color: var(--text-m); }
+
+.org-status { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.org-status.bad { color: var(--g-dec-c); }
+.org-missing-note { color: var(--text-m); font-size: 12px; }
+.org-row { border-top: 1px solid var(--border-lt); padding: 6px 0; }
+.org-row-head { display: flex; gap: 12px; align-items: baseline; cursor: pointer; }
+.org-num, .org-used { color: var(--text-m); font-size: 12px; }
+.org-mark { font-size: 11px; color: var(--text-m); border: 1px solid var(--border); padding: 0 4px; }
+.org-mark.bad { color: var(--g-dec-c); border-color: var(--g-dec-c); }
+.org-role-line { display: flex; gap: 8px; align-items: center; margin: 4px 0 0 12px; }
+.org-role { width: 70px; font-size: 12px; }
+.org-alias-in { width: 240px; }
+.org-alias-in.invalid { border-color: var(--g-dec-c); }
+.org-alias-msg { color: var(--g-dec-c); font-size: 12px; }
+.org-details { margin: 4px 0 0 12px; font-size: 12px; color: var(--text-m); }
+.assets-subtitle { font-weight: 600; margin-top: 12px; }

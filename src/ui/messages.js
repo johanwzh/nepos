@@ -27,7 +27,3 @@ export function createFailureMessage(result) {
   return t(`create:${result.error}`, (result.found ?? []).join(', '));
 }
 
-/** @param {string} code */
-export function orgIssueMessage(code) {
-  return t(`org:${code}`);
-}

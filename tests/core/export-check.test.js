@@ -2,15 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { parseERN } from '../../src/core/ern/parse.js';
 import { checkForExport, CHECK_CODES } from '../../src/core/export-check.js';
 import { STRINGS } from '../../src/i18n/strings.js';
+import { projectCopy, registerCompanies } from '../fixtures/orgs.js';
 
-const ORGS = [{ id: 'TST:Authority:1', name: 'Fylket' }, { id: 'TST:Operator:1', name: 'Buss AS' }];
+const ORGS = projectCopy();
 const bus = (/** @type {string} */ id, /** @type {string} */ name) => ({ quayId: id, publicCode: 'A', stopPlaceId: 'NSR:StopPlace:1', stopPlaceName: name, mode: 'bus', lat: 0, lon: 0 });
 const NSR = new Map([['NSR:Quay:7203', bus('NSR:Quay:7203', 'Jernbanetorget')], ['NSR:Quay:11972', bus('NSR:Quay:11972', 'Oslo bussterminal')]]);
 
 /** A clean bus route: two NSR stops, one trip, authority and operator from the list. */
 const route = () => parseERN([
   '#RUT;-1;50;Jernbanetorget - Oslo bussterminal;;1;',
-  '#SEK;TST:Authority:1;Fylket;1;0;0;0', '#SEK;TST:Operator:1;Buss AS;0;1;0;0',
+  '#SEK;NOG:Authority:aaaaaaaaaa1;Eksempel fylkeskommune;1;0;0;0', '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0',
   '#PER;Vinter;20260101;20260630;;;', '#TAB;0;;;;', '#TUR;0;DX67;0;0;0;0',
   '#TRL;0;NSR:Quay:7203;Jernbanetorget;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0',
   '#TRL;1;NSR:Quay:11972;Oslo bussterminal;34;0;-1;-1;34;-1', '#TRC;0;0710;0;0;0;0;0',
@@ -18,7 +19,7 @@ const route = () => parseERN([
 const grid0 = (/** @type {any} */ rs) => rs.grids[`${rs.periods[0].id}:${rs.directions[0].id}`];
 
 /** @param {any} rs @param {object} [extra] */
-const check = (rs, extra = {}) => checkForExport({ routes: [{ code: '50', rs, status: 'ok' }], orgs: ORGS, orgsProblem: '', quayInfo: NSR, ...extra });
+const check = (rs, extra = {}) => checkForExport({ routes: [{ code: '50', rs, status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', orgsProblem: '', quayInfo: NSR, ...extra });
 const codes = (/** @type {any[]} */ issues) => issues.map((i) => `${i.level}:${i.code}`);
 
 describe('checkForExport', () => {
@@ -109,22 +110,42 @@ describe('checkForExport', () => {
       expect(codes(check(rs))).toEqual(['error:no-authority', 'error:no-operator']);
     });
 
-    it('warns about organisations missing from the list and old-style IDs', () => {
-      expect(codes(check(route(), { orgs: [ORGS[0]] }))).toEqual(['warning:org-not-in-list']);
+    it('blocks an organisation that is not in the register with that role', () => {
       const rs = route();
-      rs.sek[1].orgId = '3';
-      expect(codes(check(rs))).toEqual(['warning:org-id-old']);
+      rs.sek[1].orgId = 'NOG:Operator:gone';
+      expect(codes(check(rs))).toEqual(['error:org-not-in-register']);
+      const typed = route();
+      typed.sek[1].orgId = 'TST:Operator:1';
+      expect(codes(check(typed))).toEqual(['error:org-not-in-register']);
     });
 
-    it('blocks an organisation list that cannot be trusted', () => {
+    it('checks against the project copy, with one warning, when no register was ever downloaded', () => {
+      expect(codes(check(route(), { register: null }))).toEqual(['warning:org-register-missing']);
+    });
+
+    it('blocks bad or duplicate aliases in codespace mode only', () => {
+      const orgs = projectCopy();
+      /** @type {any} */ (orgs[1].operator).alias = 'TST:Authority:1';
+      expect(codes(check(route(), { orgs }))).toEqual(['error:org-alias-format']);
+      expect(codes(check(route(), { orgs, orgMode: 'nog' }))).toEqual([]);
+      const dup = projectCopy();
+      /** @type {any} */ (dup[1].operator).alias = 'TST:Authority:aaaaaaaaaa1'; // wrong role and a duplicate
+      expect(codes(check(route(), { orgs: dup }))).toEqual(['error:org-alias-format', 'error:org-alias-duplicate', 'error:org-alias-duplicate']);
+    });
+
+    it('blocks, in codespace mode, an organisation that is in the register but not in the project copy', () => {
+      expect(codes(check(route(), { orgs: [projectCopy()[0]] }))).toEqual(['error:org-not-in-project']);
+      expect(codes(check(route(), { orgs: [projectCopy()[0]], orgMode: 'nog' }))).toEqual([]);
+    });
+
+    it('blocks an organisation copy that cannot be read', () => {
       expect(codes(check(route(), { orgsProblem: 'unreadable' }))).toEqual(['error:orgs-unreadable']);
-      expect(codes(check(route(), { orgsProblem: 'not-saved' }))).toEqual(['error:orgs-not-saved']);
     });
   });
 
   describe('project', () => {
     it('blocks a damaged route', () => {
-      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: null, status: 'damaged' }], orgs: ORGS, orgsProblem: '', quayInfo: NSR });
+      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: null, status: 'damaged' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', orgsProblem: '', quayInfo: NSR });
       expect(codes(issues)).toEqual(['error:route-damaged']);
       expect(issues[0].route).toBe('60');
     });
@@ -155,13 +176,13 @@ describe('checkForExport', () => {
     it('warns that a route without trips is left out', () => {
       const empty = route();
       grid0(empty).cols = [];
-      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: empty, status: 'ok' }], orgs: ORGS, orgsProblem: '', quayInfo: NSR });
+      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: empty, status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', orgsProblem: '', quayInfo: NSR });
       expect(codes(issues)).toEqual(['warning:route-no-trips']);
       expect(issues[0].route).toBe('60');
     });
 
     it('blocks a route code that cannot be a NeTEx ID', () => {
-      const issues = checkForExport({ routes: [{ code: 'A&B 2', rs: route(), status: 'ok' }], orgs: ORGS, orgsProblem: '', quayInfo: NSR });
+      const issues = checkForExport({ routes: [{ code: 'A&B 2', rs: route(), status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', orgsProblem: '', quayInfo: NSR });
       expect(codes(issues)).toEqual(['error:route-code']);
     });
 

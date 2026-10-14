@@ -9,7 +9,7 @@ const files = buildNeTExFiles({
   codespace: sample.delivery.codespace,
   deliveryName: sample.delivery.name,
   routes: sample.routes.map(({ code, text }) => ({ code, rs: parseERN(text) })),
-  orgs: sample.orgs,
+  orgs: [], orgMode: 'codespace',
   timestamp: TIMESTAMP,
 });
 

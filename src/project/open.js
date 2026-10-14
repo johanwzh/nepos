@@ -8,6 +8,7 @@ import { normalizeCodespace } from '../core/codespace.js';
 import { checkRouteFile, summarizeIntegrity } from '../core/integrity/check.js';
 import { parseERN } from '../core/ern/parse.js';
 import { serializeERN } from '../core/ern/serialize.js';
+import { orgNameList } from '../core/orgs.js';
 
 /**
  * @typedef {{ code: string, text: string, status: 'ok' | 'outdated' | 'damaged',
@@ -19,7 +20,7 @@ import { serializeERN } from '../core/ern/serialize.js';
  *             formatVersion?: number }} OpenFailure
  * @typedef {{ ok: true, meta: { formatVersion: number, name: string, codespace: string } & Record<string, any>,
  *             settings: Record<string, any>, settingsRecovered: boolean,
- *             orgs: { id: string, name: string }[], orgsError: null | 'unreadable',
+ *             orgs: import('../core/orgs.js').Company[], orgsError: null | 'unreadable',
  *             routes: RouteEntry[], summary: { ok: number, outdated: number, damaged: number },
  *             migrated: boolean }} OpenSuccess
  */
@@ -78,7 +79,7 @@ export async function openProject(fs, { now = new Date() } = {}) {
  * Rewrite every outdated route in the current format (backing each one up first).
  * Damaged routes are left alone.
  * @param {import('./fs.js').ProjectFs} fs
- * @param {{ meta: { name: string, codespace: string }, orgs: { id: string, name: string }[], routes: RouteEntry[] }} opened
+ * @param {{ meta: { name: string, codespace: string }, orgs: import('../core/orgs.js').Company[], routes: RouteEntry[] }} opened
  * @param {{ now?: Date }} [opts]
  * @returns {Promise<RouteEntry[]>}
  */
@@ -89,7 +90,7 @@ export async function updateOutdatedRoutes(fs, { meta, orgs, routes }, { now = n
     if (route.status !== 'outdated') continue;
     const text = serializeERN(parseERN(route.text), route.code, {
       delivery: { name: meta.name, codespace: meta.codespace },
-      orgs,
+      orgs: orgNameList(orgs),
     });
     await writeRoute(fs, route.code, text, { now });
     const { status, issues } = checkRouteFile(text);

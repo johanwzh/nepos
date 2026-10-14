@@ -6,7 +6,7 @@ import { buildNeTExFiles } from '../../../src/core/netex/export.js';
 const base = {
   codespace: 'TST',
   deliveryName: 'Testprosjekt',
-  orgs: sample.orgs,
+  orgs: [], // the sample's #SEK names are used (organisations not in the project copy)
   timestamp: '2026-01-01T00:00:00',
 };
 

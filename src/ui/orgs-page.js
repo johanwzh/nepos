@@ -1,160 +1,137 @@
-// Organisations page (F3). IDs are full NeTEx IDs typed by the user (RUT:Authority:1); the role
-// comes from the ID. orgs.json is written only when every ID is valid, and never when Nepos could
-// not read the file in the first place.
-//
-// The rows are built once per showing (and on add/delete). Edits update the changed row's role,
-// marking and message in place, so the field or button the user moves to next is never replaced
-// under their cursor.
+// Ressurser → Organisasjoner (organisations spec §5): Entur's register status and refresh, the
+// note on missing organisations, and the companies the project uses with their export IDs.
+// Rows are built once per showing; alias edits update their own field in place.
 import { app } from './state.js';
 import { $, onRefresh, currentPage, runAction } from './shell.js';
 import { t } from '../i18n/strings.js';
-import { validateOrgs, orgRole } from '../core/orgs.js';
+import { generatedAlias, aliasIssues, orgRole } from '../core/orgs.js';
 import { writeOrgs } from '../project/orgs-store.js';
-import { orgIssueMessage } from './messages.js';
+import { refreshRegister } from './org-register.js';
 
-/** @type {{ row: HTMLElement, role: HTMLElement, msg: HTMLElement }[]} */
-let rowParts = [];
+/** @type {Set<string>} organisationIds (or names) whose details are open */
+const open = new Set();
 
-/** @param {string} id */
-function roleLabel(id) {
-  const role = orgRole(id);
-  return role === 'authority' ? t('roleAuthority') : role === 'operator' ? t('roleOperator') : '—';
+/** @param {string} iso */
+const when = (iso) => {
+  const d = new Date(iso);
+  const p = (/** @type {number} */ n) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
+/** @param {string} tag @param {string} cls @param {string} [text] */
+const el = (tag, cls, text = '') => { const e = document.createElement(tag); e.className = cls; if (text) e.textContent = text; return e; };
+
+function statusLine() {
+  const line = el('div', 'org-status');
+  const reg = app.orgRegister;
+  const s = app.orgRegisterStatus;
+  line.textContent = s === 'loading' ? t('orgRegisterLoading')
+    : s === 'failed' ? (reg ? t('orgRegisterFailed', when(reg.fetchedAt)) : t('orgRegisterNone'))
+    : reg ? t('orgRegisterStatus', reg.companies.length, when(reg.fetchedAt)) : t('orgRegisterNone');
+  line.classList.toggle('bad', s === 'failed');
+  const btn = /** @type {HTMLButtonElement} */ (el('button', 'org-refresh', t('orgRefresh')));
+  btn.id = 'org-refresh';
+  btn.disabled = s === 'loading';
+  btn.addEventListener('click', () => { void refreshRegister(); });
+  line.appendChild(btn);
+  return line;
 }
 
-/** Show the save status line, or remove it when there is nothing to say. */
-function showStatus() {
-  const body = $('assets-body');
-  let el = body.querySelector('.assets-status');
-  if (!app.orgsStatus) {
-    el?.remove();
-    return;
-  }
-  if (!el) {
-    el = document.createElement('div');
-    body.appendChild(el);
-  }
-  el.className = `assets-status${app.orgsStatus === 'not-saved' ? ' bad' : ''}`;
-  el.textContent = app.orgsStatus === 'saved' ? t('saved') : t('orgsNotSaved');
+function missingNote() {
+  const p = el('p', 'org-missing-note');
+  const [before, after] = t('orgMissingNote').split('{mail}');
+  const a = document.createElement('a');
+  a.href = 'mailto:kollektivdata@entur.org';
+  a.textContent = 'kollektivdata@entur.org';
+  p.append(before, a, after ?? '');
+  return p;
 }
 
-/** Update every row's role, marking and messages to match the current list. */
-function showValidation() {
-  const issues = validateOrgs(app.orgs);
-  rowParts.forEach(({ row, role, msg }, index) => {
-    const rowIssues = issues.filter((i) => i.index === index);
-    row.classList.toggle('invalid', rowIssues.length > 0);
-    role.textContent = roleLabel(app.orgs[index].id);
-    msg.textContent = rowIssues.map((i) => orgIssueMessage(i.code)).join(' · ');
-    msg.hidden = rowIssues.length === 0;
-  });
-  return issues;
+/** How many route files name each organisation ID in a #SEK record. */
+function usage() {
+  /** @type {Map<string, number>} */
+  const count = new Map();
+  for (const r of app.routes) {
+    const ids = new Set([...r.text.matchAll(/^[ \t]*#SEK;([^;\r\n]*)/gm)].map((m) => m[1].trim()));
+    for (const id of ids) count.set(id, (count.get(id) ?? 0) + 1);
+  }
+  return count;
 }
 
-async function saveIfValid() {
-  if (!app.fs || app.orgsError) return;
-  if (showValidation().length > 0) {
-    app.orgsStatus = 'not-saved';
-  } else {
-    const fs = app.fs;
-    const saved = await runAction(() => writeOrgs(fs, app.orgs));
-    app.orgsStatus = saved ? 'saved' : 'not-saved';
-  }
-  showStatus();
+/** @param {HTMLInputElement} input @param {'authority' | 'operator'} role */
+function aliasProblem(input, role) {
+  const typed = input.value.trim();
+  if (typed && orgRole(typed) !== role) return t('orgAliasFormat');
+  const nog = input.dataset.nog ?? '';
+  const trial = app.orgs.map((c) => ({ ...c,
+    authority: c.authority && (c.authority.id === nog ? { ...c.authority, alias: typed } : c.authority),
+    operator: c.operator && (c.operator.id === nog ? { ...c.operator, alias: typed } : c.operator) }));
+  return aliasIssues(trial, app.meta?.codespace ?? '').some((i) => i.nogId === nog && i.code === 'org-alias-duplicate') ? t('orgAliasDuplicate') : '';
 }
 
 export function renderOrgsPage() {
   if (currentPage() !== 'assets') return;
   const body = $('assets-body');
   body.innerHTML = '';
-  rowParts = [];
-  const title = document.createElement('div');
-  title.className = 'assets-title';
-  title.textContent = t('orgTitle');
-  body.appendChild(title);
+  body.appendChild(el('div', 'assets-title', t('orgTitle')));
+  if (!app.meta) { body.appendChild(el('p', 'assets-coming', t('noProjectOpen'))); return; }
+  body.appendChild(statusLine());
+  body.appendChild(missingNote());
+  if (app.orgsError) { body.appendChild(el('p', 'assets-status bad', t('orgsUnreadable'))); return; }
 
-  if (!app.meta) {
-    const p = document.createElement('p');
-    p.className = 'assets-coming';
-    p.textContent = t('noProjectOpen');
-    body.appendChild(p);
-    return;
+  body.appendChild(el('div', 'assets-subtitle', t('orgInProjectTitle')));
+  if (!app.orgs.length) { body.appendChild(el('p', 'assets-hint', t('orgNoneInProject'))); return; }
+  const used = usage();
+  const cs = app.meta.codespace;
+  for (const company of [...app.orgs].sort((a, b) => a.name.localeCompare(b.name, 'nb'))) {
+    const key = company.organisationId || company.name;
+    const row = el('div', 'org-row');
+    const head = el('div', 'org-row-head');
+    head.appendChild(el('b', '', company.name));
+    head.appendChild(el('span', 'org-num', company.companyNumber ? `${t('orgCompanyNumber')} ${company.companyNumber}` : ''));
+    const lines = Math.max(company.authority ? used.get(company.authority.id) ?? 0 : 0, company.operator ? used.get(company.operator.id) ?? 0 : 0);
+    head.appendChild(el('span', 'org-used', t('orgUsedBy', lines)));
+    if (app.orgChanges.changed.includes(key)) head.appendChild(el('span', 'org-mark', t('orgChanged')));
+    head.addEventListener('click', () => { if (open.has(key)) open.delete(key); else open.add(key); renderOrgsPage(); });
+    row.appendChild(head);
+
+    for (const role of /** @type {('authority' | 'operator')[]} */ (['authority', 'operator'])) {
+      const entry = company[role];
+      if (!entry) continue;
+      const line = el('div', 'org-role-line');
+      line.appendChild(el('span', 'org-role', t(role === 'authority' ? 'roleAuthority' : 'roleOperator')));
+      line.appendChild(el('label', 'org-alias-label', t('orgAliasLabel')));
+      const input = /** @type {HTMLInputElement} */ (el('input', 'org-alias-in'));
+      input.dataset.nog = entry.id;
+      input.value = entry.alias ?? '';
+      input.placeholder = generatedAlias(entry.id, cs);
+      const msg = el('span', 'org-alias-msg');
+      const check = () => { const p = aliasProblem(input, role); input.classList.toggle('invalid', !!p); msg.textContent = p; return p; };
+      input.addEventListener('input', check);
+      input.addEventListener('keydown', (e) => e.stopPropagation());
+      input.addEventListener('change', () => {
+        if (check() || !app.fs) return;
+        entry.alias = input.value.trim();
+        const fs = app.fs;
+        void runAction(() => writeOrgs(fs, app.orgs));
+      });
+      line.append(input, msg);
+      if (app.orgChanges.missing.includes(entry.id)) line.appendChild(el('span', 'org-mark bad', t('orgGone')));
+      row.appendChild(line);
+    }
+
+    if (open.has(key)) {
+      const d = el('div', 'org-details');
+      for (const role of /** @type {('authority' | 'operator')[]} */ (['authority', 'operator'])) {
+        const entry = company[role];
+        if (!entry) continue;
+        const c = entry.contact;
+        d.appendChild(el('div', '', [entry.id, company.legalName, company.tradingName, c.email, c.phone, c.url].filter(Boolean).join(' · ')));
+      }
+      row.appendChild(d);
+    }
+    body.appendChild(row);
   }
-  if (app.orgsError) {
-    const p = document.createElement('p');
-    p.className = 'assets-status bad';
-    p.textContent = t('orgsUnreadable');
-    body.appendChild(p);
-    return;
-  }
-
-  const hint = document.createElement('p');
-  hint.className = 'assets-hint';
-  hint.textContent = t('orgsIdHint');
-  body.appendChild(hint);
-
-  const hdr = document.createElement('div');
-  hdr.className = 'asset-hdr';
-  for (const [text, style] of [[t('orgId'), 'width:228px'], [t('orgRole'), 'width:80px'], [t('orgName'), 'flex:1']]) {
-    const span = document.createElement('span');
-    span.setAttribute('style', style);
-    span.textContent = text;
-    hdr.appendChild(span);
-  }
-  body.appendChild(hdr);
-
-  app.orgs.forEach((org, index) => {
-    const row = document.createElement('div');
-    row.className = 'asset-row';
-
-    const idIn = document.createElement('input');
-    idIn.className = 'asset-id-in';
-    idIn.value = org.id;
-    idIn.placeholder = 'ABC:Operator:1';
-    idIn.addEventListener('change', () => { org.id = idIn.value; saveIfValid(); });
-
-    const role = document.createElement('span');
-    role.className = 'asset-role';
-
-    const nameIn = document.createElement('input');
-    nameIn.className = 'asset-name-in';
-    nameIn.value = org.name;
-    nameIn.placeholder = t('orgName');
-    nameIn.addEventListener('change', () => { org.name = nameIn.value.trim(); saveIfValid(); });
-
-    const del = document.createElement('button');
-    del.className = 'asset-del';
-    del.title = t('deleteOrg');
-    del.textContent = '×';
-    del.addEventListener('click', () => {
-      if (org.name && !confirm(t('deleteOrgConfirm', org.name))) return;
-      app.orgs.splice(index, 1);
-      renderOrgsPage();
-      saveIfValid();
-    });
-
-    for (const el of [idIn, nameIn]) el.addEventListener('keydown', (e) => e.stopPropagation());
-    row.append(idIn, role, nameIn, del);
-
-    const msg = document.createElement('div');
-    msg.className = 'asset-msg';
-    body.append(row, msg);
-    rowParts.push({ row, role, msg });
-  });
-
-  const add = document.createElement('button');
-  add.className = 'asset-add';
-  add.textContent = t('addOrg');
-  add.addEventListener('click', () => {
-    app.orgs.push({ id: '', name: '' });
-    app.orgsStatus = 'not-saved';
-    renderOrgsPage();
-    const inputs = body.querySelectorAll('.asset-id-in');
-    /** @type {HTMLInputElement} */ (inputs[inputs.length - 1])?.focus();
-  });
-  body.appendChild(add);
-
-  showValidation();
-  showStatus();
 }
 
 export function initOrgsPage() {

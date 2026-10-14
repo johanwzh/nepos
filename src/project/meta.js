@@ -14,3 +14,25 @@ export async function writeProjectName(fs, meta, name) {
   await writeJson(fs, PROJECT_FILE, updated);
   return updated;
 }
+
+/**
+ * How organisations are written in the export (organisations spec §6.1). Default: codespace.
+ * @param {Record<string, any> | null} meta
+ * @returns {'codespace' | 'nog'}
+ */
+export function orgExportMode(meta) {
+  return meta?.orgExportMode === 'nog' ? 'nog' : 'codespace';
+}
+
+/**
+ * @template {Record<string, any>} M
+ * @param {import('./fs.js').ProjectFs} fs
+ * @param {M} meta
+ * @param {'codespace' | 'nog'} mode
+ * @returns {Promise<M>}
+ */
+export async function writeOrgExportMode(fs, meta, mode) {
+  const updated = { ...meta, orgExportMode: mode };
+  await writeJson(fs, PROJECT_FILE, updated);
+  return updated;
+}

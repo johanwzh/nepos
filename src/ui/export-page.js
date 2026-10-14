@@ -4,7 +4,7 @@ import { app } from './state.js';
 import { $, onRefresh, refreshAll, runAction, beforeLeave, persistSettings, showMessage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { parseERN } from '../core/ern/parse.js';
-import { validateOrgs } from '../core/orgs.js';
+import { orgExportMode, writeOrgExportMode } from '../project/meta.js';
 import { checkForExport } from '../core/export-check.js';
 import { buildNeTExFiles } from '../core/netex/export.js';
 import { writeExport } from '../project/export.js';
@@ -48,8 +48,8 @@ async function exclusive(work) {
  *   null when the user cancelled, or another project was opened meanwhile
  */
 async function runCheck() {
-  const fs = app.fs;
-  if (!app.meta || !fs) return null;
+  const fs = app.fs, meta = app.meta;
+  if (!meta || !fs) return null;
   if (!(await beforeLeave('export'))) return null;
   if (app.fs !== fs) return null;
   $('val-results').textContent = t('checking');
@@ -74,9 +74,8 @@ async function runCheck() {
     status: r.status,
     rs: r.status === 'damaged' ? null : parseERN(r.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) }),
   }));
-  const orgsProblem = app.orgsError ? 'unreadable'
-    : app.orgsStatus === 'not-saved' || validateOrgs(app.orgs).length ? 'not-saved' : '';
-  const issues = checkForExport({ routes, orgs: app.orgs, orgsProblem, quayInfo, changedOnDisk });
+  const orgsProblem = app.orgsError ? 'unreadable' : '';
+  const issues = checkForExport({ routes, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, quayInfo, changedOnDisk });
   result = { fs, issues };
   refreshAll(); // the route list shows the files as they are now
   return { routes: routes.map(({ code, rs }) => ({ code, rs })), issues };
@@ -90,7 +89,7 @@ async function runExport() {
     setStatus(t('exportBlocked'), true);
     return;
   }
-  const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: app.orgs });
+  const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: app.orgs, orgMode: orgExportMode(app.meta) });
   const asZip = app.settings.exportAsZip !== false;
   let written = '';
   const ok = await runAction(async () => { written = await writeExport(fs, files, { codespace: meta.codespace, asZip }); });
@@ -137,6 +136,11 @@ function renderExportPage() {
   $('btn-netex').disabled = !open || busy;
   $('chk-zip').disabled = !open;
   $('chk-zip').checked = app.settings.exportAsZip !== false;
+  const mode = orgExportMode(app.meta);
+  for (const id of ['org-mode-codespace', 'org-mode-nog']) {
+    $(id).disabled = !open;
+    $(id).checked = $(id).value === mode;
+  }
   renderResults();
   renderStatus();
 }
@@ -149,5 +153,13 @@ export function initExportPage() {
     app.settings.exportAsZip = $('chk-zip').checked;
     runAction(persistSettings);
   });
+  for (const id of ['org-mode-codespace', 'org-mode-nog']) {
+    $(id).addEventListener('change', () => {
+      const fs = app.fs, meta = app.meta;
+      if (!fs || !meta || !$(id).checked) return;
+      const mode = /** @type {'codespace' | 'nog'} */ ($(id).value);
+      void runAction(async () => { app.meta = await writeOrgExportMode(fs, meta, mode); });
+    });
+  }
   renderExportPage();
 }

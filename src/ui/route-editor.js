@@ -11,7 +11,10 @@ import { parseERN } from '../core/ern/parse.js';
 import { serializeERN } from '../core/ern/serialize.js';
 import { ERN_MODES } from '../core/ern/modes.js';
 import { checkRouteFile } from '../core/integrity/check.js';
-import { orgRole, validateOrgs } from '../core/orgs.js';
+import { orgNameList, findRole, addToCopy } from '../core/orgs.js';
+import { createOrgPicker } from './org-picker.js';
+import { writeOrgs } from '../project/orgs-store.js';
+import { pruneProjectCopy } from './org-register.js';
 import { nextRouteCode, compareRouteCodes } from '../core/route-codes.js';
 import { yyyymmddToInput, inputToYyyymmdd } from '../core/footnotes.js';
 import { writeRoute, deleteRoute as deleteRouteFile } from '../project/routes.js';
@@ -49,11 +52,6 @@ function switchPeriodDir(perId, dirId, { store = true } = {}) {
 
 let saving = false;
 
-/** The organisation list to name organisations with, unless it has unsaved invalid edits. */
-function trustedOrgs() {
-  return app.orgsStatus === 'not-saved' || validateOrgs(app.orgs).length ? [] : app.orgs;
-}
-
 /**
  * Save the open route (backup first). Returns false when nothing was saved.
  * @param {HTMLButtonElement | null} [trigger]
@@ -74,6 +72,7 @@ export async function saveRoute(trigger = null) {
   const ok = await runAction(() => writeRoute(fs, code, text), trigger).finally(() => { saving = false; });
   if (!ok) return false;
   app.routes = app.routes.map((r) => (r.code === code ? { code, text, status, issues } : r));
+  await pruneProjectCopy();
   // Edits made while the file was being written are not in it: they stay unsaved.
   if (app.activeRoute === code && currentText() === text) {
     app.dirty = false;
@@ -86,7 +85,7 @@ export async function saveRoute(trigger = null) {
 /** The open route as ERN text, including the grid on screen. */
 function currentText() {
   saveGridToState();
-  return serializeERN(app.routeState, /** @type {string} */ (app.activeRoute), { delivery: { name: app.meta.name, codespace: app.meta.codespace }, orgs: trustedOrgs() });
+  return serializeERN(app.routeState, /** @type {string} */ (app.activeRoute), { delivery: { name: app.meta.name, codespace: app.meta.codespace }, orgs: orgNameList(app.orgs) });
 }
 
 /** Ask to save unsaved changes. Resolves false when the user wants to stay. */
@@ -257,29 +256,49 @@ function renderFooter() {
   const other = rs.directions.find((/** @type {any} */ d) => d.id !== rs.activeDir);
   const dirLabel = other ? `${esc(cur?.name ?? '—')} ⇄ ${esc(other.name)}` : esc(t('createReturn'));
 
-  const chips = rs.sek.map((/** @type {any} */ s) => {
-    const org = trustedOrgs().find((o) => o.id === s.orgId);
-    const role = orgRole(s.orgId);
-    const roleText = role === 'authority' ? t('roleAuthority') : role === 'operator' ? t('roleOperator') : [s.isAuthority ? 'A' : '', s.isOperator ? 'O' : ''].join('');
-    return `<span class="ef-org-chip${org ? '' : ' n2-missing'}" title="${esc(org ? s.orgId : `${s.orgId} — ${t('orgNotInList')}`)}">
-      <span class="ef-org-name">${esc(org?.name || s.name || s.orgId)}</span><span class="ef-org-role">${esc(roleText)}</span>
-      ${ro ? '' : `<button class="ef-org-x" data-oid="${esc(s.orgId)}" title="${esc(t('removeRouteOrg'))}">×</button>`}</span>`;
-  }).join('');
-  const attached = new Set(rs.sek.map((/** @type {any} */ s) => s.orgId));
-  const available = trustedOrgs().filter((o) => orgRole(o.id) && !attached.has(o.id)).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
-  const picker = !ro && available.length
-    ? `<select class="ef-add-org" id="ef-add-org"><option value="">${esc(t('addRouteOrg'))}</option>${available.map((o) => `<option value="${esc(o.id)}">${esc(o.name)}</option>`).join('')}</select>`
-    : '';
-
   el.innerHTML = `
     <button class="ef-dir-btn" id="ef-dir">${dirLabel}</button>
     ${other && !ro ? '<button class="ef-del-dir" id="ef-del-dir">×</button>' : ''}
     <div class="ef-vsep2"></div>
-    ${chips}${picker}
+    <div class="ef-orgs" id="ef-orgs"></div>
     <div class="ef-spacer"></div>
     ${ro ? `<span class="n2-readonly-note">${esc(t('statusDamaged'))}</span>` : `
     <button class="ef-save-btn${app.dirty ? ' dirty' : ''}" id="ef-save">${app.dirty ? '● ' : ''}${esc(t('save'))}</button>
     <button class="ef-del-route" id="ef-del-route">${esc(t('deleteRoute'))}</button>`}`;
+
+  const orgsEl = $('ef-orgs');
+  const register = app.orgRegister?.companies ?? app.orgs;
+  for (const role of /** @type {('authority' | 'operator')[]} */ (['authority', 'operator'])) {
+    const ofRole = rs.sek.filter((/** @type {any} */ s) => (role === 'authority' ? s.isAuthority : s.isOperator));
+    const first = ofRole[0];
+    const hit = first ? findRole(register, first.orgId) : null;
+    const known = hit && hit.role === role ? hit : null;
+    const picker = createOrgPicker({
+      role, currentId: first?.orgId ?? '', currentName: known?.company.name ?? first?.name ?? '',
+      projectCompanies: app.orgs, registerCompanies: app.orgRegister?.companies ?? [],
+      invalid: first && !known ? t('orgNotInRegister') : '', disabled: ro,
+      onPick: (company) => pickOrg(role, company),
+    });
+    picker.id = `ef-pick-${role}`;
+    orgsEl.appendChild(picker);
+    if (ofRole.length > 1) {
+      const note = document.createElement('span');
+      note.className = 'ef-org-extra';
+      note.textContent = t('orgExtra', ofRole.length, t(role === 'authority' ? 'rolesAuthority' : 'rolesOperator'));
+      if (!ro) {
+        const x = document.createElement('button');
+        x.className = 'ef-org-extra-x';
+        x.textContent = t('orgExtraRemove');
+        x.addEventListener('click', () => {
+          rs.sek = rs.sek.filter((/** @type {any} */ s) => s === first || !(role === 'authority' ? s.isAuthority : s.isOperator));
+          markDirty();
+          renderFooter();
+        });
+        note.appendChild(x);
+      }
+      orgsEl.appendChild(note);
+    }
+  }
 
   $('ef-dir').addEventListener('click', () => {
     if (other) { switchPeriodDir(rs.activePer, other.id); return; }
@@ -299,22 +318,32 @@ function renderFooter() {
     markDirty();
     switchPeriodDir(rs.activePer, rs.activeDir, { store: false });
   });
-  el.querySelectorAll('.ef-org-x').forEach((/** @type {HTMLElement} */ b) => b.addEventListener('click', () => {
-    rs.sek = rs.sek.filter((/** @type {any} */ s) => s.orgId !== b.dataset.oid);
-    markDirty();
-    renderFooter();
-  }));
-  $('ef-add-org')?.addEventListener('change', () => {
-    const id = $('ef-add-org').value;
-    const org = trustedOrgs().find((o) => o.id === id);
-    if (!org) return;
-    const role = orgRole(id);
-    rs.sek = [...rs.sek, { orgId: id, isAuthority: role === 'authority', isOperator: role === 'operator', name: org.name }];
-    markDirty();
-    renderFooter();
-  });
   $('ef-save')?.addEventListener('click', () => saveRoute($('ef-save')));
   $('ef-del-route')?.addEventListener('click', () => deleteActiveRoute($('ef-del-route')));
+}
+
+/**
+ * Put a company on the open line in one role (replacing every #SEK of that role) and add it to the
+ * project copy — unless the copy could not be read, which is never overwritten.
+ * @param {'authority' | 'operator'} role
+ * @param {import('../core/orgs.js').Company} company
+ */
+function pickOrg(role, company) {
+  const rs = app.routeState;
+  const entry = company[role];
+  if (!rs || !entry) return;
+  rs.sek = [
+    ...rs.sek.filter((/** @type {any} */ s) => !(role === 'authority' ? s.isAuthority : s.isOperator)),
+    { orgId: entry.id, isAuthority: role === 'authority', isOperator: role === 'operator', name: company.name },
+  ];
+  markDirty();
+  renderFooter();
+  const fs = app.fs;
+  const next = addToCopy(app.orgs, company, role);
+  if (fs && !app.orgsError && next !== app.orgs) {
+    app.orgs = next;
+    void runAction(() => writeOrgs(fs, next));
+  }
 }
 
 function renderReadOnlyBar() {

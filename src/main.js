@@ -12,8 +12,10 @@ import { initExportPage } from './ui/export-page.js';
 import { initMapPanel } from './ui/map-panel.js';
 import { initWorkbench, setWorkbenchMap } from './ui/workbench.js';
 import { createWorkbenchMap } from './ui/workbench-map.js';
+import { initOrgRegister } from './ui/org-register.js';
 
 initShell();
+initOrgRegister({ fetchOnStart: true });
 initRouteList();
 initOrgsPage();
 initGrid();
