@@ -3,14 +3,16 @@
 import { yyyymmdd2d } from './xml.js';
 import { expandDayCode } from './daycodes.js';
 import { journeyStops, routeHasTrips, runsOnlyDates } from './journeys.js';
+import { findRole, exportOrgId, netexOrgId } from '../orgs.js';
 
 /**
  * Collect everything the NeTEx files need from the parsed routes. Stops are identified by their
  * stop ID in the route file (an NSR Quay ID); rows without one are left out. No ServiceLinks are
  * produced (spec §8).
- * @param {{ codespace: string, routes: { code: string, rs: any }[], orgs?: { id: any, name: string }[] }} input
+ * @param {{ codespace: string, routes: { code: string, rs: any }[],
+ *           orgs?: import('../orgs.js').Company[], orgMode?: 'codespace' | 'nog' }} input
  */
-export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList = [] }) {
+export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList = [], orgMode = 'codespace' }) {
     const cs = codespace || '1869';
 
     // Routes without a trip (two or more calls) have nothing to export: no line file at all
@@ -27,18 +29,28 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
     if (overallFrom === '99999999') overallFrom = '';
     if (overallTo   === '00000000') overallTo   = '';
 
-    // Organisations (from SEK across all routes, merged with orgs.json)
-    const orgs = new Map(); // orgId → {id, name, isAuthority, isOperator}
+    /**
+     * How one #SEK organisation is written for a role (organisations spec §6). An ID that is not in
+     * the project copy with that role falls back to the route file, as before.
+     * @param {{ orgId: string, name?: string }} s
+     * @param {'Authority' | 'Operator'} role
+     */
+    function orgFor(s, role) {
+        const hit = findRole(orgList, s.orgId);
+        if (hit && hit.role === role.toLowerCase()) {
+            const id = exportOrgId(hit.entry, hit.role, orgMode, cs);
+            return { id, networkKey: id, name: hit.company.name, company: hit.company, entry: hit.entry };
+        }
+        return { id: netexOrgId(s.orgId, role, cs), networkKey: String(s.orgId), name: s.name || `Org ${s.orgId}`, company: null, entry: null };
+    }
+    const orgs = new Map(); // `${role}:${id}` → orgFor(...) + role, in order of first use
     for (const { rs } of routes) {
         for (const s of rs.sek||[]) {
-            if (!orgs.has(s.orgId)) {
-                const org = (orgList||[]).find(o=>String(o.id)===String(s.orgId));
-                orgs.set(s.orgId, { id:s.orgId, name:org?.name||`Org ${s.orgId}`,
-                    isAuthority:false, isOperator:false });
+            for (const role of /** @type {('Authority' | 'Operator')[]} */ (['Authority', 'Operator'])) {
+                if (!(role === 'Authority' ? s.isAuthority : s.isOperator)) continue;
+                const out = orgFor(s, role);
+                if (!orgs.has(`${role}:${out.id}`)) orgs.set(`${role}:${out.id}`, { ...out, role });
             }
-            const entry = orgs.get(s.orgId);
-            if (s.isAuthority) entry.isAuthority = true;
-            if (s.isOperator)  entry.isOperator  = true;
         }
     }
 
@@ -155,6 +167,6 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
         }
     }
 
-    return { cs, routes, orgs, usedStops, destDisps, operDays, operPers, dayTypes,
+    return { cs, routes, orgs, orgFor, orgMode, usedStops, destDisps, operDays, operPers, dayTypes,
              dtAssignments, overallFrom, overallTo };
 }

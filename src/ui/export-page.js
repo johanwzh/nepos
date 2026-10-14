@@ -5,6 +5,7 @@ import { $, onRefresh, refreshAll, runAction, beforeLeave, persistSettings, show
 import { t } from '../i18n/strings.js';
 import { parseERN } from '../core/ern/parse.js';
 import { orgNameList } from '../core/orgs.js';
+import { orgExportMode } from '../project/meta.js';
 import { checkForExport } from '../core/export-check.js';
 import { buildNeTExFiles } from '../core/netex/export.js';
 import { writeExport } from '../project/export.js';
@@ -89,7 +90,7 @@ async function runExport() {
     setStatus(t('exportBlocked'), true);
     return;
   }
-  const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: orgNameList(app.orgs) });
+  const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: app.orgs, orgMode: orgExportMode(app.meta) });
   const asZip = app.settings.exportAsZip !== false;
   let written = '';
   const ok = await runAction(async () => { written = await writeExport(fs, files, { codespace: meta.codespace, asZip }); });

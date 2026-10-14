@@ -1,40 +1,43 @@
 // _shared_data.xml generator, ported from Nepos 1.5.7 (nepos.html lines 6076–6220).
 import { xe, pubDelivery, compositeFrame } from './xml.js';
 import { stopLocalId, quayRef } from '../quays.js';
-import { netexOrgId, authorityNetworkLocalId } from '../orgs.js';
+import { authorityNetworkLocalId } from '../orgs.js';
 
 /**
  * @param {any} data from collectNeTExData
  * @param {{ deliveryName?: string, timestamp?: string }} [opts]
  */
 export function genSharedXml(data, { deliveryName = '', timestamp } = {}) {
-    const { cs, orgs, usedStops, destDisps, operDays, operPers, dayTypes, dtAssignments, overallFrom, overallTo } = data;
+    const { cs, orgs, orgMode, usedStops, destDisps, operDays, operPers, dayTypes, dtAssignments, overallFrom, overallTo } = data;
 
-    // ResourceFrame
-    const authXml = [...orgs.values()].filter(o=>o.isAuthority).map(o=>`      <Authority id="${xe(netexOrgId(o.id,'Authority',cs))}" version="1">
+    /** One organisation element (organisations spec §6.3): details only when it is in the project copy. */
+    const orgXml = (/** @type {any} */ o) => {
+        const kind = o.role === 'Authority' ? 'authority' : 'operator';
+        if (!o.company) return `      <${o.role} id="${xe(o.id)}" version="1">
         <Name>${xe(o.name)}</Name>
-        <OrganisationType>authority</OrganisationType>
-      </Authority>`).join('\n');
-    const operXml = [...orgs.values()].filter(o=>o.isOperator).map(o=>`      <Operator id="${xe(netexOrgId(o.id,'Operator',cs))}" version="1">
-        <Name>${xe(o.name)}</Name>
-        <OrganisationType>operator</OrganisationType>
-      </Operator>`).join('\n');
+        <OrganisationType>${kind}</OrganisationType>
+      </${o.role}>`;
+        const c = o.company, ct = o.entry.contact;
+        const el = (/** @type {string} */ n, /** @type {string} */ v, ind = '        ') => v ? `\n${ind}<${n}>${xe(v)}</${n}>` : '';
+        const contact = ct.email || ct.phone || ct.url
+            ? `\n        <ContactDetails>${el('Email', ct.email, '          ')}${el('Phone', ct.phone, '          ')}${el('Url', ct.url, '          ')}\n        </ContactDetails>` : '';
+        return `      <${o.role} id="${xe(o.id)}" version="1">${el('CompanyNumber', c.companyNumber)}${el('Name', c.name)}${el('LegalName', c.legalName)}${el('TradingName', c.tradingName)}${contact}
+        <OrganisationType>${kind}</OrganisationType>
+      </${o.role}>`;
+    };
+    const all = [...orgs.values()];
+    const authOrgs = all.filter((o) => o.role === 'Authority');
     const resFrame = `    <ResourceFrame id="${cs}:ResourceFrame:shared" version="1">
       <organisations>
-${authXml}
-${operXml}
+${[...authOrgs, ...all.filter((o) => o.role === 'Operator')].map(orgXml).join('\n')}
       </organisations>
     </ResourceFrame>`;
 
-    // ServiceFrame: one Network per unique authority so each Line can point to the right one
-    const authOrgs = [...orgs.values()].filter(o=>o.isAuthority);
-    // Fallback: if no authorities defined, create one unnamed network
-    // Primary Network: the package itself (no AuthorityRef — just a grouping container)
-    // Additional Networks: one per unique authority from SEK records, each with AuthorityRef
-    const addNetItems = authOrgs.map(o=>`      <Network id="${cs}:Network:${xe(authorityNetworkLocalId(o.id))}" version="1">
+    const addNetItems = authOrgs.map(o=>`      <Network id="${cs}:Network:${xe(authorityNetworkLocalId(o.networkKey))}" version="1">
         <Name>${xe(o.name)}</Name>
-        <AuthorityRef ref="${xe(netexOrgId(o.id,'Authority',cs))}" version="1"/>
+        <AuthorityRef ref="${xe(o.id)}" version="1"/>
       </Network>`).join('\n');
+
     const netXml = `    <Network id="${cs}:Network:${cs}" version="1">
       <Name>${xe(deliveryName||cs)}</Name>
     </Network>${authOrgs.length > 0 ? `\n    <additionalNetworks>\n${addNetItems}\n    </additionalNetworks>` : ''}`;
@@ -114,6 +117,7 @@ ${dtaXml}
       </dayTypeAssignments>
     </ServiceCalendarFrame>`;
 
-    const cf = compositeFrame(cs,'shared',overallFrom,overallTo,false,resFrame,svcFrame,calFrame);
+    const frames = orgMode === 'nog' ? [svcFrame, calFrame] : [resFrame, svcFrame, calFrame];
+    const cf = compositeFrame(cs,'shared',overallFrom,overallTo,false,...frames);
     return pubDelivery(cs, `${cs} shared data`, cf, timestamp);
 }
