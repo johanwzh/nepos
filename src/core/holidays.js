@@ -20,6 +20,9 @@ export function norwegianHolidays(year) {
     [addDays(e, 39), 'Kristi himmelfartsdag'], [addDays(e, 49), '1. pinsedag'], [addDays(e, 50), '2. pinsedag'],
     [`${year}0517`, 'Grunnlovsdag'], [`${year}1225`, '1. juledag'], [`${year}1226`, '2. juledag'],
   ];
-  list.sort((x, y) => (x[0] < y[0] ? -1 : 1));
-  return new Map(list);
+  list.sort((x, y) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0));
+  /** @type {Map<string, string>} */
+  const map = new Map();
+  for (const [d, name] of list) map.set(d, map.has(d) ? `${map.get(d)}, ${name}` : name);
+  return map;
 }

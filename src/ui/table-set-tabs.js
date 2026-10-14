@@ -53,19 +53,48 @@ export function renderTableSetTabs() {
     add.className = 'ts-add';
     add.textContent = '+';
     add.title = t('newTableSet');
-    add.addEventListener('click', () => {
-      const name = prompt(t('tableSetNamePrompt'), '');
-      if (name == null) return;
-      const reversed = confirm(t('tableSetReversed'));
-      storeGrid();
-      const id = addTableSet(rs, name.trim(), { reversed });
-      markDirty();
-      switchTableSet(id, { store: false });
-    });
+    add.addEventListener('click', openNewTableSet);
     el.appendChild(add);
   }
 }
 
+/** The new-table-set dialog (timetable structure spec §2): name, and the stops to start with. */
+function openNewTableSet() {
+  const name = /** @type {HTMLInputElement} */ ($('ts-dlg-name'));
+  name.value = '';
+  name.classList.remove('invalid');
+  /** @type {HTMLInputElement} */ ($('ts-stops-same')).checked = true;
+  $('ts-dlg').showModal();
+  name.focus();
+}
+
+function createFromDialog() {
+  const rs = app.routeState;
+  const name = /** @type {HTMLInputElement} */ ($('ts-dlg-name'));
+  if (!rs) return;
+  if (!name.value.trim()) { name.classList.add('invalid'); return; }
+  const stops = /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="ts-stops"]:checked'))?.value ?? 'same';
+  storeGrid();
+  const id = addTableSet(rs, name.value.trim(), { reversed: stops === 'reversed' });
+  if (stops === 'empty') for (const per of rs.periods.filter((/** @type {any} */ p) => p.setId === id)) rs.grids[`${per.id}:${id}`] = { stops: [], cols: [] };
+  $('ts-dlg').close();
+  markDirty();
+  switchTableSet(id, { store: false });
+}
+
+let dialogWired = false;
 export function initTableSetTabs() {
   onRefresh(renderTableSetTabs);
+  if (dialogWired) return;
+  dialogWired = true;
+  document.addEventListener('click', (e) => {
+    const target = /** @type {HTMLElement} */ (e.target);
+    if (target.id === 'ts-dlg-ok') createFromDialog();
+    else if (target.id === 'ts-dlg-cancel') $('ts-dlg').close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (/** @type {HTMLElement} */ (e.target).id !== 'ts-dlg-name') return;
+    e.stopPropagation(); // the grid must not react to typing in the dialog
+    if (e.key === 'Enter') { e.preventDefault(); createFromDialog(); }
+  }, true);
 }

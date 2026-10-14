@@ -238,6 +238,21 @@
       </div>
     </dialog>
 
+    <dialog class="n2-dialog" id="ts-dlg">
+      <p><strong data-lk="tsDlgTitle"></strong></p>
+      <label class="n2-field"><span data-lk="tsDlgName"></span> <input id="ts-dlg-name"></label>
+      <label class="n2-check"><input type="radio" name="ts-stops" id="ts-stops-same" value="same" checked> <span data-lk="tsStopsSame"></span></label>
+      <label class="n2-check"><input type="radio" name="ts-stops" value="reversed"> <span data-lk="tsStopsReversed"></span></label>
+      <label class="n2-check"><input type="radio" name="ts-stops" value="empty"> <span data-lk="tsStopsEmpty"></span></label>
+      <div class="n2-actions"><button class="pop-btn" id="ts-dlg-cancel" data-lk="cancel"></button><button class="pop-btn primary" id="ts-dlg-ok" data-lk="ok"></button></div>
+    </dialog>
+
+    <dialog class="n2-dialog" id="cal-replace-dlg">
+      <p><strong data-lk="calReplaceTitle"></strong></p>
+      <p><span id="cal-replace-from"></span> → <label><span data-lk="calReplaceTo"></span> <select id="cal-replace-to"></select></label></p>
+      <div class="n2-actions"><button class="pop-btn" id="cal-replace-cancel" data-lk="cancel"></button><button class="pop-btn primary" id="cal-replace-ok" data-lk="calReplaceOk"></button></div>
+    </dialog>
+
     <dialog class="n2-dialog" id="check-dlg">
       <h2 data-lk="integrityTitle"></h2>
       <div id="check-body"></div>

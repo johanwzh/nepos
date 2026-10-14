@@ -8,6 +8,8 @@ import { initOrgsPage } from '../../src/ui/orgs-page.js';
 import { initCalendarsPage } from '../../src/ui/calendars-page.js';
 import { createMemoryFs, readText } from '../../src/project/fs.js';
 import { writeCalendars } from '../../src/project/calendars-store.js';
+import { writeRoute, readRoute } from '../../src/project/routes.js';
+import { initCalendarReplace } from '../../src/ui/calendar-replace-ui.js';
 
 /** @type {any} */ let fs;
 const body = () => /** @type {HTMLElement} */ (document.getElementById('assets-body'));
@@ -17,40 +19,64 @@ const change = (el, v) => { const i = /** @type {HTMLInputElement} */ (el); i.va
 
 beforeEach(() => {
   loadAppMarkup();
-  initShell(); initAssetsNav(); initOrgsPage(); initCalendarsPage();
+  initShell(); initAssetsNav(); initOrgsPage(); initCalendarsPage(); initCalendarReplace();
   fs = createMemoryFs();
-  Object.assign(app, { fs, meta: { formatVersion: 1, name: 'X', codespace: 'TST' }, calendars: [], calendarsError: null, assetsSection: 'orgs',
+  Object.assign(app, { fs, meta: { formatVersion: 1, name: 'X', codespace: 'TST' }, calendars: [], calendarsError: null, assetsSection: 'orgs', calendarSelected: null, calendarYear: 0,
     routes: [], orgs: [], orgsError: null });
   window.confirm = vi.fn(() => true);
   setPage('assets');
 });
 
 describe('calendars page', () => {
-  it('adds a calendar with a date range and saves it once it has a name', async () => {
+  it('adds a calendar, names it and switches days on in the year view', async () => {
     openSection();
-    expect(body().textContent).toContain('Ingen kalendere ennå');
     /** @type {HTMLElement} */ (body().querySelector('.cal-add')).click();
     change(body().querySelector('.cal-name'), 'Vinter 26/27');
-    /** @type {HTMLElement} */ (body().querySelector('.cal-range-add')).click();
-    change(body().querySelector('.cal-from'), '2026-08-17');
-    change(body().querySelector('.cal-to'), '2026-08-18');
+    const y = Number(body().querySelector('.cal-year')?.textContent);
+    const d1 = `${y}0817`, d2 = `${y}0818`;
+    const cell = (/** @type {string} */ d) => /** @type {HTMLElement} */ (body().querySelector(`.yv-day[data-date="${d}"]`));
+    cell(d1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    cell(d2).dispatchEvent(new MouseEvent('mouseover', { bubbles: true, buttons: 1 }));
+    document.body.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     await flush();
     const saved = JSON.parse(await readText(fs, 'data/calendars.json'));
-    expect(saved[0]).toMatchObject({ name: 'Vinter 26/27', ranges: [['20260817', '20260818']] });
-    expect(body().textContent).toContain('2 dager');
+    expect(saved[0]).toMatchObject({ name: 'Vinter 26/27', ranges: [[d1, d2]] });
+    expect(body().querySelector('.cal-days')?.textContent).toContain('2 dager');
   });
 
-  it('does not save a calendar without a name', async () => {
+  it('pages between years, starting at the calendar\'s first day', () => {
+    app.calendars = [{ id: 'c1', name: 'V', ranges: [['20270104', '20270619']] }];
+    app.calendarSelected = 'c1';
     openSection();
-    /** @type {HTMLElement} */ (body().querySelector('.cal-add')).click();
-    /** @type {HTMLElement} */ (body().querySelector('.cal-range-add')).click();
-    change(body().querySelector('.cal-from'), '2026-08-17');
+    expect(body().querySelector('.cal-year')?.textContent).toBe('2027');
+    /** @type {HTMLElement} */ (body().querySelector('.cal-year-next')).click();
+    expect(body().querySelector('.cal-year')?.textContent).toBe('2028');
+  });
+
+  it('duplicates a calendar as next season, 52 weeks later', async () => {
+    app.calendars = [{ id: 'c1', name: 'Vinter 26/27', ranges: [['20260817', '20261220']] }];
+    app.calendarSelected = 'c1';
+    openSection();
+    /** @type {HTMLElement} */ (body().querySelector('.cal-dup')).click();
     await flush();
-    expect(JSON.parse((await readText(fs, 'data/calendars.json')) ?? '[]')).toEqual([]);
+    const saved = JSON.parse(await readText(fs, 'data/calendars.json'));
+    expect(saved[1]).toMatchObject({ name: 'Vinter 26/27 (kopi)', ranges: [['20270816', '20271219']] });
+    expect(app.calendarSelected).toBe(saved[1].id);
+  });
+
+  it('keeps the old name when the name is blanked', async () => {
+    app.calendars = [{ id: 'c1', name: 'Vinter', ranges: [['20260101', '20260131']] }];
+    app.calendarSelected = 'c1';
+    await writeCalendars(fs, app.calendars);
+    openSection();
+    change(body().querySelector('.cal-name'), '');
+    await flush();
+    expect(JSON.parse(await readText(fs, 'data/calendars.json'))[0].name).toBe('Vinter');
   });
 
   it('asks before deleting a calendar periods use', async () => {
     app.calendars = [{ id: 'c1', name: 'Vinter', ranges: [] }];
+    app.calendarSelected = 'c1';
     app.routes = [{ code: 'r', text: '#TRA;A\r\n#PER;;;;;;\r\n#KAL;c1\r\n', status: 'ok', issues: [] }];
     openSection();
     /** @type {HTMLElement} */ (body().querySelector('.cal-del')).click();
@@ -58,25 +84,54 @@ describe('calendars page', () => {
     expect(/** @type {any} */ (window.confirm).mock.calls[0][0]).toContain('1 perioder');
     expect(JSON.parse(await readText(fs, 'data/calendars.json'))).toEqual([]);
   });
+  it('replaces a calendar in every saved route, telling which file could not be saved', async () => {
+    const r1 = '#TRA;A\r\n#PER;;;;;;\r\n#KAL;c1\r\n#TAB;0;;;;\r\n', r2 = '#TRA;B\r\n#PER;;;;;;\r\n#KAL;c1\r\n#TAB;0;;;;\r\n';
+    await writeRoute(fs, 'r1', r1);
+    await writeRoute(fs, 'r2', r2);
+    app.routes = [{ code: 'r1', text: r1, status: 'ok', issues: [] }, { code: 'r2', text: r2, status: 'ok', issues: [] }];
+    app.calendars = [{ id: 'c1', name: 'Gammel', ranges: [] }, { id: 'c2', name: 'Ny', ranges: [] }];
+    app.calendarSelected = 'c1';
+    const write = fs.writeBytes;
+    fs.writeBytes = async (/** @type {string} */ p, /** @type {Uint8Array} */ b) => { if (p.includes('r2')) throw new Error('låst'); return write(p, b); };
+    openSection();
+    /** @type {HTMLElement} */ (body().querySelector('.cal-replace')).click();
+    /** @type {HTMLSelectElement} */ (document.getElementById('cal-replace-to')).value = 'c2';
+    /** @type {HTMLElement} */ (document.getElementById('cal-replace-ok')).click();
+    await flush(); await flush();
+    expect(await readRoute(fs, 'r1')).toContain('#KAL;c2');
+    expect(app.routes[0].text).toContain('#KAL;c2');
+    expect(document.getElementById('msg-text')?.textContent).toContain('r2');
+  });
 });
 
-describe('calendar editing that must not lose data', () => {
-  it('keeps the old name when the name is blanked, so the calendar stays in the file', async () => {
-    app.calendars = [{ id: 'c1', name: 'Vinter', ranges: [['20260101', '20260131']] }];
-    await writeCalendars(fs, app.calendars);
+describe('calendar page review fixes', () => {
+  it('keeps a typed name when the user goes straight to clicking a day', async () => {
     openSection();
-    change(body().querySelector('.cal-name'), '');
+    /** @type {HTMLElement} */ (body().querySelector('.cal-add')).click();
+    const name = /** @type {HTMLInputElement} */ (body().querySelector('.cal-name'));
+    name.value = 'Vinter';
+    name.dispatchEvent(new Event('input'));
+    const y = body().querySelector('.cal-year')?.textContent;
+    const cell = /** @type {HTMLElement} */ (body().querySelector(`.yv-day[data-date="${y}0817"]`));
+    cell.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    document.body.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     await flush();
     expect(JSON.parse(await readText(fs, 'data/calendars.json'))[0].name).toBe('Vinter');
-    expect(/** @type {HTMLInputElement} */ (body().querySelector('.cal-name')).value).toBe('Vinter');
   });
 
-  it('swaps a range whose start is after its end, so it is saved', async () => {
-    app.calendars = [{ id: 'c1', name: 'Vinter', ranges: [['', '']] }];
+  it('leaves damaged routes alone when replacing a calendar, and says so', async () => {
+    const ok = '#TRA;A\r\n#PER;;;;;;\r\n#KAL;c1\r\n#TAB;0;;;;\r\n', bad = '#TRA;B\r\n#PER;;;;;;\r\n#KAL;c1\r\n#TAB;0;;;;\r\n#KOS;x\r\n';
+    await writeRoute(fs, 'r1', ok);
+    await writeRoute(fs, 'r2', bad);
+    app.routes = [{ code: 'r1', text: ok, status: 'ok', issues: [] }, { code: 'r2', text: bad, status: 'damaged', issues: [] }];
+    app.calendars = [{ id: 'c1', name: 'Gammel', ranges: [] }, { id: 'c2', name: 'Ny', ranges: [] }];
+    app.calendarSelected = 'c1';
     openSection();
-    change(body().querySelector('.cal-from'), '2026-03-10');
-    change(body().querySelector('.cal-to'), '2026-03-01');
-    await flush();
-    expect(JSON.parse(await readText(fs, 'data/calendars.json'))[0].ranges).toEqual([['20260301', '20260310']]);
+    /** @type {HTMLElement} */ (body().querySelector('.cal-replace')).click();
+    /** @type {HTMLSelectElement} */ (document.getElementById('cal-replace-to')).value = 'c2';
+    /** @type {HTMLElement} */ (document.getElementById('cal-replace-ok')).click();
+    await flush(); await flush();
+    expect(await readRoute(fs, 'r2')).toBe(bad);
+    expect(document.getElementById('msg-text')?.textContent).toContain('r2');
   });
 });

@@ -25,7 +25,7 @@ All planned functionality for 2.0 is built and merged on `main`: projects and th
 organisations, timetable editing, NSR stops (search window, status marks), map panel, filling
 times, and NeTEx export. Since then: organisations come from Entur's register (NOG), with two
 export modes (plan 4a); line details with Transmodel modes and Entur icons, codes, brandings and
-UUID IDs (plan 4b); table sets, calendars and dated journeys in the export (plan 4c). The user is testing it with a real project; findings go into the backlog.
+UUID IDs (plan 4b); table sets, calendars and dated journeys in the export (plan 4c); the calendar year view and season tools (plan 4d). The user is testing it with a real project; findings go into the backlog.
 Not yet online: publishing to GitHub Pages waits for the user's go-ahead.
 
 ## Credits

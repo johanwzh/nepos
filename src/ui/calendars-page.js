@@ -1,13 +1,14 @@
-// Ressurser → Kalendere (timetable structure spec §3): the project's calendars as a name and a
-// list of date ranges, with the number of days. Plan 4d replaces the ranges with a whole-year view.
-// Rows are built once per showing; a field change saves without rebuilding the row. A calendar is
-// saved once it has a name; the file is never written when it could not be read.
+// Ressurser → Kalendere (timetable structure spec §3): a list of the project's calendars and an
+// editor for the selected one — its name, a whole-year view where days are switched on and off,
+// "duplicate as next season" and "replace in all periods". A calendar is saved once it has a
+// name, a saved name cannot be blanked, and the file is never written when it could not be read.
 import { app } from './state.js';
 import { $, onRefresh, currentPage, runAction } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { writeCalendars, newCalendar } from '../project/calendars-store.js';
-import { calendarDays } from '../core/calendars.js';
-import { yyyymmddToInput, inputToYyyymmdd } from '../core/footnotes.js';
+import { calendarDays, setDays, shiftRanges } from '../core/calendars.js';
+import { renderYearView } from './year-view.js';
+import { openCalendarReplace } from './calendar-replace-ui.js';
 
 function save() {
   const fs = app.fs;
@@ -22,6 +23,18 @@ const usedBy = (id) => app.routes.reduce((n, r) => n + r.text.split(/\r?\n/).fil
 /** @param {string} tag @param {string} cls @param {string} [text] */
 const el = (tag, cls, text = '') => { const e = document.createElement(tag); e.className = cls; if (text) e.textContent = text; return e; };
 
+/** @param {string | null} id */
+function select(id) {
+  app.calendarSelected = id;
+  app.calendarYear = 0;
+  renderCalendarsPage();
+}
+
+/** @param {import('../core/calendars.js').Calendar} cal */
+function yearOf(cal) {
+  return app.calendarYear || Number((calendarDays(cal)[0] ?? String(new Date().getFullYear())).slice(0, 4));
+}
+
 export function renderCalendarsPage() {
   if (currentPage() !== 'assets' || app.assetsSection !== 'calendars') return;
   const body = $('assets-body');
@@ -29,74 +42,90 @@ export function renderCalendarsPage() {
   body.appendChild(el('div', 'assets-title', t('calTitle')));
   if (!app.meta) { body.appendChild(el('p', 'assets-coming', t('noProjectOpen'))); return; }
   if (app.calendarsError) { body.appendChild(el('p', 'assets-status bad', t('calsUnreadable'))); return; }
-  if (!app.calendars.length) body.appendChild(el('p', 'assets-hint', t('calNone')));
 
+  const page = el('div', 'cal-page');
+  const list = el('div', 'cal-list');
+  if (!app.calendars.length) list.appendChild(el('p', 'assets-hint', t('calNone')));
   for (const cal of app.calendars) {
-    const row = el('div', 'cal-row');
-    const head = el('div', 'cal-head');
+    const item = el('div', `cal-item${cal.id === app.calendarSelected ? ' active' : ''}`);
+    item.dataset.cal = cal.id;
+    item.append(el('div', '', cal.name || t('tableSetUnnamed')), el('small', 'cal-days', t('calDays', calendarDays(cal).length)));
+    item.addEventListener('click', () => select(cal.id));
+    list.appendChild(item);
+  }
+  const add = el('button', 'cal-add', t('calAdd'));
+  add.addEventListener('click', () => {
+    const cal = newCalendar('');
+    app.calendars = [...app.calendars, cal];
+    select(cal.id);
+    /** @type {HTMLInputElement | null} */ (body.querySelector('.cal-name'))?.focus();
+  });
+  list.appendChild(add);
+  page.appendChild(list);
+
+  const editor = el('div', 'cal-editor');
+  const cal = app.calendars.find((c) => c.id === app.calendarSelected);
+  if (!cal) editor.appendChild(el('p', 'assets-hint', app.calendars.length ? t('calSelect') : ''));
+  else {
+    const head = el('div', 'cal-toolbar');
     const name = /** @type {HTMLInputElement} */ (el('input', 'cal-name'));
     name.value = cal.name;
     name.placeholder = t('calNamePh');
     name.classList.toggle('invalid', !cal.name.trim());
     name.addEventListener('keydown', (e) => e.stopPropagation());
+    // The name typed so far counts at once: clicking a day re-renders the page before this field
+    // would report a change.
+    name.addEventListener('input', () => { const v = name.value.trim(); if (v) cal.name = v; });
     name.addEventListener('change', () => {
-      // A calendar that has a name keeps it until a new one is typed: blanking it would drop the
-      // calendar from the file while periods still use it.
+      // A saved name is kept until a new one is typed: blanking it would drop the calendar from
+      // the file while periods still use it.
       const next = name.value.trim();
       if (!next && cal.name) { name.value = cal.name; return; }
       cal.name = next;
-      name.classList.toggle('invalid', !cal.name);
       save();
+      renderCalendarsPage();
     });
-    const count = el('span', 'cal-days');
-    const showCount = () => { count.textContent = t('calDays', calendarDays(cal).length); };
-    showCount();
+    head.append(name, el('span', 'cal-days', t('calDays', calendarDays(cal).length)));
     const del = el('button', 'cal-del', '×');
+    del.title = t('deleteCalendar');
     del.addEventListener('click', () => {
       if (!confirm(t('calDeleteConfirm', cal.name, usedBy(cal.id)))) return;
       app.calendars = app.calendars.filter((c) => c !== cal);
       save();
-      renderCalendarsPage();
+      select(null);
     });
-    head.append(name, count, del);
-    row.appendChild(head);
+    head.appendChild(del);
+    editor.appendChild(head);
 
-    cal.ranges.forEach((range, i) => {
-      const line = el('div', 'cal-range');
-      const from = /** @type {HTMLInputElement} */ (el('input', 'cal-from'));
-      const to = /** @type {HTMLInputElement} */ (el('input', 'cal-to'));
-      from.type = 'date'; to.type = 'date';
-      from.value = yyyymmddToInput(range[0]); to.value = yyyymmddToInput(range[1]);
-      const set = () => {
-        const a = inputToYyyymmdd(from.value), b = inputToYyyymmdd(to.value);
-        // A single day when only one end is filled in (both ends are inclusive); a start after the
-        // end is swapped, so the range is never silently dropped when saved.
-        const lo = a && b && a > b ? b : (a || b), hi = a && b && a > b ? a : (b || a);
-        cal.ranges[i] = [lo, hi];
-        if (lo !== a || hi !== b) { from.value = yyyymmddToInput(lo); to.value = yyyymmddToInput(hi); }
-        from.classList.toggle('invalid', !lo); to.classList.toggle('invalid', !hi);
-        showCount();
-        save();
-      };
-      from.addEventListener('change', set);
-      to.addEventListener('change', set);
-      const x = el('button', 'cal-range-del', '×');
-      x.addEventListener('click', () => { cal.ranges.splice(i, 1); save(); renderCalendarsPage(); });
-      line.append(from, el('span', 'rh-arrow', '→'), to, x);
-      row.appendChild(line);
+    const year = yearOf(cal);
+    const nav = el('div', 'cal-toolbar');
+    const prev = el('button', 'cal-year-prev', '‹');
+    prev.title = t('calPrevYear');
+    prev.addEventListener('click', () => { app.calendarYear = year - 1; renderCalendarsPage(); });
+    const next = el('button', 'cal-year-next', '›');
+    next.title = t('calNextYear');
+    next.addEventListener('click', () => { app.calendarYear = year + 1; renderCalendarsPage(); });
+    const dup = el('button', 'cal-dup', t('calDuplicate'));
+    dup.addEventListener('click', () => {
+      const copy = { ...newCalendar(t('calCopyName', cal.name)), ranges: shiftRanges(cal.ranges, 364) };
+      app.calendars = [...app.calendars, copy];
+      save();
+      select(copy.id);
     });
-    const addRange = el('button', 'cal-range-add', t('calRangeAdd'));
-    addRange.addEventListener('click', () => { cal.ranges.push(['', '']); renderCalendarsPage(); });
-    row.appendChild(addRange);
-    body.appendChild(row);
+    const replace = el('button', 'cal-replace', t('calReplace'));
+    replace.addEventListener('click', () => openCalendarReplace(cal.id));
+    nav.append(prev, el('strong', 'cal-year', String(year)), next, dup, replace);
+    editor.appendChild(nav);
+
+    const view = el('div', 'cal-year-view');
+    renderYearView(view, {
+      year, active: new Set(calendarDays(cal)), lang: app.settings.lang === 'en' ? 'en' : 'no',
+      onChange: (days, on) => { cal.ranges = setDays(cal, days, on).ranges; save(); renderCalendarsPage(); },
+    });
+    editor.appendChild(view);
   }
-  const add = el('button', 'cal-add', t('calAdd'));
-  add.addEventListener('click', () => {
-    app.calendars = [...app.calendars, newCalendar('')];
-    renderCalendarsPage();
-    /** @type {HTMLInputElement | null} */ (body.querySelector('.cal-row:last-of-type .cal-name'))?.focus();
-  });
-  body.appendChild(add);
+  page.appendChild(editor);
+  body.appendChild(page);
 }
 
 export function initCalendarsPage() {
