@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { searchStopPlaces } from '../../src/services/geocoder.js';
+import { searchStopPlaces, nearbyStopPlaces } from '../../src/services/geocoder.js';
 
 const recorded = JSON.parse(readFileSync('tests/fixtures/geocoder/autocomplete-jernbanetorget.json', 'utf8'));
 const opts = { baseUrl: 'https://api.entur.io/geocoder/v3/', clientName: 'test-nepos' };
@@ -35,5 +35,22 @@ describe('searchStopPlaces', () => {
   it('fails loudly on an error response', async () => {
     const { fn } = fakeFetch({}, { ok: false, status: 502 });
     await expect(searchStopPlaces('x', { ...opts, fetch: fn })).rejects.toThrow('502');
+  });
+});
+
+describe('nearbyStopPlaces', () => {
+  it('asks the v3 reverse search for up to 50 monomodal stop places around a point', async () => {
+    const { fn, calls } = fakeFetch();
+    const hits = await nearbyStopPlaces({ lat: 59.91, lon: 10.75, radiusKm: 0.4 }, { ...opts, fetch: fn });
+    const url = new URL(calls[0].url);
+    expect(url.origin + url.pathname).toBe('https://api.entur.io/geocoder/v3/reverse');
+    expect(Object.fromEntries(url.searchParams)).toEqual({ lat: '59.91', lon: '10.75', radius: '0.4', limit: '50', layers: 'stopPlace', multimodal: 'child' });
+    expect(calls[0].headers['ET-Client-Name']).toBe('test-nepos');
+    expect(hits[1].id).toBe('NSR:StopPlace:4013');
+  });
+
+  it('fails loudly on an error response', async () => {
+    const { fn } = fakeFetch({}, { ok: false, status: 503 });
+    await expect(nearbyStopPlaces({ lat: 1, lon: 1, radiusKm: 1 }, { ...opts, fetch: fn })).rejects.toThrow('503');
   });
 });

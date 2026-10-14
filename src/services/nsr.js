@@ -65,7 +65,34 @@ export async function getStopPlace(id, { baseUrl, clientName, fetch: doFetch = (
   });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`NSR answered ${res.status}`);
-  const place = await res.json();
+  return toStopPlace(await res.json());
+}
+
+/**
+ * Stop places by ID, with their Quays (stop picking spec §4: the Quays of the stop places in view).
+ * @param {string[]} ids NSR StopPlace IDs
+ * @param {{ baseUrl: string, clientName: string, fetch?: (url: string, init?: any) => Promise<any> }} opts
+ * @returns {Promise<StopPlace[]>} the ones NSR knows
+ */
+export async function getStopPlaces(ids, { baseUrl, clientName, fetch: doFetch = (url, init) => fetch(url, init) }) {
+  const wanted = [...new Set(ids)];
+  const base = baseUrl.replace(/\/$/, '');
+  /** @type {StopPlace[]} */
+  const out = [];
+  for (let i = 0; i < wanted.length; i += BATCH) {
+    const batch = wanted.slice(i, i + BATCH);
+    const res = await doFetch(`${base}/stop-places?count=${batch.length}&ids=${batch.join(',')}`, {
+      headers: { 'ET-Client-Name': clientName, Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error(`NSR answered ${res.status}`);
+    const places = await res.json();
+    for (const place of Array.isArray(places) ? places : []) out.push(toStopPlace(place));
+  }
+  return out;
+}
+
+/** @param {any} place @returns {StopPlace} */
+function toStopPlace(place) {
   return {
     id: place.id,
     name: place.name?.value ?? '',
