@@ -1,0 +1,40 @@
+<PublicationDelivery version="1.0" xmlns="http://www.netex.org.uk/netex">
+  <PublicationTimestamp>2026-10-14T12:40:28Z</PublicationTimestamp>
+  <ParticipantRef>EnTur:Avtaler</ParticipantRef>
+  <dataObjects>
+    <ResourceFrame id="NOG:ResourceFrame:1" version="1">
+      <organisations>
+        <Authority id="NOG:Authority:c5MpNEEftqe" version="1">
+          <PrivateCode type="organisationId">134</PrivateCode>
+          <CompanyNumber>985859310</CompanyNumber>
+          <Name>Børselv Taxi</Name>
+          <LegalName>BØRSELV TAXI Werner Eriksen</LegalName>
+          <TradingName>Børselv Taxi</TradingName>
+          <ContactDetails><Email></Email><Phone>78464420</Phone><Url></Url></ContactDetails>
+        </Authority>
+        <Operator id="NOG:Operator:eaiFiQuFxGd" version="1">
+          <PrivateCode type="organisationId">134</PrivateCode>
+          <CompanyNumber>985859310</CompanyNumber>
+          <Name>Børselv Taxi</Name>
+          <LegalName>BØRSELV TAXI Werner Eriksen</LegalName>
+          <TradingName>Børselv Taxi</TradingName>
+          <ContactDetails><Email></Email><Phone>78464420</Phone><Url></Url></ContactDetails>
+        </Operator>
+        <Operator id="NOG:Operator:eaiEZukmNKG" version="1">
+          <PrivateCode type="organisationId">135</PrivateCode>
+          <CompanyNumber>938358907</CompanyNumber>
+          <Name>Lesja Bilruter</Name>
+          <LegalName>LESJA INNKJØPSLAG SA</LegalName>
+          <TradingName>Lesja Bilruter</TradingName>
+          <ContactDetails><Phone>61245400</Phone><Url>http://www.lesjabil.no/</Url></ContactDetails>
+        </Operator>
+        <Authority id="NOG:Authority:23e9gDqTGNg" version="13">
+          <PrivateCode type="organisationId">22</PrivateCode>
+          <CompanyNumber>991609407</CompanyNumber>
+          <Name>Ruter</Name>
+          <LegalName>RUTER AS</LegalName>
+        </Authority>
+      </organisations>
+    </ResourceFrame>
+  </dataObjects>
+</PublicationDelivery>
