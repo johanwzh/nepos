@@ -171,6 +171,19 @@ function applyPanel(side) {
 }
 
 /** @param {'left' | 'right'} side */
+/** @type {(() => void) | null} */
+let maxiToggle = null;
+
+/** The lines pane's maxi view registers here; F5 and the Linjer button toggle it. @param {(() => void) | null} fn */
+export function setMaxiToggle(fn) {
+  maxiToggle = fn;
+}
+
+function toggleMaxi() {
+  if (curPage !== 'edit') setPage('edit');
+  maxiToggle?.();
+}
+
 function togglePanel(side) {
   panels[side].open = !panels[side].open;
   applyPanel(side);
@@ -234,9 +247,11 @@ export function initShell() {
   panels.right.rz = $('rh-right');
   applyPanel('left');
   applyPanel('right');
-  $('btn-p5').addEventListener('click', () => togglePanel('left'));
+  panels.left.open = true; // the mini view is always shown (navigation spec §3.1)
+  applyPanel('left');
+  $('btn-p5').addEventListener('click', () => toggleMaxi());
   $('btn-p6').addEventListener('click', () => togglePanel('right'));
-  $('close-left').addEventListener('click', () => togglePanel('left'));
+  $('close-left').addEventListener('click', () => toggleMaxi());
   $('close-right').addEventListener('click', () => togglePanel('right'));
 
   /** @type {{ side: 'left' | 'right', x0: number, w0: number } | null} */
@@ -276,7 +291,7 @@ export function initShell() {
     if (e.key === 'F5' || e.key === 'F6') {
       e.preventDefault(); e.stopPropagation();
       if (curPage !== 'edit') setPage('edit');
-      togglePanel(e.key === 'F5' ? 'left' : 'right');
+      if (e.key === 'F5') toggleMaxi(); else togglePanel('right');
     }
   }, true);
 

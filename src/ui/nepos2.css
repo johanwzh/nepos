@@ -242,3 +242,8 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 /* Line flags in the header (plan 4f) */
 .rh-flags { display: flex; gap: 12px; font-size: 12px; }
 .n2-issue-live { color: var(--text-f); font-size: 12px; margin-bottom: 6px; }
+
+/* Lines pane, mini view (plan 4f) */
+.rl-warn { margin-left: auto; font-size: 11px; color: var(--warn, #b26a00); }
+.rl-warn.has-errors { color: var(--danger, #c62828); }
+.route-item.rl-not-exported .rl-code { opacity: .55; text-decoration: line-through; }
