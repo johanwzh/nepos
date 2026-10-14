@@ -12,6 +12,7 @@ describe('createProject', () => {
     expect(await fs.list('data')).toEqual([
       { name: 'backups', kind: 'directory' },
       { name: 'brandings.json', kind: 'file' },
+      { name: 'calendars.json', kind: 'file' },
       { name: 'nepos-project.json', kind: 'file' },
       { name: 'orgs.json', kind: 'file' },
       { name: 'routes', kind: 'directory' },

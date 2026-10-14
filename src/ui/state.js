@@ -20,6 +20,10 @@ export const app = {
   brandings: [],
   /** @type {null | 'unreadable'} */
   brandingsError: null,
+  /** @type {import('../core/calendars.js').Calendar[]} the project's calendars */
+  calendars: [],
+  /** @type {null | 'unreadable'} */
+  calendarsError: null,
   /** @type {{ companies: import('../core/orgs.js').Company[], fetchedAt: string } | null} Entur's register (browser cache) */
   orgRegister: null,
   /** @type {'idle' | 'loading' | 'ok' | 'failed'} */

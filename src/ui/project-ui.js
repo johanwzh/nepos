@@ -41,6 +41,7 @@ export async function openFs(fs, { handle = null, sample = false } = {}) {
     meta: result.meta, settings: result.settings,
     orgs: result.orgs, orgsError: result.orgsError,
     brandings: result.brandings, brandingsError: result.brandingsError,
+    calendars: result.calendars, calendarsError: result.calendarsError,
     routes: result.routes, activeRoute: null, routeState: null, dirty: false,
     fileNameProblems: await findFileNameProblems(fs),
   });
