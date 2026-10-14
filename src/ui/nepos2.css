@@ -221,3 +221,7 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .cal-toolbar { display: flex; gap: 8px; align-items: center; margin: 6px 0 10px; }
 .cal-year { min-width: 3em; text-align: center; }
 .yv-day.on.sun, .yv-day.on.hol { color: #b00000; }
+
+.rh-save-state { border: none; background: transparent; color: var(--text-m); cursor: pointer; font-size: 12px; }
+.rh-save-state.unsaved { color: var(--accent); font-weight: 600; }
+.rl-unsaved { color: var(--accent); margin-left: auto; }

@@ -22,6 +22,7 @@ import { compareRouteCodes } from '../core/route-codes.js';
 import { writeRoute, deleteRoute as deleteRouteFile } from '../project/routes.js';
 import { showProjectCheck } from './project-ui.js';
 import { issueMessage } from './messages.js';
+import { parkOpenLine, takeDraft, unsavedCodes } from './drafts.js';
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -118,10 +119,54 @@ function currentText() {
 /** Ask to save unsaved changes. Resolves false when the user wants to stay. */
 /** @param {string} [reason] */
 async function confirmLeave(reason) {
-  commitPending(); // a half-typed time or name counts as a change
-  if (!app.dirty) return true;
-  if (!confirm(t(reason === 'export' ? 'saveBeforeExport' : 'saveBeforeSwitch', app.activeRoute))) return false;
-  return saveRoute();
+  if (app.routeState) storeGrid(); // a half-typed time or name counts as a change
+  const n = unsavedCodes().length;
+  if (!n) return true;
+  if (!confirm(t(reason === 'export' ? 'saveAllBeforeExport' : 'saveAllBeforeLeave', n))) return false;
+  return saveAllRoutes();
+}
+
+/**
+ * Save the open line and every line with unsaved changes (navigation spec §2). Returns false when
+ * any could not be saved; the message names them.
+ * @param {HTMLButtonElement | null} [trigger]
+ */
+export async function saveAllRoutes(trigger = null) {
+  if (!app.fs || !app.meta) return false;
+  const fs = app.fs, meta = app.meta;
+  /** @type {string[]} */ const failed = [];
+  if (app.routeState && app.dirty && !(await saveRoute(trigger))) failed.push(/** @type {string} */ (app.activeRoute));
+  for (const [code, rs] of [...app.drafts]) {
+    const text = serializeERN(rs, code, { delivery: { name: meta.name, codespace: meta.codespace }, orgs: orgNameList(app.orgs) });
+    const { status, issues } = checkRouteFile(text);
+    if (status === 'damaged') { failed.push(code); continue; }
+    try {
+      await writeRoute(fs, code, text);
+      app.routes = app.routes.map((r) => (r.code === code ? { code, text, status, issues } : r));
+      app.drafts.delete(code);
+    } catch {
+      failed.push(code);
+    }
+  }
+  if (failed.length) showMessage(t('saveAllFailed', failed.join(', ')));
+  refreshAll();
+  return !failed.length;
+}
+
+/** Throw away every unsaved change, after asking; the open line is read again from its file. */
+export function discardAllChanges() {
+  const n = unsavedCodes().length;
+  if (!n || !confirm(t('discardAllConfirm', n))) return;
+  app.drafts.clear();
+  const entry = activeEntry();
+  if (entry) {
+    const rs = parseERN(entry.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) });
+    fillMissingPeriod(rs);
+    app.routeState = rs;
+    loadGrid(rs.grids[gridKey(rs)] ?? { stops: [], cols: [] }, { readOnly: entry.status === 'damaged' }); // drops a half-typed cell too
+  }
+  app.dirty = false;
+  refreshAll();
 }
 
 /** Close the open route (after the leave check has passed). */
@@ -140,14 +185,16 @@ export function closeRoute() {
  */
 export async function selectRoute(code) {
   if (code === app.activeRoute) return true;
-  if (!(await beforeLeave())) return false;
   const entry = app.routes.find((r) => r.code === code);
   if (!entry) return false;
-  const rs = parseERN(entry.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) });
+  // Switching lines never asks (navigation spec §2): unsaved edits stay with their line.
+  if (app.routeState) { storeGrid(); parkOpenLine(); }
+  const draft = takeDraft(code);
+  const rs = draft ?? parseERN(entry.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) });
   fillMissingPeriod(rs);
   app.activeRoute = code;
   app.routeState = rs;
-  app.dirty = false;
+  app.dirty = !!draft;
   loadGrid(rs.grids[gridKey(rs)] ?? { stops: [], cols: [] }, { readOnly: entry.status === 'damaged' });
   refreshAll();
   return true;
@@ -215,6 +262,7 @@ function renderHeader() {
       <div class="rh-orgs" id="rh-orgs"></div>
     </div>
     <div class="rh-partb">
+    <button class="rh-save-state${app.dirty ? ' unsaved' : ''}" id="rh-save-state"${dis}>${esc(t(app.dirty ? 'unsavedDot' : 'savedTick'))}</button>
     <div class="rh-group"><span class="rh-label">${esc(t('periodLabel'))}:</span>
       <select class="rh-select" id="sel-period">${periodsOf(rs, rs.activeSet).map((/** @type {any} */ p) =>
         `<option value="${p.id}"${p.id === rs.activePer ? ' selected' : ''}>${esc(periodLabel(p))}</option>`).join('')}</select>
@@ -225,6 +273,7 @@ function renderHeader() {
 
   for (const id of ['rh-name', 'rh-public', 'rh-private']) $(id).addEventListener('keydown', (/** @type {Event} */ e) => e.stopPropagation());
   $('sel-period').addEventListener('change', () => switchPeriod(+$('sel-period').value));
+  $('rh-save-state').addEventListener('click', () => { if (!ro && app.dirty) void saveRoute($('rh-save-state')); });
   renderOrgPickers();
   if (ro) return;
   $('rh-name').addEventListener('change', () => { rs.routeName = $('rh-name').value.trim(); markDirty(); });
@@ -425,6 +474,6 @@ export function initRouteEditor() {
     }
   });
   window.addEventListener('beforeunload', (e) => {
-    if (app.dirty) { e.preventDefault(); e.returnValue = ''; }
+    if (unsavedCodes().length) { e.preventDefault(); e.returnValue = ''; }
   });
 }

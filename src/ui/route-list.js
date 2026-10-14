@@ -6,6 +6,7 @@ import { selectRoute } from './route-editor.js';
 import { t } from '../i18n/strings.js';
 import { routeSummary } from './route-summary.js';
 import { modeIconSvg } from './mode-icons.js';
+import { isUnsaved } from './drafts.js';
 
 /** @param {string} s */
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -46,7 +47,7 @@ export function renderRouteList() {
     const mark = r.status === 'ok' ? '' : `<span class="n2-route-mark ${r.status}">${r.status === 'damaged' ? '⚠' : '↻'}</span>`;
     // Mode icon + public code (or the branding name), and the line name; the ID stays in the tooltip.
     const brand = !r.publicCode && r.brandingId ? app.brandings.find((x) => x.id === r.brandingId)?.name ?? '' : '';
-    div.innerHTML = `${mark}<div class="rl-top">${modeIconSvg(r.mode, r.submode)}<span class="rl-code">${esc(r.publicCode || brand)}</span></div>
+    div.innerHTML = `${mark}<div class="rl-top">${modeIconSvg(r.mode, r.submode)}<span class="rl-code">${esc(r.publicCode || brand)}</span>${isUnsaved(r.code) ? `<span class="rl-unsaved" title="${esc(t('unsavedDot'))}">●</span>` : ''}</div>
       ${r.name ? `<div class="rl-name">${esc(r.name)}</div>` : ''}`;
     div.title = [r.code, r.name, r.publicCode, r.status === 'ok' ? '' : t(r.status === 'damaged' ? 'statusDamaged' : 'statusOutdated')].filter(Boolean).join(' · ');
     div.addEventListener('click', () => { selectRoute(r.code); });

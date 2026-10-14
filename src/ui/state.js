@@ -45,5 +45,7 @@ export const app = {
   /** @type {any} the open route's state (from parseERN), or null */
   routeState: null,
   dirty: false,
+  /** @type {Map<string, any>} unsaved route states of lines that are not open (navigation spec §2) */
+  drafts: new Map(),
   sampleMode: false,
 };

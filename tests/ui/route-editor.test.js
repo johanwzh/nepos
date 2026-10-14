@@ -84,24 +84,16 @@ describe('route editor', () => {
     expect(await readRoute(fs, '30')).toBe(damaged30);
   });
 
-  it('asks before switching away from unsaved changes, and stays when declined', async () => {
+  it('switches lines without asking, keeping the unsaved edits with their line', async () => {
     await selectRoute('20');
     typeKeys('0810');
     press('Enter');
     window.confirm = vi.fn(() => false);
-    expect(await selectRoute('30')).toBe(false);
-    expect(app.activeRoute).toBe('20');
-    expect(app.dirty).toBe(true);
-  });
-
-  it('saves before switching when the user agrees', async () => {
-    await selectRoute('20');
-    typeKeys('0815');
-    press('Enter');
-    window.confirm = vi.fn(() => true);
     expect(await selectRoute('30')).toBe(true);
-    expect(await readRoute(fs, '20')).toContain('#TRC;0;0815;');
-    expect(app.activeRoute).toBe('30');
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(await selectRoute('20')).toBe(true);
+    expect(app.dirty).toBe(true);
+    expect(cellTime(0, 0)).toBe('0810');
   });
 
   it('creates a new route with a UUID as its ID and opens it', async () => {
@@ -200,13 +192,13 @@ describe('route editor — review fixes', () => {
     expect(document.getElementById('fn-editor').classList.contains('open')).toBe(false);
   });
 
-  it('treats a half-typed time as an unsaved change', async () => {
+  it('keeps a half-typed time when switching lines', async () => {
     await selectRoute('20');
     typeKeys('0930');
-    window.confirm = vi.fn(() => false);
-    expect(await selectRoute('30')).toBe(false);
-    expect(window.confirm).toHaveBeenCalled();
+    expect(await selectRoute('30')).toBe(true);
+    expect(await selectRoute('20')).toBe(true);
     expect(cellTime(0, 0)).toBe('0930');
+    expect(app.dirty).toBe(true);
   });
 
   it('keeps a half-typed time when switching period', async () => {
