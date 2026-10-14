@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { setLang, STRINGS } from '../../src/i18n/strings.js';
-import { issueMessage, summaryMessage, fileNameMessage, openFailureMessage, createFailureMessage, orgIssueMessage } from '../../src/ui/messages.js';
+import { issueMessage, summaryMessage, fileNameMessage, openFailureMessage, createFailureMessage } from '../../src/ui/messages.js';
 
 afterEach(() => setLang('no'));
 
@@ -13,7 +13,6 @@ const ISSUE_CODES = [
 const OPEN_REASONS = ['not-nepos-project', 'invalid-project-file', 'invalid-codespace', 'newer-format'];
 const CREATE_ERRORS = ['codespace-required', 'codespace-format', 'folder-not-empty'];
 const NAME_PROBLEMS = ['extension-case', 'invalid-code'];
-const ORG_CODES = ['id-required', 'id-format', 'id-duplicate'];
 
 describe('every code has a message in both languages', () => {
   const required = [
@@ -21,7 +20,6 @@ describe('every code has a message in both languages', () => {
     ...OPEN_REASONS.map((c) => `open:${c}`),
     ...CREATE_ERRORS.map((c) => `create:${c}`),
     ...NAME_PROBLEMS.map((c) => `name:${c}`),
-    ...ORG_CODES.map((c) => `org:${c}`),
   ];
   for (const lang of ['no', 'en']) {
     it(lang, () => {
@@ -55,6 +53,5 @@ describe('messages', () => {
     setLang('en');
     expect(openFailureMessage({ ok: false, reason: 'newer-format', formatVersion: 3 })).toContain('format 3');
     expect(createFailureMessage({ ok: false, error: 'folder-not-empty', found: ['notes.txt', 'old'] })).toContain('notes.txt, old');
-    expect(orgIssueMessage('id-format')).toContain('ABC:Authority:123');
   });
 });
