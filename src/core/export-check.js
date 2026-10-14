@@ -3,6 +3,17 @@
 // from NSR is advisory, so it only ever gives warnings. Pure.
 import { quayStatus, stopLocalId } from './quays.js';
 import { ORG_ID_PATTERN } from './orgs.js';
+import { ROUTE_CODE_PATTERN } from './route-names.js';
+import { journeyStops, runsOnlyDates } from './netex/journeys.js';
+
+/** Every code the check can give; each has a text 'chk:<code>' in both languages. */
+export const CHECK_CODES = [
+  'orgs-unreadable', 'orgs-not-saved', 'route-damaged', 'no-trips', 'route-code', 'no-period', 'period-dates',
+  'period-order', 'no-authority', 'no-operator', 'stop-missing', 'stop-not-nsr', 'stop-id-clash', 'col-no-daycode',
+  'col-one-stop', 'no-name', 'alt-dates', 'org-id-old', 'org-not-in-list', 'stop-not-seen', 'stop-mode',
+  'stop-unchecked', 'col-decreasing', 'col-exceptions-ignored', 'col-date-outside', 'route-no-trips',
+  'route-changed-on-disk',
+];
 
 /**
  * @typedef {{ level: 'error' | 'warning', code: string, route?: string,
@@ -19,10 +30,10 @@ const minutes = (cell) => (cell.dayOffset || 0) * 1440 + Number(cell.time.slice(
 /**
  * @param {{ routes: { code: string, rs: any | null, status: string }[],
  *           orgs: { id: string, name: string }[], orgsProblem: '' | 'unreadable' | 'not-saved',
- *           quayInfo: Map<string, any> }} input
+ *           quayInfo: Map<string, any>, changedOnDisk?: string[] }} input
  * @returns {CheckIssue[]} errors first, then warnings
  */
-export function checkForExport({ routes, orgs, orgsProblem, quayInfo }) {
+export function checkForExport({ routes, orgs, orgsProblem, quayInfo, changedOnDisk = [] }) {
   /** @type {CheckIssue[]} */
   const issues = [];
   /** @param {'error' | 'warning'} level @param {string} code @param {Partial<CheckIssue>} [extra] */
@@ -34,9 +45,14 @@ export function checkForExport({ routes, orgs, orgsProblem, quayInfo }) {
   /** @type {Map<string, string>} NeTEx local ID → the first stop ID that produced it */
   const localIds = new Map();
   let trips = 0, damaged = 0;
+  for (const code of changedOnDisk) add('warning', 'route-changed-on-disk', { route: code });
   for (const { code, rs, status } of routes) {
     if (status === 'damaged' || !rs) { add('error', 'route-damaged', { route: code }); damaged++; continue; }
-    trips += checkRoute(code, rs, { orgs, quayInfo, add, localIds });
+    // The route code becomes part of NeTEx IDs and the line file name.
+    if (!ROUTE_CODE_PATTERN.test(code)) add('error', 'route-code', { route: code });
+    const routeTrips = checkRoute(code, rs, { orgs, quayInfo, add, localIds });
+    if (!routeTrips) add('warning', 'route-no-trips', { route: code });
+    trips += routeTrips;
   }
   if (!trips && !damaged) add('error', 'no-trips');
 
@@ -100,8 +116,13 @@ function checkRoute(code, rs, { orgs, quayInfo, add, localIds }) {
 
       grid.cols.forEach((/** @type {any} */ col, /** @type {number} */ ci) => {
         if (!col.cells.some(timed)) return;
-        trips++;
         const at = { ...where, column: ci + 1 };
+        // What the export writes (journeys.js): two or more calls make a trip. Timed rows
+        // without a stop ID count too here — they are already errors of their own.
+        const unnamed = grid.stops.filter((/** @type {any} */ st, /** @type {number} */ ri) => timed(col.cells[ri]) && (st.stopId == null || st.stopId === '') && !st.isDwellArr).length;
+        if (journeyStops(grid, col).length + unnamed >= 2) trips++;
+        else add('error', 'col-one-stop', { ...r, where: at });
+        checkExceptions(rs, per, col, at, (level, c, extra) => add(level, c, { ...r, ...extra }));
         // An empty day code would be exported as "every day" — never what the user meant.
         if (!col.dayCode) add('error', 'col-no-daycode', { ...r, where: at });
         let prev = -1;
@@ -116,4 +137,21 @@ function checkRoute(code, rs, { orgs, quayInfo, add, localIds }) {
     }
   }
   return trips;
+}
+
+/**
+ * Date exceptions the export cannot apply: only "runs only" single dates in a column's note
+ * become operating days; "does not run", date ranges and notes on single times are not exported.
+ * @param {any} rs @param {any} per @param {any} col
+ * @param {{ period: string, direction: string, column: number }} at
+ * @param {(level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void} add
+ */
+function checkExceptions(rs, per, col, at, add) {
+  const fnOf = (/** @type {number | null} */ id) => rs.footnotes?.find((/** @type {any} */ f) => f.id === id);
+  const colExceptions = fnOf(col.footnoteId)?.exceptions ?? [];
+  const cellExceptions = col.cells.flatMap((/** @type {any} */ c) => (c?.footnoteId != null ? fnOf(c.footnoteId)?.exceptions ?? [] : []));
+  const ignored = colExceptions.filter((/** @type {any} */ ex) => !(ex.runsOnly && ex.from && ex.from === ex.to)).length + cellExceptions.length;
+  if (ignored) add('warning', 'col-exceptions-ignored', { where: at, detail: String(ignored) });
+  const outside = runsOnlyDates(rs, col).filter((d) => (per.from && d < per.from) || (per.to && d > per.to));
+  if (outside.length) add('warning', 'col-date-outside', { where: at, detail: outside.join(', ') });
 }

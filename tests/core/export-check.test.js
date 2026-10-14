@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseERN } from '../../src/core/ern/parse.js';
-import { checkForExport } from '../../src/core/export-check.js';
+import { checkForExport, CHECK_CODES } from '../../src/core/export-check.js';
+import { STRINGS } from '../../src/i18n/strings.js';
 
 const ORGS = [{ id: 'TST:Authority:1', name: 'Fylket' }, { id: 'TST:Operator:1', name: 'Buss AS' }];
 const bus = (/** @type {string} */ id, /** @type {string} */ name) => ({ quayId: id, publicCode: 'A', stopPlaceId: 'NSR:StopPlace:1', stopPlaceName: name, mode: 'bus', lat: 0, lon: 0 });
@@ -131,7 +132,7 @@ describe('checkForExport', () => {
     it('blocks a project without any trips', () => {
       const rs = route();
       grid0(rs).cols = [];
-      expect(codes(check(rs))).toEqual(['error:no-trips']);
+      expect(codes(check(rs))).toEqual(['error:no-trips', 'warning:route-no-trips']);
     });
 
     it('lists errors before warnings', () => {
@@ -140,5 +141,66 @@ describe('checkForExport', () => {
       grid0(rs).stops[1].stopId = null;
       expect(codes(check(rs))).toEqual(['error:stop-missing', 'warning:no-name']);
     });
+  });
+
+  describe('what the export actually writes', () => {
+    it('blocks a trip with only one time', () => {
+      const rs = route();
+      grid0(rs).cols[0].cells[1] = null;
+      const issues = check(rs);
+      expect(codes(issues)).toEqual(['error:col-one-stop', 'error:no-trips', 'warning:route-no-trips']);
+      expect(issues[0].where?.column).toBe(1);
+    });
+
+    it('warns that a route without trips is left out', () => {
+      const empty = route();
+      grid0(empty).cols = [];
+      const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }, { code: '60', rs: empty, status: 'ok' }], orgs: ORGS, orgsProblem: '', quayInfo: NSR });
+      expect(codes(issues)).toEqual(['warning:route-no-trips']);
+      expect(issues[0].route).toBe('60');
+    });
+
+    it('blocks a route code that cannot be a NeTEx ID', () => {
+      const issues = checkForExport({ routes: [{ code: 'A&B 2', rs: route(), status: 'ok' }], orgs: ORGS, orgsProblem: '', quayInfo: NSR });
+      expect(codes(issues)).toEqual(['error:route-code']);
+    });
+
+    it('warns about date exceptions the export cannot apply', () => {
+      const rs = route();
+      rs.footnotes = [{ id: 1, text: '', exceptions: [{ runsOnly: false, from: '20260301', to: '20260301' }] }];
+      grid0(rs).cols[0].footnoteId = 1;
+      expect(codes(check(rs))).toEqual(['warning:col-exceptions-ignored']);
+    });
+
+    it('warns about date exceptions on single times', () => {
+      const rs = route();
+      rs.footnotes = [{ id: 1, text: '', exceptions: [{ runsOnly: true, from: '20260301', to: '20260301' }] }];
+      grid0(rs).cols[0].cells[1].footnoteId = 1;
+      expect(codes(check(rs))).toEqual(['warning:col-exceptions-ignored']);
+    });
+
+    it('warns about a "runs only" date outside the period', () => {
+      const rs = route();
+      rs.footnotes = [{ id: 1, text: '', exceptions: [{ runsOnly: true, from: '20260801', to: '20260801' }] }];
+      grid0(rs).cols[0].footnoteId = 1;
+      expect(codes(check(rs))).toEqual(['warning:col-date-outside']);
+    });
+
+    it('accepts a "runs only" date inside the period', () => {
+      const rs = route();
+      rs.footnotes = [{ id: 1, text: '', exceptions: [{ runsOnly: true, from: '20260301', to: '20260301' }] }];
+      grid0(rs).cols[0].footnoteId = 1;
+      expect(check(rs)).toEqual([]);
+    });
+
+    it('warns about route files that changed on disk', () => {
+      expect(codes(check(route(), { changedOnDisk: ['50'] }))).toEqual(['warning:route-changed-on-disk']);
+    });
+  });
+
+  it('has a text for every code in both languages', () => {
+    for (const lang of ['no', 'en']) {
+      for (const code of CHECK_CODES) expect(/** @type {any} */ (STRINGS)[lang][`chk:${code}`], `${lang} ${code}`).toBeDefined();
+    }
   });
 });
