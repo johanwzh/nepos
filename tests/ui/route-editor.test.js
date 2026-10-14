@@ -284,3 +284,39 @@ describe('organisation pickers', () => {
     expect(await readText(fs, 'data/orgs.json')).toBe(before);
   });
 });
+describe('line header', () => {
+  it('shows the mode as an icon and changes mode and submode through the menu', async () => {
+    await selectRoute('20');
+    const tile = /** @type {HTMLElement} */ (document.getElementById('rh-mode-tile'));
+    expect(tile.querySelector('svg.mode-icon')).not.toBe(null);
+    tile.click();
+    /** @type {HTMLElement} */ (document.querySelector('.mode-menu .mode-item[data-mode="coach"]')).click();
+    /** @type {HTMLElement} */ (document.querySelector('.mode-menu .mode-sub[data-sub="nationalCoach"]')).click();
+    expect([app.routeState.mode, app.routeState.submode]).toEqual(['coach', 'nationalCoach']);
+    expect(app.dirty).toBe(true);
+    expect(document.getElementById('rh-mode-tile')?.title).toContain('Langdistansebuss');
+  });
+
+  it('edits public code, private code and branding', async () => {
+    app.brandings = [{ id: 'TST:Branding:b', name: 'Kystekspressen', shortName: '', description: '', url: '', imageUrl: '' }];
+    await selectRoute('20');
+    const set = (/** @type {string} */ id, /** @type {string} */ v) => { const el = /** @type {any} */ (document.getElementById(id)); el.value = v; el.dispatchEvent(new Event('change')); };
+    set('rh-public', 'X20');
+    set('rh-private', '1008');
+    set('rh-branding', 'TST:Branding:b');
+    expect([app.routeState.publicCode, app.routeState.privateCode, app.routeState.brandingId]).toEqual(['X20', '1008', 'TST:Branding:b']);
+  });
+
+  it('puts the organisation pickers in the header, not the footer', async () => {
+    await selectRoute('20');
+    expect(document.getElementById('rh-orgs')?.querySelector('#ef-pick-operator')).not.toBe(null);
+    expect(document.getElementById('edit-footer')?.querySelector('.org-pick')).toBe(null);
+  });
+
+  it('disables every header control on a read-only route', async () => {
+    await selectRoute('30');
+    for (const id of ['rh-name', 'rh-public', 'rh-private', 'rh-branding', 'rh-mode-tile']) {
+      expect(/** @type {any} */ (document.getElementById(id)).disabled, id).toBe(true);
+    }
+  });
+});
