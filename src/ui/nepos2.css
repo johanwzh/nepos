@@ -241,3 +241,4 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 
 /* Line flags in the header (plan 4f) */
 .rh-flags { display: flex; gap: 12px; font-size: 12px; }
+.n2-issue-live { color: var(--text-f); font-size: 12px; margin-bottom: 6px; }
