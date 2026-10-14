@@ -28,10 +28,18 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 
 const activeEntry = () => app.routes.find((r) => r.code === app.activeRoute) ?? null;
 const isReadOnly = () => activeEntry()?.status === 'damaged';
+/** Whether the open route is read-only (damaged). */
+export const isRouteReadOnly = () => isReadOnly();
 
 /** Store the visible grid back into the route state. */
 function saveGridToState() {
   if (app.routeState && grid.active) app.routeState.grids[gridKey(app.routeState)] = gridData();
+}
+
+/** Finish any typing in the grid and store it in the route state (before changing the structure). */
+export function storeGrid() {
+  commitPending();
+  saveGridToState();
 }
 
 /**
@@ -184,6 +192,14 @@ function renderHeader() {
   const dis = ro ? ' disabled' : '';
   const modeTitle = rs.mode ? [modeLabel(rs.mode, lang), rs.submode ? submodeLabel(rs.submode, lang) : ''].filter(Boolean).join(' · ') : t('pickMode');
   const brandKnown = app.brandings.some((b) => b.id === rs.brandingId);
+  // The active period's calendars (timetable structure spec §4): chips, and a picker for more.
+  const activePer = rs.periods.find((/** @type {any} */ p) => p.id === rs.activePer);
+  const calChips = (activePer?.calendarIds ?? []).map((/** @type {string} */ id) => {
+    const cal = app.calendars.find((c) => c.id === id);
+    return `<span class="per-cal${cal ? '' : ' n2-missing'}" data-cal="${esc(id)}">${esc(cal?.name ?? '⚠ ' + id)}${ro ? '' : `<button class="per-cal-x" title="${esc(t('removeCalendar'))}">×</button>`}</span>`;
+  }).join('');
+  const addable = app.calendars.filter((c) => !(activePer?.calendarIds ?? []).includes(c.id));
+  const perCals = calChips + (ro || !addable.length ? '' : `<select class="rh-select" id="per-add-cal"><option value="">${esc(t('addCalendar'))}</option>${addable.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>`);
   const brandOptions = [`<option value="">${esc(t('brandingNone'))}</option>`,
     ...[...app.brandings].sort((x, y) => x.name.localeCompare(y.name, 'nb')).map((b) => `<option value="${esc(b.id)}"${b.id === rs.brandingId ? ' selected' : ''}>${esc(b.name)}</option>`),
     ...(rs.brandingId && !brandKnown ? [`<option value="${esc(rs.brandingId)}" selected>⚠ ${esc(rs.brandingId)}</option>`] : [])].join('');
@@ -204,6 +220,7 @@ function renderHeader() {
         `<option value="${p.id}"${p.id === rs.activePer ? ' selected' : ''}>${esc(periodLabel(p))}</option>`).join('')}</select>
       ${ro ? '' : `<span class="rh-icon-btn" id="btn-add-per" title="${esc(t('newPeriod'))}">+</span>
       <span class="rh-icon-btn" id="btn-del-per" title="${esc(t('deletePeriod'))}" style="font-size:15px;line-height:1">×</span>`}</div>
+    <div class="rh-group per-cals">${perCals}</div>
     </div>`;
 
   for (const id of ['rh-name', 'rh-public', 'rh-private']) $(id).addEventListener('keydown', (/** @type {Event} */ e) => e.stopPropagation());
@@ -217,6 +234,19 @@ function renderHeader() {
   $('rh-mode-tile').addEventListener('click', () => openModeMenu($('rh-mode-tile'), { mode: rs.mode, submode: rs.submode, lang, onPick: (m, sub) => {
     rs.mode = m; rs.submode = sub; rs.transportMode = ernCodeFor(m, sub, rs.transportMode); markDirty(); renderHeader();
   } }));
+  $('per-add-cal')?.addEventListener('change', () => {
+    const id = $('per-add-cal').value;
+    if (!id || !activePer) return;
+    activePer.calendarIds = [...activePer.calendarIds, id];
+    markDirty();
+    renderHeader();
+  });
+  hdr.querySelectorAll('.per-cal-x').forEach((/** @type {HTMLElement} */ b) => b.addEventListener('click', () => {
+    const id = /** @type {HTMLElement} */ (b.closest('.per-cal')).dataset.cal;
+    activePer.calendarIds = activePer.calendarIds.filter((/** @type {string} */ c) => c !== id);
+    markDirty();
+    renderHeader();
+  }));
   $('btn-add-per').addEventListener('click', () => {
     const copy = confirm(t('copyTripsConfirm', periodLabel(rs.periods.find((/** @type {any} */ p) => p.id === rs.activePer))));
     commitPending();

@@ -4,6 +4,9 @@
 import { createMemoryFs } from '../project/fs.js';
 import { createProject } from '../project/create.js';
 import { writeOrgs } from '../project/orgs-store.js';
+import { writeCalendars } from '../project/calendars-store.js';
+
+const SAMPLE_CALENDAR = 'cccccccc-0000-4000-8000-00000000000a';
 import { encodeWin1252 } from '../core/ern/win1252.js';
 
 const crlf = (/** @type {string[]} */ lines) => lines.join('\r\n') + '\r\n';
@@ -18,8 +21,9 @@ const route = (code, name, stops) => [
   '#SEK;NOG:Authority:aaaaaaaaaa1;Eksempel fylkeskommune;1;0;0;0',
   '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0',
   '#CUR;neposcoin;1',
-  `#TRA;${code}`,
-  '#PER;Vinter;20260101;20260630;;;',
+  `#TRA;${name}`,
+  '#PER;;;;;;',
+  `#KAL;${SAMPLE_CALENDAR}`,
   '#TAB;0;;;;',
   '#TUR;0;DX67;0;0;0;0',
   ...stops.flatMap(([id, stopName], i) => [`#TRL;${i};${id};${stopName};34;0;-1;-1;34;-1`, `#TRC;0;07${String(i * 15).padStart(2, '0')};0;0;0;0;0`]),
@@ -38,6 +42,7 @@ const BAD_NAME = crlf(['#LEV;Eksempelprosjekt;TST', ...route('40', 'Jernbanetorg
 export async function createSampleFs() {
   const fs = createMemoryFs();
   await createProject(fs, { name: 'Eksempelprosjekt', codespace: 'TST' });
+  await writeCalendars(fs, [{ id: SAMPLE_CALENDAR, name: 'Vinter 2026', ranges: [['20260101', '20260630']] }]);
   const contact = (url = '', phone = '') => ({ email: '', phone, url });
   await writeOrgs(fs, [
     { organisationId: '22', companyNumber: '991609407', name: 'Eksempel fylkeskommune', legalName: 'EKSEMPEL FYLKESKOMMUNE', tradingName: '',

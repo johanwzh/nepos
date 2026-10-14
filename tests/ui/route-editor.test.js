@@ -311,3 +311,27 @@ describe('line header', () => {
     }
   });
 });
+
+describe('period calendars', () => {
+  it('picks a calendar for the period and shows the period by its calendar names', async () => {
+    app.calendars = [{ id: 'c1', name: 'Vinter 26/27', ranges: [] }];
+    await selectRoute('20');
+    const sel = /** @type {HTMLSelectElement} */ (document.getElementById('per-add-cal'));
+    sel.value = 'c1';
+    sel.dispatchEvent(new Event('change'));
+    const per = app.routeState.periods.find((/** @type {any} */ p) => p.id === app.routeState.activePer);
+    expect(per.calendarIds).toContain('c1');
+    expect(app.dirty).toBe(true);
+    expect(document.getElementById('sel-period')?.textContent).toContain('Vinter 26/27');
+  });
+
+  it('removes a calendar from the period', async () => {
+    app.calendars = [{ id: 'c1', name: 'Vinter 26/27', ranges: [] }];
+    await selectRoute('20');
+    const per = app.routeState.periods.find((/** @type {any} */ p) => p.id === app.routeState.activePer);
+    per.calendarIds = ['c1'];
+    refreshAll();
+    /** @type {HTMLElement} */ (document.querySelector('.per-cal[data-cal="c1"] .per-cal-x')).click();
+    expect(per.calendarIds).toEqual([]);
+  });
+});
