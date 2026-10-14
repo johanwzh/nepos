@@ -1,6 +1,7 @@
-// The map panel (F6, spec §7.3): the selected trip's stops joined by straight lines on a CARTO
-// basemap (Positron light, Dark Matter dark). Positions come from the NSR lookups; stops without
-// one are listed under the map. Created only when the panel is first opened.
+// The map panel (F6, spec §7.3): the selected trip's stops joined by straight lines on a raster
+// basemap (OpenStreetMap by default; CARTO's free basemaps now need an API key). Positions come
+// from the NSR lookups; stops without one are listed under the map. Created only when the panel
+// is first opened.
 import L from 'leaflet';
 import { app } from './state.js';
 import { $, onRefresh, currentPage, panelOpen, onPanelToggle } from './shell.js';
@@ -8,8 +9,8 @@ import { t } from '../i18n/strings.js';
 import { grid, selectedColumn, onGridRender } from './grid.js';
 import { quayInfo, onQuaysLoaded } from './quays.js';
 import { tripOnMap } from '../core/map-model.js';
+import { DEFAULT_SETTINGS } from '../project/settings.js';
 
-const ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>';
 
 /** @type {any} */ let map = null;
 /** @type {any} */ let tiles = null;
@@ -31,12 +32,15 @@ function ensureMap() {
 }
 
 function ensureTiles() {
-  const want = theme();
+  // The basemap comes from the settings (private/settings.json), default OpenStreetMap; it is
+  // muted in light mode and inverted in dark mode by CSS (.n2-map-dark), so one source serves both.
+  const url = app.settings.tileUrl || DEFAULT_SETTINGS.tileUrl;
+  const want = `${url}|${theme()}`;
+  $('leaflet-map').classList.toggle('n2-map-dark', theme() === 'dark');
   if (tiles && tileTheme === want) return;
   if (tiles) tiles.remove();
-  const style = want === 'dark' ? 'dark_all' : 'light_all';
-  tiles = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png`, {
-    attribution: ATTRIBUTION, subdomains: 'abcd', maxZoom: 19,
+  tiles = L.tileLayer(url, {
+    attribution: app.settings.tileAttribution || DEFAULT_SETTINGS.tileAttribution, maxZoom: 19,
   }).addTo(map);
   tiles.bringToBack();
   tileTheme = want;
@@ -88,7 +92,15 @@ function schedule() {
 
 export function initMapPanel() {
   onGridRender(schedule);
-  onPanelToggle(schedule);
+  // The panel slides open (CSS width transition): fit again once it has its final size.
+  onPanelToggle(() => {
+    schedule();
+    setTimeout(() => { lastKey = ''; schedule(); }, 250);
+  });
+  // Light/dark switch (the theme button changes data-theme without a full refresh).
+  new MutationObserver(schedule).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  // Dragging the panel edge or resizing the window: let Leaflet re-measure.
+  new ResizeObserver(() => { if (map) map.invalidateSize(); }).observe($('map-inner'));
   onQuaysLoaded(schedule);
   onRefresh(schedule); // page changes, theme, language, another route
 }
