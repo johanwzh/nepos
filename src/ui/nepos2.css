@@ -198,3 +198,17 @@ dialog.n2-ws[open] { display: flex; flex-direction: column; }
 .cal-days { color: var(--text-m); font-size: 12px; }
 .cal-range { display: flex; gap: 6px; align-items: center; margin: 2px 0 0 12px; }
 .cal-range-add { margin: 4px 0 0 12px; }
+
+/* Calendar year view (plan 4d) */
+.yv { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 16px; user-select: none; }
+.yv-title { font-weight: 600; padding: 4px 8px; background: var(--accent); color: var(--accent-text); text-align: right; }
+.yv table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.yv th { color: var(--text-m); font-weight: 600; padding: 2px; }
+.yv td { text-align: center; padding: 3px 0; }
+.yv-week { color: var(--text-f); font-style: italic; }
+.yv-day { cursor: pointer; border-radius: 3px; }
+.yv-day.sun, .yv-day.hol { color: var(--g-dec-c); }
+.yv-day.hol { font-weight: 700; }
+.yv-day.on { background: #fff35a; color: #1a1a1a; }
+.yv-day.pending { outline: 2px solid var(--accent); }
+.yv-hol { font-size: 10px; color: var(--text-m); padding: 2px 6px; }
