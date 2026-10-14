@@ -12,6 +12,7 @@ import { serializeERN } from '../core/ern/serialize.js';
 import { ERN_MODES } from '../core/ern/modes.js';
 import { checkRouteFile } from '../core/integrity/check.js';
 import { orgRole, orgNameList } from '../core/orgs.js';
+import { pruneProjectCopy } from './org-register.js';
 import { nextRouteCode, compareRouteCodes } from '../core/route-codes.js';
 import { yyyymmddToInput, inputToYyyymmdd } from '../core/footnotes.js';
 import { writeRoute, deleteRoute as deleteRouteFile } from '../project/routes.js';
@@ -74,6 +75,7 @@ export async function saveRoute(trigger = null) {
   const ok = await runAction(() => writeRoute(fs, code, text), trigger).finally(() => { saving = false; });
   if (!ok) return false;
   app.routes = app.routes.map((r) => (r.code === code ? { code, text, status, issues } : r));
+  await pruneProjectCopy();
   // Edits made while the file was being written are not in it: they stay unsaved.
   if (app.activeRoute === code && currentText() === text) {
     app.dirty = false;
