@@ -5,7 +5,7 @@
 import { app } from './state.js';
 import { $, onRefresh, refreshAll, runAction, markDirty, setBeforeLeave, beforeLeave, showMessage, currentPage, onBeforeViewChange, notifyLinesChanged } from './shell.js';
 import { t } from '../i18n/strings.js';
-import { grid, loadGrid, gridData, markGridClean, clearGrid, render as renderGrid, onGridChange, commitPending } from './grid.js';
+import { grid, loadGrid, gridData, markGridClean, clearGrid, render as renderGrid, onGridChange, commitPending, onGridRender } from './grid.js';
 import { newRouteState, fillMissingPeriod, gridKey, periodsOf } from './route-state.js';
 import { parseERN } from '../core/ern/parse.js';
 import { serializeERN } from '../core/ern/serialize.js';
@@ -21,6 +21,7 @@ import { pruneProjectCopy } from './org-register.js';
 import { compareRouteCodes } from '../core/route-codes.js';
 import { writeRoute } from '../project/routes.js';
 import { showProjectCheck } from './project-ui.js';
+import { renderTimeline } from './timeline.js';
 import { issueMessage } from './messages.js';
 import { parkOpenLine, takeDraft, unsavedCodes } from './drafts.js';
 
@@ -252,12 +253,12 @@ function renderHeader() {
       <div class="rh-row">
         <button class="rh-mode-tile${rs.mode ? '' : ' empty'}" id="rh-mode-tile" title="${esc(modeTitle)}"${dis}>${modeIconSvg(rs.mode, rs.submode)}</button>
         <input class="rh-public" id="rh-public" value="${esc(rs.publicCode)}" placeholder="${esc(t('publicCodePh'))}"${dis}>
-        <label class="rh-private-l">${esc(t('privateCodeLabel'))} <input class="rh-private" id="rh-private" value="${esc(rs.privateCode)}"${dis}></label>
+        <label class="rh-private-box" title="${esc(t('privateCodeHint'))}"><span class="rh-private-cap">${esc(t('privateCodeLabel'))}</span><input class="rh-private" id="rh-private" value="${esc(rs.privateCode)}" placeholder="—"${dis}></label>
       </div>
-      <div class="rh-meta">
-        <select class="rh-branding${rs.brandingId ? '' : ' empty'}" id="rh-branding"${dis}>${brandOptions}</select>
-        <div class="rh-orgs" id="rh-orgs"></div>
-      </div>
+    </div>
+    <div class="rh-side">
+      <select class="rh-branding${rs.brandingId ? '' : ' empty'}" id="rh-branding"${dis}>${brandOptions}</select>
+      <div class="rh-orgs" id="rh-orgs"></div>
     </div>
   `;
 
@@ -280,7 +281,7 @@ function renderCalendarBar() {
   const bar = $('cal-bar');
   const rs = app.routeState;
   closeCalendarPop();
-  if (!rs) { bar.innerHTML = ''; bar.style.display = 'none'; return; }
+  if (!rs) { bar.innerHTML = ''; bar.style.display = 'none'; renderTimeline(); return; }
   bar.style.display = '';
   const ro = isReadOnly();
   const per = rs.periods.find((/** @type {any} */ p) => p.id === rs.activePer);
@@ -292,8 +293,9 @@ function renderCalendarBar() {
   }).join('');
   const legacy = periods.length > 1 ? `<select class="rh-select" id="sel-period" title="${esc(t('periodLabel'))}">${periods.map((/** @type {any} */ p) =>
     `<option value="${p.id}"${p.id === rs.activePer ? ' selected' : ''}>${esc(periodLabel(p))}</option>`).join('')}</select>` : '';
-  bar.innerHTML = `<span class="cal-bar-label">${esc(t('calendarsLabel'))}</span>${legacy}${chips || `<span class="cal-bar-none">${esc(t('periodNoCalendar'))}</span>`}${ro ? '' : `<button class="cal-add" id="cal-add">${esc(t('addCalendar'))} ▾</button>`}`;
+  bar.innerHTML = `<span class="cal-bar-label">${esc(t('calendarsLabel'))}</span>${ro ? '' : `<button class="cal-add" id="cal-add">${esc(t('addCalendar'))} ▾</button>`}${legacy}${chips || `<span class="cal-bar-none">${esc(t('periodNoCalendar'))}</span>`}`;
   $('sel-period')?.addEventListener('change', () => switchPeriod(+$('sel-period').value));
+  renderTimeline();
   if (ro || !per) return;
   bar.querySelectorAll('.cal-chip-x').forEach((/** @type {HTMLElement} */ b) => b.addEventListener('click', () => {
     const id = /** @type {HTMLElement} */ (b.closest('.cal-chip')).dataset.cal;
@@ -523,6 +525,7 @@ function renderEditor() {
 let listenersWired = false;
 
 export function initRouteEditor() {
+  onGridRender(renderTimeline); // the column under the cursor shows on the timeline
   onRefresh(renderEditor);
   onGridChange(() => { if (app.dirty) notifyLinesChanged(); else markDirty(); });
   setBeforeLeave(confirmLeave);
