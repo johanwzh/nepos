@@ -308,21 +308,21 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 
 /* Form controls on the newer pages and dialogs: one base look. :where() keeps it the weakest rule,
    so any class-specific style (the grid, the menu bar, the primary buttons) still wins. */
-:where(#page-assets, #page-export, .n2-dialog, #route-hdr, .line-table, .sp) :where(input:not([type=checkbox]):not([type=radio]):not([type=color]), select) {
+:where(#page-assets, #page-export, #page-calendars, .n2-dialog, #route-hdr, .line-table, .sp) :where(input:not([type=checkbox]):not([type=radio]):not([type=color]), select) {
   font: inherit; font-size: 13px; height: 28px; padding: 0 8px; box-sizing: border-box;
   border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text);
 }
-:where(#page-assets, #page-export, .n2-dialog, #route-hdr, .line-table, .sp) :where(textarea) {
+:where(#page-assets, #page-export, #page-calendars, .n2-dialog, #route-hdr, .line-table, .sp) :where(textarea) {
   font: inherit; font-size: 13px; padding: 6px 8px; box-sizing: border-box;
   border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text);
 }
-:where(#page-assets, #page-export, .n2-dialog, #route-hdr, .line-table, .sp) :where(input, select, textarea):focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-:where(#page-assets, #page-export, .n2-dialog, .line-table, .sp) :where(button) {
+:where(#page-assets, #page-export, #page-calendars, .n2-dialog, #route-hdr, .line-table, .sp) :where(input, select, textarea):focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+:where(#page-assets, #page-export, #page-calendars, .n2-dialog, .line-table, .sp) :where(button) {
   font: inherit; font-size: 13px; padding: 4px 12px; min-height: 28px; cursor: pointer;
   border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text);
 }
-:where(#page-assets, #page-export, .n2-dialog, .line-table, .sp) :where(button):hover:not(:disabled) { background: var(--accent-bg); }
-:where(#page-assets, #page-export, .n2-dialog, .line-table, .sp) :where(button):disabled { opacity: .5; cursor: default; }
+:where(#page-assets, #page-export, #page-calendars, .n2-dialog, .line-table, .sp) :where(button):hover:not(:disabled) { background: var(--accent-bg); }
+:where(#page-assets, #page-export, #page-calendars, .n2-dialog, .line-table, .sp) :where(button):disabled { opacity: .5; cursor: default; }
 .brand-add { margin-top: 8px; }
 .n2-field { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
 .n2-org-mode { border: 1px solid var(--border-lt); border-radius: 6px; padding: 8px 12px 10px; margin: 12px 0 16px; max-width: 560px; }
@@ -524,3 +524,13 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .ce-foot { position: sticky; bottom: 0; display: flex; align-items: center; gap: 6px; padding: 8px 0; margin-top: 8px; background: var(--bg-panel); border-top: 1px solid var(--border-lt); }
 .ce-foot .ef-spacer { flex: 1; }
 #calendars-body .ce-prev, #calendars-body .ce-next { min-width: 34px; font-size: 16px; line-height: 1; padding: 4px 8px; }
+/* Kalendere: the switcher's controls and the editor's heading */
+#calendars-body .ce-back { border: none; background: transparent; color: var(--accent); padding: 4px 6px; font-size: 13px; min-height: 0; }
+#calendars-body .ce-back:hover { background: var(--accent-bg); }
+#calendars-body .ce-add { border: 1px dashed var(--border); border-radius: 999px; background: transparent; color: var(--text-m);
+  padding: 0 12px; height: 28px; font-size: 12px; }
+#calendars-body .ce-add:hover { border-color: var(--accent); color: var(--accent); background: transparent; }
+#calendars-body .ce-name { font-size: 18px; font-weight: 600; height: 36px; padding: 0 10px; min-width: 260px; }
+#calendars-body .cal-toolbar button { height: 30px; }
+#calendars-body .ce-del { color: var(--g-dec-c); }
+#calendars-body .cl-new { height: 30px; }
