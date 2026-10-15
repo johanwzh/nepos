@@ -182,3 +182,74 @@ describe('the calendar editor', () => {
     expect(document.getElementById('msg-text')?.textContent).toContain('r2');
   });
 });
+
+describe('Kalendere list, unified with Linjer', () => {
+  const two = () => { app.calendars = [{ id: 'c1', name: 'Vinter', ranges: [['20261201', '20270131']] }, { id: 'c2', name: 'Sommer', ranges: [['20270601', '20270815']] }]; };
+  const names = () => rows().map((r) => r.querySelector('.cl-name')?.textContent);
+
+  it('selects with a click and opens with a double-click; every row has a validity bar', () => {
+    two();
+    setPage('calendars');
+    rows()[0].click();
+    expect(app.calendarSelected).toBeNull();
+    expect(rows()[0].classList.contains('selected')).toBe(true);
+    expect(rows().every((r) => r.querySelector('.vb'))).toBe(true);
+  });
+
+  it('searches, and sorts by a header, remembering the sort', () => {
+    two();
+    setPage('calendars');
+    const search = /** @type {HTMLInputElement} */ (q('#cl-search'));
+    search.value = 'som';
+    search.dispatchEvent(new Event('input'));
+    expect(names()).toEqual(['Sommer']);
+    search.value = '';
+    search.dispatchEvent(new Event('input'));
+    q('th[data-col="name"]').click();               // already by name: now descending
+    expect(names()).toEqual(['Vinter', 'Sommer']);
+    expect(JSON.parse(/** @type {string} */ (localStorage.getItem('nepos.calSort')))).toEqual({ col: 'name', dir: -1 });
+    localStorage.removeItem('nepos.calSort');
+  });
+
+  it('filters on status: only the unsaved ones', () => {
+    two();
+    app.calendarDrafts.set('c2', { id: 'c2', name: 'Sommer', ranges: [] });
+    setPage('calendars');
+    const status = /** @type {HTMLSelectElement} */ (q('#cl-f-status'));
+    status.value = 'unsaved';
+    status.dispatchEvent(new Event('change'));
+    expect(names()).toEqual(['Sommer ●']);
+  });
+
+  it('deletes several at once after asking once, and saves the selected unsaved ones', async () => {
+    two();
+    await writeCalendars(fs, app.calendars);
+    app.calendarDrafts.set('c1', { id: 'c1', name: 'Vinter 2', ranges: [] });
+    setPage('calendars');
+    rows()[1].click(); // Vinter (●)
+    click('#cl-save');
+    await flush(); await flush();
+    expect((await saved()).map((/** @type {any} */ c) => c.name)).toEqual(['Vinter 2', 'Sommer']);
+    rows()[0].click();
+    rows()[1].dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+    click('#cl-del');
+    await flush(); await flush();
+    expect(window.confirm).toHaveBeenCalledTimes(1);
+    expect(await saved()).toEqual([]);
+  });
+
+  it('"Brukes av" goes to Linjer, filtered to the lines that use the calendar', () => {
+    two();
+    app.routes = [{ code: 'r', text: ROUTE.replace('#KAL;c1', '#KAL;c1'), status: 'ok', issues: [] }];
+    setPage('calendars');
+    /** @type {HTMLElement} */ (rows().find((r) => r.textContent?.includes('Vinter'))?.querySelector('.cl-used a')).click();
+    expect(currentPage()).toBe('lines');
+    expect(app.linesFilterCal).toBe('c1');
+  });
+
+  it('with no calendars: a hint and "+ Ny kalender"', () => {
+    setPage('calendars');
+    expect(page().textContent).toContain('Ingen kalendere ennå');
+    expect(q('.cl-new')).not.toBeNull();
+  });
+});

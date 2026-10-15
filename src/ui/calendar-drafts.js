@@ -20,3 +20,8 @@ export async function saveAllCalendars() {
   app.calendarDrafts.clear();
   return true;
 }
+
+/** Throw away every unsaved calendar edit (the caller has asked). */
+export function discardAllCalendars() {
+  app.calendarDrafts.clear();
+}

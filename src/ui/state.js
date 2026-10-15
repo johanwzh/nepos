@@ -38,6 +38,8 @@ export const app = {
   calendarMonth: '',
   /** @type {Map<string, import('../core/calendars.js').Calendar>} unsaved calendar edits */
   calendarDrafts: new Map(),
+  /** @type {string | null} Linjer shows only the lines using this calendar */
+  linesFilterCal: null,
   /** @type {'orgs' | 'brandings'} the section shown on Ressurser */
   assetsSection: 'brandings',
   /** @type {import('../project/open.js').RouteEntry[]} */

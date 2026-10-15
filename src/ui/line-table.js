@@ -8,7 +8,10 @@ import { modeIconSvg } from './mode-icons.js';
 import { modeLabel } from '../i18n/modes.js';
 import { lineRows, sortLines, loadLineSort, saveLineSort } from './line-rows.js';
 import { editLines, setOrg, duplicateLines, deleteLines } from './line-batch.js';
-import { selectRoute, saveRoutes } from './route-editor.js';
+import { selectRoute, saveRoutes, newRoute } from './route-editor.js';
+import { validityBar, todayYmd } from './validity-bar.js';
+import { pick } from './selection.js';
+import { unionDays } from '../core/calendars.js';
 import { createOrgPicker } from './org-picker.js';
 import { replaceCalendarInState } from '../core/calendar-replace.js';
 
@@ -18,7 +21,9 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 const day = (d) => (d ? `${d.slice(6, 8)}.${d.slice(4, 6)}.${d.slice(0, 4)}` : '');
 const lang = () => /** @type {'no' | 'en'} */ (app.settings.lang);
 
-const COLS = ['mode', 'code', 'name', 'branding', 'authority', 'operator', 'valid', 'exported', 'public', 'status'];
+const COLS = ['mode', 'code', 'name', 'branding', 'authority', 'operator', 'calendars', 'valid', 'bar', 'exported', 'public', 'status'];
+/** Columns that cannot be sorted on. */
+const NO_SORT = new Set(['calendars', 'bar']);
 
 /** @type {Set<string>} */
 let selected = new Set();
@@ -33,6 +38,7 @@ const field = (id) => /** @type {HTMLInputElement & HTMLSelectElement} */ (docum
 
 /** @param {import('./line-rows.js').LineRow} r */
 function matches(r) {
+  if (app.linesFilterCal && !r.calendarIds.includes(app.linesFilterCal)) return false;
   const q = field('lt-search').value.trim().toLowerCase();
   if (q && ![r.publicCode, r.name, r.brand, r.authority, r.operator].some((v) => v.toLowerCase().includes(q))) return false;
   const mode = field('lt-f-mode').value, org = field('lt-f-org').value, status = field('lt-f-status').value;
@@ -81,6 +87,12 @@ function render() {
   fillSelect(field('lt-f-org'), [['', t('ltAllOrgs')], ...[...new Set(all.flatMap((r) => [r.authority, r.operator]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb')).map((o) => /** @type {[string, string]} */ ([o, o]))]);
   const rows = sortLines(all, sort).filter(matches);
   shown = rows.map((r) => r.code);
+  const filterCal = app.linesFilterCal ? app.calendars.find((c) => c.id === app.linesFilterCal) : null;
+  $('lt-f-cal').innerHTML = app.linesFilterCal ? `<span class="lt-fchip">${esc(t('ltFilterCal', filterCal?.name ?? app.linesFilterCal))}<button title="${esc(t('ltFilterClear'))}">×</button></span>` : '';
+  $('lt-f-cal').querySelector('button')?.addEventListener('click', () => { app.linesFilterCal = null; render(); });
+  const now = todayYmd();
+  const calName = (/** @type {string} */ id) => app.calendars.find((c) => c.id === id)?.name ?? `⚠ ${id}`;
+  const lineDays = (/** @type {string[]} */ ids) => unionDays(/** @type {any[]} */ (ids.map((id) => app.calendars.find((c) => c.id === id)).filter(Boolean)));
 
   el.querySelectorAll('th[data-col]').forEach((/** @type {Element} */ th) => {
     const col = /** @type {HTMLElement} */ (th).dataset.col;
@@ -92,10 +104,12 @@ function render() {
     <td title="${esc(modeLabel(r.mode, lang()))}">${modeIconSvg(r.mode, r.submode)}</td>
     <td class="lt-code">${esc(r.publicCode)}</td><td class="lt-name">${esc(r.name)}</td><td>${esc(r.brand)}</td>
     <td>${esc(r.authority)}</td><td>${esc(r.operator)}</td>
+    <td class="lt-cals">${r.calendarIds.map((id) => `<button class="lt-calchip" data-cal="${esc(id)}">${esc(calName(id))}</button>`).join('')}</td>
     <td class="lt-valid">${r.firstDay ? `${day(r.firstDay)} – ${day(r.lastDay)}` : ''}</td>
+    <td class="lt-bar">${validityBar(lineDays(r.calendarIds), now)}</td>
     <td class="lt-flag lt-flag-exp">${r.exported ? '' : '✓'}</td><td class="lt-flag lt-flag-pub">${r.isPublic ? '' : '✓'}</td>
     <td class="lt-status${r.errors || r.damaged ? ' has-errors' : ''}">${esc(statusText(r))}</td></tr>`).join('')
-    || `<tr><td colspan="11" class="lt-empty">${esc(t('noMatches'))}</td></tr>`;
+    || `<tr><td colspan="${COLS.length + 1}" class="lt-empty">${esc(t(app.routes.length ? 'noMatches' : 'ltNoLines'))}</td></tr>`;
 
   const none = !selected.size;
   for (const id of ['lt-dup', 'lt-del', 'lt-save', 'lt-cal', 'lt-exp', 'lt-pub', 'lt-brand']) field(id).disabled = none;
@@ -113,20 +127,18 @@ function render() {
 
 /** @param {MouseEvent} e */
 function onRowClick(e) {
-  const tr = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('tr[data-code]'));
-  if (!tr) return;
-  const code = /** @type {string} */ (tr.dataset.code);
-  const onCheck = /** @type {HTMLElement} */ (e.target).classList.contains('lt-check');
-  if (e.shiftKey && anchor && shown.includes(anchor)) {
-    const [a, b] = [shown.indexOf(anchor), shown.indexOf(code)].sort((x, y) => x - y);
-    selected = new Set(shown.slice(a, b + 1));
-  } else if (e.ctrlKey || e.metaKey || onCheck) {
-    if (selected.has(code)) selected.delete(code); else selected.add(code);
-    anchor = code;
-  } else {
-    selected = new Set([code]);
-    anchor = code;
+  const target = /** @type {HTMLElement} */ (e.target);
+  const chip = /** @type {HTMLElement | null} */ (target.closest('.lt-calchip'));
+  if (chip) { // a calendar: open it in Kalendere
+    app.calendarSelected = /** @type {string} */ (chip.dataset.cal);
+    app.calendarMonth = '';
+    setPage('calendars');
+    return;
   }
+  const tr = /** @type {HTMLElement | null} */ (target.closest('tr[data-code]'));
+  if (!tr) return;
+  ({ selected, anchor } = pick({ selected, anchor }, shown, /** @type {string} */ (tr.dataset.code),
+    { shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey, toggle: target.classList.contains('lt-check') }));
   render();
 }
 
@@ -149,7 +161,9 @@ function buildChrome() {
   const el = $('line-table');
   el.innerHTML = `
     <div class="lt-bar">
+      <button class="pop-btn primary" id="lt-new">${esc(t('ltNewLine'))}</button>
       <input id="lt-search" type="search" autocomplete="off" placeholder="${esc(t('ltSearch'))}">
+      <span id="lt-f-cal"></span>
       <select id="lt-f-mode"></select><select id="lt-f-org"></select>
       <select id="lt-f-status"><option value="">${esc(t('ltAllStatus'))}</option><option value="problems">${esc(t('ltProblems'))}</option><option value="expired">${esc(t('lineExpired'))}</option><option value="unsaved">${esc(t('unsavedDot'))}</option></select>
       <select id="lt-f-exp"><option value="">${esc(t('flagExported'))}: ${esc(t('ltAll'))}</option><option value="1">${esc(t('flagExported'))}: ${esc(t('yes'))}</option><option value="0">${esc(t('flagExported'))}: ${esc(t('no'))}</option></select>
@@ -168,7 +182,7 @@ function buildChrome() {
       <button class="pop-btn primary" id="lt-save">${esc(t('ltSave'))}</button>
     </div>
     <div class="lt-scroll"><table class="lt-table">
-      <thead><tr><th></th>${COLS.map((c) => `<th data-col="${c}">${esc(t(`ltCol_${c}`))}</th>`).join('')}</tr></thead>
+      <thead><tr><th></th>${COLS.map((c) => (NO_SORT.has(c) ? `<th>${esc(t(`ltCol_${c}`))}</th>` : `<th data-col="${c}">${esc(t(`ltCol_${c}`))}</th>`)).join('')}</tr></thead>
       <tbody id="lt-body"></tbody>
     </table></div>
     <dialog class="n2-dialog" id="lt-cal-dlg">
@@ -193,6 +207,7 @@ function buildChrome() {
     void selectRoute(/** @type {string} */ (tr.dataset.code));
     setPage('edit');
   });
+  $('lt-new').addEventListener('click', async () => { await newRoute(); setPage('edit'); });
   $('lt-dup').addEventListener('click', async () => { const made = await duplicateLines([...selected]); if (made.length) selected = new Set(made); render(); });
   $('lt-del').addEventListener('click', async () => { await deleteLines([...selected]); selected = new Set([...selected].filter((c) => app.routes.some((r) => r.code === c))); render(); });
   $('lt-save').addEventListener('click', () => { void saveRoutes([...selected]); });

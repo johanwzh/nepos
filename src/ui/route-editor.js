@@ -22,7 +22,7 @@ import { compareRouteCodes } from '../core/route-codes.js';
 import { writeRoute } from '../project/routes.js';
 import { showProjectCheck } from './project-ui.js';
 import { renderTimeline } from './timeline.js';
-import { unsavedCalendarCount, saveAllCalendars } from './calendar-drafts.js';
+import { unsavedCalendarCount, saveAllCalendars, discardAllCalendars } from './calendar-drafts.js';
 import { issueMessage } from './messages.js';
 import { parkOpenLine, takeDraft, unsavedCodes } from './drafts.js';
 
@@ -168,8 +168,9 @@ export async function saveRoutes(codes, trigger = null) {
 
 /** Throw away every unsaved change, after asking; the open line is read again from its file. */
 export function discardAllChanges() {
-  const n = unsavedCodes().length;
+  const n = unsavedCodes().length + unsavedCalendarCount();
   if (!n || !confirm(t('discardAllConfirm', n))) return;
+  discardAllCalendars();
   app.drafts.clear();
   const entry = activeEntry();
   if (entry) {

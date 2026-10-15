@@ -143,3 +143,36 @@ describe('lines pane language', () => {
     refreshAll();
   });
 });
+
+describe('Linjer, unified with Kalendere', () => {
+  it('has "+ Ny linje", which opens the new line in the timetable', async () => {
+    setPage('lines');
+    /** @type {HTMLElement} */ (document.getElementById('lt-new')).click();
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(app.routes).toHaveLength(4);
+    expect(currentPage()).toBe('edit');
+  });
+
+  it('shows each line\'s calendars as chips that open the calendar, and a validity bar', () => {
+    setPage('lines');
+    const alta = /** @type {HTMLElement} */ (rows().find((r) => r.textContent?.includes('Alta')));
+    expect(alta.querySelector('.vb')).not.toBeNull();
+    const chip = /** @type {HTMLElement} */ (alta.querySelector('.lt-calchip'));
+    expect(chip.textContent).toBe('Gammel');
+    chip.click();
+    expect(currentPage()).toBe('calendars');
+    expect(app.calendarSelected).toBe('cal-old');
+  });
+
+  it('can be filtered to the lines that use one calendar, and the filter can be removed', () => {
+    app.linesFilterCal = 'cal-old';
+    setPage('lines');
+    expect(names()).toEqual(['Alta']);
+    const chip = /** @type {HTMLElement} */ (document.getElementById('lt-f-cal'));
+    expect(chip.textContent).toContain('Gammel');
+    /** @type {HTMLElement} */ (chip.querySelector('button')).click();
+    expect(app.linesFilterCal).toBeNull();
+    expect(names()).toHaveLength(3);
+  });
+});
