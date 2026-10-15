@@ -257,7 +257,7 @@ function renderHeader() {
       </div>
     </div>
     <div class="rh-side">
-      <select class="rh-branding${rs.brandingId ? '' : ' empty'}" id="rh-branding"${dis}>${brandOptions}</select>
+      <label class="rh-brand-chip${rs.brandingId ? '' : ' empty'}"><span class="org-pick-role">${esc(t('brandingLabel'))}</span><select class="rh-branding" id="rh-branding"${dis}>${brandOptions}</select></label>
       <div class="rh-orgs" id="rh-orgs"></div>
     </div>
   `;

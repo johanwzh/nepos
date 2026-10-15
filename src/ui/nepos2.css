@@ -465,3 +465,16 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .tl-key.column { background: var(--cal-valid); } .tl-key.removed { background: var(--cal-removed); }
 /* The public code field is as wide as its text, so the private code sits right beside it. */
 #route-hdr .rh-public { field-sizing: content; width: auto; min-width: 2ch; max-width: 10em; padding: 0 4px; }
+
+/* The grid's add column and add row: a tint of the main colour, so they read as "not data" */
+#tbl td.g-add, #tbl th.g-add { background: color-mix(in srgb, var(--accent) 9%, var(--bg-panel)) !important; }
+
+/* The branding chip: like the organisation chips — a faded caption, then the choice */
+.rh-brand-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 4px 0 12px; border: 1px solid var(--border);
+  border-radius: 999px; background: var(--bg-raised); color: var(--text); font-size: 13px; cursor: pointer; }
+.rh-brand-chip:hover { border-color: var(--accent); }
+.rh-brand-chip:focus-within { border-color: var(--accent); }
+#route-hdr .rh-brand-chip .rh-branding { height: 26px; border: none; background: transparent; padding: 0 2px; font-size: 13px; color: var(--text); cursor: pointer; }
+#route-hdr .rh-brand-chip .rh-branding:focus { outline: none; }
+.rh-brand-chip.empty .rh-branding { color: var(--text-f); }
+.rh-side .rh-orgs { border-top: none; padding-top: 0; margin-top: 0; }
