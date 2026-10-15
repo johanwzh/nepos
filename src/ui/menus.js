@@ -1,10 +1,12 @@
 // The application menus (navigation spec §6): Prosjekt, Linjer and Visning.
 import { app } from './state.js';
-import { $, refreshAll, runAction, persistSettings, applyTheme, onRefresh, openProjectSettings } from './shell.js';
+import { $, refreshAll, runAction, persistSettings, applyTheme, onRefresh, openProjectSettings, currentPage, setPage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { createMenuBar } from './menubar.js';
 import { pickAndOpen, openNewDialog, openRecent, closeProject, copyProject, setOnRecentChanged, openCodespaceDialog } from './project-ui.js';
 import { newRoute, saveRoute, saveAllRoutes, discardAllChanges } from './route-editor.js';
+import { newDraft as newCalendarDraft, saveOpenCalendar } from './calendars-page.js';
+import { unsavedCalendarCount, saveAllCalendars } from './calendar-drafts.js';
 import { unsavedCodes } from './drafts.js';
 import { loadRecentFolders, clearRecentFolders } from './recent-folders.js';
 import { loadColourTheme, saveColourTheme, applyColourTheme, openThemeDialog } from './theme.js';
@@ -44,13 +46,20 @@ const MENUS = [
     'separator',
     { label: t('closeProject'), disabled: !app.meta, action: () => { void closeProject(); } },
   ] },
-  { label: () => t('menuLines'), items: () => [
-    { label: t('newLine'), disabled: !app.meta, action: () => { void newRoute(); } },
-    'separator',
-    { label: t('saveLine'), hint: 'Ctrl+S', disabled: !app.activeRoute || !app.dirty, action: () => { void saveRoute(); } },
-    { label: t('saveAllLines'), disabled: !unsavedCodes().length, action: () => { void saveAllRoutes(); } },
-    { label: t('discardAll'), disabled: !unsavedCodes().length, action: discardAllChanges },
-  ] },
+  // Rediger: making and saving lines and calendars (the two lists have "+ Ny" buttons too).
+  { label: () => t('menuEdit'), items: () => {
+    const onCalendars = currentPage() === 'calendars';
+    const canSave = onCalendars ? !!app.calendarSelected && app.calendarDrafts.has(app.calendarSelected) : !!app.activeRoute && app.dirty;
+    const unsaved = unsavedCodes().length + unsavedCalendarCount();
+    return [
+      { label: t('newLine'), disabled: !app.meta, action: () => { void newRoute().then(() => setPage('edit')); } },
+      { label: t('newCalendar'), disabled: !app.meta, action: () => { setPage('calendars'); newCalendarDraft(); } },
+      'separator',
+      { label: t('saveCurrent'), hint: 'Ctrl+S', disabled: !canSave, action: () => { if (onCalendars) saveOpenCalendar(); else void saveRoute(); } },
+      { label: t('saveAllChanges'), disabled: !unsaved, action: () => { void saveAllRoutes().then((ok) => (ok ? saveAllCalendars() : false)).then(() => refreshAll()); } },
+      { label: t('discardAll'), disabled: !unsaved, action: discardAllChanges },
+    ];
+  } },
   { label: () => t('menuView'), items: () => [
     { label: t('language'), submenu: () => [
       { label: 'Norsk', checked: app.settings.lang === 'no', action: () => setLanguage('no') },

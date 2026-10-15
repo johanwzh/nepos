@@ -2,7 +2,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup, flush } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell, setPage } from '../../src/ui/shell.js';
+import { initShell, setPage, currentPage } from '../../src/ui/shell.js';
+import { initCalendarsPage } from '../../src/ui/calendars-page.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs, openRecent } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
@@ -26,6 +27,7 @@ beforeEach(async () => {
   if (!wired) { initGrid(); initFootnoteEditor(); wired = true; }
   initRouteEditor();
   initMenus();
+  initCalendarsPage();
   window.confirm = vi.fn(() => true);
   app.settings.lang = 'no';
   const fs = createMemoryFs();
@@ -44,7 +46,8 @@ describe('menu bar', () => {
     openMenu(0);
     expect(items()).toEqual(['Nytt prosjekt…', 'Åpne prosjekt…', 'Åpne nylig', 'Prosjektinnstillinger…', 'Lag kopi av prosjekt…', 'Bytt codespace…', 'Lukk prosjekt']);
     openMenu(1);
-    expect(items()).toEqual(['Ny linje', 'Lagre linjen', 'Lagre alle linjer', 'Forkast alle endringer']);
+    expect(document.querySelector('.mb-menu[data-menu="1"]')?.textContent).toBe('Rediger');
+    expect(items()).toEqual(['Ny linje', 'Ny kalender', 'Lagre', 'Lagre alle endringer', 'Forkast alle endringer']);
     openMenu(2);
     expect(items()).toEqual(['Språk', 'Lys/mørk', 'Fargetema']);
     openMenu(3);
@@ -68,7 +71,7 @@ describe('menu bar', () => {
 
   it('disables save-all and discard-all when nothing is unsaved', () => {
     openMenu(1);
-    expect(item('Lagre alle linjer').classList.contains('disabled')).toBe(true);
+    expect(item('Lagre alle endringer').classList.contains('disabled')).toBe(true);
     expect(item('Forkast alle endringer').classList.contains('disabled')).toBe(true);
   });
 
@@ -193,5 +196,40 @@ describe('changing the codespace', () => {
       app.settings.lang = lang;
       expect(JSON.stringify(Object.values(document.querySelectorAll('[data-lk]')).map((e) => e.textContent))).not.toMatch(/koderom|kodeområde/i);
     }
+  });
+});
+
+describe('the Rediger menu covers lines and calendars', () => {
+  it('"Ny kalender" opens a new, unsaved calendar on Kalendere', () => {
+    openMenu(0); openMenu(1);
+    item('Ny kalender').click();
+    expect(currentPage()).toBe('calendars');
+    expect(app.calendarDrafts.size).toBe(1);
+    expect(app.calendarSelected).toBe([...app.calendarDrafts.keys()][0]);
+    app.calendarDrafts.clear(); app.calendarSelected = null;
+  });
+
+  it('"Lagre alle endringer" and "Forkast alle endringer" include unsaved calendars', async () => {
+    app.calendarDrafts.set('k1', { id: 'k1', name: 'Høst', ranges: [] });
+    openMenu(0); openMenu(1);
+    expect(item('Lagre alle endringer').classList.contains('disabled')).toBe(false);
+    item('Lagre alle endringer').click();
+    for (let i = 0; i < 8; i++) await flush();
+    expect(app.calendars.map((c) => c.name)).toContain('Høst');
+    expect(app.calendarDrafts.size).toBe(0);
+    app.calendarDrafts.set('k1', { id: 'k1', name: 'Vinter', ranges: [] });
+    openMenu(0); openMenu(1);
+    item('Forkast alle endringer').click();
+    expect(app.calendarDrafts.size).toBe(0);
+  });
+
+  it('Ctrl+S on Kalendere saves the open calendar', async () => {
+    app.calendarDrafts.set('k2', { id: 'k2', name: 'Vår', ranges: [] });
+    app.calendarSelected = 'k2';
+    setPage('calendars');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true }));
+    for (let i = 0; i < 8; i++) await flush();
+    expect(app.calendars.map((c) => c.name)).toContain('Vår');
+    setPage('edit');
   });
 });
