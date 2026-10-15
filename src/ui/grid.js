@@ -357,10 +357,10 @@ function renderInsertRow(tbl) {
     td.className = 'cw-time';
     if (!grid.readOnly) td.appendChild(smallButton('+', 'g-ibtn', t('insColLeft'), () => insertCol(ci)));
   });
+  // The add column: "+ column" above the row × buttons (same column), tinted like the add row.
   const end = tr.insertCell();
-  end.className = 'cw-time';
+  end.className = 'cw-ins g-add';
   if (!grid.readOnly) end.appendChild(smallButton('+', 'g-ibtn g-ibtn-end', t('addColEnd'), () => insertCol(grid.cols.length)));
-  tr.insertCell().className = 'cw-ins';
 }
 
 /** @param {HTMLTableElement} tbl */
@@ -380,8 +380,7 @@ function renderFootRow(tbl) {
       td.appendChild(dot);
     }
   });
-  tr.insertCell();
-  tr.insertCell().className = 'cw-ins';
+  tr.insertCell().className = 'cw-ins g-add';
 }
 
 /** @param {HTMLTableElement} tbl */
@@ -414,8 +413,7 @@ function renderDayCodeRow(tbl) {
       showCtx(e.clientX, e.clientY, true);
     });
   });
-  tr.insertCell();
-  tr.insertCell().className = 'cw-ins';
+  tr.insertCell().className = 'cw-ins g-add';
 }
 
 /**
@@ -522,9 +520,8 @@ function renderStopRow(tbl, stop, ri, linked) {
       showCtx(e.clientX, e.clientY);
     });
   });
-  tr.insertCell().className = 'cw-time g-td-spc';
   const tdd = tr.insertCell();
-  tdd.className = 'cw-ins g-td-btn';
+  tdd.className = 'cw-ins g-td-btn g-add';
   if (!grid.readOnly) tdd.appendChild(smallButton('×', 'g-ibtn g-ibtn-del', t('delRow'), () => deleteRow(ri)));
 }
 
@@ -533,16 +530,15 @@ function renderBottomRow(tbl) {
   const tr = tbl.insertRow();
   tr.className = 'g-row-bot';
   const ti = tr.insertCell();
-  ti.className = 'cw-ins g-sticky0 g-td-btn g-td-ins';
+  ti.className = 'cw-ins g-sticky0 g-td-btn g-td-ins g-add';
   if (!grid.readOnly) ti.appendChild(smallButton('+', 'g-ibtn g-ibtn-end', t('addRowEnd'), () => insertRow(grid.stops.length)));
-  tr.insertCell().className = 'cw-name g-sticky1';
+  tr.insertCell().className = 'cw-name g-sticky1 g-add';
   grid.cols.forEach((_, ci) => {
     const td = tr.insertCell();
-    td.className = 'cw-time g-td-btn';
+    td.className = 'cw-time g-td-btn g-add';
     if (!grid.readOnly) td.appendChild(smallButton('×', 'g-ibtn g-ibtn-del', t('delCol'), () => deleteCol(ci)));
   });
-  tr.insertCell().className = 'cw-time g-td-spc';
-  tr.insertCell().className = 'cw-ins';
+  tr.insertCell().className = 'cw-ins g-add';
 }
 
 // ─── Selection and editing ──────────────────────────────────────────────────

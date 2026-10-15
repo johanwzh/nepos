@@ -59,7 +59,7 @@ describe('calendars of a table set', () => {
     const bar = $('cal-bar');
     expect(bar).not.toBeNull();
     expect(!!($('ts-tabs').compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
-    expect(!!(bar.compareDocumentPosition($('kom-bar')) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(!!($('kom-bar').compareDocumentPosition($('ts-tabs')) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true); // the line's note is above
     expect(chips()).toEqual(['Vinter']);
     for (const id of ['btn-add-per', 'btn-del-per', 'sel-period', 'per-add-cal', 'rh-save-state']) expect($(id), id).toBeNull();
   });
@@ -158,5 +158,35 @@ describe('header layout', () => {
     const row = $('rh-public').closest('.rh-row');
     expect(row.querySelector('#rh-private')).not.toBeNull();
     expect($('rh-private').closest('.rh-private-box')).not.toBeNull();
+  });
+});
+
+describe('the note and the grid edges', () => {
+  it('puts the line note above the table-set tabs, worded as a note', async () => {
+    await selectRoute('7');
+    const kom = $('kom-bar');
+    expect(!!(kom.compareDocumentPosition($('ts-tabs')) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(kom.textContent).toContain('Legg til merknad');
+    expect(kom.textContent).not.toContain('kommentar');
+  });
+
+  it('has no extra column: "+ column" sits above the row ×, and the add column and row are tinted', async () => {
+    await selectRoute('7');
+    const rows = [...document.querySelectorAll('#tbl tr')];
+    const cols = app.routeState.grids[`${app.routeState.activePer}:${app.routeState.activeSet}`].cols.length;
+    for (const tr of rows) expect(tr.children.length, tr.className).toBe(2 + cols + 1);
+    const ins = /** @type {HTMLElement} */ (document.querySelector('#tbl tr.g-row-ins'));
+    expect(ins.lastElementChild?.querySelector('.g-ibtn')?.textContent).toBe('+');
+    for (const tr of rows) expect(tr.lastElementChild?.classList.contains('g-add'), tr.className).toBe(true);
+    expect([...document.querySelectorAll('#tbl tr.g-row-bot > td')].every((td) => td.classList.contains('g-add'))).toBe(true);
+  });
+});
+
+describe('branding chip', () => {
+  it('shows a faded "Merkevare" caption before the choice, like the organisation chips', async () => {
+    await selectRoute('7');
+    const chip = $('rh-branding').closest('.rh-brand-chip');
+    expect(chip).not.toBeNull();
+    expect(chip.querySelector('.org-pick-role')?.textContent).toBe('Merkevare');
   });
 });
