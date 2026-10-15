@@ -58,3 +58,13 @@ describe('brandings page', () => {
     expect(JSON.parse(await readText(fs, 'data/brandings.json'))).toEqual([]);
   });
 });
+
+describe('the branding list (user test 2026-10-16)', () => {
+  it('shows only name and website, with headers over the columns instead of text inside the fields', () => {
+    app.brandings = [{ id: 'TST:Branding:x', name: 'Ekspressen', shortName: 'EX', description: 'd', url: '', imageUrl: '' }];
+    openSection();
+    expect([...body().querySelectorAll('.brand-row .brand-in')].map((i) => /** @type {HTMLElement} */ (i).dataset.field)).toEqual(['name', 'url']);
+    expect([...body().querySelectorAll('.brand-head .brand-h')].map((s) => s.textContent)).toEqual(['Navn', 'Nettside']);
+    expect(/** @type {HTMLInputElement} */ (body().querySelector('.brand-in')).placeholder).toBe('');
+  });
+});

@@ -559,3 +559,10 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 /* "Brukes av" in the calendar list: a quiet link */
 .cl-used a { color: var(--accent); text-decoration: none; }
 .cl-used a:hover { text-decoration: underline; }
+
+/* Brandings: column headers over the fields */
+.brand-head { margin-bottom: 0; }
+.brand-h { flex: 1; min-width: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-m); padding: 0 2px; }
+.brand-h-del { width: 32px; flex: none; }
+.brand-row { max-width: 720px; }
+.brand-del { width: 32px; flex: none; }
