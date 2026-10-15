@@ -42,7 +42,7 @@ const item = (/** @type {string} */ label) => /** @type {HTMLElement} */ ([...do
 describe('menu bar', () => {
   it('has the four menus with their items', () => {
     openMenu(0);
-    expect(items()).toEqual(['Nytt prosjekt…', 'Åpne prosjekt…', 'Åpne nylig', 'Prosjektinnstillinger…', 'Bytt codespace…', 'Lukk prosjekt', 'Lag kopi av prosjekt…']);
+    expect(items()).toEqual(['Nytt prosjekt…', 'Åpne prosjekt…', 'Åpne nylig', 'Prosjektinnstillinger…', 'Lag kopi av prosjekt…', 'Bytt codespace…', 'Lukk prosjekt']);
     openMenu(1);
     expect(items()).toEqual(['Ny linje', 'Lagre linjen', 'Lagre alle linjer', 'Forkast alle endringer']);
     openMenu(2);

@@ -39,10 +39,10 @@ const MENUS = [
       : [{ label: t('recentNone'), disabled: true }]) },
     'separator',
     { label: t('projectSettings') + '…', disabled: !app.meta, action: openProjectSettings },
+    { label: t('copyProject'), disabled: !app.meta || app.sampleMode, action: () => { void copyProject(); } },
     { label: t('csMenu'), disabled: !app.meta || app.sampleMode, action: openCodespaceDialog },
     'separator',
     { label: t('closeProject'), disabled: !app.meta, action: () => { void closeProject(); } },
-    { label: t('copyProject'), disabled: !app.meta || app.sampleMode, action: () => { void copyProject(); } },
   ] },
   { label: () => t('menuLines'), items: () => [
     { label: t('newLine'), disabled: !app.meta, action: () => { void newRoute(); } },
