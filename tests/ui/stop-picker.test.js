@@ -75,6 +75,12 @@ beforeEach(async () => {
 });
 
 describe('stop picking in the map pane', () => {
+  it('opens the map when a stop cell is selected', () => {
+    expect(panelOpen('right')).toBe(false);
+    pickRow(0);
+    expect(panelOpen('right')).toBe(true);
+  });
+
   it('follows the selected stop cell', () => {
     pickRow(0);
     expect(document.getElementById('sp').hidden).toBe(false);

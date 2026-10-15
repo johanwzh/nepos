@@ -399,3 +399,10 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 /* Leaflet stacks its panes and controls up to z-index 1000. Keep that inside the map, so menus,
    pickers and pop-ups always draw above it. */
 #map-inner { position: relative; isolation: isolate; z-index: 0; }
+
+/* The closed map: a strip at the timetable's left edge (the map belongs to this page). */
+.map-strip { flex: 0 0 22px; border: none; border-right: 1px solid var(--border-lt); background: var(--bg-panel); color: var(--text-m);
+  cursor: pointer; padding: 10px 0; writing-mode: vertical-rl; transform: rotate(180deg); font: inherit; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .08em; }
+.map-strip:hover { color: var(--accent); background: var(--accent-bg); }
+.map-strip[hidden] { display: none; }

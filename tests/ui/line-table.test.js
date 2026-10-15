@@ -50,8 +50,8 @@ beforeEach(async () => {
 });
 
 describe('lines pane, maxi view', () => {
-  it('is its own page, Alt+3', () => {
-    key('3', { altKey: true });
+  it('is its own page, Alt+2', () => {
+    key('2', { altKey: true });
     expect(currentPage()).toBe('lines');
     expect(document.getElementById('page-lines')?.contains(table())).toBe(true);
     expect(table().hidden).toBe(false);
