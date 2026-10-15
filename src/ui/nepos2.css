@@ -495,3 +495,11 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .help-soon { color: var(--text-m); font-style: italic; }
 /* The global reset (margin: 0) took away the browser's centring of modal dialogs: bring it back. */
 dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
+
+/* The run of months: each year its colour (red, green, blue in turn), the past greyed */
+.yv-month.yv-y0 .yv-title { background: #c0392b; color: #fff; }
+.yv-month.yv-y1 .yv-title { background: #2e8b57; color: #fff; }
+.yv-month.yv-y2 .yv-title { background: #2f6fb5; color: #fff; }
+.yv-title { text-align: left; }
+.yv-day.past { opacity: .42; }
+.yv-day.past.on { opacity: .6; }

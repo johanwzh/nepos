@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
-import { renderYearView } from '../../src/ui/year-view.js';
+import { renderYearView, renderMonthsView } from '../../src/ui/year-view.js';
 
 /** @type {any[]} */ let changes;
 /** @type {HTMLElement} */ let box;
@@ -19,7 +19,7 @@ beforeEach(() => {
 describe('year view', () => {
   it('shows twelve months with ISO weeks, Sundays and holidays', () => {
     expect(box.querySelectorAll('.yv-month')).toHaveLength(12);
-    expect(box.querySelector('.yv-title')?.textContent).toBe('Januar 2027');
+    expect(box.querySelector('.yv-title')?.textContent).toContain('Januar 2027');
     expect(box.querySelectorAll('.yv-day')).toHaveLength(365);
     expect(day('20270103').classList.contains('sun')).toBe(true);
     expect(day('20270517').classList.contains('hol')).toBe(true);
@@ -69,5 +69,34 @@ describe('year view drag safety', () => {
     day('20270108').dispatchEvent(new MouseEvent('mouseover', { bubbles: true, buttons: 0 })); // released outside the window
     fire(document.body, 'mouseup');
     expect(changes).toEqual([]);
+  });
+});
+
+describe('a run of months (calendars page spec §4)', () => {
+  it('starts at any month and crosses New Year, each year in its colour, each month with its emoji', () => {
+    renderMonthsView(box, { start: '202608', count: 12, active: new Set(), today: '20261016', lang: 'no', onChange: () => {} });
+    const titles = [...box.querySelectorAll('.yv-title')].map((e) => e.textContent);
+    expect(titles[0]).toBe('🌻 August 2026');
+    expect(titles[5]).toBe('🧊 Januar 2027');
+    expect(titles[9]).toBe('🐝 Mai 2027');
+    expect(titles[11]).toBe('😎 Juli 2027');
+    const yearClass = (/** @type {number} */ i) => [...box.querySelectorAll('.yv-month')][i].className.match(/yv-y\d/)?.[0];
+    expect(yearClass(0)).not.toBe(yearClass(5));
+    expect(yearClass(0)).toBe(yearClass(4));
+  });
+
+  it('greys out the days before today, which can still be clicked', () => {
+    renderMonthsView(box, { start: '202610', count: 2, active: new Set(), today: '20261016', lang: 'no', onChange: (days, on) => changes.push([days, on]) });
+    expect(day('20261015').classList.contains('past')).toBe(true);
+    expect(day('20261016').classList.contains('past')).toBe(false);
+    fire(day('20261015'), 'mousedown');
+    fire(document.body, 'mouseup');
+    expect(changes).toEqual([[['20261015'], true]]);
+  });
+
+  it('marks the holidays of every year it shows', () => {
+    renderMonthsView(box, { start: '202612', count: 6, active: new Set(), today: '20261016', lang: 'no', onChange: () => {} });
+    expect(day('20261225').classList.contains('hol')).toBe(true);
+    expect(day('20270517').classList.contains('hol')).toBe(true);
   });
 });
