@@ -13,8 +13,8 @@
         <span class="tb-ver" id="el-ver"></span>
         <div class="tb-sep"></div>
         <nav id="menubar"></nav>
-        <button id="delivery-btn"></button>
         <div class="tb-spacer"></div>
+        <div id="project-title" class="project-title"></div>
       </div>
       <div class="n2-banner" id="sample-banner" data-lk="sampleMode" hidden></div>
 
@@ -130,8 +130,8 @@
       </div>
     </div>
 
-    <div id="delivery-pop">
-      <div class="pop-title" data-lk="deliveryTitle"></div>
+    <dialog class="n2-dialog" id="settings-dlg">
+      <p><strong data-lk="projectSettings"></strong></p>
       <div class="pop-row">
         <label data-lk="fieldName"></label>
         <input type="text" id="pop-name" autocomplete="off">
@@ -145,7 +145,7 @@
         <button class="pop-btn" id="pop-cancel" data-lk="cancel"></button>
         <button class="pop-btn primary" id="pop-save" data-lk="save"></button>
       </div>
-    </div>
+    </dialog>
 
     <div id="fn-editor">
       <div class="fn-hdr">

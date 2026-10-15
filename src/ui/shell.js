@@ -106,26 +106,24 @@ function updateStatusBar() {
 }
 
 // ─── Project button and popover ─────────────────────────────────────────────
+/** The project as a title on the right of the top band: "Name (CODESPACE)". */
 function updateProjectButton() {
-  const btn = $('delivery-btn');
-  btn.textContent = app.meta ? (app.meta.name || `(${app.meta.codespace})`) : t('noProject');
-  btn.classList.toggle('loaded', !!app.meta);
-  btn.title = app.meta ? `${app.meta.name} · ${app.meta.codespace}` : '';
+  const el = $('project-title');
+  el.textContent = app.meta ? `${app.meta.name}${app.meta.name ? ' ' : ''}(${app.meta.codespace})` : '';
+  el.title = app.meta ? `${app.meta.name} · ${app.meta.codespace}` : '';
 }
 
-function openPop() {
-  $('pop-name').value = app.meta?.name ?? '';
-  $('pop-codespace').textContent = app.meta?.codespace ?? '';
-  const rect = $('delivery-btn').getBoundingClientRect();
-  const pop = $('delivery-pop');
-  pop.style.left = `${rect.left}px`;
-  pop.style.top = `${rect.bottom + 4}px`;
-  pop.classList.add('open');
+/** "Prosjektinnstillinger…" in the Prosjekt menu: the project's name and codespace. */
+export function openProjectSettings() {
+  if (!app.meta) return;
+  $('pop-name').value = app.meta.name ?? '';
+  $('pop-codespace').textContent = app.meta.codespace ?? '';
+  $('settings-dlg').showModal();
   $('pop-name').focus();
 }
 
 function closePop() {
-  $('delivery-pop').classList.remove('open');
+  if ($('settings-dlg').open) $('settings-dlg').close();
 }
 
 // ─── Messages ───────────────────────────────────────────────────────────────
@@ -245,15 +243,7 @@ export function initShell() {
   $('el-ver').textContent = `v${VERSION}`;
 
 
-  $('delivery-btn').addEventListener('click', () => {
-    if (!app.meta) return;
-    $('delivery-pop').classList.contains('open') ? closePop() : openPop();
-  });
   $('pop-cancel').addEventListener('click', closePop);
-  document.addEventListener('mousedown', (e) => {
-    const target = /** @type {HTMLElement} */ (e.target);
-    if (!target.closest('#delivery-pop') && !target.closest('#delivery-btn')) closePop();
-  });
   $('pop-save').addEventListener('click', async () => {
     if (!app.fs || !app.meta) return;
     const fs = app.fs, meta = app.meta;

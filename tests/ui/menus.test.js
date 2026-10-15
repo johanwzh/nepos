@@ -42,7 +42,7 @@ const item = (/** @type {string} */ label) => /** @type {HTMLElement} */ ([...do
 describe('menu bar', () => {
   it('has the three menus with their items', () => {
     openMenu(0);
-    expect(items()).toEqual(['Nytt prosjekt…', 'Åpne prosjekt…', 'Åpne nylig', 'Lukk prosjekt', 'Lag kopi av prosjekt…']);
+    expect(items()).toEqual(['Nytt prosjekt…', 'Åpne prosjekt…', 'Åpne nylig', 'Prosjektinnstillinger…', 'Lukk prosjekt', 'Lag kopi av prosjekt…']);
     openMenu(1);
     expect(items()).toEqual(['Ny linje', 'Lagre linjen', 'Lagre alle linjer', 'Forkast alle endringer']);
     openMenu(2);
@@ -126,5 +126,26 @@ describe('recent folders that are gone', () => {
     item('Tøm listen').click();
     await flush(); await flush();
     expect(await loadRecentFolders()).toEqual([]);
+  });
+});
+
+describe('project settings and title', () => {
+  it('shows the project as a title on the right, not as a button', () => {
+    expect(document.getElementById('delivery-btn')).toBeNull();
+    expect(document.getElementById('project-title')?.textContent).toBe('Test (TST)');
+  });
+
+  it('has "Prosjektinnstillinger…" in the Prosjekt menu, where the name is changed', async () => {
+    openMenu(0);
+    item('Prosjektinnstillinger…').click();
+    const dlg = /** @type {any} */ (document.getElementById('settings-dlg'));
+    expect(dlg.open).toBe(true);
+    expect(dlg.textContent).toContain('TST');
+    /** @type {HTMLInputElement} */ (document.getElementById('pop-name')).value = 'Nytt navn';
+    document.getElementById('pop-save')?.click();
+    await flush(); await flush();
+    expect(app.meta?.name).toBe('Nytt navn');
+    expect(dlg.open).toBe(false);
+    expect(document.getElementById('project-title')?.textContent).toBe('Nytt navn (TST)');
   });
 });
