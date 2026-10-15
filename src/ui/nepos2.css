@@ -396,3 +396,6 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .rh-meta .org-pick { min-width: 0; flex: 0 1 auto; }
 .rh-meta .org-pick-btn { max-width: 100%; min-width: 0; }
 .rh-partb { max-width: 42%; }
+/* Leaflet stacks its panes and controls up to z-index 1000. Keep that inside the map, so menus,
+   pickers and pop-ups always draw above it. */
+#map-inner { position: relative; isolation: isolate; z-index: 0; }
