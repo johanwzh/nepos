@@ -20,7 +20,7 @@ const memo = new Map();
 
 /** @param {string} text */
 function summarise(text) {
-  let name = '', publicCode = '', mode = '', submode = '', brandingId = '', ern = 0, sawRut = false, inTables = false;
+  let name = '', publicCode = '', privateCode = '', mode = '', submode = '', brandingId = '', ern = 0, sawRut = false, inTables = false;
   let exported = true, isPublic = true;
   /** @type {string[]} */ const calendarIds = [];
   /** @type {string[]} */ const authorities = [];
@@ -30,7 +30,7 @@ function summarise(text) {
     if (f[0] === '#KAL') { const id = (f[1] ?? '').trim(); if (id && !calendarIds.includes(id)) calendarIds.push(id); continue; }
     if (f[0] === '#TRA' || f[0] === '#PER') inTables = true;
     if (inTables) continue;
-    if (f[0] === '#RUT' && !sawRut) { sawRut = true; name = f[3] ?? ''; publicCode = f[2] ?? ''; ern = parseInt(f[5] ?? '') || 0; }
+    if (f[0] === '#RUT' && !sawRut) { sawRut = true; name = f[3] ?? ''; publicCode = f[2] ?? ''; privateCode = (f[1] ?? '').trim() === '-1' ? '' : (f[1] ?? '').trim(); ern = parseInt(f[5] ?? '') || 0; }
     else if (f[0] === '#MOD' && !mode) { mode = f[1] ?? ''; submode = f[2] ?? ''; }
     else if (f[0] === '#BRA' && !brandingId) brandingId = f[1] ?? '';
     else if (f[0] === '#EKS') exported = (f[1] ?? '').trim() !== '0';
@@ -43,5 +43,5 @@ function summarise(text) {
     }
   }
   if (!mode && ern) ({ mode, submode } = modeFromErn(ern));
-  return { name, publicCode, mode, submode, brandingId, exported, isPublic, calendarIds, orgIds: [...authorities, ...operators] };
+  return { name, publicCode, privateCode, mode, submode, brandingId, exported, isPublic, calendarIds, orgIds: [...authorities, ...operators] };
 }

@@ -68,3 +68,17 @@ describe('line rows', () => {
     expect(sortLines(rows, { col: 'valid', dir: -1 })[0].code).toBe(G);
   });
 });
+
+describe('what the mini list shows for a line', () => {
+  it('public code, else branding, else private code, else the name, else the ID', () => {
+    const label = (/** @type {string} */ rut, extra = '') => {
+      app.routes = [{ code: 'id-123', text: text(rut, extra), status: 'ok', issues: [] }];
+      return lineRows()[0].label;
+    };
+    expect(label('#RUT;P7;X20;Oslo - Gol;;13;', '#BRA;TST:Branding:b\r\n')).toBe('X20');
+    expect(label('#RUT;P7;;Oslo - Gol;;13;', '#BRA;TST:Branding:b\r\n')).toBe('Randsfjordferja');
+    expect(label('#RUT;P7;;Oslo - Gol;;13;')).toBe('P7');
+    expect(label('#RUT;-1;;Oslo - Gol;;13;')).toBe('Oslo - Gol');
+    expect(label('#RUT;-1;;;;13;')).toBe('id-123');
+  });
+});

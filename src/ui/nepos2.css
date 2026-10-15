@@ -406,3 +406,4 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
   text-transform: uppercase; letter-spacing: .08em; }
 .map-strip:hover { color: var(--accent); background: var(--accent-bg); }
 .map-strip[hidden] { display: none; }
+.route-item .rl-code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

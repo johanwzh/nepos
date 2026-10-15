@@ -43,7 +43,7 @@ function orgName(id) {
 function liveSummary(code, rs) {
   const sek = /** @type {any[]} */ (rs.sek ?? []);
   return {
-    name: rs.routeName ?? '', publicCode: rs.publicCode ?? '', mode: rs.mode ?? '', submode: rs.submode ?? '',
+    name: rs.routeName ?? '', publicCode: rs.publicCode ?? '', privateCode: rs.privateCode ?? '', mode: rs.mode ?? '', submode: rs.submode ?? '',
     brandingId: rs.brandingId ?? '', exported: rs.exported !== false, isPublic: rs.isPublic !== false,
     calendarIds: [...new Set(/** @type {any[]} */ (rs.periods ?? []).flatMap((p) => p.calendarIds ?? []))],
     orgIds: [...sek.filter((s) => s.isAuthority), ...sek.filter((s) => !s.isAuthority)].map((s) => String(s.orgId)).filter((id) => id && id !== '-1'),
@@ -71,7 +71,8 @@ export function lineRows() {
     const operId = s.orgIds.find((id) => id !== authId) ?? '';
     return {
       code: r.code, name: s.name, publicCode: s.publicCode,
-      label: s.publicCode || brand || s.name.replace(/[^\p{L}\p{N}]/gu, '').slice(0, 3),
+      // What the lines pane shows: public code, branding, private code, name, ID — the first there is.
+      label: s.publicCode || brand || s.privateCode || s.name || r.code,
       mode: s.mode, submode: s.submode, brandingId: s.brandingId, brand,
       authority: authId ? orgName(authId) : '', operator: operId ? orgName(operId) : '', orgIds: s.orgIds, calendarIds: s.calendarIds,
       firstDay, lastDay, expired: !!lastDay && lastDay < now, exported: s.exported, isPublic: s.isPublic,
