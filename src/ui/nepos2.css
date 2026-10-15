@@ -380,3 +380,19 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .n2-issue-where { font-size: 11px; color: var(--text-f); white-space: normal; }
 .n2-issue-text { grid-column: 2; }
 .n2-issue-summary { font-size: 12px; }
+
+/* Pages and panels (2026-10-16): the map left of the timetable, the lines right of it; the line
+   table is its own page; Alt+1 is a toggle for the map. */
+.line-table { box-shadow: none; }
+#tabbar .tab-toggle { margin-right: 6px; }
+#tabbar .tab-toggle.on { color: var(--accent); }
+#tabbar .tab-toggle.on .fk { color: var(--accent); }
+.rh-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.rh-meta .rh-branding { align-self: auto; }
+/* One row for branding, authority and operator: the chips shrink (with …) rather than wrap. */
+.rh-meta { flex-wrap: nowrap; min-width: 0; }
+.rh-meta #rh-orgs { flex-wrap: nowrap; min-width: 0; flex: 0 1 auto; }
+.rh-meta .rh-branding { flex: 0 0 auto; }
+.rh-meta .org-pick { min-width: 0; flex: 0 1 auto; }
+.rh-meta .org-pick-btn { max-width: 100%; min-width: 0; }
+.rh-partb { max-width: 42%; }

@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup, flush } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell, currentPage, setPage } from '../../src/ui/shell.js';
+import { initShell, currentPage, setPage, panelOpen } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
@@ -44,21 +44,35 @@ beforeEach(async () => {
 const key = (/** @type {string} */ k, opts = {}, target = /** @type {EventTarget} */ (document)) => target.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...opts }));
 
 describe('keys', () => {
-  it('switches views with Alt+1/2/3 and F3/F4, also from a text field', async () => {
+  it('switches pages with Alt+2…5, also from a text field', async () => {
     await selectRoute('20');
     const name = /** @type {HTMLInputElement} */ (document.getElementById('rh-name'));
-    key('2', { altKey: true }, name);
+    key('4', { altKey: true }, name);
     expect(currentPage()).toBe('assets');
-    key('1', { altKey: true });
+    key('2', { altKey: true });
     expect(currentPage()).toBe('edit');
     // the header was re-rendered: use the field that is on the page now
-    key('F4', {}, /** @type {HTMLElement} */ (document.getElementById('rh-name')));
+    key('5', { altKey: true }, /** @type {HTMLElement} */ (document.getElementById('rh-name')));
     expect(currentPage()).toBe('export');
+    key('3', { altKey: true });
+    expect(currentPage()).toBe('lines');
+  });
+
+  it('toggles the map with Alt+1, going to the timetable first; there are no F5/F6 buttons', () => {
+    expect(document.getElementById('btn-p5')).toBeNull();
+    expect(document.getElementById('btn-p6')).toBeNull();
+    key('5', { altKey: true });
+    key('1', { altKey: true });
+    expect(currentPage()).toBe('edit');
+    expect(panelOpen('right')).toBe(true);
+    expect(document.getElementById('tab-map')?.classList.contains('on')).toBe(true);
+    key('1', { altKey: true });
+    expect(panelOpen('right')).toBe(false);
   });
 
   it('does not switch views while a dialog is open', () => {
     /** @type {any} */ (document.getElementById('msg-dlg')).showModal();
-    key('2', { altKey: true });
+    key('4', { altKey: true });
     expect(currentPage()).toBe('edit');
   });
 
@@ -87,15 +101,15 @@ describe('keys', () => {
     name = /** @type {HTMLInputElement} */ (document.getElementById('rh-name'));
     name.focus();
     name.value = 'Enda nyere';
-    key('2', { altKey: true }, name);
+    key('4', { altKey: true }, name);
     expect(app.routeState.routeName).toBe('Enda nyere');
   });
 
   it('commits a half-typed cell before switching view', async () => {
     await selectRoute('20');
     typeKeys('0833');                    // not committed yet
-    key('3', { altKey: true });
-    key('1', { altKey: true });
+    key('5', { altKey: true });
+    key('2', { altKey: true });
     expect(cellTime(0, 0)).toBe('0833');
   });
 });

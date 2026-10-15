@@ -13,9 +13,9 @@ describe('strings', () => {
 
   it('defaults to Norwegian and switches to English', () => {
     expect(getLang()).toBe('no');
-    expect(t('tabEdit')).toBe('Rediger');
+    expect(t('tabEdit')).toBe('Rediger rutetabell');
     setLang('en');
-    expect(t('tabEdit')).toBe('Edit');
+    expect(t('tabEdit')).toBe('Edit timetable');
   });
 
   it('calls function values with arguments', () => {

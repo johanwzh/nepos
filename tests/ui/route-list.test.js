@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell, refreshAll, setMaxiToggle, setPage } from '../../src/ui/shell.js';
+import { initShell, refreshAll, setPage } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { lineRows, sortLines } from '../../src/ui/line-rows.js';
 
@@ -50,12 +50,11 @@ describe('lines pane, mini view', () => {
     expect(items().map((i) => i.title.split(' · ')[0])).toEqual(['Oslo - Gol', 'Ferjerute']);
   });
 
-  it('opens the maxi view with F5', () => {
-    const toggle = vi.fn();
-    setMaxiToggle(toggle);
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'F5', bubbles: true }));
-    expect(toggle).toHaveBeenCalled(); // initShell runs per test and adds its key listener each time
-    setMaxiToggle(null);
+  it('sits to the right of the timetable, the map to the left', () => {
+    const el = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
+    const before = (/** @type {string} */ a, /** @type {string} */ b) => !!(el(a).compareDocumentPosition(el(b)) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(before('panel-right', 'edit-main')).toBe(true); // the map
+    expect(before('edit-main', 'panel-left')).toBe(true);  // the lines
   });
 });
 

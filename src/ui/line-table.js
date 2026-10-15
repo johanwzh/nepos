@@ -1,8 +1,8 @@
-// The lines pane, maxi view (navigation spec §3.2): a table over the workspace with search, sort,
-// filters, multi-select and batch actions. F5 or the Linjer button opens it; Esc or F5 closes it.
+// The Linjer page (Alt+3; was the lines pane's maxi view, navigation spec §3.2): a table of all
+// lines with search, sort, filters, multi-select and batch actions. Double-click opens a line.
 // Batch edits leave the lines unsaved (§2); "Lagre" saves the selected lines.
 import { app } from './state.js';
-import { $, onRefresh, onLinesChanged, setMaxiToggle, setMaxiOpen, showMessage } from './shell.js';
+import { $, onRefresh, onLinesChanged, showMessage, currentPage, setPage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { modeIconSvg } from './mode-icons.js';
 import { modeLabel } from '../i18n/modes.js';
@@ -20,7 +20,6 @@ const lang = () => /** @type {'no' | 'en'} */ (app.settings.lang);
 
 const COLS = ['mode', 'code', 'name', 'branding', 'authority', 'operator', 'valid', 'exported', 'public', 'status'];
 
-let open = false;
 /** @type {Set<string>} */
 let selected = new Set();
 /** @type {string | null} */
@@ -31,18 +30,6 @@ let shown = [];
 /** @param {string} id */
 const field = (id) => /** @type {HTMLInputElement & HTMLSelectElement} */ (document.getElementById(id));
 
-function toggle() {
-  open = !open;
-  if (open) selected = new Set([...selected].filter((c) => app.routes.some((r) => r.code === c)));
-  render();
-  if (open) field('lt-search')?.focus();
-}
-
-function close() {
-  if (!open) return;
-  open = false;
-  render();
-}
 
 /** @param {import('./line-rows.js').LineRow} r */
 function matches(r) {
@@ -85,9 +72,9 @@ function render() {
   const el = $('line-table');
   if (!el || !document.getElementById('lt-body')) return; // not built yet
   if (builtLang !== app.settings.lang) buildChrome();
-  el.hidden = !open || !app.meta;
-  setMaxiOpen(!el.hidden);
-  if (el.hidden) return;
+  el.hidden = !app.meta;
+  if (el.hidden || currentPage() !== 'lines') return; // drawn while its page is shown
+  selected = new Set([...selected].filter((c) => app.routes.some((r) => r.code === c))); // lines can go away
   const all = lineRows();
   const sort = loadLineSort();
   fillSelect(field('lt-f-mode'), [['', t('ltAllModes')], ...[...new Set(all.map((r) => r.mode).filter(Boolean))].sort().map((m) => /** @type {[string, string]} */ ([m, modeLabel(m, lang())]))]);
@@ -168,7 +155,6 @@ function buildChrome() {
       <select id="lt-f-exp"><option value="">${esc(t('flagExported'))}: ${esc(t('ltAll'))}</option><option value="1">${esc(t('flagExported'))}: ${esc(t('yes'))}</option><option value="0">${esc(t('flagExported'))}: ${esc(t('no'))}</option></select>
       <select id="lt-f-pub"><option value="">${esc(t('flagPublic'))}: ${esc(t('ltAll'))}</option><option value="1">${esc(t('flagPublic'))}: ${esc(t('yes'))}</option><option value="0">${esc(t('flagPublic'))}: ${esc(t('no'))}</option></select>
       <span class="lt-spacer"></span>
-      <button class="pop-btn" id="lt-close" title="Esc / F5">✕</button>
     </div>
     <div class="lt-bar lt-actions">
       <span id="lt-count"></span>
@@ -194,7 +180,6 @@ function buildChrome() {
 
   field('lt-search').addEventListener('input', render);
   for (const id of ['lt-f-mode', 'lt-f-org', 'lt-f-status', 'lt-f-exp', 'lt-f-pub']) field(id).addEventListener('change', render);
-  $('lt-close').addEventListener('click', close);
   el.querySelectorAll('th[data-col]').forEach((/** @type {Element} */ th) => th.addEventListener('click', () => {
     const col = /** @type {string} */ (/** @type {HTMLElement} */ (th).dataset.col);
     const sort = loadLineSort();
@@ -205,9 +190,8 @@ function buildChrome() {
   $('lt-body').addEventListener('dblclick', (/** @type {MouseEvent} */ e) => {
     const tr = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('tr[data-code]'));
     if (!tr) return;
-    open = false;
     void selectRoute(/** @type {string} */ (tr.dataset.code));
-    render();
+    setPage('edit');
   });
   $('lt-dup').addEventListener('click', async () => { const made = await duplicateLines([...selected]); if (made.length) selected = new Set(made); render(); });
   $('lt-del').addEventListener('click', async () => { await deleteLines([...selected]); selected = new Set([...selected].filter((c) => app.routes.some((r) => r.code === c))); render(); });
@@ -242,15 +226,8 @@ function buildChrome() {
 export function initLineTable() {
   if (field('lt-search')) field('lt-search').value = ''; // a fresh page
   buildChrome();
-  open = false;
   selected = new Set();
   anchor = null;
-  setMaxiToggle(toggle);
-  document.addEventListener('keydown', (e) => {
-    if (!open || e.key !== 'Escape' || document.querySelector('dialog[open]') || document.querySelector('.org-pick-pop')) return;
-    e.preventDefault();
-    close();
-  }, true);
   onRefresh(render);
   onLinesChanged(render);
 }

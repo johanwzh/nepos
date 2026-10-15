@@ -37,7 +37,7 @@ export function openModeMenu(anchor, { mode, submode, lang, onPick }) {
       subs.appendChild(row);
     }
   };
-  for (const { mode: m } of TRANSMODEL_MODES) {
+  for (const { mode: m } of TRANSMODEL_MODES.filter((x) => x.mode !== 'other')) {
     const row = document.createElement('div');
     row.className = 'mode-item';
     row.dataset.mode = m;

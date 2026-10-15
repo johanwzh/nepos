@@ -16,7 +16,8 @@ const menu = () => document.querySelector('.mode-menu');
 
 describe('mode menu', () => {
   it('lists the modes and shows a mode\'s submodes, "Ikke spesifisert" first', () => {
-    expect(menu()?.querySelectorAll('.mode-item')).toHaveLength(15);
+    expect(menu()?.querySelectorAll('.mode-item')).toHaveLength(14); // never "other": it cannot be exported
+    expect(menu()?.querySelector('.mode-item[data-mode="other"]')).toBeNull();
     /** @type {HTMLElement} */ (menu()?.querySelector('.mode-item[data-mode="bus"]')).click();
     const subs = [...(menu()?.querySelectorAll('.mode-sub') ?? [])].map((e) => /** @type {HTMLElement} */ (e).dataset.sub);
     expect(subs[0]).toBe('');

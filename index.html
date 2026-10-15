@@ -19,28 +19,38 @@
       <div class="n2-banner" id="sample-banner" data-lk="sampleMode" hidden></div>
 
       <div id="tabbar">
-        <div class="tab active" data-page="edit"><span class="fk">Alt+1</span><span data-lk="tabEdit"></span></div>
-        <div class="tab" data-page="assets"><span class="fk">Alt+2</span><span data-lk="tabAssets"></span></div>
-        <div class="tab" data-page="export"><span class="fk">Alt+3</span><span data-lk="tabExport"></span></div>
-        <div id="panel-btns">
-          <button class="ptbtn" id="btn-p5"><span class="fk">F5</span><span data-lk="panelRoutes"></span></button>
-          <button class="ptbtn" id="btn-p6"><span class="fk">F6</span><span data-lk="panelMap"></span></button>
-        </div>
+        <div class="tab tab-toggle" id="tab-map"><span class="fk">Alt+1</span><span data-lk="tabMap"></span></div>
+        <div class="tab active" data-page="edit"><span class="fk">Alt+2</span><span data-lk="tabEdit"></span></div>
+        <div class="tab" data-page="lines"><span class="fk">Alt+3</span><span data-lk="tabLines"></span></div>
+        <div class="tab" data-page="assets"><span class="fk">Alt+4</span><span data-lk="tabAssets"></span></div>
+        <div class="tab" data-page="export"><span class="fk">Alt+5</span><span data-lk="tabExport"></span></div>
       </div>
 
       <div id="pages">
 
         <div id="page-edit" class="page active">
-          <div id="line-table" class="line-table" hidden></div>
-          <div id="panel-left" class="side-panel">
+          <div id="panel-right" class="side-panel">
             <div class="panel-hdr">
-              <span class="panel-hdr-title" data-lk="panelRoutes"></span>
-              <span class="panel-close" id="close-left" title="F5">⤢</span>
+              <span class="panel-hdr-title" data-lk="panelMap"></span>
+              <span class="panel-close" id="close-right" title="Alt+1">✕</span>
             </div>
-            <div class="route-list" id="route-list"></div>
+            <div id="sp" class="sp" hidden>
+              <div class="sp-head"><span id="sp-head"></span></div>
+              <input type="text" id="sp-q" autocomplete="off" spellcheck="false">
+              <label class="n2-check sp-mode"><input type="checkbox" id="sp-only-mode" checked> <span id="sp-only-mode-label"></span></label>
+              <div class="sp-status" id="sp-status"></div>
+              <div class="sp-list" id="sp-list"></div>
+              <div class="sp-card" id="sp-card" hidden></div>
+              <button class="pop-btn" id="sp-clear" data-lk="spClear"></button>
+            </div>
+            <div id="map-inner">
+              <div id="leaflet-map" class="n2-tiles"></div>
+              <div class="map-hint-overlay"><div class="map-hint" data-lk="mapHint"></div></div>
+              <div class="n2-map-missing" id="map-missing" hidden></div>
+            </div>
           </div>
 
-          <div class="rz-handle" id="rh-left" data-side="left"></div>
+          <div class="rz-handle" id="rh-right" data-side="right"></div>
 
           <div id="edit-main">
             <div id="route-hdr"><span class="rh-hint" id="rh-hint"></span></div>
@@ -60,28 +70,20 @@
             <div id="edit-footer"></div>
           </div>
 
-          <div class="rz-handle" id="rh-right" data-side="right"></div>
 
-          <div id="panel-right" class="side-panel">
+          <div class="rz-handle" id="rh-left" data-side="left"></div>
+
+          <div id="panel-left" class="side-panel">
             <div class="panel-hdr">
-              <span class="panel-hdr-title" data-lk="panelMap"></span>
-              <span class="panel-close" id="close-right" title="F6">✕</span>
+              <span class="panel-hdr-title" data-lk="panelRoutes"></span>
+              <span class="panel-close" id="close-left" title="Alt+3">⤢</span>
             </div>
-            <div id="sp" class="sp" hidden>
-              <div class="sp-head"><span id="sp-head"></span></div>
-              <input type="text" id="sp-q" autocomplete="off" spellcheck="false">
-              <label class="n2-check sp-mode"><input type="checkbox" id="sp-only-mode" checked> <span id="sp-only-mode-label"></span></label>
-              <div class="sp-status" id="sp-status"></div>
-              <div class="sp-list" id="sp-list"></div>
-              <div class="sp-card" id="sp-card" hidden></div>
-              <button class="pop-btn" id="sp-clear" data-lk="spClear"></button>
-            </div>
-            <div id="map-inner">
-              <div id="leaflet-map" class="n2-tiles"></div>
-              <div class="map-hint-overlay"><div class="map-hint" data-lk="mapHint"></div></div>
-              <div class="n2-map-missing" id="map-missing" hidden></div>
-            </div>
+            <div class="route-list" id="route-list"></div>
           </div>
+        </div>
+
+        <div id="page-lines" class="page">
+          <div id="line-table" class="line-table"></div>
         </div>
 
         <div id="page-assets" class="page">

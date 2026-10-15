@@ -3,11 +3,11 @@
 
 export const STRINGS = {
   en: {
-    tabEdit: 'Edit', tabAssets: 'Resources', tabExport: 'Export',
+    tabMap: 'Map', tabEdit: 'Edit timetable', tabLines: 'Manage lines', tabAssets: 'Resources', tabExport: 'Export',
     openProject: 'Open project…', newProject: 'New project…',
     reopen: (name) => `Reopen ${name}`,
     noProject: 'No project open',
-    panelRoutes: 'Routes', panelMap: 'Map',
+    panelRoutes: 'Lines', panelMap: 'Map',
     newRoute: '+ New route', newRouteLater: 'Creating routes arrives with timetable editing.',
     periodLabel: 'Period',
     validateTitle: 'Validation', validateDesc: 'Checks every route. Errors stop the export; warnings do not. The export runs the check too.',
@@ -214,11 +214,11 @@ export const STRINGS = {
     wsNotSeen: 'not in NSR yet', wsChecking: 'checking NSR…', wsUnchecked: 'not checked (NSR could not be reached)', wsOtherMode: 'other mode than the line',
   },
   no: {
-    tabEdit: 'Rediger', tabAssets: 'Ressurser', tabExport: 'Eksport',
+    tabMap: 'Kart', tabEdit: 'Rediger rutetabell', tabLines: 'Linjer', tabAssets: 'Ressurser', tabExport: 'Eksport',
     openProject: 'Åpne prosjektmappe…', newProject: 'Nytt prosjekt…',
     reopen: (name) => `Åpne ${name} igjen`,
     noProject: 'Ingen prosjekt åpent',
-    panelRoutes: 'Ruter', panelMap: 'Kart',
+    panelRoutes: 'Linjer', panelMap: 'Kart',
     newRoute: '+ Ny rute', newRouteLater: 'Opprettelse av ruter kommer sammen med redigering av rutetabeller.',
     periodLabel: 'Periode',
     validateTitle: 'Kontroll', validateDesc: 'Sjekker alle ruter. Feil stopper eksporten; advarsler gjør det ikke. Eksporten kjører kontrollen også.',
