@@ -44,16 +44,18 @@ beforeEach(async () => {
 const key = (/** @type {string} */ k, opts = {}, target = /** @type {EventTarget} */ (document)) => target.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...opts }));
 
 describe('keys', () => {
-  it('switches pages with Alt+1…4, also from a text field', async () => {
+  it('switches pages with Alt+1…5, also from a text field', async () => {
     await selectRoute('20');
     const name = /** @type {HTMLInputElement} */ (document.getElementById('rh-name'));
-    key('3', { altKey: true }, name);
+    key('4', { altKey: true }, name);
     expect(currentPage()).toBe('assets');
     key('1', { altKey: true });
     expect(currentPage()).toBe('edit');
     // the header was re-rendered: use the field that is on the page now
-    key('4', { altKey: true }, /** @type {HTMLElement} */ (document.getElementById('rh-name')));
+    key('5', { altKey: true }, /** @type {HTMLElement} */ (document.getElementById('rh-name')));
     expect(currentPage()).toBe('export');
+    key('3', { altKey: true });
+    expect(currentPage()).toBe('calendars');
     key('2', { altKey: true });
     expect(currentPage()).toBe('lines');
   });

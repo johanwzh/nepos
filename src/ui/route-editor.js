@@ -22,6 +22,7 @@ import { compareRouteCodes } from '../core/route-codes.js';
 import { writeRoute } from '../project/routes.js';
 import { showProjectCheck } from './project-ui.js';
 import { renderTimeline } from './timeline.js';
+import { unsavedCalendarCount, saveAllCalendars } from './calendar-drafts.js';
 import { issueMessage } from './messages.js';
 import { parkOpenLine, takeDraft, unsavedCodes } from './drafts.js';
 
@@ -121,10 +122,10 @@ function currentText() {
 /** @param {string} [reason] */
 async function confirmLeave(reason) {
   if (app.routeState) storeGrid(); // a half-typed time or name counts as a change
-  const n = unsavedCodes().length;
+  const n = unsavedCodes().length + unsavedCalendarCount();
   if (!n) return true;
   if (!confirm(t(reason === 'export' ? 'saveAllBeforeExport' : 'saveAllBeforeLeave', n))) return false;
-  return saveAllRoutes();
+  return (await saveAllRoutes()) && (await saveAllCalendars());
 }
 
 /**
@@ -541,6 +542,6 @@ export function initRouteEditor() {
   }, true);
   onBeforeViewChange(() => { commitFocusedField(); if (app.routeState) commitPending(); });
   window.addEventListener('beforeunload', (e) => {
-    if (unsavedCodes().length) { e.preventDefault(); e.returnValue = ''; }
+    if (unsavedCodes().length || unsavedCalendarCount()) { e.preventDefault(); e.returnValue = ''; }
   });
 }
