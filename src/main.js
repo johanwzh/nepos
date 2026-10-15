@@ -45,7 +45,9 @@ initStopPicker();
 const sample = import.meta.env.DEV && new URLSearchParams(location.search).has('sample');
 await initProjectUi({ restoreLast: !sample });
 refreshAll();
-document.documentElement.classList.remove('n2-loading'); // styled and drawn: show the page
+// The splash stays for at least a second from page start, so everything settles behind it.
+const splash = document.getElementById('splash');
+if (splash) setTimeout(() => { splash.classList.add('done'); setTimeout(() => splash.remove(), 400); }, Math.max(0, 1000 - performance.now()));
 if (sample) {
   const { createSampleFs } = await import('./ui/sample.js');
   await openFs(await createSampleFs(), { sample: true });
