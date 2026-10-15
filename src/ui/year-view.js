@@ -93,6 +93,7 @@ export function renderMonthsView(container, { start, count, active, readOnly = f
       cell.textContent = String(Number(d.slice(6, 8)));
       if (active.has(d)) cell.classList.add('on');
       if (today && d < today) cell.classList.add('past');
+      if (d === today) cell.classList.add('today');
       if (wd === 7) cell.classList.add('sun');
       const name = holidays.get(d);
       if (name) { cell.classList.add('hol'); cell.title = name; hol.push(`${Number(d.slice(6, 8))}.${m + 1}: ${name}`); }

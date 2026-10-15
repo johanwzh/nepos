@@ -89,6 +89,8 @@ describe('a run of months (calendars page spec §4)', () => {
     renderMonthsView(box, { start: '202610', count: 2, active: new Set(), today: '20261016', lang: 'no', onChange: (days, on) => changes.push([days, on]) });
     expect(day('20261015').classList.contains('past')).toBe(true);
     expect(day('20261016').classList.contains('past')).toBe(false);
+    expect(day('20261016').classList.contains('today')).toBe(true); // a ring shows where the past ends
+    expect(day('20261017').classList.contains('today')).toBe(false);
     fire(day('20261015'), 'mousedown');
     fire(document.body, 'mouseup');
     expect(changes).toEqual([[['20261015'], true]]);
