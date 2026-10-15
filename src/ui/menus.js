@@ -1,6 +1,6 @@
 // The application menus (navigation spec §6): Prosjekt, Linjer and Visning.
 import { app } from './state.js';
-import { $, refreshAll, runAction, persistSettings, applyTheme, onRefresh } from './shell.js';
+import { $, refreshAll, runAction, persistSettings, applyTheme, onRefresh, openProjectSettings } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { createMenuBar } from './menubar.js';
 import { pickAndOpen, openNewDialog, openRecent, closeProject, copyProject, setOnRecentChanged } from './project-ui.js';
@@ -36,6 +36,8 @@ const MENUS = [
       ? [...recent.map((f) => /** @type {import('./menubar.js').MenuItem} */ ({ label: f.name, action: () => { void openRecent(f.handle); } })),
         'separator', { label: t('recentClear'), action: () => { void clearRecentFolders().then(reloadRecent); } }]
       : [{ label: t('recentNone'), disabled: true }]) },
+    'separator',
+    { label: t('projectSettings') + '…', disabled: !app.meta, action: openProjectSettings },
     'separator',
     { label: t('closeProject'), disabled: !app.meta, action: () => { void closeProject(); } },
     { label: t('copyProject'), disabled: !app.meta || app.sampleMode, action: () => { void copyProject(); } },
