@@ -1,10 +1,18 @@
 <!doctype html>
-<html lang="no">
+<html lang="no" class="n2-loading">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Nepos</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <style>
+      /* Until Nepos has started (its stylesheets come with the script), show an empty page in the
+         theme's colour instead of unstyled HTML. Shown anyway after 3 s, so an error never hides it. */
+      html.n2-loading { background: #f3f3f3; }
+      @media (prefers-color-scheme: dark) { html.n2-loading { background: #1e1e1e; } }
+      html.n2-loading body { visibility: hidden; }
+    </style>
+    <script>setTimeout(function () { document.documentElement.classList.remove('n2-loading'); }, 3000);</script>
   </head>
   <body>
     <div id="app">

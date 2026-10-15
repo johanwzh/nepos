@@ -45,6 +45,7 @@ initStopPicker();
 const sample = import.meta.env.DEV && new URLSearchParams(location.search).has('sample');
 await initProjectUi({ restoreLast: !sample });
 refreshAll();
+document.documentElement.classList.remove('n2-loading'); // styled and drawn: show the page
 if (sample) {
   const { createSampleFs } = await import('./ui/sample.js');
   await openFs(await createSampleFs(), { sample: true });
