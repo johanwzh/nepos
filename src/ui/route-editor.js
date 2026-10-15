@@ -299,8 +299,10 @@ function renderHeader() {
         <input class="rh-public" id="rh-public" value="${esc(rs.publicCode)}" placeholder="${esc(t('publicCodePh'))}"${dis}>
         <label class="rh-private-l">${esc(t('privateCodeLabel'))} <input class="rh-private" id="rh-private" value="${esc(rs.privateCode)}"${dis}></label>
       </div>
-      <select class="rh-branding${rs.brandingId ? '' : ' empty'}" id="rh-branding"${dis}>${brandOptions}</select>
-      <div class="rh-orgs" id="rh-orgs"></div>
+      <div class="rh-meta">
+        <select class="rh-branding${rs.brandingId ? '' : ' empty'}" id="rh-branding"${dis}>${brandOptions}</select>
+        <div class="rh-orgs" id="rh-orgs"></div>
+      </div>
     </div>
     <div class="rh-partb">
     <button class="rh-save-state${app.dirty ? ' unsaved' : ''}" id="rh-save-state"${dis}>${esc(t(app.dirty ? 'unsavedDot' : 'savedTick'))}</button>

@@ -85,7 +85,7 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
   const r = { route: code };
   // Line details (line header spec §7)
   if (!rs.routeName?.trim()) add('error', 'no-name', r);
-  if (!rs.mode) add('error', 'no-mode', r);
+  if (!rs.mode || rs.mode === 'other') add('error', 'no-mode', r); // 'other' is what a new line starts as
   if (rs.brandingId && !brandings.some((b) => b.id === rs.brandingId)) add('error', 'branding-missing', { ...r, detail: rs.brandingId });
 
   const sek = rs.sek ?? [];

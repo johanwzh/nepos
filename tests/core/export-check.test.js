@@ -129,6 +129,8 @@ describe('checkForExport', () => {
       const rs = route();
       rs.mode = '';
       expect(codes(check(rs))).toContain('error:no-mode');
+      rs.mode = 'other'; // what a new line starts as: not a mode NeTEx accepts
+      expect(codes(check(rs))).toContain('error:no-mode');
       const unnamed = route();
       unnamed.routeName = '';
       expect(codes(check(unnamed))).toContain('error:no-name');

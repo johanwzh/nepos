@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell, setPage, refreshAll } from '../../src/ui/shell.js';
+import { initShell, setPage, refreshAll, currentPage } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
@@ -21,7 +21,7 @@ const route = (/** @type {string} */ code, /** @type {string} */ pub, /** @type 
   '#TRL;1;NSR:Quay:2;B;34;0;-1;-1;34;-1', '#TRC;0;0710;0;0;0;0;0',
 ].join('\r\n') + '\r\n';
 
-const key = (/** @type {string} */ k) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+const key = (/** @type {string} */ k, opts = {}) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...opts }));
 const table = () => /** @type {HTMLElement} */ (document.getElementById('line-table'));
 const rows = () => /** @type {HTMLElement[]} */ ([...document.querySelectorAll('#lt-body tr')]);
 const names = () => rows().map((r) => r.querySelector('.lt-name')?.textContent);
@@ -50,16 +50,16 @@ beforeEach(async () => {
 });
 
 describe('lines pane, maxi view', () => {
-  it('opens and closes with F5 and Esc', () => {
-    key('F5');
+  it('is its own page, Alt+3', () => {
+    key('3', { altKey: true });
+    expect(currentPage()).toBe('lines');
+    expect(document.getElementById('page-lines')?.contains(table())).toBe(true);
     expect(table().hidden).toBe(false);
     expect(names()).toEqual(['Alta', 'Bergen', 'Drammen']); // by public code, numerically
-    key('Escape');
-    expect(table().hidden).toBe(true);
   });
 
   it('searches and sorts; the sort is remembered', () => {
-    key('F5');
+    setPage('lines');
     const search = /** @type {HTMLInputElement} */ (document.getElementById('lt-search'));
     search.value = 'berg';
     search.dispatchEvent(new Event('input'));
@@ -74,7 +74,7 @@ describe('lines pane, maxi view', () => {
   });
 
   it('selects by click, Shift-click and Ctrl-click; actions need a selection', () => {
-    key('F5');
+    setPage('lines');
     expect(btn('lt-dup').disabled).toBe(true);
     expect(btn('lt-del').disabled).toBe(true);
     rows()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -86,7 +86,7 @@ describe('lines pane, maxi view', () => {
   });
 
   it('filters on status and shows expired lines', () => {
-    key('F5');
+    setPage('lines');
     const alta = /** @type {HTMLElement} */ (rows().find((r) => r.textContent?.includes('Alta')));
     expect(alta.textContent).toContain('Utløpt');
     const status = /** @type {HTMLSelectElement} */ (document.getElementById('lt-f-status'));
@@ -96,7 +96,7 @@ describe('lines pane, maxi view', () => {
   });
 
   it('sets "Eksporter ikke" on the selected lines, unsaved', () => {
-    key('F5');
+    setPage('lines');
     expect(document.querySelector('#line-table th[data-col="exported"]')?.textContent).toBe('Eksporter ikke');
     expect(document.querySelector('#line-table th[data-col="public"]')?.textContent).toBe('Ikke åpen rute');
     rows()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -112,24 +112,24 @@ describe('lines pane, maxi view', () => {
     await selectRoute('a');
     const cell = () => document.querySelector('[data-r="0"][data-c="0"]')?.textContent;
     expect(cell()).toBe('0700');
-    key('F5');
+    setPage('lines');
     rows()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
     key('Delete');
     key('Escape');
     expect(cell()).toBe('0700');
   });
 
-  it('opens a line on double-click and closes the view', () => {
-    key('F5');
+  it('opens a line in the timetable on double-click', () => {
+    setPage('lines');
     rows()[1].dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     expect(app.activeRoute).toBe('a');
-    expect(table().hidden).toBe(true);
+    expect(currentPage()).toBe('edit');
   });
 });
 
 describe('lines pane language', () => {
   it('follows a language switch, keeping the search', async () => {
-    key('F5');
+    setPage('lines');
     const search = /** @type {HTMLInputElement} */ (document.getElementById('lt-search'));
     search.value = 'berg';
     search.dispatchEvent(new Event('input'));

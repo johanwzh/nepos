@@ -52,11 +52,6 @@ export function notifyLinesChanged() {
   for (const fn of linesListeners) fn();
 }
 
-/** @type {boolean} */
-let maxiOpen = false;
-/** The maxi view covers the editor: the grid must not take keys meanwhile. @param {boolean} v */
-export function setMaxiOpen(v) { maxiOpen = v; }
-export function isMaxiOpen() { return maxiOpen; }
 
 /** @type {(reason?: string) => Promise<boolean>} */
 let leaveCheck = async () => true;
@@ -160,7 +155,7 @@ export async function runAction(action, trigger = null) {
   }
 }
 
-// ─── Panels (F5 / F6) ───────────────────────────────────────────────────────
+// ─── Panels (lines, map) ───────────────────────────────────────────────────────
 const panels = {
   left: { el: null, rz: null, w: 180, open: true },
   right: { el: null, rz: null, w: 300, open: false },
@@ -189,22 +184,14 @@ function applyPanel(side) {
   const p = panels[side];
   p.el.style.width = p.open ? `${p.w}px` : '0';
   p.rz.style.display = p.open ? '' : 'none';
-  $('btn-p5').classList.toggle('on', panels.left.open);
-  $('btn-p6').classList.toggle('on', panels.right.open);
+  $('tab-map')?.classList.toggle('on', panels.right.open);
 }
 
 /** @param {'left' | 'right'} side */
-/** @type {(() => void) | null} */
-let maxiToggle = null;
-
-/** The lines pane's maxi view registers here; F5 and the Linjer button toggle it. @param {(() => void) | null} fn */
-export function setMaxiToggle(fn) {
-  maxiToggle = fn;
-}
-
-function toggleMaxi() {
-  if (curPage !== 'edit') setPage('edit');
-  maxiToggle?.();
+/** The map is a panel beside the timetable: Alt+1 or its tab toggles it, from any page. */
+function toggleMap() {
+  if (curPage !== 'edit') { setPage('edit'); if (panels.right.open) return; }
+  togglePanel('right');
 }
 
 function togglePanel(side) {
@@ -213,7 +200,7 @@ function togglePanel(side) {
   for (const fn of panelListeners) fn();
 }
 
-// ─── Pages (F2 / F3 / F4) ───────────────────────────────────────────────────
+// ─── Pages (Alt+2…5) ───────────────────────────────────────────────────
 let curPage = 'edit';
 
 /** @param {string} id */
@@ -229,7 +216,7 @@ export function setPage(id) {
   if (curPage === 'edit' && id !== 'edit') for (const fn of beforeViewChange) fn();
   curPage = id;
   document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach((tab) => tab.classList.remove('active'));
+  document.querySelectorAll('.tab[data-page]').forEach((tab) => tab.classList.remove('active'));
   $(`page-${id}`)?.classList.add('active');
   document.querySelector(`.tab[data-page="${id}"]`)?.classList.add('active');
   for (const fn of refreshers) fn();
@@ -290,9 +277,8 @@ export function initShell() {
   applyPanel('right');
   panels.left.open = true; // the mini view is always shown (navigation spec §3.1)
   applyPanel('left');
-  $('btn-p5').addEventListener('click', () => toggleMaxi());
-  $('btn-p6').addEventListener('click', () => togglePanel('right'));
-  $('close-left').addEventListener('click', () => toggleMaxi());
+  $('tab-map').addEventListener('click', toggleMap);
+  $('close-left').addEventListener('click', () => setPage('lines'));
   $('close-right').addEventListener('click', () => togglePanel('right'));
 
   /** @type {{ side: 'left' | 'right', x0: number, w0: number } | null} */
@@ -307,7 +293,8 @@ export function initShell() {
   });
   document.addEventListener('mousemove', (e) => {
     if (!drag) return;
-    const dx = drag.side === 'left' ? e.clientX - drag.x0 : drag.x0 - e.clientX;
+    // The map panel ('right') sits left of the timetable, the lines panel ('left') to its right.
+    const dx = drag.side === 'right' ? e.clientX - drag.x0 : drag.x0 - e.clientX;
     panels[drag.side].w = Math.max(120, Math.min(480, drag.w0 + dx));
     panels[drag.side].el.style.width = `${panels[drag.side].w}px`;
   });
@@ -317,8 +304,8 @@ export function initShell() {
     drag = null;
   });
 
-  document.querySelectorAll('.tab').forEach((tab) => {
-    tab.addEventListener('click', () => setPage(/** @type {HTMLElement} */ (tab).dataset.page));
+  document.querySelectorAll('.tab[data-page]').forEach((tab) => {
+    tab.addEventListener('click', () => setPage(/** @type {string} */ (/** @type {HTMLElement} */ (tab).dataset.page)));
   });
 
   // View and panel shortcuts (navigation spec §8). Capture phase, so they work from text fields and
@@ -326,14 +313,11 @@ export function initShell() {
   if (!keysWired) document.addEventListener('keydown', (e) => {
     if (document.querySelector('dialog[open]')) return;
     /** @type {Record<string, string>} */
-    const byDigit = { 1: 'edit', 2: 'assets', 3: 'export' };
-    const view = e.altKey && !e.ctrlKey && !e.metaKey ? byDigit[e.key] : e.key === 'F3' ? 'assets' : e.key === 'F4' ? 'export' : null;
-    if (view) { e.preventDefault(); e.stopPropagation(); setPage(view); return; }
-    if (e.key === 'F5' || e.key === 'F6') {
-      e.preventDefault(); e.stopPropagation();
-      if (curPage !== 'edit') setPage('edit');
-      if (e.key === 'F5') toggleMaxi(); else togglePanel('right');
-    }
+    const byDigit = { 2: 'edit', 3: 'lines', 4: 'assets', 5: 'export' };
+    if (!e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === '1') { e.preventDefault(); e.stopPropagation(); toggleMap(); return; }
+    const view = byDigit[e.key];
+    if (view) { e.preventDefault(); e.stopPropagation(); setPage(view); }
   }, true);
   keysWired = true; // the document outlives a re-initialised shell (tests): one listener only
 
