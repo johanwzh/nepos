@@ -36,3 +36,17 @@ export async function writeOrgExportMode(fs, meta, mode) {
   await writeJson(fs, PROJECT_FILE, updated);
   return updated;
 }
+
+/**
+ * A new codespace for the project file (see core/recode.js for the rest of the project).
+ * @template {Record<string, any>} M
+ * @param {import('./fs.js').ProjectFs} fs
+ * @param {M} meta
+ * @param {string} codespace
+ * @returns {Promise<M>}
+ */
+export async function writeProjectCodespace(fs, meta, codespace) {
+  const updated = { ...meta, codespace };
+  await writeJson(fs, PROJECT_FILE, updated);
+  return updated;
+}

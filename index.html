@@ -130,6 +130,21 @@
       </div>
     </div>
 
+    <dialog class="n2-dialog help-dlg" id="help-dlg">
+      <p><strong id="help-title"></strong></p>
+      <div id="help-body" class="help-body"></div>
+      <div class="n2-actions"><button class="pop-btn primary" id="help-close" data-lk="close"></button></div>
+    </dialog>
+
+    <dialog class="n2-dialog" id="cs-dlg">
+      <p><strong data-lk="csTitle"></strong></p>
+      <p class="n2-dlg-help" data-lk="csExplain"></p>
+      <p><span data-lk="csCurrent"></span> <b id="cs-current"></b></p>
+      <label class="n2-field"><span data-lk="csNew"></span> <input id="cs-new" maxlength="3" autocomplete="off" spellcheck="false"></label>
+      <div class="assets-status bad" id="cs-error"></div>
+      <div class="n2-actions"><button class="pop-btn" id="cs-cancel" data-lk="cancel"></button><button class="pop-btn primary" id="cs-ok" data-lk="csOk"></button></div>
+    </dialog>
+
     <dialog class="n2-dialog" id="settings-dlg">
       <p><strong data-lk="projectSettings"></strong></p>
       <div class="pop-row">

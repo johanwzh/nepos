@@ -293,7 +293,7 @@ function renderCalendarBar() {
   }).join('');
   const legacy = periods.length > 1 ? `<select class="rh-select" id="sel-period" title="${esc(t('periodLabel'))}">${periods.map((/** @type {any} */ p) =>
     `<option value="${p.id}"${p.id === rs.activePer ? ' selected' : ''}>${esc(periodLabel(p))}</option>`).join('')}</select>` : '';
-  bar.innerHTML = `<span class="cal-bar-label">${esc(t('calendarsLabel'))}</span>${ro ? '' : `<button class="cal-add" id="cal-add">${esc(t('addCalendar'))} ▾</button>`}${legacy}${chips || `<span class="cal-bar-none">${esc(t('periodNoCalendar'))}</span>`}`;
+  bar.innerHTML = `<span class="cal-bar-label">${esc(t('calendarsLabel'))}</span>${ro ? '' : `<button class="cal-add" id="cal-add">${esc(t('addCalendar'))}</button>`}${legacy}${chips || `<span class="cal-bar-none">${esc(t('periodNoCalendar'))}</span>`}`;
   $('sel-period')?.addEventListener('change', () => switchPeriod(+$('sel-period').value));
   renderTimeline();
   if (ro || !per) return;

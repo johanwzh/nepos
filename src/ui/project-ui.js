@@ -8,6 +8,11 @@ import { createProject } from '../project/create.js';
 import { findFileNameProblems, repairFileNames } from '../project/repair.js';
 import { summarizeIntegrity } from '../core/integrity/check.js';
 import { normalizeCodespace } from '../core/codespace.js';
+import { recodeProject } from '../core/recode.js';
+import { writeRoute } from '../project/routes.js';
+import { writeBrandings } from '../project/brandings-store.js';
+import { writeOrgs } from '../project/orgs-store.js';
+import { writeProjectCodespace } from '../project/meta.js';
 import { loadRecentFolders, rememberFolder, forgetFolder } from './recent-folders.js';
 
 /** @type {() => Promise<void>} the menu reloads its list */
@@ -298,7 +303,45 @@ function escapeHtml(s) {
  * Wire up project actions and, unless told not to, try to reopen the last folder.
  * @param {{ restoreLast?: boolean }} [opts]
  */
+// ─── Change the codespace (Prosjekt → Bytt codespace…) ───────────────────────
+/** The codespace is locked in Project settings; changing it is a conversion of the whole project. */
+export function openCodespaceDialog() {
+  if (!app.meta || !app.fs) return;
+  $('cs-current').textContent = app.meta.codespace;
+  /** @type {HTMLInputElement} */ ($('cs-new')).value = '';
+  $('cs-error').textContent = '';
+  $('cs-dlg').showModal();
+  $('cs-new').focus();
+}
+
+async function applyCodespace() {
+  const fs = app.fs, meta = app.meta;
+  if (!fs || !meta) return;
+  const parsed = normalizeCodespace(/** @type {HTMLInputElement} */ ($('cs-new')).value);
+  if (parsed.ok === false) { $('cs-error').textContent = t(`create:codespace-${parsed.error}`); return; }
+  const from = meta.codespace, to = parsed.value;
+  if (to === from) { $('cs-dlg').close(); return; }
+  $('cs-dlg').close();
+  // Unsaved edits still hold the old IDs: save them first (or stop).
+  if (!(await beforeLeave())) return;
+  // Nepos never edits a damaged file; those keep the old codespace and are named.
+  const skipped = app.routes.filter((r) => r.status === 'damaged').map((r) => r.code);
+  const out = recodeProject(from, to, { brandings: app.brandings, orgs: app.orgs,
+    routes: app.routes.filter((r) => r.status !== 'damaged').map(({ code, text }) => ({ code, text })) });
+  const ok = await runAction(async () => {
+    for (const r of out.routes) if (r.changed) await writeRoute(fs, r.code, r.text); // backups kept
+    if (!app.brandingsError && JSON.stringify(out.brandings) !== JSON.stringify(app.brandings)) await writeBrandings(fs, out.brandings);
+    if (!app.orgsError && JSON.stringify(out.orgs) !== JSON.stringify(app.orgs)) await writeOrgs(fs, out.orgs);
+    await writeProjectCodespace(fs, meta, to);
+  });
+  await openFs(fs, { handle: app.handle, sample: app.sampleMode });
+  if (ok) showMessage([t('csDone', from, to), skipped.length ? t('csSkipped', skipped.join(', ')) : ''].filter(Boolean).join('\n'));
+}
+
 export async function initProjectUi({ restoreLast = true } = {}) {
+  $('cs-ok').addEventListener('click', () => { void applyCodespace(); });
+  $('cs-cancel').addEventListener('click', () => $('cs-dlg').close());
+  $('cs-new').addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => { if (e.key === 'Enter') { e.preventDefault(); void applyCodespace(); } });
   $('new-cancel').addEventListener('click', () => $('new-dlg').close());
   $('new-create').addEventListener('click', createFromDialog);
   onRefresh(renderPlaceholder);

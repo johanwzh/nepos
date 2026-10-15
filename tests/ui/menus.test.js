@@ -40,13 +40,30 @@ const items = () => [...document.querySelectorAll('.mb-drop:not(.mb-subdrop) > .
 const item = (/** @type {string} */ label) => /** @type {HTMLElement} */ ([...document.querySelectorAll('.mb-item')].find((e) => e.querySelector('.mb-label')?.textContent === label));
 
 describe('menu bar', () => {
-  it('has the three menus with their items', () => {
+  it('has the four menus with their items', () => {
     openMenu(0);
-    expect(items()).toEqual(['Nytt prosjekt…', 'Åpne prosjekt…', 'Åpne nylig', 'Prosjektinnstillinger…', 'Lukk prosjekt', 'Lag kopi av prosjekt…']);
+    expect(items()).toEqual(['Nytt prosjekt…', 'Åpne prosjekt…', 'Åpne nylig', 'Prosjektinnstillinger…', 'Bytt codespace…', 'Lukk prosjekt', 'Lag kopi av prosjekt…']);
     openMenu(1);
     expect(items()).toEqual(['Ny linje', 'Lagre linjen', 'Lagre alle linjer', 'Forkast alle endringer']);
     openMenu(2);
     expect(items()).toEqual(['Språk', 'Lys/mørk', 'Fargetema']);
+    openMenu(3);
+    expect(items()).toEqual(['Hurtigtaster', 'Brukerveiledning', 'Versjonshistorikk', 'Kontakt', 'GitHub']);
+  });
+
+  it('shows the keyboard shortcuts and the Entur contact from the Hjelp menu', () => {
+    openMenu(0); // the menu bar keeps its open menu between tests: switch to Hjelp
+    openMenu(3);
+    item('Hurtigtaster').click();
+    const dlg = /** @type {any} */ (document.getElementById('help-dlg'));
+    expect(dlg.open).toBe(true);
+    expect(dlg.textContent).toContain('Alt+M');
+    expect(dlg.textContent).toContain('Ctrl+S');
+    dlg.close();
+    openMenu(0);
+    openMenu(3);
+    item('Kontakt').click();
+    expect(dlg.querySelector('a[href="mailto:kollektivdata@entur.org"]')).not.toBeNull();
   });
 
   it('disables save-all and discard-all when nothing is unsaved', () => {
@@ -147,5 +164,34 @@ describe('project settings and title', () => {
     expect(app.meta?.name).toBe('Nytt navn');
     expect(dlg.open).toBe(false);
     expect(document.getElementById('project-title')?.textContent).toBe('Nytt navn (TST)');
+  });
+});
+
+describe('changing the codespace', () => {
+  it('rewrites the project to a new codespace from "Bytt codespace…"', async () => {
+    openMenu(0);
+    item('Bytt codespace…').click();
+    const dlg = /** @type {any} */ (document.getElementById('cs-dlg'));
+    expect(dlg.open).toBe(true);
+    expect(dlg.textContent).not.toMatch(/koderom/i);
+    const input = /** @type {HTMLInputElement} */ (document.getElementById('cs-new'));
+    input.value = 'ab';
+    document.getElementById('cs-ok')?.click();
+    await flush();
+    expect(dlg.open).toBe(true);                       // two letters: refused, the dialog stays
+    expect(document.getElementById('cs-error')?.textContent).not.toBe('');
+    input.value = 'abc';
+    document.getElementById('cs-ok')?.click();
+    for (let i = 0; i < 10; i++) await flush();
+    expect(app.meta?.codespace).toBe('ABC');
+    expect(app.routes.find((r) => r.code === '20')?.text).toMatch(/^#LEV;[^;\r\n]*;ABC/);
+    expect(document.getElementById('project-title')?.textContent).toBe('Test (ABC)');
+  });
+
+  it('never says "koderom": codespace is a technical term', () => {
+    for (const lang of ['no']) {
+      app.settings.lang = lang;
+      expect(JSON.stringify(Object.values(document.querySelectorAll('[data-lk]')).map((e) => e.textContent))).not.toMatch(/koderom|kodeområde/i);
+    }
   });
 });
