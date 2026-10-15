@@ -207,7 +207,7 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .yv-day { cursor: pointer; border-radius: 3px; }
 .yv-day.sun, .yv-day.hol { color: var(--g-dec-c); }
 .yv-day.hol { font-weight: 700; }
-.yv-day.on { background: #fff35a; color: #1a1a1a; }
+.yv-day.on { background: var(--cal-valid); color: #1a1a1a; }
 .yv-day.pending { outline: 2px solid var(--accent); }
 .yv-hol { font-size: 10px; color: var(--text-m); padding: 2px 6px; }
 
@@ -429,3 +429,39 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .ef-discard { height: 28px; padding: 0 12px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text); cursor: pointer; font: inherit; font-size: 13px; margin-right: 6px; }
 .ef-discard:disabled { opacity: .45; cursor: default; }
 .ef-save-btn:disabled { background: var(--bg-raised) !important; color: var(--text-f) !important; border-color: var(--border) !important; cursor: default; }
+
+/* Shared calendar colours: the year view and the validity timeline (2026-10-16) */
+:root { --cal-valid: #f6d83a; --cal-removed: #e0504a; }
+
+/* Header: the line's details on the left; branding, authority and operator stacked on the right */
+#route-hdr { justify-content: space-between; }
+.rh-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: 0 1 auto; min-width: 0; }
+.rh-side .rh-orgs { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.rh-side .rh-branding { align-self: flex-end; }
+.rh-side .org-pick-btn { max-width: 300px; }
+/* The private code: a quiet "shadow" ID beside the public code */
+.rh-private-box { display: inline-flex; flex-direction: column; justify-content: center; align-self: center; margin-left: 2px;
+  padding: 2px 8px; background: var(--bg-raised); border: 1px solid var(--border-lt); border-radius: 4px; }
+.rh-private-cap { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-f); line-height: 1.2; }
+#route-hdr .rh-private-box .rh-private { width: 7em; height: auto; padding: 0; border: none; background: transparent; font-size: 12px;
+  font-family: ui-monospace, Consolas, monospace; color: var(--text-m); }
+#route-hdr .rh-private-box .rh-private:focus { outline: none; color: var(--text); }
+.rh-private-box:focus-within { border-color: var(--accent); }
+
+/* The validity timeline */
+.cal-timeline { padding: 4px 16px 6px; border-bottom: 1px solid var(--border-lt); }
+.tl-track { position: relative; height: 14px; background: var(--bg-raised); border-radius: 3px; }
+.tl-svg { position: absolute; left: 0; right: 0; top: 2px; width: 100%; height: 10px; display: block; }
+.tl-day.valid, .tl-day.column { fill: var(--cal-valid); }
+.tl-day.removed { fill: var(--cal-removed); opacity: .75; }
+.tl-now { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--accent); }
+.tl-before, .tl-after { position: absolute; top: 0; font-size: 9px; line-height: 14px; color: var(--text-m); }
+.tl-before { left: -12px; } .tl-after { right: -12px; }
+.tl-months { position: relative; height: 13px; font-size: 9px; color: var(--text-f); }
+.tl-month { position: absolute; top: 1px; padding-left: 2px; border-left: 1px solid var(--border); line-height: 11px; }
+.tl-now-label { position: absolute; top: 1px; transform: translateX(-50%); color: var(--accent); font-weight: 600; background: var(--bg-panel); padding: 0 2px; }
+.tl-legend { font-size: 10px; color: var(--text-m); display: flex; gap: 4px; align-items: center; margin-top: 1px; }
+.tl-key { display: inline-block; width: 10px; height: 8px; border-radius: 2px; margin-left: 6px; }
+.tl-key.column { background: var(--cal-valid); } .tl-key.removed { background: var(--cal-removed); }
+/* The public code field is as wide as its text, so the private code sits right beside it. */
+#route-hdr .rh-public { field-sizing: content; width: auto; min-width: 2ch; max-width: 10em; padding: 0 4px; }

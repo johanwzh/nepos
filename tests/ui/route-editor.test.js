@@ -274,12 +274,3 @@ describe('line header', () => {
   });
 });
 
-describe('line header layout', () => {
-  it('puts branding, authority and operator on one row', async () => {
-    await selectRoute('20');
-    const row = document.querySelector('.rh-meta');
-    if (!row) throw new Error('no .rh-meta row');
-    expect(row.querySelector('#rh-branding')).not.toBeNull();
-    expect(row.querySelector('#rh-orgs')).not.toBeNull();
-  });
-});

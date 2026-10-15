@@ -121,3 +121,42 @@ describe('save state in the footer', () => {
     expect(await readRoute(fs, '7')).toContain('#TRC;0;0705;');
   });
 });
+
+describe('chip row order and the validity timeline', () => {
+  it('keeps "+ Kalender" leftmost', async () => {
+    await selectRoute('7');
+    const bar = $('cal-bar');
+    const add = $('cal-add');
+    expect(!!(add.compareDocumentPosition(bar.querySelector('.cal-chip')) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+  });
+
+  it('draws the table set\'s valid days, and the selected column\'s on top', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-03-01T12:00:00'));
+    try {
+      await selectRoute('7');
+      const count = (/** @type {string} */ cls) => document.querySelectorAll(`#cal-timeline .tl-day.${cls}`).length;
+      // calendar c1 is 1 Jan – 30 Jun 2026; the window starts 36 days before 1 March: 24 Jan
+      expect(count('column')).toBe(158);              // the cursor is in the trip column (day code D)
+      expect(document.querySelector('#cal-timeline .tl-now')).not.toBeNull();
+      document.querySelector('.g-td-name[data-ri="0"]')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+      expect(count('valid')).toBe(158);               // a stop cell: the table set only
+      expect(count('column')).toBe(0);
+      expect(document.querySelector('#cal-timeline .tl-before')).not.toBeNull(); // 1–23 Jan are before the window
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('header layout', () => {
+  it('puts branding, authority and operator on the right; the private code beside the public code', async () => {
+    await selectRoute('7');
+    const side = document.querySelector('#route-hdr .rh-side');
+    expect(side?.querySelector('#rh-branding')).not.toBeNull();
+    expect(side?.querySelector('#rh-orgs')).not.toBeNull();
+    const row = $('rh-public').closest('.rh-row');
+    expect(row.querySelector('#rh-private')).not.toBeNull();
+    expect($('rh-private').closest('.rh-private-box')).not.toBeNull();
+  });
+});
