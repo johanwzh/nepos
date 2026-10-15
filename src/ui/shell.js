@@ -184,15 +184,11 @@ function applyPanel(side) {
   const p = panels[side];
   p.el.style.width = p.open ? `${p.w}px` : '0';
   p.rz.style.display = p.open ? '' : 'none';
-  $('tab-map')?.classList.toggle('on', panels.right.open);
+  const strip = $('map-strip');
+  if (strip) strip.hidden = panels.right.open; // the closed map is a strip at the timetable's edge
 }
 
 /** @param {'left' | 'right'} side */
-/** The map is a panel beside the timetable: Alt+1 or its tab toggles it, from any page. */
-function toggleMap() {
-  if (curPage !== 'edit') { setPage('edit'); if (panels.right.open) return; }
-  togglePanel('right');
-}
 
 function togglePanel(side) {
   panels[side].open = !panels[side].open;
@@ -269,6 +265,7 @@ export function initShell() {
 
   $('msg-close').addEventListener('click', () => $('msg-dlg').close());
 
+  panels.right.open = false; // the map starts closed
   panels.left.el = $('panel-left');
   panels.right.el = $('panel-right');
   panels.left.rz = $('rh-left');
@@ -277,7 +274,7 @@ export function initShell() {
   applyPanel('right');
   panels.left.open = true; // the mini view is always shown (navigation spec §3.1)
   applyPanel('left');
-  $('tab-map').addEventListener('click', toggleMap);
+  $('map-strip').addEventListener('click', () => togglePanel('right'));
   $('close-left').addEventListener('click', () => setPage('lines'));
   $('close-right').addEventListener('click', () => togglePanel('right'));
 
@@ -313,9 +310,10 @@ export function initShell() {
   if (!keysWired) document.addEventListener('keydown', (e) => {
     if (document.querySelector('dialog[open]')) return;
     /** @type {Record<string, string>} */
-    const byDigit = { 2: 'edit', 3: 'lines', 4: 'assets', 5: 'export' };
+    const byDigit = { 1: 'edit', 2: 'lines', 3: 'assets', 4: 'export' };
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
-    if (e.key === '1') { e.preventDefault(); e.stopPropagation(); toggleMap(); return; }
+    // The map is part of the timetable page: Alt+M opens and closes it there.
+    if (e.key.toLowerCase() === 'm') { if (curPage === 'edit') { e.preventDefault(); e.stopPropagation(); togglePanel('right'); } return; }
     const view = byDigit[e.key];
     if (view) { e.preventDefault(); e.stopPropagation(); setPage(view); }
   }, true);

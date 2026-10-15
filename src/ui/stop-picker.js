@@ -117,6 +117,7 @@ function followRow() {
   const row = grid.active && !grid.readOnly ? selectedStopRow() : null;
   if (row === state.row) { render(); return; }
   state.row = row;
+  if (row != null) openPanel('right'); // picking a stop happens in the map pane
   seq++;
   clearTimeout(timer);
   state.hits = []; state.place = null; state.direct = null; state.candidate = null;
