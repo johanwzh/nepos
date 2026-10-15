@@ -8,7 +8,7 @@
 import { t } from '../i18n/strings.js';
 import { isValidDayCode } from '../core/ern/validate.js';
 import { parseCellInput } from '../core/grid-input.js';
-import { currentPage, showMessage } from './shell.js';
+import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
 import { fnById, footnoteSummary, openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
@@ -37,7 +37,7 @@ const renderListeners = [];
 
 /** Called after every grid render (the map follows the selected trip). @param {() => void} fn */
 export function onGridRender(fn) {
-  renderListeners.push(fn);
+  addOnce(renderListeners, fn);
 }
 
 /** Where a stop is, from the NSR lookups. @param {any} stop @returns {[number, number] | null} */

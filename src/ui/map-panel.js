@@ -139,6 +139,12 @@ function schedule() {
   setTimeout(update, 0);
 }
 
+/** The panel slides open (CSS width transition): fit again once it has its final size. */
+function refitAfterSlide() {
+  schedule();
+  setTimeout(() => { lastKey = ''; schedule(); }, 250);
+}
+
 export function initMapPanel() {
   setPickerMap({
     show: () => schedule(),
@@ -153,11 +159,7 @@ export function initMapPanel() {
     zoomTo: (lat, lon, zoom) => { ensureMap(); map.setView([lat, lon], zoom); },
   });
   onGridRender(schedule);
-  // The panel slides open (CSS width transition): fit again once it has its final size.
-  onPanelToggle(() => {
-    schedule();
-    setTimeout(() => { lastKey = ''; schedule(); }, 250);
-  });
+  onPanelToggle(refitAfterSlide);
   // Light/dark switch (the theme button changes data-theme without a full refresh).
   new MutationObserver(schedule).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   // Dragging the panel edge or resizing the window: let Leaflet re-measure.
