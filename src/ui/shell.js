@@ -14,9 +14,15 @@ export const $ = (id) => /** @type {any} */ (document.getElementById(id));
 /** @type {(() => void)[]} */
 const refreshers = [];
 
+/** Add a listener unless it is there already: parts are started again (tests reload the page
+ * markup), and a stacked copy would redraw again on every keystroke. @template T @param {T[]} list @param {T} fn */
+export function addOnce(list, fn) {
+  if (!list.includes(fn)) list.push(fn);
+}
+
 /** Register a redraw function; it runs on every refreshAll(). @param {() => void} fn */
 export function onRefresh(fn) {
-  refreshers.push(fn);
+  addOnce(refreshers, fn);
 }
 
 /** Redraw everything: texts, theme, status bar, and every registered part. */
@@ -45,7 +51,7 @@ const linesListeners = [];
 
 /** The lines pane redraws when an open line changes, without a full refresh. @param {() => void} fn */
 export function onLinesChanged(fn) {
-  linesListeners.push(fn);
+  addOnce(linesListeners, fn);
 }
 
 export function notifyLinesChanged() {
@@ -174,7 +180,7 @@ export function panelOpen(side) {
 
 /** Called after a side panel opens or closes. @param {() => void} fn */
 export function onPanelToggle(fn) {
-  panelListeners.push(fn);
+  addOnce(panelListeners, fn);
 }
 
 /** @param {'left' | 'right'} side */
@@ -203,7 +209,7 @@ const beforeViewChange = [];
 
 /** Run before the view changes away from the edit page (e.g. commit a half-typed cell). @param {() => void} fn */
 export function onBeforeViewChange(fn) {
-  beforeViewChange.push(fn);
+  addOnce(beforeViewChange, fn);
 }
 
 export function setPage(id) {

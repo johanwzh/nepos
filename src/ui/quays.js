@@ -23,7 +23,7 @@ export function setQuayLookup(fn) {
 
 /** Called after new lookup results arrive. @param {() => void} fn */
 export function onQuaysLoaded(fn) {
-  listeners.push(fn);
+  if (!listeners.includes(fn)) listeners.push(fn); // started again: no stacked copies
 }
 
 /** Forget everything (another project opened). Lookups still running are ignored when they finish. */

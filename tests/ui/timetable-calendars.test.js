@@ -190,3 +190,10 @@ describe('branding chip', () => {
     expect(chip.querySelector('.org-pick-role')?.textContent).toBe('Merkevare');
   });
 });
+
+describe('private code caption', () => {
+  it('says "privat kode", not just "privat"', async () => {
+    await selectRoute('7');
+    expect(document.querySelector('.rh-private-cap')?.textContent).toBe('privat kode');
+  });
+});

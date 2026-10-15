@@ -6,7 +6,9 @@ import { $, onRefresh, currentPage, runAction } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { writeBrandings, newBranding } from '../project/brandings-store.js';
 
-const FIELDS = /** @type {const} */ (['name', 'shortName', 'description', 'url', 'imageUrl']);
+// Shown and edited: name and website. Short name, description and image URL are kept in the file
+// untouched (user test 2026-10-16: not needed on this page).
+const FIELDS = /** @type {const} */ (['name', 'url']);
 const LABEL = { name: 'brandName', shortName: 'brandShortName', description: 'brandDescription', url: 'brandUrl', imageUrl: 'brandImageUrl' };
 
 function save() {
@@ -31,6 +33,12 @@ export function renderBrandingsPage() {
   if (!app.meta) { p(t('noProjectOpen'), 'assets-coming'); return; }
   if (app.brandingsError) { p(t('brandsUnreadable'), 'assets-status bad'); return; }
   if (!app.brandings.length) p(t('brandNone'), 'assets-hint');
+  else {
+    const head = document.createElement('div');
+    head.className = 'brand-row brand-head';
+    head.innerHTML = FIELDS.map((f) => `<span class="brand-h">${t(LABEL[f])}</span>`).join('') + '<span class="brand-h-del"></span>';
+    body.appendChild(head);
+  }
 
   for (const b of app.brandings) {
     const row = document.createElement('div');
@@ -39,7 +47,6 @@ export function renderBrandingsPage() {
       const input = document.createElement('input');
       input.className = 'brand-in';
       input.dataset.field = field;
-      input.placeholder = t(LABEL[field]);
       input.title = t(LABEL[field]);
       input.value = b[field];
       input.addEventListener('keydown', (e) => e.stopPropagation());
