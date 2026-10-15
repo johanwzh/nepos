@@ -19,10 +19,12 @@ import { initMapPanel } from './ui/map-panel.js';
 import { initStopPicker } from './ui/stop-picker.js';
 import { initOrgRegister } from './ui/org-register.js';
 import { initMenus } from './ui/menus.js';
+import { initHelp } from './ui/help.js';
 
 initShell();
 initOrgRegister({ fetchOnStart: true });
 initMenus();
+initHelp();
 initRouteList();
 initLineTable();
 initOrgsPage();

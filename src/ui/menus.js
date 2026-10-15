@@ -3,11 +3,12 @@ import { app } from './state.js';
 import { $, refreshAll, runAction, persistSettings, applyTheme, onRefresh, openProjectSettings } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { createMenuBar } from './menubar.js';
-import { pickAndOpen, openNewDialog, openRecent, closeProject, copyProject, setOnRecentChanged } from './project-ui.js';
+import { pickAndOpen, openNewDialog, openRecent, closeProject, copyProject, setOnRecentChanged, openCodespaceDialog } from './project-ui.js';
 import { newRoute, saveRoute, saveAllRoutes, discardAllChanges } from './route-editor.js';
 import { unsavedCodes } from './drafts.js';
 import { loadRecentFolders, clearRecentFolders } from './recent-folders.js';
 import { loadColourTheme, saveColourTheme, applyColourTheme, openThemeDialog } from './theme.js';
+import { showShortcuts, showUserGuide, showVersionHistory, showContact, showGitHub } from './help.js';
 
 /** @type {{ name: string, handle: any }[]} */
 let recent = [];
@@ -38,6 +39,7 @@ const MENUS = [
       : [{ label: t('recentNone'), disabled: true }]) },
     'separator',
     { label: t('projectSettings') + '…', disabled: !app.meta, action: openProjectSettings },
+    { label: t('csMenu'), disabled: !app.meta || app.sampleMode, action: openCodespaceDialog },
     'separator',
     { label: t('closeProject'), disabled: !app.meta, action: () => { void closeProject(); } },
     { label: t('copyProject'), disabled: !app.meta || app.sampleMode, action: () => { void copyProject(); } },
@@ -63,6 +65,14 @@ const MENUS = [
       { label: 'Nepos', checked: !loadColourTheme(), action: () => { saveColourTheme(null); applyColourTheme(); } },
       { label: t('themeCustom'), checked: !!loadColourTheme(), action: openThemeDialog },
     ] },
+  ] },
+  { label: () => t('menuHelp'), items: () => [
+    { label: t('helpShortcuts'), action: showShortcuts },
+    { label: t('helpGuide'), action: showUserGuide },
+    { label: t('helpVersions'), action: showVersionHistory },
+    'separator',
+    { label: t('helpContact'), action: showContact },
+    { label: 'GitHub', action: showGitHub },
   ] },
 ];
 
