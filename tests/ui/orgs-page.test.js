@@ -23,6 +23,7 @@ beforeEach(async () => {
     orgRegister: { companies: registerCompanies(), fetchedAt: '2026-10-14T12:40:00Z' }, orgRegisterStatus: 'ok',
     orgChanges: { changed: [], missing: [] },
     routes: [{ code: '1', text: '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0\r\n', status: 'ok', issues: [] }] });
+  app.assetsSection = 'orgs';
   setPage('assets');
 });
 

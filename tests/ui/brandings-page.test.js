@@ -19,12 +19,17 @@ beforeEach(() => {
   Object.assign(app, { fs, meta: { formatVersion: 1, name: 'X', codespace: 'TST' }, brandings: [], brandingsError: null, assetsSection: 'orgs',
     routes: [{ code: 'r1', text: '#RUT;-1;1;A;;1;\r\n#BRA;TST:Branding:x\r\n', status: 'ok', issues: [] }], orgs: [], orgsError: null });
   window.confirm = vi.fn(() => true);
+  app.assetsSection = 'calendars'; // the default
   setPage('assets');
 });
 
 describe('brandings page', () => {
-  it('switches section from organisations to brandings', () => {
-    expect(body().textContent).toContain('Organisasjoner');
+  it('lists calendars, brandings, organisations — and opens on calendars, where most work is', () => {
+    expect([...document.querySelectorAll('.assets-nav-item')].map((e) => /** @type {HTMLElement} */ (e).dataset.sec)).toEqual(['calendars', 'brandings', 'orgs']);
+    expect(document.querySelector('.assets-nav-item.active')?.getAttribute('data-sec')).toBe('calendars');
+  });
+
+  it('switches section from calendars to brandings', () => {
     openSection();
     expect(body().textContent).toContain('Ingen merkevarer ennå');
   });

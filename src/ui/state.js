@@ -35,7 +35,7 @@ export const app = {
   /** @type {number} the year shown in the calendar editor (0 = the calendar's first year) */
   calendarYear: 0,
   /** @type {'orgs' | 'brandings' | 'calendars'} the section shown on Ressurser */
-  assetsSection: 'orgs',
+  assetsSection: 'calendars', // where most of the work is
   /** @type {import('../project/open.js').RouteEntry[]} */
   routes: [],
   /** @type {{ fileName: string, problem: string, rename: string | null }[]} */
