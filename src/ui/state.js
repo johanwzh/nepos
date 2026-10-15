@@ -32,10 +32,14 @@ export const app = {
   orgChanges: { changed: [], missing: [] },
   /** @type {string | null} the calendar shown in the calendar editor */
   calendarSelected: null,
-  /** @type {number} the year shown in the calendar editor (0 = the calendar's first year) */
+  /** @type {number} (unused since the run of months; kept for old state) */
   calendarYear: 0,
-  /** @type {'orgs' | 'brandings' | 'calendars'} the section shown on Ressurser */
-  assetsSection: 'calendars', // where most of the work is
+  /** @type {string} the first month shown in the calendar editor, YYYYMM ('' = from the calendar) */
+  calendarMonth: '',
+  /** @type {Map<string, import('../core/calendars.js').Calendar>} unsaved calendar edits */
+  calendarDrafts: new Map(),
+  /** @type {'orgs' | 'brandings'} the section shown on Ressurser */
+  assetsSection: 'brandings',
   /** @type {import('../project/open.js').RouteEntry[]} */
   routes: [],
   /** @type {{ fileName: string, problem: string, rename: string | null }[]} */

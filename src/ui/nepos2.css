@@ -503,3 +503,24 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .yv-title { text-align: left; }
 .yv-day.past { opacity: .42; }
 .yv-day.past.on { opacity: .6; }
+
+/* Kalendere: the list, and the editor with its switcher (calendars page spec) */
+.calendars-body { position: absolute; inset: 0; overflow: auto; padding: 0; display: flex; flex-direction: column; }
+.calendars-body > .lt-bar { flex: none; }
+.cl-table tbody tr { cursor: pointer; }
+.cl-editor { display: flex; flex: 1; min-height: 0; }
+.ce-switch { width: 190px; flex: none; border-right: 1px solid var(--border-lt); padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.ce-back { margin-bottom: 8px; align-self: flex-start; }
+.ce-item { padding: 6px 8px; border-radius: 4px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ce-item:hover { background: var(--bg-raised); }
+.ce-item.active { background: var(--accent-bg); font-weight: 600; }
+.ce-add { margin-top: 8px; align-self: flex-start; }
+.ce-main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 12px 16px 0; overflow: auto; }
+.ce-head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+#calendars-body .ce-name { font-size: 16px; font-weight: 600; height: 32px; min-width: 240px; }
+.ce-name.invalid { border-color: var(--g-dec-c); }
+.ce-span { font-size: 18px; color: var(--text-m); font-variant-numeric: tabular-nums; }
+.ce-gap { flex: 1; }
+.ce-foot { position: sticky; bottom: 0; display: flex; align-items: center; gap: 6px; padding: 8px 0; margin-top: 8px; background: var(--bg-panel); border-top: 1px solid var(--border-lt); }
+.ce-foot .ef-spacer { flex: 1; }
+#calendars-body .ce-prev, #calendars-body .ce-next { min-width: 34px; font-size: 16px; line-height: 1; padding: 4px 8px; }
