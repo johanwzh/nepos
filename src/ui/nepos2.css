@@ -534,3 +534,8 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 #calendars-body .cal-toolbar button { height: 30px; }
 #calendars-body .ce-del { color: var(--g-dec-c); }
 #calendars-body .cl-new { height: 30px; }
+
+/* The run of months is always three across, so ‹ › move it one row (three months) up or down */
+#calendars-body .yv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; }
+/* Today: a ring, so it is clear where the greyed past ends */
+.yv-day.today { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 50%; font-weight: 700; }

@@ -64,7 +64,7 @@ describe('Kalendere: a page of its own', () => {
 });
 
 describe('the calendar editor', () => {
-  it('opens at the first valid month with the span as its heading, and steps a month at a time', () => {
+  it('opens at the first valid month with the span as its heading, and steps a row of three months', () => {
     app.calendars = [{ id: 'c1', name: 'V', ranges: [['20270104', '20270619']] }];
     app.calendarSelected = 'c1';
     setPage('calendars');
@@ -72,7 +72,23 @@ describe('the calendar editor', () => {
     expect(titles()).toHaveLength(12);
     expect(titles()[0]).toContain('Januar 2027');
     click('.ce-next');
-    expect(titles()[0]).toContain('Februar 2027');
+    expect(titles()[0]).toContain('April 2027');
+    click('.ce-prev');
+    click('.ce-prev');
+    expect(titles()[0]).toContain('Oktober 2026');
+  });
+
+  it('never moves the months when days change; "I dag" puts this month in the middle of the second row', () => {
+    app.calendars = [{ id: 'c1', name: 'V', ranges: [['20261201', '20270301']] }];
+    app.calendarSelected = 'c1';
+    setPage('calendars');
+    expect(titles()[0]).toContain('Desember 2026');
+    toggle('20261201');                 // take the first day away: the view stays
+    toggle('20261202');
+    expect(titles()[0]).toContain('Desember 2026');
+    click('.ce-today');
+    expect(titles()[4]).toContain('Oktober 2026'); // today is 16 Oct 2026
+    expect(titles()[0]).toContain('Juni 2026');
   });
 
   it('opens an empty calendar at the current month', () => {

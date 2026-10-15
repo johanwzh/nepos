@@ -87,12 +87,18 @@ function open(id) {
   renderCalendarsPage();
 }
 
-/** Where the run of months starts: the first valid month, or this month when empty or past. @param {Calendar} cal */
+/**
+ * Where the run of months starts. Fixed when the calendar opens (its first valid month, or this
+ * month when it is empty or past), so switching days never moves the view; only the buttons do.
+ * @param {Calendar} cal
+ */
 function startMonth(cal) {
-  if (app.calendarMonth) return app.calendarMonth;
-  const s = span(cal);
-  const now = today();
-  return (s && s[1] >= now ? s[0] : now).slice(0, 6);
+  if (!app.calendarMonth) {
+    const s = span(cal);
+    const now = today();
+    app.calendarMonth = (s && s[1] >= now ? s[0] : now).slice(0, 6);
+  }
+  return app.calendarMonth;
 }
 
 /** @param {string} ym @param {number} n */
@@ -217,10 +223,13 @@ function renderEditor(/** @type {HTMLElement} */ body, /** @type {Calendar} */ c
   const tools = el('div', 'cal-toolbar');
   const prev = el('button', 'ce-prev', '‹');
   prev.title = t('calPrevMonth');
-  prev.addEventListener('click', () => { app.calendarMonth = addMonths(start, -1); renderCalendarsPage(); });
+  prev.addEventListener('click', () => { app.calendarMonth = addMonths(start, -3); renderCalendarsPage(); });
+  const now = el('button', 'ce-today', t('calToday'));
+  now.title = t('calTodayHint');
+  now.addEventListener('click', () => { app.calendarMonth = addMonths(today().slice(0, 6), -4); renderCalendarsPage(); });
   const next = el('button', 'ce-next', '›');
   next.title = t('calNextMonth');
-  next.addEventListener('click', () => { app.calendarMonth = addMonths(start, 1); renderCalendarsPage(); });
+  next.addEventListener('click', () => { app.calendarMonth = addMonths(start, 3); renderCalendarsPage(); });
   const dup = el('button', 'ce-dup', t('calDuplicate'));
   dup.addEventListener('click', () => {
     const copy = { ...newCalendar(t('calCopyName', cal.name)), ranges: shiftRanges(cal.ranges, 364) };
@@ -231,7 +240,7 @@ function renderEditor(/** @type {HTMLElement} */ body, /** @type {Calendar} */ c
   replace.addEventListener('click', () => openCalendarReplace(cal.id));
   const del = el('button', 'ce-del', t('deleteCalendar'));
   del.addEventListener('click', () => { void deleteCalendar(cal); });
-  tools.append(prev, next, el('span', 'ce-gap'), dup, replace, del);
+  tools.append(prev, now, next, el('span', 'ce-gap'), dup, replace, del);
   main.appendChild(tools);
 
   const view = el('div', 'cal-year-view');
