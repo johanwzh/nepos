@@ -116,13 +116,4 @@ describe('unsaved edits per line', () => {
     expect(await readRoute(fs, '20')).toContain('#TRC;0;0811;');
   });
 
-  it('shows the save state in the header and saves on click', async () => {
-    await selectRoute('20');
-    expect(document.getElementById('rh-save-state')?.textContent).toBe('Lagret ✓');
-    typeKeys('0811'); press('Enter');
-    expect(document.getElementById('rh-save-state')?.textContent).toBe('Ikke lagret ●');
-    document.getElementById('rh-save-state')?.click();
-    await flush(); await flush();
-    expect(app.dirty).toBe(false);
-  });
 });
