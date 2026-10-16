@@ -163,3 +163,16 @@ describe('Linjer on the shared list frame', () => {
     expect(currentPage()).toBe('edit');
   });
 });
+
+describe('the timetable\'s navigator follows Linjer', () => {
+  it('lists the lines Linjer shows, in its order, keeping the open line', async () => {
+    setPage('lines');
+    field('lt-search').value = 'en'; // Bergen, Drammen
+    field('lt-search').dispatchEvent(new Event('input'));
+    /** @type {HTMLElement} */ (table().querySelector('.lv-head [data-col="name"]')).click();
+    /** @type {HTMLElement} */ (table().querySelector('.lv-head [data-col="name"]')).click(); // name, descending
+    rows()[0].dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); // Drammen
+    const nav = [...document.querySelectorAll('#route-list .route-item')].map((e) => /** @type {HTMLElement} */ (e).title.split(' · ')[0]);
+    expect(nav).toEqual(['Drammen', 'Bergen']);
+  });
+});
