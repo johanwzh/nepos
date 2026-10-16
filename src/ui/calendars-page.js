@@ -13,6 +13,9 @@ import { openCalendarReplace } from './calendar-replace-ui.js';
 import { lineState, lineLabel } from './line-info.js';
 import { validityBar, todayYmd } from './validity-bar.js';
 import { createListView, validityOf } from './list-view.js';
+import { selectRoute, switchTableSet } from './route-editor.js';
+import { norwegianHolidays } from '../core/holidays.js';
+import { lineRows } from './line-rows.js';
 
 /** @typedef {import('../core/calendars.js').Calendar} Calendar */
 
@@ -41,36 +44,59 @@ function span(cal) {
 }
 
 /**
- * The line + table set pairs that use a calendar (unsaved line edits included).
+ * @typedef {{ code: string, label: string, set: string, index: number }} Use  a line's table (by its place in the line) using a calendar
+ */
+
+/**
+ * The line + table pairs that use a calendar (unsaved line edits included).
  * @param {string} id
- * @returns {{ code: string, label: string }[]}
+ * @returns {Use[]}
  */
 function usage(id) {
-  /** @type {{ code: string, label: string }[]} */
+  /** @type {Use[]} */
   const out = [];
   for (const r of app.routes) {
     const rs = lineState(r.code);
     if (rs) {
-      for (const set of rs.tableSets) {
+      rs.tableSets.forEach((/** @type {any} */ set, /** @type {number} */ index) => {
         const uses = rs.periods.some((/** @type {any} */ p) => p.setId === set.id && p.calendarIds.includes(id));
-        if (uses) out.push({ code: r.code, label: `${lineLabel(r.code)} · ${set.name || '—'}` });
-      }
+        if (uses) out.push({ code: r.code, label: `${lineLabel(r.code)} · ${set.name || '—'}`, set: set.name, index });
+      });
       continue;
     }
-    let setName = '';
+    let setName = '', index = -1, last = -2;
     for (const line of r.text.split(/\r?\n/)) {
       const f = line.trim().split(';');
-      if (f[0] === '#TRA') setName = f[1] ?? '';
-      if (f[0] === '#KAL' && (f[1] ?? '').trim() === id) out.push({ code: r.code, label: `${lineLabel(r.code)} · ${setName || '—'}` });
+      if (f[0] === '#TRA') { setName = f[1] ?? ''; index++; }
+      if (f[0] === '#KAL' && (f[1] ?? '').trim() === id && index !== last) {
+        last = index;
+        out.push({ code: r.code, label: `${lineLabel(r.code)} · ${setName || '—'}`, set: setName, index: Math.max(0, index) });
+      }
     }
   }
   return out;
 }
 
-/** @param {{ code: string }[]} uses */
-function usedText(uses) {
-  const lines = new Set(uses.map((u) => u.code)).size;
-  return t('calUsedBy', lines, uses.length);
+/** The uses grouped by line, in the order met. @param {Use[]} uses */
+function byLine(uses) {
+  /** @type {Map<string, Use[]>} */
+  const lines = new Map();
+  for (const u of uses) lines.set(u.code, [...(lines.get(u.code) ?? []), u]);
+  return [...lines.values()];
+}
+
+/** Open a line in the timetable at one of its tables. @param {string} code @param {number} index */
+async function openLineAt(code, index) {
+  await selectRoute(code);
+  setPage('edit');
+  const rs = app.routeState;
+  const set = rs?.tableSets?.[index];
+  if (set && set.id !== rs.activeSet) switchTableSet(set.id);
+}
+
+/** A chip per line; the tables using the calendar on hover. @param {Use[]} uses */
+function lineChips(uses) {
+  return byLine(uses).map((sets) => `<button class="lt-calchip cl-linechip" data-code="${esc(sets[0].code)}" data-index="${sets[0].index}" title="${esc(sets.map((u) => t('calTable', u.set || '—')).join('\n'))}">${esc(shortLabel(sets[0].code))}</button>`).join('');
 }
 
 /** @param {Calendar} cal @param {number} nUses */
@@ -159,7 +185,13 @@ const deleteCalendar = (cal) => deleteCalendars([cal.id]);
 let view = null;
 
 /** The rows: each calendar with its span, days, use and status. */
+/** @type {Map<string, string>} the short line labels (as the lines pane), per showing of the list */
+let shortLabels = new Map();
+/** @param {string} code */
+const shortLabel = (code) => shortLabels.get(code) ?? code;
+
 function listRows() {
+  shortLabels = new Map(lineRows().map((l) => [l.code, l.label]));
   return allCalendars().map((cal) => {
     const uses = usage(cal.id);
     return { cal, uses, s: span(cal), days: calendarDays(cal), unsaved: app.calendarDrafts.has(cal.id) };
@@ -188,10 +220,10 @@ function makeView(host) {
     rowId: (r) => r.cal.id,
     columns: [
       { key: 'name', label: () => t('ltCol_name'), width: 'minmax(0, 2fr)', sort: (r) => r.cal.name || '', cell: (r) => esc(r.cal.name || t('tableSetUnnamed')), text: (r) => r.cal.name },
-      { key: 'valid', label: () => t('ltCol_valid'), width: '190px', sort: (r) => r.s?.[0] ?? '', cell: (r) => (r.s ? `${show(r.s[0])} – ${show(r.s[1])}` : ''), text: (r) => (r.s ? `${show(r.s[0])} – ${show(r.s[1])}` : '') },
       { key: 'days', label: () => t('calColDays'), width: '70px', sort: (r) => r.days.length, cell: (r) => String(r.days.length), text: (r) => String(r.days.length) },
-      { key: 'used', label: () => t('calColUsed'), width: 'minmax(0, 1fr)', sort: (r) => r.uses.length,
-        cell: (r) => (r.uses.length ? `<a href="#" class="cl-used-link">${esc(usedText(r.uses))}</a>` : esc(usedText(r.uses))), text: (r) => usedText(r.uses) },
+      { key: 'lines', label: () => t('calColLines'), width: 'minmax(0, 1.5fr)', sort: (r) => byLine(r.uses).length,
+        cell: (r) => lineChips(r.uses), text: (r) => byLine(r.uses).map((sets) => shortLabel(sets[0].code)).join(', ') },
+      { key: 'valid', label: () => t('ltCol_valid'), width: '190px', sort: (r) => r.s?.[0] ?? '', cell: (r) => (r.s ? `${show(r.s[0])} – ${show(r.s[1])}` : ''), text: (r) => (r.s ? `${show(r.s[0])} – ${show(r.s[1])}` : '') },
       { key: 'status', label: () => t('ltCol_status'), width: '200px', sort: (r) => validityOf(r.days, today()), cell: statusCell },
     ],
     band: (r) => r.days,
@@ -233,13 +265,11 @@ function makeView(host) {
     onDelete: (ids) => { void deleteCalendars(ids); },
     empty: () => t(allCalendars().length ? 'noMatches' : 'calNone'),
   });
-  // "Brukes av": the lines that use the calendar, on Linjer
+  // Linjer: a line's chip opens it in the timetable, at the first table using the calendar
   host.addEventListener('click', (e) => {
-    const link = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('.cl-used-link'));
-    if (!link) return;
-    e.preventDefault();
-    app.linesFilterCal = /** @type {string} */ (/** @type {HTMLElement} */ (link.closest('.lv-row')).dataset.id);
-    setPage('lines');
+    const chip = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('.cl-linechip'));
+    if (!chip) return;
+    void openLineAt(/** @type {string} */ (chip.dataset.code), Number(chip.dataset.index));
   });
 }
 
@@ -331,7 +361,20 @@ function renderEditor(/** @type {HTMLElement} */ body, /** @type {Calendar} */ c
   replace.addEventListener('click', () => openCalendarReplace(cal.id));
   const del = el('button', 'ce-del', t('deleteCalendar'));
   del.addEventListener('click', () => { void deleteCalendar(cal); });
-  tools.append(prev, now, next, el('span', 'ce-gap'), dup, replace, del);
+  // Holidays in the months shown: take them all out (the usual need), or put them all in
+  const holidays = () => {
+    const from = `${start}01`, to = `${addMonths(start, 12)}01`;
+    /** @type {string[]} */ const days = [];
+    for (let y = Number(start.slice(0, 4)); y <= Number(to.slice(0, 4)); y++) {
+      for (const d of norwegianHolidays(y).keys()) if (d >= from && d < to) days.push(d);
+    }
+    return days;
+  };
+  const holOff = el('button', 'ce-hol-off', t('calHolidaysOff'));
+  holOff.addEventListener('click', () => edit(cal, (c) => ({ ...c, ranges: setDays(c, holidays(), false).ranges })));
+  const holOn = el('button', 'ce-hol-on', t('calHolidaysOn'));
+  holOn.addEventListener('click', () => edit(cal, (c) => ({ ...c, ranges: setDays(c, holidays(), true).ranges })));
+  tools.append(prev, now, next, el('span', 'ce-gap'), holOff, holOn, dup, replace, del);
   main.appendChild(tools);
 
   const view = el('div', 'cal-year-view');
