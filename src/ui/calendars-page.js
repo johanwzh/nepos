@@ -342,13 +342,13 @@ function renderEditor(/** @type {HTMLElement} */ body, /** @type {Calendar} */ c
 
   const start = startMonth(cal);
   const tools = el('div', 'cal-toolbar');
-  const prev = el('button', 'ce-prev', '‹');
+  const prev = el('button', 'ce-prev', '↑');
   prev.title = t('calPrevMonth');
   prev.addEventListener('click', () => { app.calendarMonth = addMonths(start, -3); renderCalendarsPage(); });
   const now = el('button', 'ce-today', t('calToday'));
   now.title = t('calTodayHint');
   now.addEventListener('click', () => { app.calendarMonth = addMonths(today().slice(0, 6), -4); renderCalendarsPage(); });
-  const next = el('button', 'ce-next', '›');
+  const next = el('button', 'ce-next', '↓');
   next.title = t('calNextMonth');
   next.addEventListener('click', () => { app.calendarMonth = addMonths(start, 3); renderCalendarsPage(); });
   const dup = el('button', 'ce-dup', t('calDuplicate'));
@@ -428,7 +428,7 @@ export function initCalendarsPage() {
   if (!keysWired) {
     keysWired = true;
     document.addEventListener('keydown', (e) => {
-      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's' || currentPage() !== 'calendars' || document.querySelector('dialog[open]')) return;
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 's' || currentPage() !== 'calendars' || document.querySelector('dialog[open]')) return;
       e.preventDefault();
       // a name being typed counts
       const name = /** @type {HTMLInputElement | null} */ (document.querySelector('#calendars-body .ce-name'));

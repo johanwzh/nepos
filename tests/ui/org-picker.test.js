@@ -13,7 +13,7 @@ const make = (opts = {}) => {
   return el;
 };
 const open = (/** @type {HTMLElement} */ el) => /** @type {HTMLElement} */ (el.querySelector('.org-pick-btn')).click();
-const rows = (/** @type {HTMLElement} */ el) => [...el.querySelectorAll('.org-pick-row')].map((r) => r.querySelector('b')?.textContent);
+const rows = (/** @type {HTMLElement} */ _el) => [...document.querySelectorAll('.org-pick-pop .org-pick-row')].map((r) => r.querySelector('b')?.textContent);
 
 beforeEach(() => { loadAppMarkup(); picked = []; });
 
@@ -27,27 +27,46 @@ describe('organisation picker', () => {
     const el = make();
     open(el);
     expect(rows(el)).toEqual(['Eksempel Buss AS', 'Fjord AS']);
-    expect(el.querySelector('.org-pick-section')?.textContent).toBe('I prosjektet');
+    expect(document.querySelector('.org-pick-pop .org-pick-section')?.textContent).toBe('I prosjektet');
   });
 
   it('filters as the user types and picks with Enter', () => {
     const el = make();
     open(el);
-    const input = /** @type {HTMLInputElement} */ (el.querySelector('.org-pick-search'));
+    const input = /** @type {HTMLInputElement} */ (document.querySelector('.org-pick-pop .org-pick-search'));
     input.value = 'fjord';
     input.dispatchEvent(new Event('input'));
     expect(rows(el)).toEqual(['Fjord AS']);
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     expect(picked.map((c) => c.name)).toEqual(['Fjord AS']);
-    expect(el.querySelector('.org-pick-pop')).toBe(null);
+    expect(document.querySelector('.org-pick-pop')).toBe(null);
   });
 
   it('closes on Escape without picking', () => {
     const el = make();
     open(el);
-    el.querySelector('.org-pick-search')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    expect(el.querySelector('.org-pick-pop')).toBe(null);
+    document.querySelector('.org-pick-pop .org-pick-search')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(document.querySelector('.org-pick-pop')).toBe(null);
     expect(picked).toEqual([]);
+  });
+
+  it('opens on top of the page, not inside its own box, and goes when the picker goes', () => {
+    const el = make();
+    open(el);
+    const pop = /** @type {HTMLElement} */ (document.querySelector('.org-pick-pop'));
+    expect(pop.parentElement).toBe(document.body);
+    expect(el.contains(pop)).toBe(false);
+    expect(pop.style.position).toBe('fixed');
+    el.remove();
+    window.dispatchEvent(new Event('resize'));
+    expect(document.querySelector('.org-pick-pop')).toBe(null);
+  });
+
+  it('a click in the list does not count as outside', () => {
+    const el = make();
+    open(el);
+    document.querySelector('.org-pick-pop .org-pick-search')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(document.querySelector('.org-pick-pop')).not.toBe(null);
   });
 
   it('marks an organisation that does not validate', () => {
@@ -59,6 +78,6 @@ describe('organisation picker', () => {
   it('does nothing when disabled', () => {
     const el = make({ disabled: true });
     open(el);
-    expect(el.querySelector('.org-pick-pop')).toBe(null);
+    expect(document.querySelector('.org-pick-pop')).toBe(null);
   });
 });

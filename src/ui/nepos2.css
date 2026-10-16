@@ -114,7 +114,7 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .org-pick { position: relative; }
 .org-pick-btn { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .org-pick.invalid .org-pick-btn { border-color: var(--g-dec-c); color: var(--g-dec-c); }
-.org-pick-pop { position: absolute; bottom: 100%; left: 0; z-index: 50; width: 320px; background: var(--bg-panel);
+.org-pick-pop { position: fixed; z-index: 1000; width: 320px; background: var(--bg-panel); color: var(--text); text-align: left;
   border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,.2); padding: 6px; }
 .org-pick-search { width: 100%; box-sizing: border-box; margin-bottom: 4px; }
 .org-pick-list { max-height: 300px; overflow-y: auto; }
@@ -165,7 +165,6 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .rh-branding { align-self: flex-start; border-radius: 999px; padding: 2px 10px; }
 .rh-branding.empty { color: var(--text-f); border-style: dashed; }
 .rh-orgs { display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--border-lt); padding-top: 4px; }
-.rh-orgs .org-pick-pop { bottom: auto; top: 100%; }
 .rh-partb { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-left: 1px solid var(--border-lt); padding-left: 12px; max-width: 50%; }
 .mode-menu { position: fixed; z-index: 60; display: flex; background: var(--bg-panel); border: 1px solid var(--border);
   box-shadow: 0 4px 16px rgba(0,0,0,.2); max-height: 70vh; color: var(--text); }
@@ -308,7 +307,7 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 
 /* Form controls on the newer pages and dialogs: one base look. :where() keeps it the weakest rule,
    so any class-specific style (the grid, the menu bar, the primary buttons) still wins. */
-:where(#page-assets, #page-export, #page-calendars, .n2-dialog, #route-hdr, .line-table, .sp) :where(input:not([type=checkbox]):not([type=radio]):not([type=color]), select) {
+:where(#page-assets, #page-export, #page-calendars, .n2-dialog, #route-hdr, .line-table, .sp, .org-pick-pop) :where(input:not([type=checkbox]):not([type=radio]):not([type=color]), select) {
   font: inherit; font-size: 13px; height: 28px; padding: 0 8px; box-sizing: border-box;
   border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text);
 }
@@ -316,7 +315,7 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
   font: inherit; font-size: 13px; padding: 6px 8px; box-sizing: border-box;
   border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text);
 }
-:where(#page-assets, #page-export, #page-calendars, .n2-dialog, #route-hdr, .line-table, .sp) :where(input, select, textarea):focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+:where(#page-assets, #page-export, #page-calendars, .n2-dialog, #route-hdr, .line-table, .sp, .org-pick-pop) :where(input, select, textarea):focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 :where(#page-assets, #page-export, #page-calendars, .n2-dialog, .line-table, .sp) :where(button) {
   font: inherit; font-size: 13px; padding: 4px 12px; min-height: 28px; cursor: pointer;
   border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text);
@@ -662,3 +661,8 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 #settings-dlg .org-missing-note { color: var(--text-m); margin: 8px 0; }
 #settings-dlg .set-urls { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; color: var(--text-m); }
 #settings-dlg .set-urls dd { margin: 0; font-family: ui-monospace, monospace; font-size: 11px; overflow-wrap: anywhere; }
+.re-alias-field { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); overflow: hidden; }
+.re-alias-prefix { padding: 0 2px 0 8px; color: var(--text-m); font-family: ui-monospace, monospace; font-size: 12px; white-space: nowrap; }
+#page-assets .re-alias-field .re-alias { border: none; background: transparent; flex: 1; min-width: 0; padding-left: 0; font-family: ui-monospace, monospace; font-size: 12px; }
+.re-alias-field:has(.re-alias.invalid) { border-color: var(--g-dec-c); }
+#page-assets .re-alias.invalid { outline: none; }

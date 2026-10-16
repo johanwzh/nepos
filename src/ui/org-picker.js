@@ -33,8 +33,25 @@ export function createOrgPicker({ role, currentId, currentName, projectCompanies
   /** @type {HTMLElement | null} */ let pop = null;
   /** @type {Company[]} */ let shown = [];
   let active = 0;
-  const close = () => { pop?.remove(); pop = null; document.removeEventListener('mousedown', outside, true); };
-  const outside = (/** @type {MouseEvent} */ e) => { if (!root.contains(/** @type {Node} */ (e.target))) close(); };
+  // The list opens on top of the page (in document.body, fixed to the button), so no page section
+  // can clip it, push it aside or squeeze it: below the button when there is room, else above.
+  const place = () => {
+    if (!pop) return;
+    if (!root.isConnected) { close(); return; } // the page was redrawn under it
+    const b = btn.getBoundingClientRect();
+    const w = pop.offsetWidth || 320, h = pop.offsetHeight || 360;
+    const below = window.innerHeight - b.bottom, above = b.top;
+    const top = below >= h + 8 || below >= above ? b.bottom + 4 : Math.max(4, b.top - h - 4);
+    pop.style.top = `${top}px`;
+    pop.style.left = `${Math.max(4, Math.min(b.left, window.innerWidth - w - 4))}px`;
+  };
+  const close = () => {
+    pop?.remove(); pop = null;
+    document.removeEventListener('mousedown', outside, true);
+    window.removeEventListener('resize', place);
+    window.removeEventListener('scroll', place, true);
+  };
+  const outside = (/** @type {MouseEvent} */ e) => { if (!root.contains(/** @type {Node} */ (e.target)) && !pop?.contains(/** @type {Node} */ (e.target))) close(); };
   const pick = (/** @type {Company} */ c) => { close(); onPick(c); };
 
   /** @param {string} q */
@@ -75,7 +92,8 @@ export function createOrgPicker({ role, currentId, currentName, projectCompanies
     const list = document.createElement('div');
     list.className = 'org-pick-list';
     pop.append(input, list);
-    root.appendChild(pop);
+    pop.style.position = 'fixed';
+    document.body.appendChild(pop);
     input.addEventListener('input', () => { active = 0; render(input.value); });
     input.addEventListener('keydown', (e) => {
       e.stopPropagation(); // the grid must not act on these keys
@@ -85,7 +103,10 @@ export function createOrgPicker({ role, currentId, currentName, projectCompanies
       else if (e.key === 'Enter' && shown[active]) { pick(shown[active]); e.preventDefault(); }
     });
     document.addEventListener('mousedown', outside, true);
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
     render('');
+    place();
     input.focus();
   });
   return root;
