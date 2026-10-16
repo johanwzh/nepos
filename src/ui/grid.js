@@ -226,6 +226,14 @@ function updateStopMarks() {
   });
 }
 
+/** Select a row, keeping the column (the speed profile's dots and legs). @param {number} ri */
+export function selectRow(ri) {
+  if (!grid.active || !grid.stops[ri]) return;
+  inDC = false; inStopEdit = false;
+  ancR = ri; endR = ri; endC = ancC;
+  render();
+}
+
 /** The selected row in any column (the stop card follows it), or null. */
 export function selectedRowIndex() {
   return grid.active && !inDC && grid.stops[ancR] ? ancR : null;
