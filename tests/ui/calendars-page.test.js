@@ -11,6 +11,7 @@ import { writeCalendars } from '../../src/project/calendars-store.js';
 import { writeRoute, readRoute } from '../../src/project/routes.js';
 import { initCalendarReplace } from '../../src/ui/calendar-replace-ui.js';
 import { resetListStates } from '../../src/ui/list-view.js';
+import { calendarDays } from '../../src/core/calendars.js';
 
 /** @type {any} */ let fs;
 const page = () => /** @type {HTMLElement} */ (document.getElementById('calendars-body'));
@@ -56,7 +57,11 @@ describe('Kalendere: a page of its own', () => {
     const vinter = rows()[1];
     expect(vinter.textContent).toContain('01.12.2026 – 31.01.2027');
     expect(vinter.textContent).toContain('62');
-    expect(vinter.querySelector('.lv-c-used')?.textContent).toBe('1 linje · 1 tabellsett');
+    // Linjer: a chip per line, like the calendar chips on Linjer; the tables on hover
+    const chip = /** @type {HTMLElement} */ (vinter.querySelector('.lv-c-lines .cl-linechip'));
+    expect(chip.textContent).toBe('10');
+    expect(chip.title).toBe('Tabell: Oslo - Gol');
+    expect([...page().querySelectorAll('.lv-head span')].map((h) => h.textContent)).toEqual(['Navn', 'Dager', 'Linjer', 'Gyldig', 'Status']);
     expect(rows()[0].querySelector('.lv-c-status')?.textContent).toContain('Utløpt');
     expect(rows()[0].classList.contains('lv-expired')).toBe(true);
     vinter.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
@@ -66,6 +71,22 @@ describe('Kalendere: a page of its own', () => {
 });
 
 describe('the calendar editor', () => {
+  it('removes and adds the public holidays in the months shown', () => {
+    app.calendars = [{ id: 'c1', name: 'V', ranges: [['20261201', '20270131']] }];
+    app.calendarSelected = 'c1';
+    setPage('calendars');
+    click('.ce-hol-off');
+    let days = app.calendarDrafts.get('c1') ? calendarDays(/** @type {any} */ (app.calendarDrafts.get('c1'))) : [];
+    expect(days).not.toContain('20261225');
+    expect(days).not.toContain('20270101');
+    expect(days).toContain('20261224');
+    click('.ce-hol-on');
+    days = calendarDays(/** @type {any} */ (app.calendarDrafts.get('c1')));
+    expect(days).toContain('20261225');
+    expect(days).toContain('20270325'); // skjærtorsdag, within the 12 months shown
+    expect(days).not.toContain('20280101'); // not shown
+  });
+
   it('opens at the first valid month with the span as its heading, and steps a row of three months', () => {
     app.calendars = [{ id: 'c1', name: 'V', ranges: [['20270104', '20270619']] }];
     app.calendarSelected = 'c1';
@@ -235,13 +256,20 @@ describe('Kalendere list, unified with Linjer', () => {
     expect(await saved()).toEqual([]);
   });
 
-  it('"Brukes av" goes to Linjer, filtered to the lines that use the calendar', () => {
+  it('a line chip opens the line in the timetable, at the first table that uses the calendar', async () => {
     two();
-    app.routes = [{ code: 'r', text: ROUTE.replace('#KAL;c1', '#KAL;c1'), status: 'ok', issues: [] }];
+    const text = ROUTE + '#TRA;Gol - Oslo\r\n#PER;;;;;;\r\n#KAL;c2\r\n#TAB;0;;;;\r\n#TRA;Ekstra\r\n#PER;;;;;;\r\n#KAL;c2\r\n#TAB;0;;;;\r\n';
+    await writeRoute(fs, 'r', text);
+    app.routes = [{ code: 'r', text, status: 'ok', issues: [] }];
     setPage('calendars');
-    /** @type {HTMLElement} */ (rows().find((r) => r.textContent?.includes('Vinter'))?.querySelector('.cl-used-link')).click();
-    expect(currentPage()).toBe('lines');
-    expect(app.linesFilterCal).toBe('c1');
+    const chip = /** @type {HTMLElement} */ (rows().find((r) => r.textContent?.includes('Sommer'))?.querySelector('.cl-linechip'));
+    expect(chip.title).toBe('Tabell: Gol - Oslo\nTabell: Ekstra');
+    chip.click();
+    await flush(); await flush();
+    expect(currentPage()).toBe('edit');
+    expect(app.activeRoute).toBe('r');
+    const rs = /** @type {any} */ (app.routeState);
+    expect(rs.tableSets.find((/** @type {any} */ x) => x.id === rs.activeSet).name).toBe('Gol - Oslo');
   });
 
   it('with no calendars: a hint and "+ Ny kalender"', () => {

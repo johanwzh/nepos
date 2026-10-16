@@ -568,7 +568,7 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .brand-del { width: 32px; flex: none; }
 
 /* ── The shared list frame (Linjer, Kalendere, Ressurser) ─────────────────────────────── */
-.lv { display: flex; height: 100%; min-height: 0; }
+.lv { display: flex; height: 100%; min-height: 0; background: var(--bg-panel); color: var(--text); }
 .lv-pane { flex: none; position: relative; display: flex; flex-direction: column; gap: 6px; padding: 12px 12px 12px 14px; border-right: 1px solid var(--border-lt);
   background: var(--bg-panel); overflow-y: auto; font-size: 13px; }
 .lv-h { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-f); margin: 2px 0 4px; }
