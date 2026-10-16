@@ -257,15 +257,29 @@ describe('the stop at the selected row, at the top of the map pane', () => {
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (/** @type {string} */ s) => { wrote.push(s); } }, configurable: true });
     pickRow(0);
     await settle();
-    expect(card().querySelector('.sc-sign svg')).not.toBeNull();
+    expect(card().querySelector('.sc-post .sc-plate svg')).not.toBeNull();
     expect(card().querySelector('.sc-name')?.textContent).toBe('Jernbanetorget');
     expect(card().querySelector('.sc-quay')?.textContent).toContain('A');
     expect(card().querySelector('.sc-id code')?.textContent).toBe('NSR:Quay:7203');
-    expect(/** @type {HTMLAnchorElement} */ (card().querySelector('a.sc-nsr')).href).toBe('https://stoppested.entur.org/stop_place/NSR:StopPlace:4000');
+    const nsr = /** @type {HTMLAnchorElement} */ (card().querySelector('a.sc-nsr'));
+    expect(nsr.href).toBe('https://stoppested.entur.org/stop_place/NSR:StopPlace:4000');
+    expect(nsr.textContent).toBe('NSR ↗');
+    expect(card().textContent).not.toContain('Retning');
     expect(card().querySelector('.sc-facts')?.textContent).toContain('Lukket leskur');
     /** @type {HTMLElement} */ (card().querySelector('.sc-copy')).click();
     await settle();
     expect(wrote).toEqual(['NSR:Quay:7203']);
+  });
+
+  it('always has the same slots in the same places, filled or blank, so its height never changes', () => {
+    const slots = () => ['.sc-row', '.sc-post', '.sc-name', '.sc-quay', '.sc-facts', '.sc-id'].map((sel) => !!card().querySelector(sel));
+    expect(slots()).toEqual([true, true, true, true, true, true]); // a linked stop
+    pickRow(3);
+    expect(slots()).toEqual([true, true, true, true, true, true]); // no stop on the row
+    clearGrid();
+    refreshAll();
+    expect(slots()).toEqual([true, true, true, true, true, true]); // no line
+    expect(card().querySelector('.sc-heading')).toBeNull(); // the heading is not shown (too flimsy in NSR)
   });
 
   it('follows the row in any column, and says when a row has no stop', () => {
