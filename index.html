@@ -12,9 +12,9 @@
         justify-content: center; gap: 28px; background: #0078d4; color: #fff; font-family: system-ui, "Segoe UI", sans-serif;
         transition: opacity .35s ease; }
       #splash.done { opacity: 0; pointer-events: none; }
-      /* The logo: a placeholder until the real one is handed over — replace the <svg> in #splash-logo. */
+      /* The logo: the white Nepos mark (public/nepos_white.svg) on the Nepos blue. */
       #splash-logo { display: flex; align-items: center; gap: 18px; }
-      #splash-logo svg { width: 96px; height: 96px; }
+      #splash-logo svg { width: 120px; height: 120px; }
       #splash-name { font-size: 64px; font-weight: 700; letter-spacing: .02em; }
       #splash-bar { width: 220px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .25); overflow: hidden; }
       #splash-bar::after { content: ''; display: block; width: 40%; height: 100%; border-radius: 2px; background: #fff;
@@ -30,7 +30,7 @@
   <body>
     <div id="splash" role="status" aria-label="Nepos starter">
       <div id="splash-logo">
-        <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#fff"/><path d="M18 48V16h6.5l15 21V16H46v32h-6.5l-15-21v21z" fill="#0078d4"/></svg>
+        <svg viewBox="0 0 34.2 33.8" aria-hidden="true"><path fill="#fff" d="M17.1,31.6c-8.2,0-14.8-6.6-14.8-14.8S8.9,2,17.1,2s14.8,6.6,14.8,14.8-6.7,14.8-14.8,14.8ZM4.3,16.8c0,7.6,5.2,13.8,12.8,13.8s12.8-6.2,12.8-13.8S24.7,3,17.1,3s-12.8,6.2-12.8,13.8ZM11.7,14v-3.2h1.8v2.2h.2c.6-1.3,2.2-2.4,4.3-2.4s4.5.9,4.5,5.4v4.9l-2,2v-6.8c0-2.1-.9-3.8-3.2-3.8s-3.6,1.4-3.6,3.4v5.2l-2,2v-8.8h0Z"/></svg>
         <span id="splash-name">Nepos</span>
       </div>
       <div id="splash-bar"></div>
