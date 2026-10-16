@@ -53,8 +53,28 @@ function ensureTiles() {
   tileTheme = want;
 }
 
-/** @type {(kind: 'place' | 'quay', id: string) => void} */
+/** @type {(kind: 'place' | 'quay', id: string, action?: 'use' | 'above' | 'below') => void} */
 let onPick = () => {};
+
+/** The right-click menu on a Quay: Bruk, Legg til over, Legg til under. @param {string} id @param {MouseEvent} ev */
+function quayMenu(id, ev) {
+  closeQuayMenu();
+  const s = pickerState();
+  if (s.row == null || s.recording) return;
+  const menu = document.createElement('div');
+  menu.className = 'map-ctx';
+  menu.style.left = `${ev.clientX}px`;
+  menu.style.top = `${ev.clientY}px`;
+  for (const [action, label] of /** @type {['use' | 'above' | 'below', string][]} */ ([['use', t('mapUse')], ['above', t('mapAbove')], ['below', t('mapBelow')]])) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); closeQuayMenu(); onPick('quay', id, action); });
+    menu.appendChild(b);
+  }
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener('mousedown', closeQuayMenu, { once: true }), 0);
+}
+function closeQuayMenu() { document.querySelector('.map-ctx')?.remove(); }
 /** @type {(() => void)[]} */
 const viewListeners = [];
 let pickKey = '';
@@ -80,7 +100,10 @@ function drawPicker() {
     else marker = L.marker([m.lat, m.lon], { icon: icon(m.kind === 'place' ? 'pm-place' : 'pm-place pm-browse', modeIconSvg(m.mode ?? '', ''), 26), keyboard: false });
     marker.bindTooltip(esc(m.label), { direction: 'top', offset: [0, -10] });
     if (m.kind === 'place' || m.kind === 'browsePlace') marker.on('click', () => onPick('place', m.id));
-    if (m.kind === 'quay') marker.on('click', () => onPick('quay', m.id));
+    if (m.kind === 'quay') {
+      marker.on('click', () => onPick('quay', m.id));
+      marker.on('contextmenu', (/** @type {any} */ e) => { e.originalEvent?.preventDefault(); quayMenu(m.id, e.originalEvent); });
+    }
     layers.push(marker.addTo(map));
   }
   // Fit when what is being looked at changes (a new row, new hits, another stop place) — never
@@ -117,18 +140,19 @@ function update() {
   const dark = theme() === 'dark';
   const latlngs = trip.points.map((p) => [p.lat, p.lon]);
   if (latlngs.length > 1) layers.push(L.polyline(latlngs, { color: '#0078d4', weight: 3, opacity: 0.85 }).addTo(map));
-  trip.points.forEach((p, i) => {
-    const end = i === 0 || i === trip.points.length - 1;
+  trip.points.forEach((p) => {
+    // Bold stops (the main stops in the timetable) are the larger dots
     layers.push(L.circleMarker([p.lat, p.lon], {
-      radius: end ? 7 : 5, fillColor: '#0078d4', color: dark ? '#2a2620' : '#ffffff', weight: 2, fillOpacity: 1,
+      radius: p.bold ? 7 : 5, fillColor: '#0078d4', color: dark ? '#2a2620' : '#ffffff', weight: 2, fillOpacity: 1,
     }).bindTooltip(`<b>${esc(p.name)}</b> ${esc(p.time.slice(0, 2))}:${esc(p.time.slice(2))}`, { sticky: true }).addTo(map));
   });
 
-  // The selected row's stop: a ring on top, so the eye finds where it is in the timetable
+  // The selected row's stop, when it is a call of this trip: a ring on top, in the text colour
   const ri = selectedRowIndex();
-  const here = ri == null || !grid.stops[ri]?.stopId ? null : quayInfo.get(String(grid.stops[ri].stopId));
-  if (here?.lat != null && here.lon != null) {
-    layers.push(L.circleMarker([here.lat, here.lon], { radius: 12, color: '#d32f2f', weight: 3, fill: false, interactive: false }).addTo(map));
+  const here = trip.points.find((p) => p.ri === ri || (grid.stops[/** @type {number} */ (ri)]?.isDwellArr && p.ri === /** @type {number} */ (ri) + 1));
+  if (here) {
+    const ink = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#000';
+    layers.push(L.circleMarker([here.lat, here.lon], { radius: 12, color: ink, weight: 3, fill: false, interactive: false }).addTo(map));
   }
 
   // Fit only when another trip is shown, so the user's own zoom/pan survives edits.

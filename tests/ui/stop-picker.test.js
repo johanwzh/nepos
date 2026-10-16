@@ -114,28 +114,46 @@ describe('stop picking in the map pane', () => {
     expect(grid.stops[3].name).toBe('Uten ID');
   });
 
-  it('makes a one-Quay stop place the candidate and puts it in the row only on Bruk', async () => {
+  it('search, open the stop place, click the platform: it is in the row, no Bruk step', async () => {
     pickRow(3);
     await search('Skøyen');
     rows()[0].click();
     await settle();
     expect(grid.stops[3].stopId).toBe(null);
-    expect(document.getElementById('sp-card').textContent).toContain('Skøyen');
-    document.getElementById('sp-use').click();
+    expect(document.getElementById('sp-card')).toBeNull();
+    rows().find((r) => r.textContent?.includes('Plattform B'))?.click();
     expect(grid.stops[3].stopId).toBe('NSR:Quay:55');
     expect(grid.stops[3].name).toBe('Skøyen');
     expect(quayInfo.get('NSR:Quay:55')?.stopPlaceName).toBe('Skøyen');
   });
 
-  it('lists the Quays of a stop place with several, and Enter applies the candidate', async () => {
+  it('lists the Quays of a stop place with several; a click puts one in the row', async () => {
     pickRow(3);
     await search('Stor');
     rows()[0].click();
     await settle();
     expect(rows().map((r) => r.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('B')]));
     rows()[rows().length - 1].click();
-    press('Enter', q());
     expect(grid.stops[3].stopId).toBe('NSR:Quay:62');
+  });
+
+  it('a Quay clicked on the map is only viewed; Bruk, Legg til over and Legg til under act on it', async () => {
+    /** @type {(kind: 'place' | 'quay', id: string, action?: string) => void} */ let pick = () => {};
+    setPickerMap({ show: (m) => { lastModel = m; }, onPick: (fn) => { pick = fn; }, view: () => null, onViewChange: () => {}, zoomTo: () => {} });
+    pickRow(3);
+    await search('Stor');
+    rows()[0].click(); // the stop place is open: its Quays are on the map
+    await settle();
+    pick('quay', 'NSR:Quay:61');
+    expect(grid.stops[3].stopId).toBe(null); // viewed, not used
+    expect(document.getElementById('map-viewed')?.textContent).toContain('Storsenter');
+    /** @type {HTMLElement} */ (document.getElementById('map-use')).click();
+    expect(grid.stops[3].stopId).toBe('NSR:Quay:61');
+    pick('quay', 'NSR:Quay:62', 'below'); // the map's right-click menu
+    expect(grid.stops.map((s) => s.stopId)).toEqual(['NSR:Quay:7203', 'NSR:Quay:11972', 'NSR:Quay:11972', 'NSR:Quay:61', 'NSR:Quay:62']);
+    // the new row is now the selected one: "above" goes above it
+    pick('quay', 'NSR:Quay:61', 'above');
+    expect(grid.stops.map((s) => s.stopId)).toEqual(['NSR:Quay:7203', 'NSR:Quay:11972', 'NSR:Quay:11972', 'NSR:Quay:61', 'NSR:Quay:61', 'NSR:Quay:62']);
   });
 
   it('gives both rows of a dwell stop the Quay, also when picked on the arrival row', async () => {
@@ -143,7 +161,7 @@ describe('stop picking in the map pane', () => {
     await search('Skøyen');
     rows()[0].click();
     await settle();
-    document.getElementById('sp-use').click();
+    rows().find((r) => r.textContent?.includes('Plattform B'))?.click();
     expect(grid.stops[1].stopId).toBe('NSR:Quay:55');
     expect(grid.stops[2].stopId).toBe('NSR:Quay:55');
   });

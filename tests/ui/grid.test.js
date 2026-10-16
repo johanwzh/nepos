@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
 import { initShell, setPage, currentPage } from '../../src/ui/shell.js';
-import { grid, initGrid, loadGrid, onGridChange, gridData } from '../../src/ui/grid.js';
+import { grid, initGrid, loadGrid, onGridChange, gridData, selectedStopRow } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { newRouteState } from '../../src/ui/route-state.js';
 
@@ -75,8 +75,16 @@ describe('grid', () => {
     expect(document.querySelectorAll('.g-ibtn')).toHaveLength(0);
   });
 
+  it('selects the new row\'s stop cell when a row is added (no name box until asked for)', () => {
+    document.querySelector('.g-row-bot .g-ibtn').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(grid.stops).toHaveLength(3);
+    expect(selectedStopRow()).toBe(2);
+    expect(document.querySelector('.g-stop-input')).toBeNull();
+  });
+
   it('types into a new stop row after naming it, never into another row', () => {
     document.querySelector('.g-row-bot .g-ibtn').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    press('Enter'); // name it
     const input = /** @type {HTMLInputElement} */ (document.querySelector('.g-stop-input'));
     input.value = 'Ny holdeplass';
     input.dispatchEvent(new Event('input'));

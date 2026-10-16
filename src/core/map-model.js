@@ -11,7 +11,7 @@ const timed = (cell) => !!cell?.time && cell.time !== '|';
  * @param {Map<string, { lat: number | null, lon: number | null } | null>} quayInfo
  */
 export function tripOnMap(grid, col, quayInfo) {
-  /** @type {{ name: string, time: string, stopId: string, lat: number, lon: number }[]} */
+  /** @type {{ name: string, time: string, stopId: string, lat: number, lon: number, ri: number, bold: boolean }[]} */
   const points = [];
   /** @type {string[]} */
   const missing = [];
@@ -26,7 +26,7 @@ export function tripOnMap(grid, col, quayInfo) {
       return;
     }
     const info = quayInfo.get(call.stopId);
-    if (info?.lat != null && info.lon != null) points.push({ name: call.name, time: call.depCell.time, stopId: call.stopId, lat: info.lat, lon: info.lon });
+    if (info?.lat != null && info.lon != null) points.push({ name: call.name, time: call.depCell.time, stopId: call.stopId, lat: info.lat, lon: info.lon, ri, bold: !!stop.bold });
     else missing.push(call.name);
   });
   return { points, missing };
