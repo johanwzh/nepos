@@ -200,7 +200,7 @@ describe('organisation pickers', () => {
   it('picking an operator replaces every operator on the line and adds the company to the project copy', async () => {
     // route has two operators: NOG:Operator:bbbbbbbbbb2 and TST:Operator:9
     document.getElementById('ef-pick-operator')?.querySelector('.org-pick-btn')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    const input = /** @type {HTMLInputElement} */ (document.querySelector('#ef-pick-operator .org-pick-search'));
+    const input = /** @type {HTMLInputElement} */ (document.querySelector('.org-pick-pop .org-pick-search'));
     input.value = 'Fjord';
     input.dispatchEvent(new Event('input'));
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
@@ -229,7 +229,7 @@ describe('organisation pickers', () => {
     const before = await readText(fs, 'data/orgs.json');
     // pick Fjord AS as operator as in the first test
     document.getElementById('ef-pick-operator')?.querySelector('.org-pick-btn')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    const input = /** @type {HTMLInputElement} */ (document.querySelector('#ef-pick-operator .org-pick-search'));
+    const input = /** @type {HTMLInputElement} */ (document.querySelector('.org-pick-pop .org-pick-search'));
     input.value = 'Fjord';
     input.dispatchEvent(new Event('input'));
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));

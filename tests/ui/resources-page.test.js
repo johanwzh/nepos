@@ -9,6 +9,7 @@ import { initShell, setPage, openProjectSettings, refreshAll } from '../../src/u
 import { initResourcesPage } from '../../src/ui/resources-page.js';
 import { resetListStates } from '../../src/ui/list-view.js';
 import { initEnturSettings } from '../../src/ui/entur-settings.js';
+import { initMenus } from '../../src/ui/menus.js';
 import { createMemoryFs, readText } from '../../src/project/fs.js';
 import { writeOrgs } from '../../src/project/orgs-store.js';
 import { writeBrandings } from '../../src/project/brandings-store.js';
@@ -46,9 +47,20 @@ describe('Ressurser: merkevarer and organisations in one list', () => {
     expect(document.querySelector('.assets-nav')).toBeNull();
     expect(names()).toEqual(['Eksempel Buss AS', 'Eksempel fylkeskommune', 'Ekspressen']);
     expect(rows()[2].querySelector('.lv-c-type')?.textContent).toBe('Merkevare');
-    expect(rows()[0].querySelector('.lv-c-type')?.textContent).toBe('Organisasjon');
+    // an organisation is listed by its role, as in NeTEx
+    expect(rows()[0].querySelector('.lv-c-type')?.textContent).toBe('Operatør');
+    expect(rows()[1].querySelector('.lv-c-type')?.textContent).toBe('Autoritet');
     expect(rows()[0].querySelector('.lv-band')).toBeNull(); // no calendar, no timeline
     expect(rows()[2].querySelector('.lv-c-used')?.textContent).toContain('1');
+  });
+
+  it('lists a company with both roles twice, one row per role and export ID', () => {
+    app.orgs = [...projectCopy(), ...registerCompanies().slice(2).map((c) => ({ ...c, authority: c.authority && { ...c.authority, alias: '' }, operator: c.operator && { ...c.operator, alias: '' } }))];
+    setPage('edit');
+    setPage('assets');
+    const fjord = rows().filter((r) => r.querySelector('.lv-c-name')?.textContent === 'Fjord AS');
+    expect(fjord.map((r) => r.querySelector('.lv-c-type')?.textContent)).toEqual(['Autoritet', 'Operatør']);
+    expect(fjord.map((r) => r.querySelector('.lv-c-export')?.textContent)).toEqual(['TST:Authority:ccccccccc3', 'TST:Operator:ddddddddd4']);
   });
 
   it('filters on type and searches', () => {
@@ -56,6 +68,9 @@ describe('Ressurser: merkevarer and organisations in one list', () => {
     type.value = 'branding';
     type.dispatchEvent(new Event('change'));
     expect(names()).toEqual(['Ekspressen']);
+    type.value = 'authority';
+    type.dispatchEvent(new Event('change'));
+    expect(names()).toEqual(['Eksempel fylkeskommune']);
     type.value = '';
     type.dispatchEvent(new Event('change'));
     const search = /** @type {HTMLInputElement} */ (q('#rs-search'));
@@ -105,25 +120,43 @@ describe('the merkevare editor', () => {
   });
 });
 
+describe('saving everything', () => {
+  it('Ctrl+Shift+S saves the unsaved resources too', async () => {
+    initMenus();
+    q('#rs-new').click();
+    const name = /** @type {HTMLInputElement} */ (q('#re-name'));
+    name.value = 'Kystbussen';
+    name.dispatchEvent(new Event('input'));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'S', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    for (let i = 0; i < 8; i++) await flush();
+    const saved = JSON.parse(/** @type {string} */ (await readText(fs, 'data/brandings.json')));
+    expect(saved.map((/** @type {any} */ b) => b.name)).toContain('Kystbussen');
+    expect(app.resourceDrafts.size).toBe(0);
+  });
+});
+
 describe('the organisation editor', () => {
   const openBus = () => dbl(/** @type {HTMLElement} */ (rows().find((r) => r.textContent?.includes('Eksempel Buss AS'))));
 
-  it('shows the register details read-only and the generated alias as placeholder', () => {
+  it('shows the register details read-only at the top, contact included; the alias has a fixed prefix', () => {
     openBus();
+    const facts = q('.re-facts').textContent;
+    expect(facts).toContain('NOG:Operator:bbbbbbbbbb2');
+    expect(facts).toContain('61245400');
+    expect(q('.re-alias-prefix').textContent).toBe('TST:Operator:');
     const alias = /** @type {HTMLInputElement} */ (q('.re-alias[data-nog="NOG:Operator:bbbbbbbbbb2"]'));
-    expect(alias.placeholder).toMatch(/^TST:Operator:/);
-    expect(page().textContent).toContain('NOG:Operator:bbbbbbbbbb2');
+    expect(alias.placeholder).toBe('bbbbbbbbbb2');
     expect(q('#re-name')).toBeNull(); // nothing but the alias can be edited
   });
 
-  it('marks an alias with the wrong role and will not save it; saves a valid one on Lagre', async () => {
+  it('marks an alias with characters an ID cannot have and will not save it; saves a valid one with the prefix', async () => {
     openBus();
     const alias = /** @type {HTMLInputElement} */ (q('.re-alias[data-nog="NOG:Operator:bbbbbbbbbb2"]'));
-    alias.value = 'TST:Authority:feil';
+    alias.value = 'feil:x';
     alias.dispatchEvent(new Event('input'));
     expect(alias.classList.contains('invalid')).toBe(true);
     expect(/** @type {HTMLButtonElement} */ (q('.re-save')).disabled).toBe(true);
-    alias.value = 'TST:Operator:buss';
+    alias.value = 'buss';
     alias.dispatchEvent(new Event('input'));
     q('.re-save').click();
     await flush(); await flush();

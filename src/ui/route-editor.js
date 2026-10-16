@@ -536,7 +536,7 @@ export function initRouteEditor() {
   listenersWired = true;
   // Ctrl+S saves the open line, also from text fields (navigation spec §2); not behind a window.
   document.addEventListener('keydown', (e) => {
-    if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's' || document.querySelector('dialog[open]')) return;
+    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 's' || document.querySelector('dialog[open]')) return;
     e.preventDefault();
     e.stopPropagation();
     if (currentPage() === 'edit' && app.activeRoute) { commitFocusedField(); void saveRoute(); }

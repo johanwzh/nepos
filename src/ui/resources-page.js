@@ -1,13 +1,15 @@
 // Ressurser (list pages, decided 2026-10-16): merkevarer and organisations in one list on the shared
-// frame, mixed and sorted by name. Each opens its own editor with the navigator on the right:
-// a merkevare is edited in full (name, website); an organisation comes from Entur's register and only
-// its export ID (alias) can be changed. Edits wait in app.resourceDrafts until Lagre.
+// frame, mixed and sorted by name. An organisation is listed once per role (Autoritet, Operatør): in
+// NeTEx the role is the thing referred to, with its own ID. Each opens its own editor with the
+// navigator on the right: a merkevare is edited in full (name, website); a role comes from Entur's
+// register and only its export ID (alias) can be changed, after the fixed "ABC:Authority:" prefix.
+// Edits wait in app.resourceDrafts until Lagre.
 // The register's status and refresh live in Prosjektinnstillinger (entur-settings.js).
 import { app } from './state.js';
 import { onRefresh, currentPage, runAction } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { createListView } from './list-view.js';
-import { generatedAlias, aliasIssues, orgRole } from '../core/orgs.js';
+import { generatedAlias, aliasIssues } from '../core/orgs.js';
 import { writeOrgs } from '../project/orgs-store.js';
 import { writeBrandings, newBranding } from '../project/brandings-store.js';
 import { refreshRegister } from './org-register.js';
@@ -16,7 +18,7 @@ import { refreshRegister } from './org-register.js';
  * @typedef {import('../project/brandings-store.js').Branding} Branding
  * @typedef {import('../core/orgs.js').Company} Company
  * @typedef {{ id: string, kind: 'branding', name: string, branding: Branding, used: number, unsaved: boolean, isNew: boolean }
- *   | { id: string, kind: 'org', name: string, company: Company, used: number, unsaved: boolean, changed: boolean, gone: boolean }} Resource
+ *   | { id: string, kind: 'org', role: 'authority' | 'operator', name: string, company: Company, entry: any, used: number, unsaved: boolean, changed: boolean, gone: boolean }} Resource
  */
 
 const ROLES = /** @type {('authority' | 'operator')[]} */ (['authority', 'operator']);
@@ -26,8 +28,8 @@ const el = (tag, cls, text = '') => { const e = document.createElement(tag); e.c
 /** @param {string} v */
 const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/** @param {Company} c */
-const orgKey = (c) => `o:${c.organisationId || c.name}`;
+/** A role's row: its NOG ID. @param {{ id: string }} entry */
+const roleKey = (entry) => `o:${entry.id}`;
 /** @param {Branding} b */
 const brandKey = (b) => `b:${b.id}`;
 /** @returns {Map<string, any>} */
@@ -62,10 +64,13 @@ function allResources() {
   }
   if (!app.orgsError) {
     for (const c of app.orgs) {
-      const key = c.organisationId || c.name;
-      rows.push({ id: orgKey(c), kind: 'org', name: c.name, company: c, unsaved: drafts().has(orgKey(c)),
-        used: Math.max(...ROLES.map((r) => (c[r] ? used.get(/** @type {any} */ (c[r]).id) ?? 0 : 0))),
-        changed: app.orgChanges.changed.includes(key), gone: ROLES.some((r) => c[r] && app.orgChanges.missing.includes(/** @type {any} */ (c[r]).id)) });
+      const changed = app.orgChanges.changed.includes(c.organisationId || c.name);
+      for (const role of ROLES) {
+        const entry = c[role];
+        if (!entry) continue;
+        rows.push({ id: roleKey(entry), kind: 'org', role, name: c.name, company: c, entry, unsaved: drafts().has(roleKey(entry)),
+          used: used.get(entry.id) ?? 0, changed, gone: app.orgChanges.missing.includes(entry.id) });
+      }
     }
   }
   return rows;
@@ -80,11 +85,13 @@ function detail(r) {
   return r.company.companyNumber ? `${t('orgCompanyNumber')} ${r.company.companyNumber}` : '';
 }
 
+/** The role's alias prefix in this project: "ABC:Authority:". @param {'authority' | 'operator'} role */
+const aliasPrefix = (role) => `${app.meta?.codespace ?? ''}:${role === 'authority' ? 'Authority' : 'Operator'}:`;
+
 /** @param {Resource} r */
 function exportIds(r) {
   if (r.kind === 'branding') return r.branding.id;
-  const cs = app.meta?.codespace ?? '';
-  return ROLES.map((role) => r.company[role]).filter(Boolean).map((e) => /** @type {any} */ (e).alias || generatedAlias(/** @type {any} */ (e).id, cs)).join(', ');
+  return r.entry.alias || generatedAlias(r.entry.id, app.meta?.codespace ?? '');
 }
 
 /** @param {Resource} r */
@@ -97,7 +104,11 @@ function statusCell(r) {
 }
 
 /** @param {Resource} r */
-const typeText = (r) => t(r.kind === 'branding' ? 'rsTypeBranding' : 'rsTypeOrg');
+const typeKey = (r) => (r.kind === 'branding' ? 'branding' : r.role);
+/** @param {Resource} r */
+const typeText = (r) => t(r.kind === 'branding' ? 'rsTypeBranding' : r.role === 'authority' ? 'roleAuthority' : 'roleOperator');
+/** The name, with the role when the company has both (the navigator). @param {Resource} r */
+const navName = (r) => (r.kind === 'org' && r.company.authority && r.company.operator ? `${r.name} · ${typeText(r)}` : r.name || t('tableSetUnnamed'));
 
 // ─── Saving and deleting ────────────────────────────────────────────────────
 /** Write brandings with the given drafts applied; unnamed ones are not saved. @param {string[]} ids */
@@ -116,20 +127,28 @@ async function saveBrandings(ids) {
   for (const id of ids) drafts().delete(id);
 }
 
-/** Write the organisations with the alias drafts applied. @param {string} id */
+/** Write the organisations with this role's alias draft applied (not when the alias is wrong). @param {string} id */
 async function saveOrg(id) {
   const fs = app.fs;
   const d = drafts().get(id);
-  if (!fs || !d || app.orgsError) return;
-  for (const c of app.orgs) {
-    if (orgKey(c) !== id) continue;
-    for (const role of ROLES) {
-      const entry = c[role];
-      if (entry && entry.id in d) entry.alias = String(d[entry.id]).trim();
-    }
-  }
+  if (!fs || d == null || app.orgsError) return;
+  const nog = id.slice(2);
+  const hit = app.orgs.flatMap((c) => ROLES.map((role) => ({ role, entry: c[role] }))).find((x) => x.entry?.id === nog);
+  if (!hit?.entry || aliasProblem(nog, d.suffix, hit.role)) return;
+  hit.entry.alias = d.suffix.trim() ? aliasPrefix(hit.role) + d.suffix.trim() : '';
   await runAction(() => writeOrgs(fs, app.orgs));
   drafts().delete(id);
+}
+
+/** How many resources have unsaved edits. */
+export const unsavedResourceCount = () => app.resourceDrafts.size;
+
+/** Save every unsaved resource (Lagre alle endringer, Ctrl+Shift+S). */
+export async function saveAllResources() {
+  const ids = [...drafts().keys()];
+  await saveBrandings(ids.filter((id) => id.startsWith('b:')));
+  for (const id of ids.filter((id) => !id.startsWith('b:'))) await saveOrg(id);
+  renderResourcesPage();
 }
 
 /** @param {string} id */
@@ -191,7 +210,7 @@ function makeView(host) {
     renderFinders: (box, state, changed) => {
       box.innerHTML = `<input id="rs-search" type="search" autocomplete="off" placeholder="${esc(t('rsSearch'))}">
         <select id="rs-f-type"><option value="">${esc(t('rsAllTypes'))}</option><option value="branding">${esc(t('rsTypeBranding'))}</option>
-          <option value="org">${esc(t('rsTypeOrg'))}</option></select>`;
+          <option value="authority">${esc(t('roleAuthority'))}</option><option value="operator">${esc(t('roleOperator'))}</option></select>`;
       for (const id of ['rs-search', 'rs-f-type']) {
         const f = /** @type {HTMLInputElement} */ (box.querySelector('#' + id));
         if (state[id] != null) f.value = state[id];
@@ -199,7 +218,7 @@ function makeView(host) {
       }
     },
     matches: (r, st) => {
-      if (st['rs-f-type'] && r.kind !== st['rs-f-type']) return false;
+      if (st['rs-f-type'] && typeKey(r) !== st['rs-f-type']) return false;
       const q = String(st['rs-search'] ?? '').trim().toLowerCase();
       return !q || [r.name, detail(r), exportIds(r)].some((s) => s.toLowerCase().includes(q));
     },
@@ -233,7 +252,7 @@ function navigator(r) {
   const ids = resourceOrder();
   if (!ids.includes(r.id)) ids.unshift(r.id);
   for (const other of /** @type {Resource[]} */ (ids.map(resource).filter(Boolean))) {
-    const item = el('div', `re-item re-${other.kind}${other.id === r.id ? ' active' : ''}`, `${other.name || t('tableSetUnnamed')}${other.unsaved ? ' ●' : ''}`);
+    const item = el('div', `re-item re-${other.kind}${other.id === r.id ? ' active' : ''}`, `${navName(other)}${other.unsaved ? ' ●' : ''}`);
     item.dataset.id = other.id;
     item.addEventListener('click', () => { if (other.id !== r.id) open(other.id); });
     side.appendChild(item);
@@ -309,62 +328,61 @@ function brandingForm(main, r) {
 }
 
 /**
- * Is this alias wrong? The role must match and no other organisation may have it.
- * @param {string} nog @param {string} typed @param {'authority' | 'operator'} role
+ * Is this alias wrong? Only the part after the prefix is typed: it may hold A–Z, a–z, 0–9, - and _,
+ * and no other organisation may end up with the same ID.
+ * @param {string} nog @param {string} suffix @param {'authority' | 'operator'} role
  */
-function aliasProblem(nog, typed, role) {
-  if (typed && orgRole(typed) !== role) return t('orgAliasFormat');
+function aliasProblem(nog, suffix, role) {
+  const typed = suffix.trim();
+  if (typed && !/^[A-Za-z0-9_-]+$/.test(typed)) return t('orgAliasChars');
+  const alias = typed ? aliasPrefix(role) + typed : '';
   const trial = app.orgs.map((c) => ({ ...c,
-    authority: c.authority && (c.authority.id === nog ? { ...c.authority, alias: typed } : c.authority),
-    operator: c.operator && (c.operator.id === nog ? { ...c.operator, alias: typed } : c.operator) }));
+    authority: c.authority && (c.authority.id === nog ? { ...c.authority, alias } : c.authority),
+    operator: c.operator && (c.operator.id === nog ? { ...c.operator, alias } : c.operator) }));
   return aliasIssues(trial, app.meta?.codespace ?? '').some((i) => i.nogId === nog && i.code === 'org-alias-duplicate') ? t('orgAliasDuplicate') : '';
 }
 
+/** The part of a saved alias after the role's prefix (an alias from another codespace keeps its own last part). @param {string} alias */
+const suffixOf = (alias) => (alias ? alias.split(':').slice(2).join(':') || alias : '');
+
 /** @param {HTMLElement} main @param {Resource & { kind: 'org' }} r */
 function orgForm(main, r) {
-  const c = r.company;
-  main.appendChild(el('div', 're-title', `${t('rsTypeOrg')} · ${c.name}`));
+  const c = r.company, entry = r.entry, role = r.role;
+  main.appendChild(el('div', 're-title', `${typeText(r)} · ${c.name}`));
+  // Everything from the register, read-only, in one place: the company, then this role's contact
   const facts = el('div', 're-facts');
-  for (const [label, value] of [[t('orgCompanyNumber'), c.companyNumber], [t('rsLegalName'), c.legalName], [t('rsTradingName'), c.tradingName]]) {
+  const ct = entry.contact ?? {};
+  for (const [label, value] of [[t('orgCompanyNumber'), c.companyNumber], [t('rsLegalName'), c.legalName], [t('rsTradingName'), c.tradingName],
+    [t('brandUrl'), ct.url], [t('rsEmail'), ct.email], [t('rsPhone'), ct.phone], [t('rsNogId'), entry.id]]) {
     if (value) facts.appendChild(el('div', '', `${label}: ${value}`));
   }
   if (r.changed) facts.appendChild(el('div', 'org-mark', t('orgChanged')));
+  if (r.gone) facts.appendChild(el('div', 'org-mark bad', t('orgGone')));
   main.appendChild(facts);
-  const draft = drafts().get(r.id) ?? {};
+
   const cs = app.meta?.codespace ?? '';
-  /** @type {HTMLInputElement[]} */
-  const inputs = [];
-  const allValid = () => inputs.every((i) => !i.classList.contains('invalid'));
-  for (const role of ROLES) {
-    const entry = c[role];
-    if (!entry) continue;
-    const box = el('div', 're-role');
-    box.appendChild(el('div', 're-role-h', t(role === 'authority' ? 'roleAuthority' : 'roleOperator')));
-    const ct = entry.contact;
-    box.appendChild(el('div', 're-static', [entry.id, ct.email, ct.phone, ct.url].filter(Boolean).join(' · ')));
-    if (app.orgChanges.missing.includes(entry.id)) box.appendChild(el('div', 'org-mark bad', t('orgGone')));
-    const input = /** @type {HTMLInputElement} */ (el('input', 're-alias'));
-    input.dataset.nog = entry.id;
-    input.value = entry.id in draft ? draft[entry.id] : entry.alias ?? '';
-    input.placeholder = generatedAlias(entry.id, cs);
-    input.autocomplete = 'off';
-    const msg = el('span', 'org-alias-msg');
-    const check = () => { const p = aliasProblem(entry.id, input.value.trim(), role); input.classList.toggle('invalid', !!p); msg.textContent = p; };
-    check();
-    input.addEventListener('keydown', (e) => e.stopPropagation());
-    input.addEventListener('input', () => {
-      drafts().set(r.id, { ...(drafts().get(r.id) ?? {}), [entry.id]: input.value });
-      check();
-      touched(main, allValid() && !app.orgsError);
-    });
-    inputs.push(input);
-    const line = el('label', 're-row');
-    line.append(el('span', 're-label', t('orgAliasLabel')), input, msg);
-    box.appendChild(line);
-    main.appendChild(box);
-  }
+  const draft = drafts().get(r.id);
+  const input = /** @type {HTMLInputElement} */ (el('input', 're-alias'));
+  input.dataset.nog = entry.id;
+  input.value = draft ? draft.suffix : suffixOf(entry.alias ?? '');
+  input.placeholder = suffixOf(generatedAlias(entry.id, cs));
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+  const msg = el('span', 'org-alias-msg');
+  const check = () => { const p = aliasProblem(entry.id, input.value, role); input.classList.toggle('invalid', !!p); msg.textContent = p; return !p; };
+  check();
+  input.addEventListener('keydown', (e) => e.stopPropagation());
+  input.addEventListener('input', () => {
+    drafts().set(r.id, { suffix: input.value });
+    touched(main, check() && !app.orgsError);
+  });
+  const field = el('span', 're-alias-field');
+  field.append(el('span', 're-alias-prefix', aliasPrefix(role)), input);
+  const line = el('label', 're-row');
+  line.append(el('span', 're-label', t('orgAliasLabel')), field, msg);
+  main.appendChild(line);
   main.appendChild(el('div', 're-note', t('orgUsedBy', r.used)));
-  main.appendChild(footer(r, allValid() && !app.orgsError));
+  main.appendChild(footer(r, check() && !app.orgsError));
 }
 
 /** @param {HTMLElement} body @param {Resource} r */

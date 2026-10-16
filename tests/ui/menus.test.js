@@ -223,6 +223,19 @@ describe('the Rediger menu covers lines and calendars', () => {
     expect(app.calendarDrafts.size).toBe(0);
   });
 
+  it('Ctrl+Shift+S saves all changes from any page, and the menu says so', async () => {
+    app.calendarDrafts.set('k3', { id: 'k3', name: 'Høst', ranges: [] });
+    setPage('lines');
+    openMenu(0); openMenu(1);
+    expect(item('Lagre alle endringer').textContent).toContain('Ctrl+Shift+S');
+    document.body.click();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'S', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    for (let i = 0; i < 8; i++) await flush();
+    expect(app.calendars.map((c) => c.name)).toContain('Høst');
+    expect(app.calendarDrafts.size).toBe(0);
+    setPage('edit');
+  });
+
   it('Ctrl+S on Kalendere saves the open calendar', async () => {
     app.calendarDrafts.set('k2', { id: 'k2', name: 'Vår', ranges: [] });
     app.calendarSelected = 'k2';

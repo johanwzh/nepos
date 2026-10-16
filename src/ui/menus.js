@@ -7,6 +7,7 @@ import { pickAndOpen, openNewDialog, openRecent, closeProject, copyProject, setO
 import { newRoute, saveRoute, saveAllRoutes, discardAllChanges } from './route-editor.js';
 import { newDraft as newCalendarDraft, saveOpenCalendar } from './calendars-page.js';
 import { unsavedCalendarCount, saveAllCalendars } from './calendar-drafts.js';
+import { unsavedResourceCount, saveAllResources } from './resources-page.js';
 import { unsavedCodes } from './drafts.js';
 import { loadRecentFolders, clearRecentFolders } from './recent-folders.js';
 import { loadColourTheme, saveColourTheme, applyColourTheme, openThemeDialog } from './theme.js';
@@ -50,13 +51,13 @@ const MENUS = [
   { label: () => t('menuEdit'), items: () => {
     const onCalendars = currentPage() === 'calendars';
     const canSave = onCalendars ? !!app.calendarSelected && app.calendarDrafts.has(app.calendarSelected) : !!app.activeRoute && app.dirty;
-    const unsaved = unsavedCodes().length + unsavedCalendarCount();
+    const unsaved = unsavedCodes().length + unsavedCalendarCount() + unsavedResourceCount();
     return [
       { label: t('newLine'), disabled: !app.meta, action: () => { void newRoute().then(() => setPage('edit')); } },
       { label: t('newCalendar'), disabled: !app.meta, action: () => { setPage('calendars'); newCalendarDraft(); } },
       'separator',
       { label: t('saveCurrent'), hint: 'Ctrl+S', disabled: !canSave, action: () => { if (onCalendars) saveOpenCalendar(); else void saveRoute(); } },
-      { label: t('saveAllChanges'), disabled: !unsaved, action: () => { void saveAllRoutes().then((ok) => (ok ? saveAllCalendars() : false)).then(() => refreshAll()); } },
+      { label: t('saveAllChanges'), hint: 'Ctrl+Shift+S', disabled: !unsaved, action: () => { void saveEverything(); } },
       { label: t('discardAll'), disabled: !unsaved, action: discardAllChanges },
     ];
   } },
@@ -85,7 +86,26 @@ const MENUS = [
   ] },
 ];
 
+/** Lagre alle endringer: lines, calendars and resources, in that order; stops at a failed save. */
+async function saveEverything() {
+  if (await saveAllRoutes()) {
+    if ((await saveAllCalendars()) !== false) await saveAllResources();
+  }
+  refreshAll();
+}
+
+let keysWired = false;
 export function initMenus() {
+  if (!keysWired) {
+    keysWired = true;
+    // Ctrl+Shift+S: save all changes, from any page (not behind a window)
+    document.addEventListener('keydown', (e) => {
+      if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.key.toLowerCase() !== 's' || document.querySelector('dialog[open]')) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      void saveEverything();
+    }, true);
+  }
   const relabel = createMenuBar($('menubar'), MENUS);
   onRefresh(relabel); // menu names follow the language
   setOnRecentChanged(reloadRecent); // a folder opened or forgotten shows at once
