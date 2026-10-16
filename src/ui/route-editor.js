@@ -90,14 +90,15 @@ let saving = false;
 const savedNameless = new Set();
 
 /**
- * A name made from the timetable: the bold stops in order ("Oslo – Drammen – Gol"), or the first and
+ * A name made from the timetable: the bold stops in order ("Oslo-Drammen-Gol"), or the first and
  * last stop when fewer than two are bold.
  */
 function nameFromStops() {
   const rows = grid.stops.filter((s) => !s.isDwellArr && String(s.name ?? '').trim());
   const bold = rows.filter((s) => s.bold);
   const picked = bold.length >= 2 ? bold : rows.length ? [rows[0], rows[rows.length - 1]] : [];
-  return picked.map((s) => String(s.name).trim()).filter((n, i, all) => n !== all[i - 1]).join(' – ');
+  // A plain hyphen without spaces ("Oslo-Drammen-Gol"): what anyone can type, so generated and typed names look alike
+  return picked.map((s) => String(s.name).trim()).filter((n, i, all) => n !== all[i - 1]).join('-');
 }
 
 /** The name field's right-click menu. @param {MouseEvent} e @param {() => void} make */
