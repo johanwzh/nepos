@@ -1,0 +1,291 @@
+{
+ "centroid": {
+  "location": {
+   "latitude": 59.740605,
+   "longitude": 10.20017
+  }
+ },
+ "changed": "2025-09-18T11:35:14.152+02:00",
+ "created": "2017-06-19T21:33:25.097+02:00",
+ "id": "NSR:StopPlace:16804",
+ "keyList": {
+  "keyValue": [
+   {
+    "key": "imported-id",
+    "value": "BRA:StopPlace:06021001,RUT:StopPlace:06021001,VKT:StopPlace:06021001,RUT:StopPlace:6021001,VKT:StopPlace:6021001,BRA:StopPlace:6021001"
+   },
+   {
+    "key": "VERSION_COMMENT",
+    "value": "Justert plattform J litt lenger frem mot torget"
+   },
+   {
+    "key": "TAG-0-idReference",
+    "value": "NSR:StopPlace:16804"
+   },
+   {
+    "key": "TAG-0-name",
+    "value": "adm_koordinat"
+   },
+   {
+    "key": "TAG-0-created",
+    "value": "1507901244091"
+   },
+   {
+    "key": "TAG-0-removed",
+    "value": "1507907419273"
+   },
+   {
+    "key": "IS_PARENT_STOP_PLACE",
+    "value": "false"
+   }
+  ]
+ },
+ "modification": "NEW",
+ "name": {
+  "lang": "nor",
+  "value": "Drammen busstasjon"
+ },
+ "placeEquipments": {
+  "id": "NSR:PlaceEquipment:84909",
+  "installedEquipmentRefOrInstalledEquipment": [
+   {
+    "type": "WaitingRoomEquipment",
+    "value": {
+     "heated": false,
+     "id": "NSR:WaitingRoomEquipment:27869",
+     "modification": "NEW",
+     "seats": 30,
+     "stepFree": false,
+     "version": "1"
+    }
+   }
+  ]
+ },
+ "privateCode": {},
+ "quays": {
+  "quayRefOrQuay": [
+   {
+    "accessibilityAssessment": {
+     "id": "NSR:AccessibilityAssessment:16878",
+     "limitations": {
+      "accessibilityLimitation": {
+       "audibleSignalsAvailable": "UNKNOWN",
+       "escalatorFreeAccess": "UNKNOWN",
+       "id": "204024",
+       "liftFreeAccess": "UNKNOWN",
+       "modification": "NEW",
+       "stepFreeAccess": "TRUE",
+       "version": "9",
+       "visualSignsAvailable": "UNKNOWN",
+       "wheelchairAccess": "TRUE"
+      }
+     },
+     "mobilityImpairedAccess": "UNKNOWN",
+     "modification": "NEW",
+     "version": "9"
+    },
+    "centroid": {
+     "location": {
+      "latitude": 59.74052,
+      "longitude": 10.20093
+     }
+    },
+    "changed": "2025-09-18T11:35:14.137+02:00",
+    "compassBearing": 23,
+    "id": "NSR:Quay:29303",
+    "keyList": {
+     "keyValue": [
+      {
+       "key": "imported-id",
+       "value": "VKT:Quay:602100106,RUT:Quay:0602100106,VKT:Quay:0602100106,BRA:Quay:0602100106,BRA:Quay:602100106,RUT:Quay:602100106"
+      }
+     ]
+    },
+    "modification": "NEW",
+    "placeEquipments": {
+     "id": "NSR:PlaceEquipment:84910",
+     "installedEquipmentRefOrInstalledEquipment": [
+      {
+       "type": "ShelterEquipment",
+       "value": {
+        "enclosed": true,
+        "id": "NSR:ShelterEquipment:38313",
+        "modification": "NEW",
+        "version": "1"
+       }
+      },
+      {
+       "type": "GeneralSign",
+       "value": {
+        "id": "NSR:GeneralSign:74515",
+        "modification": "NEW",
+        "privateCode": {
+         "value": "512"
+        },
+        "signContentType": "TRANSPORT_MODE",
+        "version": "1"
+       }
+      }
+     ]
+    },
+    "privateCode": {
+     "value": "06"
+    },
+    "publicCode": "F",
+    "version": "9"
+   },
+   {
+    "accessibilityAssessment": {
+     "id": "NSR:AccessibilityAssessment:16880",
+     "limitations": {
+      "accessibilityLimitation": {
+       "audibleSignalsAvailable": "UNKNOWN",
+       "escalatorFreeAccess": "UNKNOWN",
+       "id": "204025",
+       "liftFreeAccess": "UNKNOWN",
+       "modification": "NEW",
+       "stepFreeAccess": "TRUE",
+       "version": "9",
+       "visualSignsAvailable": "UNKNOWN",
+       "wheelchairAccess": "TRUE"
+      }
+     },
+     "mobilityImpairedAccess": "UNKNOWN",
+     "modification": "NEW",
+     "version": "9"
+    },
+    "centroid": {
+     "location": {
+      "latitude": 59.740632,
+      "longitude": 10.200342
+     }
+    },
+    "changed": "2025-09-18T11:35:14.137+02:00",
+    "compassBearing": 44,
+    "id": "NSR:Quay:29305",
+    "keyList": {
+     "keyValue": [
+      {
+       "key": "imported-id",
+       "value": "VKT:Quay:602100105,RUT:Quay:0602100105,VKT:Quay:0602100105,BRA:Quay:0602100105,RUT:Quay:602100105,BRA:Quay:602100105"
+      }
+     ]
+    },
+    "modification": "NEW",
+    "placeEquipments": {
+     "id": "NSR:PlaceEquipment:84911",
+     "installedEquipmentRefOrInstalledEquipment": [
+      {
+       "type": "ShelterEquipment",
+       "value": {
+        "enclosed": true,
+        "id": "NSR:ShelterEquipment:38314",
+        "modification": "NEW",
+        "version": "1"
+       }
+      },
+      {
+       "type": "GeneralSign",
+       "value": {
+        "id": "NSR:GeneralSign:74516",
+        "modification": "NEW",
+        "privateCode": {
+         "value": "512"
+        },
+        "signContentType": "TRANSPORT_MODE",
+        "version": "1"
+       }
+      }
+     ]
+    },
+    "privateCode": {
+     "value": "05"
+    },
+    "publicCode": "E",
+    "version": "9"
+   },
+   {
+    "accessibilityAssessment": {
+     "id": "NSR:AccessibilityAssessment:16881",
+     "limitations": {
+      "accessibilityLimitation": {
+       "audibleSignalsAvailable": "UNKNOWN",
+       "escalatorFreeAccess": "UNKNOWN",
+       "id": "204023",
+       "liftFreeAccess": "UNKNOWN",
+       "modification": "NEW",
+       "stepFreeAccess": "FALSE",
+       "version": "9",
+       "visualSignsAvailable": "UNKNOWN",
+       "wheelchairAccess": "FALSE"
+      }
+     },
+     "mobilityImpairedAccess": "UNKNOWN",
+     "modification": "NEW",
+     "version": "9"
+    },
+    "centroid": {
+     "location": {
+      "latitude": 59.74009,
+      "longitude": 10.201744
+     }
+    },
+    "changed": "2025-09-18T11:35:14.136+02:00",
+    "compassBearing": 23,
+    "id": "NSR:Quay:29306",
+    "keyList": {
+     "keyValue": [
+      {
+       "key": "imported-id",
+       "value": "RUT:Quay:0602100107,RUT:Quay:602100107,BRA:Quay:0602100107,BRA:Quay:602100107"
+      }
+     ]
+    },
+    "modification": "NEW",
+    "privateCode": {
+     "value": "07"
+    },
+    "publicCode": "J",
+    "version": "9"
+   }
+  ]
+ },
+ "stopPlaceType": "BUS_STATION",
+ "tariffZones": {
+  "tariffZoneRef": [
+   {
+    "ref": "BRA:TariffZone:102",
+    "version": "6"
+   },
+   {
+    "ref": "VKT:FareZone:7",
+    "version": "8"
+   },
+   {
+    "ref": "BRA:FareZone:22",
+    "version": "10"
+   },
+   {
+    "ref": "RUT:TariffZone:5V",
+    "version": "7"
+   },
+   {
+    "ref": "VKT:TariffZone:601",
+    "version": "4"
+   }
+  ]
+ },
+ "topographicPlaceRef": {
+  "created": "2026-10-15T23:07:04.526+02:00",
+  "ref": "KVE:TopographicPlace:3301",
+  "version": "2"
+ },
+ "transportMode": "BUS",
+ "validBetween": [
+  {
+   "fromDate": "2025-09-18T11:35:14.141+02:00"
+  }
+ ],
+ "version": "9",
+ "weighting": "PREFERRED_INTERCHANGE"
+}

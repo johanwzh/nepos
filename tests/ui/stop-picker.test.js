@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup, flush } from './dom-setup.js';
-import { initShell, setPage, panelOpen } from '../../src/ui/shell.js';
+import { initShell, setPage, panelOpen, refreshAll } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
-import { initGrid, grid } from '../../src/ui/grid.js';
+import { initGrid, grid, clearGrid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { initRouteEditor, selectRoute, newRoute } from '../../src/ui/route-editor.js';
 import { setQuayLookup, quayInfo } from '../../src/ui/quays.js';
 import { initStopPicker, setPickerServices, setPickerMap, pickerState } from '../../src/ui/stop-picker.js';
+import { initStopCard, setStopCardServices } from '../../src/ui/stop-card.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
@@ -27,6 +28,10 @@ const JBT = { quayId: 'NSR:Quay:7203', publicCode: 'A', stopPlaceId: 'NSR:StopPl
 const SKOYEN_PLACE = { id: 'NSR:StopPlace:5', name: 'Skøyen', description: '', mode: 'bus', quays: [{ quayId: 'NSR:Quay:55', publicCode: 'B', description: '', lat: 59.92, lon: 10.68 }] };
 const BIG_PLACE = { id: 'NSR:StopPlace:6', name: 'Storsenter', description: '', mode: 'bus', quays: [
   { quayId: 'NSR:Quay:61', publicCode: 'A', description: '', lat: 59.93, lon: 10.7 }, { quayId: 'NSR:Quay:62', publicCode: 'B', description: '', lat: 59.93, lon: 10.71 }] };
+/** @type {import('../../src/services/nsr.js').StopPlace} */
+const JBT_PLACE = { id: 'NSR:StopPlace:4000', name: 'Jernbanetorget', description: '', mode: 'bus', type: 'ONSTREET_BUS', waitingRoom: null,
+  quays: [{ quayId: 'NSR:Quay:7203', publicCode: 'A', description: '', lat: 59.91, lon: 10.75, bearing: 90, shelter: 'enclosed', sign: true, wheelchair: 'yes', stepFree: 'yes' }] };
+const RAIL_PLACE = { id: 'NSR:StopPlace:9', name: 'Skøyen stasjon', description: '', mode: 'rail', quays: [{ quayId: 'NSR:Quay:99', publicCode: '1', description: '', lat: 59.92, lon: 10.68 }] };
 const hit = (/** @type {any} */ p) => ({ id: p.id, name: p.name, context: 'Oslo', description: '', modes: ['bus'], lat: 59.9, lon: 10.7 });
 
 /** @type {((v: any) => void)[]} */
@@ -56,6 +61,8 @@ beforeEach(async () => {
   if (!wired) { initGrid(); initFootnoteEditor(); wired = true; }
   initRouteEditor();
   initStopPicker();
+  initStopCard();
+  setStopCardServices({ getStopPlace: async (id) => (id === JBT.stopPlaceId ? JBT_PLACE : null) });
   pending = [];
   holdSearch = false;
   setPickerMap({ show: (m) => { lastModel = m; }, onPick: () => {}, view: () => null, onViewChange: () => {}, zoomTo: () => {} });
@@ -81,13 +88,21 @@ describe('stop picking in the map pane', () => {
     expect(panelOpen('right')).toBe(true);
   });
 
-  it('follows the selected stop cell', () => {
+  it('follows the selected stop cell, and says what the search is for: find a stop, or replace one', () => {
     pickRow(0);
     expect(document.getElementById('sp').hidden).toBe(false);
-    expect(document.getElementById('sp-head').textContent).toContain('1');
-    expect(document.getElementById('sp-head').textContent).toContain('Jernbanetorget · A');
+    expect(document.getElementById('sp-head').textContent).toBe('Bytt stoppet på rad 1');
     pickRow(3);
-    expect(document.getElementById('sp-head').textContent).toContain('4');
+    expect(document.getElementById('sp-head').textContent).toBe('Finn og velg stopp for rad 4');
+  });
+
+  it('has no "only this mode" choice: a stop of another mode than the line is never offered', async () => {
+    expect(document.getElementById('sp-only-mode')).toBeNull();
+    setPickerServices({ search: async () => [{ ...hit(RAIL_PLACE), modes: ['rail'] }, hit(SKOYEN_PLACE)], getStopPlace: async (id) => (id === RAIL_PLACE.id ? RAIL_PLACE : SKOYEN_PLACE) });
+    pickRow(3);
+    await search('Skøyen');
+    expect(rows().map((r) => r.textContent)).not.toContain(expect.stringContaining('stasjon'));
+    expect(rows().some((r) => r.textContent?.includes('stasjon'))).toBe(false);
   });
 
   it('opens the pane when typing in a stop cell and searches for the text, leaving the row alone', async () => {
@@ -224,6 +239,46 @@ describe('browsing the map', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('the stop at the selected row, at the top of the map pane', () => {
+  const card = () => /** @type {HTMLElement} */ (document.getElementById('map-stop'));
+
+  it('says so when no line is open (with a line open, the grid always has a selected row)', () => {
+    expect(card().textContent).toContain('Jernbanetorget'); // row 1 is selected when a line opens
+    clearGrid();
+    refreshAll(); // as the app does after closing a line
+    expect(card().textContent).toContain('Ingen stopp valgt');
+  });
+
+  it('shows the stop as a sign: mode, name, platform, ID with a copy button, a link to NSR, and what NSR knows', async () => {
+    const wrote = /** @type {string[]} */ ([]);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (/** @type {string} */ s) => { wrote.push(s); } }, configurable: true });
+    pickRow(0);
+    await settle();
+    expect(card().querySelector('.sc-sign svg')).not.toBeNull();
+    expect(card().querySelector('.sc-name')?.textContent).toBe('Jernbanetorget');
+    expect(card().querySelector('.sc-quay')?.textContent).toContain('A');
+    expect(card().querySelector('.sc-id code')?.textContent).toBe('NSR:Quay:7203');
+    expect(/** @type {HTMLAnchorElement} */ (card().querySelector('a.sc-nsr')).href).toBe('https://stoppested.entur.org/stop_place/NSR:StopPlace:4000');
+    expect(card().querySelector('.sc-facts')?.textContent).toContain('Lukket leskur');
+    /** @type {HTMLElement} */ (card().querySelector('.sc-copy')).click();
+    await settle();
+    expect(wrote).toEqual(['NSR:Quay:7203']);
+  });
+
+  it('follows the row in any column, and says when a row has no stop', () => {
+    pickRow(3);
+    expect(card().textContent).toContain('Uten ID');
+    expect(card().textContent).toContain('ikke koblet til et stopp');
+  });
+
+  it('keeps Registrer stopp and Tøm stopp at the bottom of the pane', () => {
+    const tools = /** @type {HTMLElement} */ (document.querySelector('#panel-right .map-tools'));
+    expect(tools.querySelector('#map-rec')).not.toBeNull();
+    expect(tools.querySelector('#sp-clear')).not.toBeNull();
+    expect(/** @type {HTMLElement} */ (document.getElementById('map-inner')).compareDocumentPosition(tools) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 

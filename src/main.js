@@ -16,6 +16,7 @@ import { initRouteEditor } from './ui/route-editor.js';
 import { initExportPage } from './ui/export-page.js';
 import { initMapPanel } from './ui/map-panel.js';
 import { initStopPicker } from './ui/stop-picker.js';
+import { initStopCard } from './ui/stop-card.js';
 import { initOrgRegister } from './ui/org-register.js';
 import { initMenus } from './ui/menus.js';
 import { initHelp } from './ui/help.js';
@@ -37,6 +38,7 @@ initRouteEditor();
 initExportPage();
 initMapPanel();
 initStopPicker();
+initStopCard();
 
 // Development only: /?sample opens an in-memory sample project, so the screens can be checked
 // without the browser's folder picker. Never active in a production build.

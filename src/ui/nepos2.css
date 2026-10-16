@@ -670,3 +670,26 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .map-tools { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--border-lt); flex-wrap: wrap; }
 .map-rec.on { background: color-mix(in srgb, #d32f2f 14%, var(--bg-raised)); border-color: #d32f2f; color: #d32f2f; font-weight: 600; }
 .map-rec-hint { font-size: 11px; color: var(--text-m); }
+/* The map pane: the stop at the top, search and map in the middle, tools at the bottom */
+#panel-right { display: flex; flex-direction: column; }
+#panel-right #map-inner { flex: 1; min-height: 0; }
+#panel-right .map-tools { border-bottom: none; border-top: 1px solid var(--border-lt); }
+.map-stop { padding: 10px 12px; border-bottom: 1px solid var(--border-lt); font-size: 12px; color: var(--text); }
+.sc-none { color: var(--text-m); font-style: italic; padding: 6px 0; }
+.sc-row { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-f); margin-bottom: 4px; }
+.sc { display: flex; align-items: center; gap: 10px; }
+.sc-sign { flex: none; width: 34px; height: 34px; border-radius: 6px; background: #0b5aa2; color: #fff; display: grid; place-items: center; box-shadow: inset 0 0 0 2px #fff, 0 0 0 1px #0b5aa2; }
+.sc-sign .mode-icon { width: 22px; height: 22px; }
+.sc-sign-empty { background: var(--bg-raised); box-shadow: inset 0 0 0 1px var(--border); }
+.sc-main { min-width: 0; }
+.sc-name { font-size: 17px; font-weight: 600; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-quay { font-size: 13px; color: var(--text-m); }
+.sc-muted { font-style: italic; }
+.sc-facts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.sc-facts > span { background: var(--bg-raised); border-radius: 999px; padding: 1px 8px; font-size: 11px; color: var(--text-m); }
+.sc-arrow { display: inline-block; font-weight: 700; }
+.sc-id { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.sc-id code { font-size: 11px; color: var(--text-m); }
+.sc-copy { font-size: 11px; padding: 1px 8px; height: auto; }
+.sc-nsr { font-size: 11px; color: var(--accent); }
+.sp-row.sp-off { opacity: .45; cursor: not-allowed; }

@@ -78,23 +78,23 @@
               <span class="panel-hdr-title" data-lk="panelMap"></span>
               <span class="panel-close" id="close-right" title="Alt+M">✕</span>
             </div>
-            <div class="map-tools">
-              <button class="pop-btn map-rec" id="map-rec"></button>
-              <span class="map-rec-hint" id="map-rec-hint" data-lk="mapRecordHint" hidden></span>
-            </div>
+            <div class="map-stop" id="map-stop"></div>
             <div id="sp" class="sp" hidden>
               <div class="sp-head"><span id="sp-head"></span></div>
               <input type="text" id="sp-q" autocomplete="off" spellcheck="false">
-              <label class="n2-check sp-mode"><input type="checkbox" id="sp-only-mode" checked> <span id="sp-only-mode-label"></span></label>
               <div class="sp-status" id="sp-status"></div>
               <div class="sp-list" id="sp-list"></div>
               <div class="sp-card" id="sp-card" hidden></div>
-              <button class="pop-btn" id="sp-clear" data-lk="spClear"></button>
             </div>
             <div id="map-inner">
               <div id="leaflet-map" class="n2-tiles"></div>
               <div class="map-hint-overlay"><div class="map-hint" data-lk="mapHint"></div></div>
               <div class="n2-map-missing" id="map-missing" hidden></div>
+            </div>
+            <div class="map-tools">
+              <button class="pop-btn map-rec" id="map-rec"></button>
+              <button class="pop-btn" id="sp-clear" data-lk="spClear"></button>
+              <span class="map-rec-hint" id="map-rec-hint" data-lk="mapRecordHint" hidden></span>
             </div>
           </div>
 

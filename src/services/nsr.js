@@ -49,8 +49,11 @@ export async function lookupQuays(ids, { baseUrl, clientName, fetch: doFetch = (
 }
 
 /**
- * @typedef {{ id: string, name: string, description: string, mode: string,
- *             quays: { quayId: string, publicCode: string, description: string, lat: number | null, lon: number | null }[] }} StopPlace
+ * @typedef {'yes' | 'no' | 'partial' | ''} Access
+ * @typedef {{ quayId: string, publicCode: string, description: string, lat: number | null, lon: number | null,
+ *             bearing?: number | null, shelter?: 'enclosed' | 'open' | null, sign?: boolean, wheelchair?: Access, stepFree?: Access }} StopQuay
+ * @typedef {{ id: string, name: string, description: string, mode: string, type?: string,
+ *             waitingRoom?: { seats: number, heated: boolean } | null, quays: StopQuay[] }} StopPlace
  */
 
 /**
@@ -91,19 +94,36 @@ export async function getStopPlaces(ids, { baseUrl, clientName, fetch: doFetch =
   return out;
 }
 
+/** @param {any} x @returns {any[]} */
+const equipment = (x) => x?.placeEquipments?.installedEquipmentRefOrInstalledEquipment ?? [];
+/** @param {any} v @returns {Access} */
+const access = (v) => (v === 'TRUE' ? 'yes' : v === 'FALSE' ? 'no' : v === 'PARTIAL' ? 'partial' : '');
+
 /** @param {any} place @returns {StopPlace} */
 function toStopPlace(place) {
+  const waiting = equipment(place).find((e) => e.type === 'WaitingRoomEquipment')?.value;
   return {
     id: place.id,
     name: place.name?.value ?? '',
     description: place.description?.value ?? '',
     mode: String(place.transportMode ?? '').toLowerCase(),
-    quays: (place.quays?.quayRefOrQuay ?? []).filter((/** @type {any} */ q) => q.id).map((/** @type {any} */ q) => ({
-      quayId: q.id,
-      publicCode: q.publicCode ?? '',
-      description: q.description?.value ?? '',
-      lat: q.centroid?.location?.latitude ?? null,
-      lon: q.centroid?.location?.longitude ?? null,
-    })),
+    type: place.stopPlaceType ?? '',
+    waitingRoom: waiting ? { seats: Number(waiting.seats) || 0, heated: !!waiting.heated } : null,
+    quays: (place.quays?.quayRefOrQuay ?? []).filter((/** @type {any} */ q) => q.id).map((/** @type {any} */ q) => {
+      const shelter = equipment(q).find((e) => e.type === 'ShelterEquipment')?.value;
+      const limits = q.accessibilityAssessment?.limitations?.accessibilityLimitation;
+      return {
+        quayId: q.id,
+        publicCode: q.publicCode ?? '',
+        description: q.description?.value ?? '',
+        lat: q.centroid?.location?.latitude ?? null,
+        lon: q.centroid?.location?.longitude ?? null,
+        bearing: typeof q.compassBearing === 'number' ? q.compassBearing : null,
+        shelter: shelter ? (shelter.enclosed ? 'enclosed' : 'open') : null,
+        sign: equipment(q).some((e) => e.type === 'GeneralSign'),
+        wheelchair: access(limits?.wheelchairAccess),
+        stepFree: access(limits?.stepFreeAccess),
+      };
+    }),
   };
 }

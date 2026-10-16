@@ -226,6 +226,11 @@ function updateStopMarks() {
   });
 }
 
+/** The selected row in any column (the stop card follows it), or null. */
+export function selectedRowIndex() {
+  return grid.active && !inDC && grid.stops[ancR] ? ancR : null;
+}
+
 /** The selected stop row (the stop-name column), or null (stop picking spec §1). */
 export function selectedStopRow() {
   return grid.active && inStopCol && !inStopEdit && grid.stops[ancR] ? ancR : null;
