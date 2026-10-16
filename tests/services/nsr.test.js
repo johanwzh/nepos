@@ -71,6 +71,16 @@ describe('getStopPlace', () => {
     expect(result?.quays[2]).toMatchObject({ lat: 59.911425, lon: 10.749736 });
   });
 
+  it('gives what NSR says about the stop place and each Quay: shelter, sign, access, waiting room', async () => {
+    const drammen = JSON.parse(readFileSync('tests/fixtures/nsr/stop-place-16804.json', 'utf8'));
+    const { fn } = fakeFetch(drammen);
+    const result = /** @type {any} */ (await getStopPlace('NSR:StopPlace:16804', { ...opts, fetch: fn }));
+    expect(result.type).toBe('BUS_STATION');
+    expect(result.waitingRoom).toEqual({ seats: 30, heated: false });
+    expect(result.quays[0]).toMatchObject({ publicCode: 'F', shelter: 'enclosed', sign: true, wheelchair: 'yes', stepFree: 'yes', bearing: 23 });
+    expect(result.quays[2]).toMatchObject({ publicCode: 'J', shelter: null, sign: false, wheelchair: 'no', stepFree: 'no' });
+  });
+
   it('gives null for a stop place NSR does not know', async () => {
     const { fn } = fakeFetch({ errorCode: 'RESOURCE_NOT_FOUND' }, { ok: false, status: 404 });
     expect(await getStopPlace('NSR:StopPlace:999999999', { ...opts, fetch: fn })).toBe(null);

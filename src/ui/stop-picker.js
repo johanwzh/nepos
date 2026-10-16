@@ -8,7 +8,7 @@ import { searchStopPlaces, nearbyStopPlaces } from '../services/geocoder.js';
 import { getStopPlace, getStopPlaces, lookupQuays } from '../services/nsr.js';
 import { NSR_QUAY_PATTERN, NSR_STOP_PLACE_PATTERN, modeMatches } from '../core/quays.js';
 import { ERN_MODES } from '../core/ern/modes.js';
-import { grid, selectedStopRow, setStopOnRow, clearStopOnRow, focusGrid, setStopTypeHandler, onGridRender, appendStopRow, removeStopRow } from './grid.js';
+import { grid, selectedStopRow, selectedRowIndex, setStopOnRow, clearStopOnRow, focusGrid, setStopTypeHandler, onGridRender, appendStopRow, removeStopRow } from './grid.js';
 import { quayInfo } from './quays.js';
 
 /**
@@ -257,9 +257,14 @@ function undoRecorded() {
   }
 }
 
+/** Is a stop place of this mode allowed on the line? (Never another mode than the line's.) @param {string} mode */
+const modeOk = (mode) => !state.ernMode || !mode || modeMatches(state.ernMode, mode);
+
 /** A Quay clicked on the map or in the list becomes the candidate. @param {string} quayId */
 function pickQuay(quayId) {
   if (state.recording) { recordQuay(quayId); return; }
+  const place = [state.place, ...state.browseQuays].find((p) => p?.quays.some((q) => q.quayId === quayId));
+  if (place && !modeOk(place.mode)) return;
   for (const place of [state.place, ...state.browseQuays]) {
     const quay = place?.quays.find((q) => q.quayId === quayId);
     if (place && quay) { state.candidate = quayInfoOf(place, quay); render(); return; }
@@ -268,7 +273,7 @@ function pickQuay(quayId) {
 
 /** Bruk: the candidate goes into the row. */
 function apply() {
-  if (state.row == null || !state.candidate) return;
+  if (state.row == null || !state.candidate || !modeOk(state.candidate.mode)) return;
   const c = state.candidate;
   setStopOnRow(state.row, { quayId: c.quayId, name: c.stopPlaceName, info: c });
   done();
@@ -278,6 +283,7 @@ function apply() {
 function applyDirect() {
   if (state.row == null || !state.direct) return;
   const d = state.direct;
+  if (d.info && !modeOk(d.info.mode)) { setStatus(t('wsOtherMode')); return; }
   setStopOnRow(state.row, { quayId: d.quayId, name: d.info?.stopPlaceName ?? '', info: d.info });
   done();
 }
@@ -313,19 +319,18 @@ function render() {
   const active = state.row != null && grid.stops[state.row];
   pane.hidden = !active;
   state.ernMode = app.routeState?.transportMode ?? 0;
-  state.onlyMode = /** @type {HTMLInputElement} */ ($('sp-only-mode')).checked;
+  state.onlyMode = true; // never a stop of another mode than the line's (user test 2026-10-16)
+  // Tøm stopp (at the bottom of the pane) works on the selected row in any column
+  const sel = selectedRowIndex();
+  /** @type {HTMLButtonElement} */ ($('sp-clear')).disabled = sel == null || !grid.stops[sel]?.stopId || grid.readOnly;
   if (!active) { state.current = null; map?.show(state); return; }
 
   const stop = grid.stops[/** @type {number} */ (state.row)];
   state.current = stop.stopId ? known(String(stop.stopId)) : null;
-  const label = state.current ? `${state.current.stopPlaceName} · ${state.current.publicCode}`.replace(/ · $/, '')
-    : stop.stopId ? `${stop.name || stop.stopId} (${stop.stopId})` : t('spNoStop');
-  $('sp-head').textContent = t('spRow', /** @type {number} */ (state.row) + 1, label);
+  // What the search is for: finding a stop for an empty row, or replacing the row's stop
+  $('sp-head').textContent = t(stop.stopId ? 'spReplace' : 'spFind', /** @type {number} */ (state.row) + 1);
   const mode = modeName(state.ernMode);
-  $('sp-only-mode-label').textContent = t('wsOnlyMode', mode);
-  /** @type {HTMLElement} */ ($('sp-only-mode').parentElement).hidden = !mode;
   $('sp-q').placeholder = t('wsPlaceholder');
-  $('sp-clear').disabled = !stop.stopId;
 
   const list = $('sp-list');
   list.innerHTML = '';
@@ -335,19 +340,19 @@ function render() {
   } else if (state.place) {
     const place = state.place;
     if (state.hits.length) list.appendChild(row(esc(t('wsBack')), () => { state.place = null; state.candidate = null; render(); }, 'sp-row sp-back'));
-    const otherMode = place.mode && !modeMatches(state.ernMode, place.mode);
+    const otherMode = !modeOk(place.mode);
     const head = document.createElement('div');
     head.className = 'sp-place';
     head.innerHTML = `${esc(place.name)}<small>${esc(place.description)}${otherMode ? ` · <span class="n2-ws-warn">${esc(t('wsOtherMode'))}</span>` : ''}</small>`;
     list.appendChild(head);
     for (const quay of place.quays) {
       const r = row(`${esc(t('wsQuay', quay.publicCode))}<small>${esc(quay.quayId)}${quay.description ? ` · ${esc(quay.description)}` : ''}</small>`,
-        () => { state.candidate = quayInfoOf(place, quay); render(); });
+        () => { if (!otherMode) { state.candidate = quayInfoOf(place, quay); render(); } }, otherMode ? 'sp-row sp-off' : 'sp-row');
       if (state.candidate?.quayId === quay.quayId) r.classList.add('on');
       list.appendChild(r);
     }
   } else {
-    const shown = state.onlyMode && mode ? state.hits.filter((h) => !h.modes.length || h.modes.some((m) => modeMatches(state.ernMode, m))) : state.hits;
+    const shown = mode ? state.hits.filter((h) => !h.modes.length || h.modes.some((m) => modeMatches(state.ernMode, m))) : state.hits;
     const hidden = state.hits.length - shown.length;
     if (hidden && !$('sp-status').textContent) setStatus(t('wsHidden', hidden));
     for (const h of shown) {
@@ -387,11 +392,10 @@ export function initStopPicker() {
     if (state.candidate || state.direct) { state.candidate = null; state.direct = null; render(); }
     schedule();
   });
-  $('sp-only-mode').addEventListener('change', render);
   $('map-rec').addEventListener('click', () => setRecording(!state.recording));
   state.recording = false;
   recorded = [];
-  $('sp-clear').addEventListener('click', () => { if (state.row != null) { clearStopOnRow(state.row); render(); } });
+  $('sp-clear').addEventListener('click', () => { const ri = selectedRowIndex(); if (ri != null) { clearStopOnRow(ri); render(); } });
   onGridRender(followRow);
   onRefresh(followRow);
   if (!keysWired) {

@@ -6,7 +6,7 @@ import L from 'leaflet';
 import { app } from './state.js';
 import { $, onRefresh, currentPage, panelOpen, onPanelToggle } from './shell.js';
 import { t } from '../i18n/strings.js';
-import { grid, selectedColumn, onGridRender } from './grid.js';
+import { grid, selectedColumn, selectedRowIndex, onGridRender } from './grid.js';
 import { quayInfo, onQuaysLoaded } from './quays.js';
 import { tripOnMap } from '../core/map-model.js';
 import { DEFAULT_SETTINGS } from '../project/settings.js';
@@ -123,6 +123,13 @@ function update() {
       radius: end ? 7 : 5, fillColor: '#0078d4', color: dark ? '#2a2620' : '#ffffff', weight: 2, fillOpacity: 1,
     }).bindTooltip(`<b>${esc(p.name)}</b> ${esc(p.time.slice(0, 2))}:${esc(p.time.slice(2))}`, { sticky: true }).addTo(map));
   });
+
+  // The selected row's stop: a ring on top, so the eye finds where it is in the timetable
+  const ri = selectedRowIndex();
+  const here = ri == null || !grid.stops[ri]?.stopId ? null : quayInfo.get(String(grid.stops[ri].stopId));
+  if (here?.lat != null && here.lon != null) {
+    layers.push(L.circleMarker([here.lat, here.lon], { radius: 12, color: '#d32f2f', weight: 3, fill: false, interactive: false }).addTo(map));
+  }
 
   // Fit only when another trip is shown, so the user's own zoom/pan survives edits.
   const key = `${app.activeRoute}|${app.routeState?.activePer}|${app.routeState?.activeSet}|${ci}|${trip.points.map((p) => p.stopId).join(',')}`;

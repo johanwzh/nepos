@@ -34,7 +34,9 @@ export function pickerMapModel(s) {
   // Quays shown as squares: the row's stop and the candidate mark their own square (spec §5).
   /** @type {PickerMarker[]} */
   const quays = [];
+  const placeOk = (/** @type {any} */ p) => !s.onlyMode || !s.ernMode || !p?.mode || modeMatches(s.ernMode, p.mode);
   for (const place of [s.place, ...s.browseQuays]) {
+    if (!placeOk(place)) continue;
     for (const q of place?.quays ?? []) {
       if (quays.some((m) => m.id === q.quayId) || !placed(q)) continue;
       const state = s.candidate?.quayId === q.quayId ? 'candidate' : s.current?.quayId === q.quayId ? 'current' : '';
