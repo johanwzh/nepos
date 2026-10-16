@@ -723,3 +723,6 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .sp-leg:hover path:not(.sp-hit), .sp-leg:hover line:not(.sp-hit) { stroke-width: 3; }
 .sp-dot { fill: var(--accent); stroke: var(--bg-panel); stroke-width: 1.5; cursor: pointer; }
 .sp-here { fill: none; stroke: var(--text); stroke-width: 2.5; pointer-events: none; }
+/* The line name: blank, outlined in red once the line is saved without one */
+#route-hdr .rh-name.missing { border: 1px solid var(--g-dec-c); border-radius: 4px; }
+.map-viewbar[hidden] { display: none; }

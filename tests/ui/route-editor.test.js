@@ -274,3 +274,36 @@ describe('line header', () => {
   });
 });
 
+
+describe('the line name (user test 2026-10-16)', () => {
+  const name = () => /** @type {HTMLInputElement} */ (document.getElementById('rh-name'));
+
+  it('is blank with no example text, and outlined in red after a save while empty', async () => {
+    await selectRoute('20');
+    expect(name().placeholder).toBe('');
+    expect(name().classList.contains('missing')).toBe(false);
+    name().value = '';
+    name().dispatchEvent(new Event('change'));
+    document.getElementById('ef-save')?.click();
+    await flush(); await flush();
+    expect(name().classList.contains('missing')).toBe(true);
+    name().value = 'Florø – Eikefjord';
+    name().dispatchEvent(new Event('change'));
+    expect(name().classList.contains('missing')).toBe(false);
+  });
+
+  it('offers, on right-click, a name made from the bold stops', async () => {
+    await selectRoute('20');
+    grid.stops.forEach((s) => { s.bold = false; });
+    const last = grid.stops.length - 1;
+    grid.stops[0].bold = true;
+    grid.stops[last].bold = true;
+    name().dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
+    const item = /** @type {HTMLElement} */ (document.querySelector('.map-ctx button'));
+    expect(item.textContent).toBe('Lag navn fra rutetabellen');
+    item.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    expect(app.routeState.routeName).toBe(`${grid.stops[0].name} – ${grid.stops[last].name}`);
+    expect(name().value).toBe(app.routeState.routeName);
+    expect(app.dirty).toBe(true);
+  });
+});
