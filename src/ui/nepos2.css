@@ -679,9 +679,9 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .sc-row { height: 14px; line-height: 14px; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-f); }
 .sc { display: flex; align-items: flex-start; gap: 10px; height: 46px; margin-top: 2px; }
 /* The mode as a transport sign on its post, black like the timetable's mode tile */
-.sc-post { flex: none; width: 28px; height: 46px; display: flex; flex-direction: column; align-items: center; }
-.sc-plate { width: 28px; height: 28px; border-radius: 5px; background: var(--text); color: var(--bg-panel); display: grid; place-items: center; }
-.sc-plate .mode-icon { width: 18px; height: 18px; }
+.sc-post { flex: none; width: 22px; height: 46px; display: flex; flex-direction: column; align-items: center; }
+.sc-plate { width: 22px; height: 22px; border-radius: 4px; background: var(--text); color: var(--bg-panel); display: grid; place-items: center; }
+.sc-plate .mode-icon { width: 16px; height: 16px; }
 .sc-plate.empty { background: var(--bg-raised); box-shadow: inset 0 0 0 1px var(--border); }
 .sc-pole { width: 3px; flex: 1; background: var(--text-m); border-radius: 0 0 2px 2px; }
 .sc-main { min-width: 0; flex: 1; }
@@ -697,3 +697,14 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .sc-chip:hover { border-color: var(--accent); }
 .sc-chip.sc-nsr { border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-bg); color: var(--accent); font-weight: 600; }
 .sp-row.sp-off { opacity: .45; cursor: not-allowed; }
+/* The search list: at most 7 stops tall (it scrolls), so the map keeps its room */
+#panel-right .sp-list { max-height: calc(7 * 41px); overflow-y: auto; }
+/* Under the map: the Quay viewed on the map, and what to do with it */
+.map-viewbar { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-top: 1px solid var(--border-lt); flex-wrap: wrap; }
+.map-viewed { flex: 1; min-width: 120px; font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-viewed.none { font-weight: 400; color: var(--text-m); font-style: italic; }
+/* The right-click menu on a Quay */
+.map-ctx { position: fixed; z-index: 1000; display: flex; flex-direction: column; min-width: 150px; padding: 4px; background: var(--bg-panel);
+  border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+.map-ctx button { text-align: left; border: none; background: transparent; color: var(--text); font: inherit; font-size: 12px; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+.map-ctx button:hover { background: var(--accent-bg); }

@@ -43,5 +43,5 @@ export function renderTimeline() {
       ${m.after ? `<span class="tl-after" title="${esc(t('tlAfter'))}">▶</span>` : ''}
     </div>
     <div class="tl-months">${months}<span class="tl-now-label" style="left:${pct(m.nowIndex)}">${esc(t('tlNow'))}</span></div>
-    ${col ? `<div class="tl-legend"><span class="tl-key column"></span>${esc(t('tlColumn'))} <span class="tl-key removed"></span>${esc(t('tlRemoved'))}</div>` : ''}`;
+`;
 }

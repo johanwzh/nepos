@@ -8,7 +8,7 @@ import { searchStopPlaces, nearbyStopPlaces } from '../services/geocoder.js';
 import { getStopPlace, getStopPlaces, lookupQuays } from '../services/nsr.js';
 import { NSR_QUAY_PATTERN, NSR_STOP_PLACE_PATTERN, modeMatches } from '../core/quays.js';
 import { ERN_MODES } from '../core/ern/modes.js';
-import { grid, selectedStopRow, selectedRowIndex, setStopOnRow, clearStopOnRow, focusGrid, setStopTypeHandler, onGridRender, appendStopRow, removeStopRow } from './grid.js';
+import { grid, selectedStopRow, selectedRowIndex, setStopOnRow, clearStopOnRow, focusGrid, setStopTypeHandler, onGridRender, appendStopRow, removeStopRow, addStopRowAt } from './grid.js';
 import { quayInfo } from './quays.js';
 
 /**
@@ -18,7 +18,8 @@ import { quayInfo } from './quays.js';
  * @typedef {{ row: number | null, current: QuayInfo | null, candidate: QuayInfo | null, hits: StopPlaceHit[],
  *             place: StopPlace | null, direct: { quayId: string, info: QuayInfo | null | undefined } | null,
  *             browse: StopPlaceHit[], browseQuays: StopPlace[], onlyMode: boolean, ernMode: number, recording: boolean }} PickerState
- * @typedef {{ show(state: PickerState): void, onPick(fn: (kind: 'place' | 'quay', id: string) => void): void,
+ * @typedef {'use' | 'above' | 'below'} QuayAction  from the map's right-click menu
+ * @typedef {{ show(state: PickerState): void, onPick(fn: (kind: 'place' | 'quay', id: string, action?: QuayAction) => void): void,
  *             view(): { lat: number, lon: number, radiusKm: number, zoom: number } | null,
  *             onViewChange(fn: () => void): void, zoomTo(lat: number, lon: number, zoom: number): void }} PickerMap
  */
@@ -34,7 +35,11 @@ let map = null;
 /** @param {PickerMap | null} m */
 export function setPickerMap(m) {
   map = m;
-  m?.onPick((kind, id) => { if (kind === 'place') { if (!state.recording) void openPlace(id); } else pickQuay(id); });
+  m?.onPick((kind, id, action) => {
+    if (kind === 'place') { if (!state.recording) void openPlace(id); }
+    else if (action && !state.recording) actOnQuay(id, action);
+    else pickQuay(id);
+  });
   m?.onViewChange(() => onViewChange());
 }
 
@@ -118,6 +123,7 @@ function followRow() {
   if (row === state.row) { render(); return; }
   state.row = row;
   if (row != null) openPanel('right'); // picking a stop happens in the map pane
+  if (keepView) { state.candidate = null; render(); return; }
   seq++;
   clearTimeout(timer);
   state.hits = []; state.place = null; state.direct = null; state.candidate = null;
@@ -271,6 +277,39 @@ function pickQuay(quayId) {
   }
 }
 
+/** The Quay (with its stop place) among those shown, or null. @param {string} quayId */
+function findQuay(quayId) {
+  for (const place of [state.place, ...state.browseQuays]) {
+    const quay = place?.quays.find((q) => q.quayId === quayId);
+    if (place && quay) return modeOk(place.mode) ? quayInfoOf(place, quay) : null;
+  }
+  return null;
+}
+
+/**
+ * Bruk / Legg til over / Legg til under, for a Quay from the map. A new row is added beside a whole
+ * dwell stop (never between its two rows) and becomes the selected row.
+ * @param {string} quayId @param {QuayAction} action
+ */
+function actOnQuay(quayId, action) {
+  const info = findQuay(quayId);
+  if (state.row == null || !info || grid.readOnly) return;
+  let ri = state.row;
+  if (action !== 'use') {
+    const top = grid.stops[ri - 1]?.isDwellArr ? ri - 1 : ri;
+    const bottom = grid.stops[ri]?.isDwellArr ? ri + 1 : ri;
+    ri = action === 'above' ? top : bottom + 1;
+    keepView = true; // the new row becomes the selected one; the open stop place stays on the map
+    addStopRowAt(ri);
+    keepView = false;
+  }
+  setStopOnRow(ri, { quayId: info.quayId, name: info.stopPlaceName, info });
+  state.candidate = null;
+  render();
+}
+
+let keepView = false;
+
 /** Bruk: the candidate goes into the row. */
 function apply() {
   if (state.row == null || !state.candidate || !modeOk(state.candidate.mode)) return;
@@ -305,6 +344,17 @@ function row(html, onClick, cls = 'sp-row') {
   return div;
 }
 
+/** Under the map: the Quay clicked on the map (viewed), and what can be done with it. */
+function renderViewed() {
+  const c = state.candidate;
+  const box = $('map-viewed');
+  if (!box) return;
+  box.textContent = c ? `${c.stopPlaceName} · ${t('wsQuay', c.publicCode)}` : t('mapViewedNone');
+  box.classList.toggle('none', !c);
+  const can = !!c && state.row != null && !state.recording && !grid.readOnly;
+  for (const id of ['map-use', 'map-above', 'map-below']) /** @type {HTMLButtonElement} */ ($(id)).disabled = !can;
+}
+
 function render() {
   const pane = $('sp');
   if (!pane) return;
@@ -323,7 +373,7 @@ function render() {
   // Tøm stopp (at the bottom of the pane) works on the selected row in any column
   const sel = selectedRowIndex();
   /** @type {HTMLButtonElement} */ ($('sp-clear')).disabled = sel == null || !grid.stops[sel]?.stopId || grid.readOnly;
-  if (!active) { state.current = null; map?.show(state); return; }
+  if (!active) { state.current = null; renderViewed(); map?.show(state); return; }
 
   const stop = grid.stops[/** @type {number} */ (state.row)];
   state.current = stop.stopId ? known(String(stop.stopId)) : null;
@@ -347,7 +397,7 @@ function render() {
     list.appendChild(head);
     for (const quay of place.quays) {
       const r = row(`${esc(t('wsQuay', quay.publicCode))}<small>${esc(quay.quayId)}${quay.description ? ` · ${esc(quay.description)}` : ''}</small>`,
-        () => { if (!otherMode) { state.candidate = quayInfoOf(place, quay); render(); } }, otherMode ? 'sp-row sp-off' : 'sp-row');
+        () => { if (!otherMode) { state.candidate = quayInfoOf(place, quay); apply(); } }, otherMode ? 'sp-row sp-off' : 'sp-row');
       if (state.candidate?.quayId === quay.quayId) r.classList.add('on');
       list.appendChild(r);
     }
@@ -361,15 +411,7 @@ function render() {
     }
   }
 
-  const card = $('sp-card');
-  const c = state.candidate;
-  card.hidden = !c;
-  if (c) {
-    card.innerHTML = `<div class="sp-card-name">${esc(c.stopPlaceName)} <b>${esc(c.publicCode)}</b></div>
-      <small>${esc(c.quayId)}${c.mode ? ` · ${esc(c.mode)}` : ''}</small>
-      <button class="pop-btn primary" id="sp-use">${esc(t('spUse'))}</button>`;
-    $('sp-use').addEventListener('click', apply);
-  }
+  renderViewed();
   map?.show(state);
 }
 
@@ -393,6 +435,9 @@ export function initStopPicker() {
     schedule();
   });
   $('map-rec').addEventListener('click', () => setRecording(!state.recording));
+  for (const [id, action] of /** @type {[string, QuayAction][]} */ ([['map-use', 'use'], ['map-above', 'above'], ['map-below', 'below']])) {
+    $(id).addEventListener('click', () => { if (state.candidate) actOnQuay(state.candidate.quayId, action); });
+  }
   state.recording = false;
   recorded = [];
   $('sp-clear').addEventListener('click', () => { const ri = selectedRowIndex(); if (ri != null) { clearStopOnRow(ri); render(); } });

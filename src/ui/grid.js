@@ -816,8 +816,16 @@ function insertRow(at) {
   grid.stops.splice(at, 0, { name: '', stopId: null, bold: false, sep: false, isDwellArr: false, price: null });
   for (const col of grid.cols) col.cells.splice(at, 0, null);
   for (const col of grid.cols) for (const cell of col.cells) if (cell && cell.interchange && cell.interchange.targetR >= at) cell.interchange.targetR++;
-  if (!inDC) { if (ancR >= at && grid.stops.length > 1) ancR++; if (endR >= at && grid.stops.length > 1) endR++; }
-  enterStopEdit(at);
+  // The new row's stop cell is selected, so the map pane offers to find its stop at once; Enter or
+  // F2 names it (user test 2026-10-16: no name box popping up)
+  inDC = false; inStopEdit = false; inStopCol = true; ancR = at; endR = at;
+  render();
+}
+
+/** Add an empty stop row at a position and select it (adding a stop from the map). @param {number} at */
+export function addStopRowAt(at) {
+  if (grid.readOnly) return;
+  insertRow(Math.max(0, Math.min(grid.stops.length, at)));
 }
 /** @param {number} ci */
 function deleteCol(ci) {

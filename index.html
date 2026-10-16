@@ -84,12 +84,17 @@
               <input type="text" id="sp-q" autocomplete="off" spellcheck="false">
               <div class="sp-status" id="sp-status"></div>
               <div class="sp-list" id="sp-list"></div>
-              <div class="sp-card" id="sp-card" hidden></div>
             </div>
             <div id="map-inner">
               <div id="leaflet-map" class="n2-tiles"></div>
               <div class="map-hint-overlay"><div class="map-hint" data-lk="mapHint"></div></div>
               <div class="n2-map-missing" id="map-missing" hidden></div>
+            </div>
+            <div class="map-viewbar">
+              <span class="map-viewed none" id="map-viewed"></span>
+              <button class="pop-btn" id="map-use" data-lk="mapUse"></button>
+              <button class="pop-btn" id="map-above" data-lk="mapAbove"></button>
+              <button class="pop-btn" id="map-below" data-lk="mapBelow"></button>
             </div>
             <div class="map-tools">
               <button class="pop-btn map-rec" id="map-rec"></button>

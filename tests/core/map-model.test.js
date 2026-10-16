@@ -14,11 +14,17 @@ describe('tripOnMap', () => {
     const info = new Map([['NSR:Quay:1', at(60, 10)], ['NSR:Quay:2', null], ['NSR:Quay:3', at(60.1, 10.1)], ['NSR:Quay:4', at(61, 11)]]);
     expect(tripOnMap(grid, grid.cols[0], info)).toEqual({
       points: [
-        { name: 'A', time: '0700', stopId: 'NSR:Quay:1', lat: 60, lon: 10 },
-        { name: 'B', time: '0720', stopId: 'NSR:Quay:3', lat: 60.1, lon: 10.1 },
+        { name: 'A', time: '0700', stopId: 'NSR:Quay:1', lat: 60, lon: 10, ri: 0, bold: false },
+        { name: 'B', time: '0720', stopId: 'NSR:Quay:3', lat: 60.1, lon: 10.1, ri: 3, bold: false },
       ],
       missing: ['Uten ID', 'Ukjent'],
     });
+  });
+
+  it('marks bold stops (drawn larger on the map) and gives each point its row', () => {
+    const grid = { stops: [stop('A', 'NSR:Quay:1', { bold: true }), stop('B', 'NSR:Quay:3')], cols: [{ cells: [cell('0700'), cell('0710')] }] };
+    const info = new Map([['NSR:Quay:1', at(60, 10)], ['NSR:Quay:3', at(60.1, 10.1)]]);
+    expect(tripOnMap(grid, grid.cols[0], info).points.map((p) => [p.ri, p.bold])).toEqual([[0, true], [1, false]]);
   });
 
   it('shows a dwell stop once, with its departure time', () => {
