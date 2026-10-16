@@ -625,3 +625,5 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .lt-orgs { display: flex; flex-direction: column; gap: 6px; }
 .lt-orgs .org-pick-btn { width: 100%; max-width: none; }
 #line-table { position: absolute; inset: 0; }
+.cl-list-host { flex: 1; min-height: 0; }
+#calendars-body .ce-switch { border-right: none; border-left: 1px solid var(--border-lt); order: 2; }

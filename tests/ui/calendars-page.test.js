@@ -11,12 +11,13 @@ import { createMemoryFs, readText } from '../../src/project/fs.js';
 import { writeCalendars } from '../../src/project/calendars-store.js';
 import { writeRoute, readRoute } from '../../src/project/routes.js';
 import { initCalendarReplace } from '../../src/ui/calendar-replace-ui.js';
+import { resetListStates } from '../../src/ui/list-view.js';
 
 /** @type {any} */ let fs;
 const page = () => /** @type {HTMLElement} */ (document.getElementById('calendars-body'));
 const q = (/** @type {string} */ sel) => /** @type {HTMLElement} */ (page().querySelector(sel));
 const click = (/** @type {string} */ sel) => q(sel).click();
-const rows = () => /** @type {HTMLElement[]} */ ([...page().querySelectorAll('.cl-table tbody tr[data-cal]')]);
+const rows = () => /** @type {HTMLElement[]} */ ([...page().querySelectorAll('.lv-row')]);
 const titles = () => [...page().querySelectorAll('.yv-title')].map((e) => e.textContent);
 const day = (/** @type {string} */ d) => q(`.yv-day[data-date="${d}"]`);
 /** @param {string} d */
@@ -27,6 +28,7 @@ const key = (/** @type {string} */ k) => document.dispatchEvent(new KeyboardEven
 const ROUTE = '#LEV;T;TST\r\n#RUT;-1;10;Oslo - Gol;;1;\r\n#TRA;Oslo - Gol\r\n#PER;;;;;;\r\n#KAL;c1\r\n#TAB;0;;;;\r\n';
 
 beforeEach(() => {
+  resetListStates();
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-10-16T12:00:00'));
   loadAppMarkup();
@@ -51,12 +53,13 @@ describe('Kalendere: a page of its own', () => {
     app.calendars = [{ id: 'c1', name: 'Vinter 26/27', ranges: [['20261201', '20270131']] }, { id: 'c2', name: 'Gammel', ranges: [['20250101', '20250110']] }];
     app.routes = [{ code: 'r', text: ROUTE, status: 'ok', issues: [] }];
     setPage('calendars');
-    expect(rows().map((r) => r.querySelector('.cl-name')?.textContent)).toEqual(['Gammel', 'Vinter 26/27']);
+    expect(rows().map((r) => r.querySelector('.lv-c-name')?.textContent)).toEqual(['Gammel', 'Vinter 26/27']);
     const vinter = rows()[1];
     expect(vinter.textContent).toContain('01.12.2026 – 31.01.2027');
     expect(vinter.textContent).toContain('62');
-    expect(vinter.querySelector('.cl-used')?.textContent).toBe('1 linje · 1 tabellsett');
-    expect(rows()[0].querySelector('.cl-status')?.textContent).toContain('Utløpt');
+    expect(vinter.querySelector('.lv-c-used')?.textContent).toBe('1 linje · 1 tabellsett');
+    expect(rows()[0].querySelector('.lv-c-status')?.textContent).toContain('Utløpt');
+    expect(rows()[0].classList.contains('lv-expired')).toBe(true);
     vinter.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     expect(app.calendarSelected).toBe('c1');
     expect(q('.cl-editor')).not.toBeNull();
@@ -92,7 +95,7 @@ describe('the calendar editor', () => {
   });
 
   it('opens an empty calendar at the current month', () => {
-    click('.cl-new');
+    click('#cl-new');
     expect(titles()[0]).toContain('Oktober 2026');
     expect(q('.ce-span').textContent).toBe('Ingen datoer');
   });
@@ -116,7 +119,7 @@ describe('the calendar editor', () => {
   });
 
   it('a new calendar is unsaved until it has a name and is saved', async () => {
-    click('.cl-new');
+    click('#cl-new');
     expect(/** @type {HTMLButtonElement} */ (q('.ce-save')).disabled).toBe(true);
     const name = /** @type {HTMLInputElement} */ (q('.ce-name'));
     name.value = 'Sommer';
@@ -128,7 +131,7 @@ describe('the calendar editor', () => {
     expect(await saved()).toMatchObject([{ name: 'Sommer', ranges: [['20261020', '20261020']] }]);
   });
 
-  it('switches between calendars on the left, and goes back to the list', () => {
+  it('switches between calendars in the navigator on the right, and goes back to the list', () => {
     app.calendars = [{ id: 'c1', name: 'A', ranges: [] }, { id: 'c2', name: 'B', ranges: [] }];
     app.calendarSelected = 'c1';
     setPage('calendars');
@@ -185,7 +188,7 @@ describe('the calendar editor', () => {
 
 describe('Kalendere list, unified with Linjer', () => {
   const two = () => { app.calendars = [{ id: 'c1', name: 'Vinter', ranges: [['20261201', '20270131']] }, { id: 'c2', name: 'Sommer', ranges: [['20270601', '20270815']] }]; };
-  const names = () => rows().map((r) => r.querySelector('.cl-name')?.textContent);
+  const names = () => rows().map((r) => r.querySelector('.lv-c-name')?.textContent);
 
   it('selects with a click and opens with a double-click; every row has a validity bar', () => {
     two();
@@ -205,10 +208,8 @@ describe('Kalendere list, unified with Linjer', () => {
     expect(names()).toEqual(['Sommer']);
     search.value = '';
     search.dispatchEvent(new Event('input'));
-    q('th[data-col="name"]').click();               // already by name: now descending
+    q('.lv-head [data-col="name"]').click();        // already by name: now descending
     expect(names()).toEqual(['Vinter', 'Sommer']);
-    expect(JSON.parse(/** @type {string} */ (localStorage.getItem('nepos.calSort')))).toEqual({ col: 'name', dir: -1 });
-    localStorage.removeItem('nepos.calSort');
   });
 
   it('filters on status: only the unsaved ones', () => {
@@ -218,18 +219,15 @@ describe('Kalendere list, unified with Linjer', () => {
     const status = /** @type {HTMLSelectElement} */ (q('#cl-f-status'));
     status.value = 'unsaved';
     status.dispatchEvent(new Event('change'));
-    expect(names()).toEqual(['Sommer ●']);
+    expect(names()).toEqual(['Sommer']);
+    expect(rows()[0].textContent).toContain('●');
   });
 
-  it('deletes several at once after asking once, and saves the selected unsaved ones', async () => {
+  it('deletes several at once after asking once; there is no Lagre on the list (saving is in the editor)', async () => {
     two();
     await writeCalendars(fs, app.calendars);
-    app.calendarDrafts.set('c1', { id: 'c1', name: 'Vinter 2', ranges: [] });
     setPage('calendars');
-    rows()[1].click(); // Vinter (●)
-    click('#cl-save');
-    await flush(); await flush();
-    expect((await saved()).map((/** @type {any} */ c) => c.name)).toEqual(['Vinter 2', 'Sommer']);
+    expect(page().querySelector('#cl-save')).toBeNull();
     rows()[0].click();
     rows()[1].dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
     click('#cl-del');
@@ -242,7 +240,7 @@ describe('Kalendere list, unified with Linjer', () => {
     two();
     app.routes = [{ code: 'r', text: ROUTE.replace('#KAL;c1', '#KAL;c1'), status: 'ok', issues: [] }];
     setPage('calendars');
-    /** @type {HTMLElement} */ (rows().find((r) => r.textContent?.includes('Vinter'))?.querySelector('.cl-used a')).click();
+    /** @type {HTMLElement} */ (rows().find((r) => r.textContent?.includes('Vinter'))?.querySelector('.cl-used-link')).click();
     expect(currentPage()).toBe('lines');
     expect(app.linesFilterCal).toBe('c1');
   });
@@ -250,6 +248,21 @@ describe('Kalendere list, unified with Linjer', () => {
   it('with no calendars: a hint and "+ Ny kalender"', () => {
     setPage('calendars');
     expect(page().textContent).toContain('Ingen kalendere ennå');
-    expect(q('.cl-new')).not.toBeNull();
+    expect(q('#cl-new')).not.toBeNull();
+  });
+});
+
+describe('the editor\'s navigator follows the list', () => {
+  it('lists the calendars the list shows, in its order, on the right', () => {
+    app.calendars = [{ id: 'c1', name: 'Vinter', ranges: [] }, { id: 'c2', name: 'Sommer', ranges: [] }, { id: 'c3', name: 'Høst', ranges: [] }];
+    setPage('calendars');
+    const search = /** @type {HTMLInputElement} */ (q('#cl-search'));
+    search.value = 'er';
+    search.dispatchEvent(new Event('input'));
+    rows()[0].dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    const nav = [...page().querySelectorAll('.ce-switch [data-cal]')].map((e) => e.textContent);
+    expect(nav).toEqual(['Sommer', 'Vinter']);
+    const wrap = /** @type {HTMLElement} */ (q('.cl-editor'));
+    expect(wrap.lastElementChild?.classList.contains('ce-switch')).toBe(true);
   });
 });

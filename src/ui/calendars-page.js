@@ -12,7 +12,7 @@ import { renderMonthsView } from './year-view.js';
 import { openCalendarReplace } from './calendar-replace-ui.js';
 import { lineState, lineLabel } from './line-info.js';
 import { validityBar, todayYmd } from './validity-bar.js';
-import { pick } from './selection.js';
+import { createListView, validityOf } from './list-view.js';
 
 /** @typedef {import('../core/calendars.js').Calendar} Calendar */
 
@@ -148,149 +148,119 @@ async function deleteCalendars(ids) {
     if (!(await runAction(() => writeCalendars(fs, next)))) return;
     app.calendars = next;
   }
-  selectedIds = new Set([...selectedIds].filter((id) => !ids.includes(id)));
   if (app.calendarSelected && ids.includes(app.calendarSelected)) app.calendarSelected = null;
   renderCalendarsPage();
 }
 /** @param {Calendar} cal */
 const deleteCalendar = (cal) => deleteCalendars([cal.id]);
 
-// ─── The list (like Linjer: search, filter, sort, select, act) ─────────────
-const SORT_KEY = 'nepos.calSort';
-/** @returns {{ col: string, dir: 1 | -1 }} */
-function loadSort() {
-  try { const v = JSON.parse(localStorage.getItem(SORT_KEY) ?? 'null'); if (v && typeof v.col === 'string' && (v.dir === 1 || v.dir === -1)) return v; } catch { /* the default */ }
-  return { col: 'name', dir: 1 };
-}
-/** @param {{ col: string, dir: 1 | -1 }} v */
-function saveSort(v) { try { localStorage.setItem(SORT_KEY, JSON.stringify(v)); } catch { /* not remembered */ } }
+// ─── The list (the shared list frame) ───────────────────────────────────────
+/** @type {ReturnType<typeof createListView> | null} */
+let view = null;
 
-/** @type {Set<string>} */
-let selectedIds = new Set();
-/** @type {string | null} */
-let anchor = null;
-/** @type {string[]} */
-let shown = [];
-
-/** The rows as shown: each calendar with its span, days, use and status. */
+/** The rows: each calendar with its span, days, use and status. */
 function listRows() {
-  const now = today();
   return allCalendars().map((cal) => {
     const uses = usage(cal.id);
-    const s = span(cal);
-    const days = calendarDays(cal);
-    const unsaved = app.calendarDrafts.has(cal.id);
-    const state = !s ? 'empty' : s[1] < now ? 'expired' : !uses.length ? 'unused' : '';
-    return { cal, uses, s, days, unsaved, state, status: [unsaved ? '●' : '', statusOf(cal, uses.length)].filter(Boolean).join(' ') };
+    return { cal, uses, s: span(cal), days: calendarDays(cal), unsaved: app.calendarDrafts.has(cal.id) };
   });
 }
 
-/** @type {Record<string, (r: ReturnType<typeof listRows>[number]) => string | number>} */
-const KEYS = { name: (r) => r.cal.name || '', valid: (r) => r.s?.[0] ?? '', days: (r) => r.days.length, used: (r) => r.uses.length, status: (r) => r.status };
+/** @param {string} v */
+const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/** @param {HTMLElement} body */
-function buildListChrome(body) {
-  body.innerHTML = `
-    <div class="lt-bar">
-      <button class="pop-btn primary cl-new" id="cl-new">${t('calAdd')}</button>
-      <input id="cl-search" type="search" autocomplete="off" placeholder="${t('calSearch')}">
-      <select id="cl-f-status"><option value="">${t('ltAllStatus')}</option><option value="expired">${t('lineExpired')}</option>
-        <option value="empty">${t('calStatusEmpty')}</option><option value="unused">${t('calStatusUnused')}</option><option value="unsaved">${t('unsavedDot')}</option></select>
-    </div>
-    <div class="lt-bar lt-actions">
-      <span id="cl-count"></span>
-      <button class="pop-btn" id="cl-dup">${t('calDuplicate')}</button>
-      <button class="pop-btn" id="cl-replace">${t('calReplace')}</button>
-      <button class="pop-btn" id="cl-del">${t('ltDelete')}</button>
-      <button class="pop-btn primary" id="cl-save">${t('ltSave')}</button>
-    </div>
-    <div class="lt-scroll"><table class="lt-table cl-table">
-      <thead><tr><th></th><th data-col="name">${t('ltCol_name')}</th><th data-col="valid">${t('ltCol_valid')}</th><th></th>
-        <th data-col="days">${t('calColDays')}</th><th data-col="used">${t('calColUsed')}</th><th data-col="status">${t('ltCol_status')}</th></tr></thead>
-      <tbody></tbody>
-    </table></div>`;
-  body.dataset.mode = 'list';
-  body.dataset.lang = app.settings.lang;
-  const field = (/** @type {string} */ id) => /** @type {HTMLInputElement} */ (body.querySelector('#' + id));
-  field('cl-new').addEventListener('click', newDraft);
-  field('cl-search').addEventListener('input', () => renderList(body));
-  field('cl-f-status').addEventListener('change', () => renderList(body));
-  body.querySelectorAll('th[data-col]').forEach((th) => th.addEventListener('click', () => {
-    const col = /** @type {string} */ (/** @type {HTMLElement} */ (th).dataset.col);
-    const sort = loadSort();
-    saveSort({ col, dir: sort.col === col ? /** @type {1 | -1} */ (-sort.dir) : 1 });
-    renderList(body);
-  }));
-  const tbody = /** @type {HTMLElement} */ (body.querySelector('tbody'));
-  tbody.addEventListener('click', (e) => {
-    const target = /** @type {HTMLElement} */ (e.target);
-    const link = /** @type {HTMLElement | null} */ (target.closest('.cl-used a'));
-    const tr = /** @type {HTMLElement | null} */ (target.closest('tr[data-cal]'));
-    if (!tr) return;
-    if (link) { // "Brukes av": the lines that use it, on Linjer
-      e.preventDefault();
-      app.linesFilterCal = /** @type {string} */ (tr.dataset.cal);
-      setPage('lines');
-      return;
-    }
-    ({ selected: selectedIds, anchor } = pick({ selected: selectedIds, anchor }, shown, /** @type {string} */ (tr.dataset.cal),
-      { shift: /** @type {MouseEvent} */ (e).shiftKey, ctrl: /** @type {MouseEvent} */ (e).ctrlKey || /** @type {MouseEvent} */ (e).metaKey, toggle: target.classList.contains('lt-check') }));
-    renderList(body);
+/** @param {{ cal: Calendar, uses: any[], days: string[], unsaved: boolean }} r */
+function statusCell(r) {
+  const v = validityOf(r.days, today());
+  const text = v === 'valid' ? t('lvValid') : v === 'future' ? t('lvFuture') : v === 'ending' ? t('lvEnding') : v === 'expired' ? t('lineExpired') : t('calStatusEmpty');
+  const parts = [`<span class="lv-tag ${v}">${esc(text)}</span>`];
+  if (!r.uses.length && r.days.length) parts.push(`<span class="lv-tag none">${esc(t('calStatusUnused'))}</span>`);
+  if (r.unsaved) parts.push('<span class="lv-unsaved">●</span>');
+  return parts.join(' ');
+}
+
+/** @param {HTMLElement} host */
+function makeView(host) {
+  view = createListView(host, {
+    id: 'calendars',
+    defaultSort: { col: 'name', dir: 1 },
+    rows: listRows,
+    rowId: (r) => r.cal.id,
+    columns: [
+      { key: 'name', label: () => t('ltCol_name'), width: 'minmax(0, 2fr)', sort: (r) => r.cal.name || '', cell: (r) => esc(r.cal.name || t('tableSetUnnamed')), text: (r) => r.cal.name },
+      { key: 'valid', label: () => t('ltCol_valid'), width: '190px', sort: (r) => r.s?.[0] ?? '', cell: (r) => (r.s ? `${show(r.s[0])} – ${show(r.s[1])}` : ''), text: (r) => (r.s ? `${show(r.s[0])} – ${show(r.s[1])}` : '') },
+      { key: 'days', label: () => t('calColDays'), width: '70px', sort: (r) => r.days.length, cell: (r) => String(r.days.length), text: (r) => String(r.days.length) },
+      { key: 'used', label: () => t('calColUsed'), width: 'minmax(0, 1fr)', sort: (r) => r.uses.length,
+        cell: (r) => (r.uses.length ? `<a href="#" class="cl-used-link">${esc(usedText(r.uses))}</a>` : esc(usedText(r.uses))), text: (r) => usedText(r.uses) },
+      { key: 'status', label: () => t('ltCol_status'), width: '200px', sort: (r) => validityOf(r.days, today()), cell: statusCell },
+    ],
+    band: (r) => r.days,
+    renderFinders: (box, state, changed) => {
+      box.innerHTML = `<input id="cl-search" type="search" autocomplete="off" placeholder="${esc(t('calSearch'))}">
+        <select id="cl-f-status"><option value="">${esc(t('ltAllStatus'))}</option><option value="valid">${esc(t('lvValid'))}</option><option value="future">${esc(t('lvFuture'))}</option>
+          <option value="ending">${esc(t('lvEnding'))}</option><option value="expired">${esc(t('lineExpired'))}</option><option value="none">${esc(t('calStatusEmpty'))}</option>
+          <option value="unused">${esc(t('calStatusUnused'))}</option><option value="unsaved">${esc(t('unsavedDot'))}</option></select>`;
+      for (const id of ['cl-search', 'cl-f-status']) {
+        const f = /** @type {HTMLInputElement} */ (box.querySelector('#' + id));
+        if (state[id] != null) f.value = state[id];
+        f.addEventListener(id === 'cl-search' ? 'input' : 'change', () => { state[id] = f.value; changed(); });
+      }
+    },
+    matches: (r, st) => {
+      const q = String(st['cl-search'] ?? '').trim().toLowerCase();
+      if (q && !(r.cal.name || '').toLowerCase().includes(q)) return false;
+      const f = st['cl-f-status'];
+      if (f === 'unsaved') return r.unsaved;
+      if (f === 'unused') return !r.uses.length;
+      return !f || validityOf(r.days, today()) === f;
+    },
+    tools: [
+      { id: 'cl-new', label: () => t('calAdd'), run: () => newDraft() },
+      { id: 'cl-edit', label: () => t('lvEdit'), enabled: (sel) => sel.length === 1, run: (sel) => open(sel[0]) },
+      { id: 'cl-dup', label: () => t('calDuplicate'), enabled: (sel) => sel.length > 0, run: (sel) => {
+        const made = sel.map(current).filter(Boolean).map((c) => {
+          const copy = { ...newCalendar(t('calCopyName', /** @type {Calendar} */ (c).name)), ranges: shiftRanges(/** @type {Calendar} */ (c).ranges, 364) };
+          app.calendarDrafts.set(copy.id, copy);
+          return copy.id;
+        });
+        view?.select(made);
+        renderCalendarsPage();
+      } },
+      { id: 'cl-replace', label: () => t('calReplace'), enabled: (sel) => sel.length === 1, run: (sel) => openCalendarReplace(sel[0]) },
+      { id: 'cl-del', label: () => t('ltDelete'), danger: true, enabled: (sel) => sel.length > 0, run: (sel) => { void deleteCalendars(sel); } },
+    ],
+    onEdit: (id) => open(id),
+    onDelete: (ids) => { void deleteCalendars(ids); },
+    empty: () => t(allCalendars().length ? 'noMatches' : 'calNone'),
   });
-  tbody.addEventListener('dblclick', (e) => {
-    const tr = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('tr[data-cal]'));
-    if (tr) open(/** @type {string} */ (tr.dataset.cal));
+  // "Brukes av": the lines that use the calendar, on Linjer
+  host.addEventListener('click', (e) => {
+    const link = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('.cl-used-link'));
+    if (!link) return;
+    e.preventDefault();
+    app.linesFilterCal = /** @type {string} */ (/** @type {HTMLElement} */ (link.closest('.lv-row')).dataset.id);
+    setPage('lines');
   });
-  field('cl-dup').addEventListener('click', () => {
-    const made = [...selectedIds].map(current).filter(Boolean).map((c) => {
-      const copy = { ...newCalendar(t('calCopyName', /** @type {Calendar} */ (c).name)), ranges: shiftRanges(/** @type {Calendar} */ (c).ranges, 364) };
-      app.calendarDrafts.set(copy.id, copy);
-      return copy.id;
-    });
-    selectedIds = new Set(made);
-    renderList(body);
-  });
-  field('cl-replace').addEventListener('click', () => { if (selectedIds.size === 1) openCalendarReplace([...selectedIds][0]); });
-  field('cl-del').addEventListener('click', () => { void deleteCalendars([...selectedIds]); });
-  field('cl-save').addEventListener('click', () => { void saveCalendars([...selectedIds]); });
 }
 
 /** @param {HTMLElement} body */
 function renderList(body) {
-  if (body.dataset.mode !== 'list' || body.dataset.lang !== app.settings.lang) buildListChrome(body);
-  const field = (/** @type {string} */ id) => /** @type {HTMLInputElement} */ (body.querySelector('#' + id));
-  const q = field('cl-search').value.trim().toLowerCase();
-  const status = field('cl-f-status').value;
-  const sort = loadSort();
-  const key = KEYS[sort.col] ?? KEYS.name;
-  const all = listRows();
-  selectedIds = new Set([...selectedIds].filter((id) => all.some((r) => r.cal.id === id)));
-  const rows = all
-    .filter((r) => !q || (r.cal.name || '').toLowerCase().includes(q))
-    .filter((r) => !status || (status === 'unsaved' ? r.unsaved : r.state === status))
-    .sort((a, b) => { const x = key(a), y = key(b); return sort.dir * (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'nb', { numeric: true })); });
-  shown = rows.map((r) => r.cal.id);
-  body.querySelectorAll('th[data-col]').forEach((th) => {
-    const col = /** @type {HTMLElement} */ (th).dataset.col;
-    th.classList.toggle('sorted', col === sort.col);
-    th.setAttribute('data-dir', col === sort.col ? String(sort.dir) : '');
-  });
-  const now = todayYmd();
-  const esc = (/** @type {string} */ v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  /** @type {HTMLElement} */ (body.querySelector('tbody')).innerHTML = rows.map((r) => `<tr data-cal="${esc(r.cal.id)}" class="${selectedIds.has(r.cal.id) ? 'selected' : ''}">
-    <td><input type="checkbox" class="lt-check"${selectedIds.has(r.cal.id) ? ' checked' : ''}></td>
-    <td class="cl-name">${esc(`${r.cal.name || t('tableSetUnnamed')}${r.unsaved ? ' ●' : ''}`)}</td>
-    <td class="lt-valid">${r.s ? `${show(r.s[0])} – ${show(r.s[1])}` : ''}</td>
-    <td class="lt-bar">${validityBar(r.days, now)}</td>
-    <td class="cl-days">${r.days.length}</td>
-    <td class="cl-used">${r.uses.length ? `<a href="#">${esc(usedText(r.uses))}</a>` : esc(usedText(r.uses))}</td>
-    <td class="cl-status lt-status">${esc(r.status)}</td></tr>`).join('')
-    || `<tr><td colspan="7" class="lt-empty">${esc(t(allCalendars().length ? 'noMatches' : 'calNone'))}</td></tr>`;
-  const none = !selectedIds.size;
-  for (const id of ['cl-dup', 'cl-del']) field(id).disabled = none;
-  field('cl-replace').disabled = selectedIds.size !== 1;
-  field('cl-save').disabled = ![...selectedIds].some((id) => app.calendarDrafts.has(id));
-  field('cl-count').textContent = none ? '' : t('ltSelected', selectedIds.size);
+  if (body.dataset.mode !== 'list' || !view) {
+    body.innerHTML = '';
+    body.dataset.mode = 'list';
+    const host = el('div', 'cl-list-host');
+    body.appendChild(host);
+    makeView(host);
+  }
+  /** @type {ReturnType<typeof createListView>} */ (view).render();
+}
+
+/** The calendars in the order (and filter) the list shows them: the editor's navigator follows it. */
+function calendarOrder() {
+  // The list's last view (filter and order); when it shows nothing that exists now (not visited yet,
+  // another project), all calendars by name.
+  const ids = view ? view.order().filter((id) => current(id)) : [];
+  return ids.length ? ids : allCalendars().map((c) => c.id);
 }
 
 export function newDraft() {
@@ -303,12 +273,14 @@ export function newDraft() {
 // ─── The editor ──────────────────────────────────────────────────────────────
 function renderEditor(/** @type {HTMLElement} */ body, /** @type {Calendar} */ cal) {
   const wrap = el('div', 'cl-editor');
-  // Left: the switcher
+  // Right: the navigator — the calendars as the list shows them (its filter and order)
   const side = el('div', 'ce-switch');
   const back = el('button', 'ce-back', t('calBack'));
   back.addEventListener('click', () => open(null));
   side.appendChild(back);
-  for (const c of allCalendars()) {
+  const ids = calendarOrder();
+  if (!ids.includes(cal.id)) ids.unshift(cal.id);
+  for (const c of /** @type {Calendar[]} */ (ids.map(current).filter(Boolean))) {
     const item = el('div', `ce-item${c.id === cal.id ? ' active' : ''}`, `${c.name || t('tableSetUnnamed')}${app.calendarDrafts.has(c.id) ? ' ●' : ''}`);
     item.dataset.cal = c.id;
     item.addEventListener('click', () => { if (c.id !== cal.id) open(c.id); });
@@ -318,7 +290,7 @@ function renderEditor(/** @type {HTMLElement} */ body, /** @type {Calendar} */ c
   add.addEventListener('click', newDraft);
   side.appendChild(add);
 
-  // Right: name, span, tools, months, footer
+  // Left: name, span, tools, months, footer
   const main = el('div', 'ce-main');
   const head = el('div', 'ce-head');
   const name = /** @type {HTMLInputElement} */ (el('input', 'ce-name'));
@@ -385,7 +357,7 @@ function renderEditor(/** @type {HTMLElement} */ body, /** @type {Calendar} */ c
   foot.append(el('span', 'ef-spacer'), state, discard, save);
   main.appendChild(foot);
 
-  wrap.append(side, main);
+  wrap.append(main, side);
   body.appendChild(wrap);
 }
 
