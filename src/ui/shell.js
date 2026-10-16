@@ -86,6 +86,7 @@ function resolvedTheme() {
 export function applyTheme() {
   const theme = resolvedTheme();
   document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem('nepos.lastTheme', theme); } catch { /* the splash then follows the system */ }
   applyColourTheme(); // a custom colour theme follows light/dark
 }
 

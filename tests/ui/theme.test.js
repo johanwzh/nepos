@@ -48,3 +48,16 @@ describe('custom theme dialog', () => {
     expect(loadColourTheme()).toBeNull();
   });
 });
+
+describe('the splash follows the theme', () => {
+  it('remembers the last light/dark choice in the browser, for the next splash', async () => {
+    const { app } = await import('../../src/ui/state.js');
+    const { applyTheme } = await import('../../src/ui/shell.js');
+    app.settings.theme = 'dark';
+    applyTheme();
+    expect(localStorage.getItem('nepos.lastTheme')).toBe('dark');
+    app.settings.theme = 'light';
+    applyTheme();
+    expect(localStorage.getItem('nepos.lastTheme')).toBe('light');
+  });
+});
