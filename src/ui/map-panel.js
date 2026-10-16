@@ -86,7 +86,7 @@ function drawPicker() {
   // Fit when what is being looked at changes (a new row, new hits, another stop place) — never
   // while the user pans and zooms to browse.
   const key = `${s.row}|${s.place?.id ?? ''}|${s.hits.map((h) => h.id).join(',')}|${s.current?.quayId ?? ''}`;
-  if (key !== pickKey && model.fit) {
+  if (key !== pickKey && model.fit && !s.recording) {
     pickKey = key;
     if (model.fit.length === 1) map.setView(model.fit[0], Math.max(map.getZoom(), 17));
     else map.fitBounds(L.latLngBounds(model.fit), { padding: [30, 30], maxZoom: 17 });
@@ -103,7 +103,7 @@ function update() {
 
   for (const layer of layers) layer.remove();
   layers = [];
-  if (pickerState().row != null) { lastKey = ''; drawPicker(); return; }
+  if (pickerState().row != null || pickerState().recording) { lastKey = ''; drawPicker(); return; }
   pickKey = '';
   const ci = selectedColumn();
   const col = grid.active ? grid.cols[ci] : null;

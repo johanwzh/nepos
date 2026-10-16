@@ -828,9 +828,28 @@ function deleteCol(ci) {
   if (inDC) dcCol = clampC(dcCol);
   render();
 }
+/** A new empty stop row at the bottom (recording stops); its index. */
+export function appendStopRow() {
+  grid.stops.push({ name: '', stopId: null, bold: false, sep: false, isDwellArr: false, price: null });
+  for (const col of grid.cols) col.cells.push(null);
+  render();
+  return grid.stops.length - 1;
+}
+
+/** Remove a stop row without asking (undoing a recorded stop, which has no times). @param {number} ri */
+export function removeStopRow(ri) {
+  if (!grid.stops[ri] || grid.readOnly) return;
+  dropRow(ri);
+}
+
 /** @param {number} ri */
 function deleteRow(ri) {
   if (grid.cols.some((col) => col.cells[ri] !== null) && !confirm(t('confirmDelRow'))) return;
+  dropRow(ri);
+}
+
+/** @param {number} ri */
+function dropRow(ri) {
   grid.stops.splice(ri, 1);
   for (const col of grid.cols) col.cells.splice(ri, 1);
   for (const col of grid.cols) for (const cell of col.cells) {

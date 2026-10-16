@@ -666,3 +666,7 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 #page-assets .re-alias-field .re-alias { border: none; background: transparent; flex: 1; min-width: 0; padding-left: 0; font-family: ui-monospace, monospace; font-size: 12px; }
 .re-alias-field:has(.re-alias.invalid) { border-color: var(--g-dec-c); }
 #page-assets .re-alias.invalid { outline: none; }
+/* Recording stops in the map pane */
+.map-tools { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--border-lt); flex-wrap: wrap; }
+.map-rec.on { background: color-mix(in srgb, #d32f2f 14%, var(--bg-raised)); border-color: #d32f2f; color: #d32f2f; font-weight: 600; }
+.map-rec-hint { font-size: 11px; color: var(--text-m); }

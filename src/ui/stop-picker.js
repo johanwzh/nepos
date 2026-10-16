@@ -8,7 +8,7 @@ import { searchStopPlaces, nearbyStopPlaces } from '../services/geocoder.js';
 import { getStopPlace, getStopPlaces, lookupQuays } from '../services/nsr.js';
 import { NSR_QUAY_PATTERN, NSR_STOP_PLACE_PATTERN, modeMatches } from '../core/quays.js';
 import { ERN_MODES } from '../core/ern/modes.js';
-import { grid, selectedStopRow, setStopOnRow, clearStopOnRow, focusGrid, setStopTypeHandler, onGridRender } from './grid.js';
+import { grid, selectedStopRow, setStopOnRow, clearStopOnRow, focusGrid, setStopTypeHandler, onGridRender, appendStopRow, removeStopRow } from './grid.js';
 import { quayInfo } from './quays.js';
 
 /**
@@ -17,7 +17,7 @@ import { quayInfo } from './quays.js';
  * @typedef {import('../services/geocoder.js').StopPlaceHit} StopPlaceHit
  * @typedef {{ row: number | null, current: QuayInfo | null, candidate: QuayInfo | null, hits: StopPlaceHit[],
  *             place: StopPlace | null, direct: { quayId: string, info: QuayInfo | null | undefined } | null,
- *             browse: StopPlaceHit[], browseQuays: StopPlace[], onlyMode: boolean, ernMode: number }} PickerState
+ *             browse: StopPlaceHit[], browseQuays: StopPlace[], onlyMode: boolean, ernMode: number, recording: boolean }} PickerState
  * @typedef {{ show(state: PickerState): void, onPick(fn: (kind: 'place' | 'quay', id: string) => void): void,
  *             view(): { lat: number, lon: number, radiusKm: number, zoom: number } | null,
  *             onViewChange(fn: () => void): void, zoomTo(lat: number, lon: number, zoom: number): void }} PickerMap
@@ -34,7 +34,7 @@ let map = null;
 /** @param {PickerMap | null} m */
 export function setPickerMap(m) {
   map = m;
-  m?.onPick((kind, id) => { if (kind === 'place') void openPlace(id); else pickQuay(id); });
+  m?.onPick((kind, id) => { if (kind === 'place') { if (!state.recording) void openPlace(id); } else pickQuay(id); });
   m?.onViewChange(() => onViewChange());
 }
 
@@ -59,11 +59,11 @@ const quayCache = new Map();
 let browseTimer = null;
 let browseSeq = 0;
 
-/** The stop places in view from street level (zoom ≥ 15), and their Quays from zoom 17. */
+/** The stop places in view from street level (zoom ≥ 15), and their Quays from zoom 17 (16 while recording). */
 async function browse() {
   const v = map?.view() ?? null;
   const my = ++browseSeq;
-  if (state.row == null || !v || v.zoom < 15) {
+  if ((state.row == null && !state.recording) || !v || v.zoom < 15) {
     if (state.browse.length || state.browseQuays.length) { state.browse = []; state.browseQuays = []; render(); }
     return;
   }
@@ -75,7 +75,7 @@ async function browse() {
   }
   if (my !== browseSeq) return;
   state.browse = hits;
-  if (v.zoom >= 17) {
+  if (v.zoom >= (state.recording ? 16 : 17)) {
     const missing = hits.map((h) => h.id).filter((id) => !quayCache.has(id));
     if (missing.length) {
       try { for (const p of await services.getStopPlaces(missing, opts('nsr'))) quayCache.set(p.id, p); } catch { /* shown without Quays */ }
@@ -88,7 +88,7 @@ async function browse() {
 }
 
 /** @type {PickerState} */
-const state = { row: null, current: null, candidate: null, hits: [], place: null, direct: null, browse: [], browseQuays: [], onlyMode: true, ernMode: 0 };
+const state = { row: null, current: null, candidate: null, hits: [], place: null, direct: null, browse: [], browseQuays: [], onlyMode: true, ernMode: 0, recording: false };
 export const pickerState = () => state;
 let seq = 0;
 /** @type {any} */
@@ -203,8 +203,63 @@ async function openPlace(id) {
   showPlace(place);
 }
 
+// ─── Recording stops (user test 2026-10-16) ─────────────────────────────────
+// "Registrer stopp": every Quay clicked on the map goes into the next empty stop row, or a new row
+// at the bottom. No Bruk. Ctrl+Z takes back the last one recorded in this run; Esc or the button
+// ends it. The map never moves by itself while recording.
+
+/** @type {{ stop: any, appended: boolean }[]} what this run recorded, newest last */
+let recorded = [];
+
+/** @param {boolean} on */
+export function setRecording(on) {
+  if (on && (!grid.active || grid.readOnly)) return;
+  state.recording = on;
+  recorded = [];
+  if (on) openPanel('right');
+  render();
+  onViewChange(); // browse with the recording rules (no row needed, Quays from zoom 16)
+}
+
+/** The first stop row with nothing in it (no stop, no name, no times), or -1. */
+function emptyRow() {
+  return grid.stops.findIndex((s, i) => !s.stopId && !String(s.name ?? '').trim() && !s.isDwellArr && grid.cols.every((c) => c.cells[i] == null));
+}
+
+/** @param {string} quayId */
+function recordQuay(quayId) {
+  for (const place of [state.place, ...state.browseQuays]) {
+    const quay = place?.quays.find((q) => q.quayId === quayId);
+    if (!place || !quay) continue;
+    if (state.onlyMode && state.ernMode && place.mode && !modeMatches(state.ernMode, place.mode)) return; // the mode filter applies
+    let ri = emptyRow();
+    const appended = ri < 0;
+    if (appended) ri = appendStopRow();
+    const info = quayInfoOf(place, quay);
+    setStopOnRow(ri, { quayId: info.quayId, name: info.stopPlaceName, info });
+    recorded.push({ stop: grid.stops[ri], appended });
+    /** @type {any} */ (document.querySelector(`.g-td-name[data-ri="${ri}"]`))?.scrollIntoView?.({ block: 'nearest' });
+    render();
+    return;
+  }
+}
+
+/** Ctrl+Z while recording: take back the last recorded stop (rows changed since are skipped). */
+function undoRecorded() {
+  while (recorded.length) {
+    const last = /** @type {{ stop: any, appended: boolean }} */ (recorded.pop());
+    const ri = grid.stops.indexOf(last.stop);
+    if (ri < 0) continue;
+    if (last.appended) removeStopRow(ri);
+    else { clearStopOnRow(ri); last.stop.name = ''; }
+    render();
+    return;
+  }
+}
+
 /** A Quay clicked on the map or in the list becomes the candidate. @param {string} quayId */
 function pickQuay(quayId) {
+  if (state.recording) { recordQuay(quayId); return; }
   for (const place of [state.place, ...state.browseQuays]) {
     const quay = place?.quays.find((q) => q.quayId === quayId);
     if (place && quay) { state.candidate = quayInfoOf(place, quay); render(); return; }
@@ -247,6 +302,14 @@ function row(html, onClick, cls = 'sp-row') {
 function render() {
   const pane = $('sp');
   if (!pane) return;
+  const rec = $('map-rec');
+  if (rec) {
+    if (state.recording && (!grid.active || grid.readOnly)) { state.recording = false; recorded = []; }
+    rec.classList.toggle('on', state.recording);
+    rec.textContent = t(state.recording ? 'mapRecording' : 'mapRecord');
+    /** @type {HTMLButtonElement} */ (rec).disabled = !grid.active || grid.readOnly;
+    $('map-rec-hint').hidden = !state.recording;
+  }
   const active = state.row != null && grid.stops[state.row];
   pane.hidden = !active;
   state.ernMode = app.routeState?.transportMode ?? 0;
@@ -325,11 +388,22 @@ export function initStopPicker() {
     schedule();
   });
   $('sp-only-mode').addEventListener('change', render);
+  $('map-rec').addEventListener('click', () => setRecording(!state.recording));
+  state.recording = false;
+  recorded = [];
   $('sp-clear').addEventListener('click', () => { if (state.row != null) { clearStopOnRow(state.row); render(); } });
   onGridRender(followRow);
   onRefresh(followRow);
   if (!keysWired) {
     keysWired = true;
+    // Recording: Ctrl+Z takes back the last stop, Esc ends it. Text fields keep their own keys.
+    document.addEventListener('keydown', (e) => {
+      if (!state.recording || document.querySelector('dialog[open]')) return;
+      const el = document.activeElement;
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) return;
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setRecording(false); }
+      else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); e.stopPropagation(); undoRecorded(); }
+    }, true);
     // Capture phase: before the grid, which would otherwise start editing the row's name.
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' || !state.candidate || state.row == null || $('sp')?.hidden) return;

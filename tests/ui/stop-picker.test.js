@@ -6,9 +6,9 @@ import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid, grid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
-import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
+import { initRouteEditor, selectRoute, newRoute } from '../../src/ui/route-editor.js';
 import { setQuayLookup, quayInfo } from '../../src/ui/quays.js';
-import { initStopPicker, setPickerServices, setPickerMap } from '../../src/ui/stop-picker.js';
+import { initStopPicker, setPickerServices, setPickerMap, pickerState } from '../../src/ui/stop-picker.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
@@ -221,6 +221,70 @@ describe('browsing the map', () => {
       await vi.advanceTimersByTimeAsync(600);
       expect(asked).toEqual([[BIG_PLACE.id]]);
       expect(lastModel.browseQuays.map((/** @type {any} */ p) => p.id)).toEqual([BIG_PLACE.id]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('recording stops by clicking Quays on the map', () => {
+  /** @type {(kind: 'place' | 'quay', id: string) => void} */ let pick = () => {};
+  /** @type {() => void} */ let changed = () => {};
+  let moves = 0;
+  const rec = () => /** @type {HTMLElement} */ (document.getElementById('map-rec'));
+  const ctrlZ = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true, cancelable: true }));
+  /** Recording on, the map at zoom 16 over the big stop place, its Quays loaded. */
+  async function startRecording() {
+    setPickerServices({ nearby: async () => [hit(BIG_PLACE)], getStopPlaces: async () => [BIG_PLACE] });
+    setPickerMap({ show: (m) => { lastModel = m; }, onPick: (fn) => { pick = fn; }, view: () => ({ lat: 59.93, lon: 10.7, radiusKm: 0.3, zoom: 16 }),
+      onViewChange: (fn) => { changed = fn; }, zoomTo: () => { moves++; } });
+    moves = 0;
+    rec().click();
+    changed();
+    await vi.advanceTimersByTimeAsync(600);
+  }
+
+  it('shows Quays from zoom 16 with no stop cell selected, adds a clicked Quay at the bottom, and Ctrl+Z takes it back', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await startRecording();
+      expect(pickerState().recording).toBe(true);
+      expect(rec().classList.contains('on')).toBe(true);
+      expect(lastModel.browseQuays.map((/** @type {any} */ p) => p.id)).toEqual([BIG_PLACE.id]);
+      // the test line has no empty stop row: each Quay goes into a new row at the bottom, no Bruk
+      pick('quay', 'NSR:Quay:61');
+      pick('quay', 'NSR:Quay:62');
+      expect(grid.stops.map((s) => s.stopId)).toEqual(['NSR:Quay:7203', 'NSR:Quay:11972', 'NSR:Quay:11972', null, 'NSR:Quay:61', 'NSR:Quay:62']);
+      expect(grid.stops[4].name).toBe('Storsenter');
+      pick('place', BIG_PLACE.id); // a stop place: Nepos never picks a Quay for you
+      expect(grid.stops).toHaveLength(6);
+      ctrlZ();
+      expect(grid.stops).toHaveLength(5);
+      ctrlZ(); ctrlZ(); // only what this run recorded
+      expect(grid.stops).toHaveLength(4);
+      expect(moves).toBe(0); // the map never moves by itself
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      expect(pickerState().recording).toBe(false);
+      expect(rec().classList.contains('on')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('fills a new line\'s empty rows first, and Ctrl+Z empties a filled row again', async () => {
+    await newRoute();
+    await settle();
+    expect(grid.stops).toHaveLength(3);
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await startRecording();
+      for (const id of ['NSR:Quay:61', 'NSR:Quay:62', 'NSR:Quay:61', 'NSR:Quay:62']) pick('quay', id);
+      expect(grid.stops.map((s) => s.stopId)).toEqual(['NSR:Quay:61', 'NSR:Quay:62', 'NSR:Quay:61', 'NSR:Quay:62']);
+      ctrlZ(); ctrlZ();
+      expect(grid.stops.map((s) => s.stopId)).toEqual(['NSR:Quay:61', 'NSR:Quay:62', null]);
+      expect(grid.stops[2].name).toBe('');
+      rec().click(); // the button turns it off too
+      expect(pickerState().recording).toBe(false);
     } finally {
       vi.useRealTimers();
     }

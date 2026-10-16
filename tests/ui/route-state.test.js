@@ -8,7 +8,12 @@ describe('route state', () => {
     expect(rs.tableSets).toEqual([{ id: 1, name: '', uid: null }]);
     expect(rs.periods).toEqual([{ id: 2, setId: 1, calendarIds: [] }]);
     expect(gridKey(rs)).toBe('2:1');
-    expect(rs.grids['2:1']).toEqual({ stops: [], cols: [] });
+    // a new line starts with a small grid to type into: 3 stops by 3 trips (user test 2026-10-16)
+    expect(rs.grids['2:1'].stops).toHaveLength(3);
+    expect(rs.grids['2:1'].stops.every((/** @type {any} */ s) => s.stopId === null && s.name === '')).toBe(true);
+    expect(rs.grids['2:1'].cols).toHaveLength(3);
+    expect(rs.grids['2:1'].cols.map((/** @type {any} */ c) => c.cells)).toEqual([[null, null, null], [null, null, null], [null, null, null]]);
+    expect(new Set(rs.grids['2:1'].cols.map((/** @type {any} */ c) => c.uid)).size).toBe(3);
   });
 
   it('adds a period to the active set, copying calendars and (optionally) trips with new IDs', () => {
