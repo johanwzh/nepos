@@ -163,6 +163,10 @@ export async function runAction(action, trigger = null) {
 }
 
 // ─── Panels (lines, map) ───────────────────────────────────────────────────────
+const MAP_WIDTH_KEY = 'nepos.mapWidth';
+/** What the map pane leaves for the timetable when dragged wide. */
+const TIMETABLE_MIN = 400;
+
 const panels = {
   left: { el: null, rz: null, w: 180, open: true },
   right: { el: null, rz: null, w: 300, open: false },
@@ -265,6 +269,8 @@ export function initShell() {
   $('msg-close').addEventListener('click', () => $('msg-dlg').close());
 
   panels.right.open = false; // the map starts closed
+  // The map pane keeps its width in this browser (user test 2026-10-16)
+  try { const w = Number(localStorage.getItem(MAP_WIDTH_KEY)); if (w >= 120) panels.right.w = w; } catch { /* the default */ }
   panels.left.el = $('panel-left');
   panels.right.el = $('panel-right');
   panels.left.rz = $('rh-left');
@@ -291,12 +297,15 @@ export function initShell() {
     if (!drag) return;
     // The map panel ('right') sits left of the timetable, the lines panel ('left') to its right.
     const dx = drag.side === 'right' ? e.clientX - drag.x0 : drag.x0 - e.clientX;
-    panels[drag.side].w = Math.max(120, Math.min(480, drag.w0 + dx));
+    // The map may take most of the window (seeing more of it matters), leaving room for the timetable
+    const max = drag.side === 'right' ? Math.max(480, window.innerWidth - TIMETABLE_MIN) : 480;
+    panels[drag.side].w = Math.max(120, Math.min(max, drag.w0 + dx));
     panels[drag.side].el.style.width = `${panels[drag.side].w}px`;
   });
   document.addEventListener('mouseup', () => {
     if (!drag) return;
     $(`rh-${drag.side}`).classList.remove('active');
+    if (drag.side === 'right') { try { localStorage.setItem(MAP_WIDTH_KEY, String(panels.right.w)); } catch { /* not remembered */ } }
     drag = null;
   });
 

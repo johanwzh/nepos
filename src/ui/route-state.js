@@ -1,6 +1,11 @@
 // The route state's structure (timetable structure spec §1–§4): table sets, each with periods that
 // reference calendars, and one grid per period.
 const emptyGrid = () => ({ stops: [], cols: [] });
+/** A new line's first grid: 3 empty stops by 3 empty trips, ready to type into (user test 2026-10-16). @returns {{ stops: any[], cols: any[] }} */
+const starterGrid = () => ({
+  stops: [0, 1, 2].map(() => ({ name: '', stopId: null, bold: false, sep: false, isDwellArr: false, price: null })),
+  cols: [0, 1, 2].map(() => ({ dayCode: '', uid: crypto.randomUUID(), footnote: '', footnoteId: null, cells: [null, null, null] })),
+});
 
 /** @param {'no' | 'en' | string} _lang */
 export function newRouteState(_lang) {
@@ -9,7 +14,7 @@ export function newRouteState(_lang) {
     tableSets: [{ id: 1, name: '', uid: null }],
     periods: [{ id: 2, setId: 1, calendarIds: [] }],
     activeSet: 1, activePer: 2, nextId: 3,
-    grids: { '2:1': emptyGrid() },
+    grids: { '2:1': starterGrid() },
     kom: '', sek: [], footnotes: [],
   };
 }
@@ -92,7 +97,9 @@ export function deleteTableSet(rs) {
 export function periodHasData(rs, perId) {
   const per = rs.periods.find((/** @type {any} */ p) => p.id === perId);
   const g = per && rs.grids[`${per.id}:${per.setId}`];
-  return !!g && (g.stops.length > 0 || g.cols.length > 0);
+  // Content, not rows: a new line's empty 3×3 grid holds nothing
+  return !!g && (g.stops.some((/** @type {any} */ st) => st.stopId || String(st.name ?? '').trim())
+    || g.cols.some((/** @type {any} */ c) => c.cells.some((/** @type {any} */ x) => x != null)));
 }
 
 /** @param {any} rs @param {number} setId */
