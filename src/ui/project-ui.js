@@ -55,7 +55,7 @@ export async function openFs(fs, { handle = null, sample = false } = {}) {
     orgs: result.orgs, orgsError: result.orgsError,
     brandings: result.brandings, brandingsError: result.brandingsError,
     calendars: result.calendars, calendarsError: result.calendarsError,
-    routes: result.routes, activeRoute: null, routeState: null, dirty: false, drafts: new Map(), calendarDrafts: new Map(), calendarSelected: null, calendarMonth: '',
+    routes: result.routes, activeRoute: null, routeState: null, dirty: false, drafts: new Map(), calendarDrafts: new Map(), calendarSelected: null, resourceDrafts: new Map(), resourceSelected: null, calendarMonth: '',
     fileNameProblems: await findFileNameProblems(fs),
   });
   pendingNotes = [];
@@ -189,7 +189,7 @@ export async function pickAndOpen() {
 export async function closeProject() {
   if (!app.meta || !(await beforeLeave())) return;
   Object.assign(app, { fs: null, handle: null, meta: null, routes: [], orgs: [], orgsError: null, brandings: [], brandingsError: null,
-    calendars: [], calendarsError: null, activeRoute: null, routeState: null, dirty: false, drafts: new Map(), calendarDrafts: new Map(), calendarSelected: null, fileNameProblems: [], sampleMode: false });
+    calendars: [], calendarsError: null, activeRoute: null, routeState: null, dirty: false, drafts: new Map(), calendarDrafts: new Map(), calendarSelected: null, resourceDrafts: new Map(), resourceSelected: null, fileNameProblems: [], sampleMode: false });
   clearGrid();
   refreshAll();
 }

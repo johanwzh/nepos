@@ -543,6 +543,6 @@ export function initRouteEditor() {
   }, true);
   onBeforeViewChange(() => { commitFocusedField(); if (app.routeState) commitPending(); });
   window.addEventListener('beforeunload', (e) => {
-    if (unsavedCodes().length || unsavedCalendarCount()) { e.preventDefault(); e.returnValue = ''; }
+    if (unsavedCodes().length || unsavedCalendarCount() || app.resourceDrafts.size) { e.preventDefault(); e.returnValue = ''; }
   });
 }

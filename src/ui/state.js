@@ -40,8 +40,10 @@ export const app = {
   calendarDrafts: new Map(),
   /** @type {string | null} Linjer shows only the lines using this calendar */
   linesFilterCal: null,
-  /** @type {'orgs' | 'brandings'} the section shown on Ressurser */
-  assetsSection: 'brandings',
+  /** @type {string | null} the resource open in its editor on Ressurser (b:… a merkevare, o:… an organisation) */
+  resourceSelected: null,
+  /** @type {Map<string, any>} unsaved resource edits: a merkevare, or an organisation's aliases by NOG ID */
+  resourceDrafts: new Map(),
   /** @type {import('../project/open.js').RouteEntry[]} */
   routes: [],
   /** @type {{ fileName: string, problem: string, rename: string | null }[]} */

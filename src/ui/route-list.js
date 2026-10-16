@@ -7,9 +7,22 @@ import { selectRoute } from './route-editor.js';
 import { t } from '../i18n/strings.js';
 import { modeIconSvg } from './mode-icons.js';
 import { lineRows, sortLines, loadLineSort } from './line-rows.js';
+import { lineOrder } from './line-table.js';
 
 /** @param {string} s */
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/**
+ * The lines as Linjer shows them (its filter and order), so the navigator steps through the same set;
+ * the open line is always there. Before Linjer has been shown: every line, by code.
+ */
+function navigatorRows() {
+  const all = lineRows();
+  const order = lineOrder().filter((code) => all.some((r) => r.code === code));
+  if (!order.length) return sortLines(all, loadLineSort());
+  if (app.activeRoute && !order.includes(app.activeRoute) && all.some((r) => r.code === app.activeRoute)) order.unshift(app.activeRoute);
+  return order.map((code) => /** @type {any} */ (all.find((r) => r.code === code)));
+}
 
 export function renderRouteList() {
   const el = $('route-list');
@@ -22,7 +35,7 @@ export function renderRouteList() {
     el.innerHTML = `<div class="route-list-hint">${esc(t('noRoutes'))}</div>`;
     return;
   }
-  for (const r of sortLines(lineRows(), loadLineSort())) {
+  for (const r of navigatorRows()) {
     const div = document.createElement('div');
     div.className = `route-item${app.activeRoute === r.code ? ' active' : ''}${r.exported ? '' : ' rl-not-exported'}`;
     const problems = r.damaged ? 1 : r.errors + r.warnings;
