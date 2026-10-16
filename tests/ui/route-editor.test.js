@@ -302,7 +302,8 @@ describe('the line name (user test 2026-10-16)', () => {
     const item = /** @type {HTMLElement} */ (document.querySelector('.map-ctx button'));
     expect(item.textContent).toBe('Lag navn fra rutetabellen');
     item.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-    expect(app.routeState.routeName).toBe(`${grid.stops[0].name} – ${grid.stops[last].name}`);
+    // a plain hyphen, no spaces: what anyone can type (user test 2026-10-17)
+    expect(app.routeState.routeName).toBe(`${grid.stops[0].name}-${grid.stops[last].name}`);
     expect(name().value).toBe(app.routeState.routeName);
     expect(app.dirty).toBe(true);
   });
