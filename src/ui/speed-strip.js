@@ -45,21 +45,21 @@ function render() {
     `<line class="sp-base" x1="${PAD}" x2="${W - PAD}" y1="${BASE}" y2="${BASE}"></line>`];
   for (const leg of p.legs) {
     const x1 = /** @type {number} */ (xOf.get(leg.from)), x2 = /** @type {number} */ (xOf.get(leg.to));
-    const title = leg.kind === 'layover' ? t('spdLayover', leg.fromName, leg.minutes)
-      : leg.kmh == null ? `${leg.fromName} → ${leg.toName}: ${t(leg.kind === 'zero' ? 'spdZero' : 'spdNegative')}`
-      : t('spdLeg', leg.fromName, leg.toName, fmt(leg.km), leg.minutes, fmt(leg.kmh, 0));
+    // Short: the speed and the distance (the line itself shows the rest)
+    const title = leg.kind === 'layover' ? t('spdLayover', leg.minutes)
+      : leg.kmh == null ? t(leg.kind === 'zero' ? 'spdZero' : 'spdNegative')
+      : t('spdLeg', fmt(leg.kmh, 0), fmt(leg.km));
     const capped = leg.kmh != null && leg.kmh > p.limit * CAP;
     if (leg.kmh == null) {
-      // Flat: a layover (quiet), or a time that cannot be right (marked)
+      // Flat: a layover (grey), or a time that cannot be right (red)
       parts.push(`<g class="sp-leg ${leg.kind}" data-to="${leg.to}"><title>${esc(title)}</title><line x1="${x1}" x2="${x2}" y1="${BASE}" y2="${BASE}"></line>
-        <line class="sp-hit" x1="${x1}" x2="${x2}" y1="${BASE}" y2="${BASE}"></line>${leg.kind === 'layover' ? '' : `<text class="sp-cap" x="${(x1 + x2) / 2}" y="${BASE - 4}">!</text>`}</g>`);
+        <line class="sp-hit" x1="${x1}" x2="${x2}" y1="${BASE}" y2="${BASE}"></line></g>`);
       continue;
     }
     const h = height(leg.kmh);
     const d = `M ${x1} ${BASE} Q ${(x1 + x2) / 2} ${BASE - 2 * h} ${x2} ${BASE}`;
-    const label = x2 - x1 >= 34 && !capped ? `<text class="sp-num" x="${(x1 + x2) / 2}" y="${BASE - h - 3}">${fmt(leg.kmh, 0)}</text>` : '';
     parts.push(`<g class="sp-leg ${leg.kind}" data-to="${leg.to}"${capped ? ' data-capped="1"' : ''}><title>${esc(title)}</title>
-      <path d="${d}"></path><path class="sp-hit" d="${d}"></path>${label}${capped ? `<text class="sp-cap" x="${(x1 + x2) / 2}" y="${BASE - h - 2}">!</text>` : ''}</g>`);
+      <path d="${d}"></path><path class="sp-hit" d="${d}"></path></g>`);
   }
   const sel = selectedRowIndex();
   for (const pt of p.points) {

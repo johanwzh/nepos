@@ -70,13 +70,15 @@ describe('the speed profile under the timetable', () => {
     expect(Math.round(((xs[2] - xs[0]) / span) * 100)).toBe(92);
     const legs = [...strip().querySelectorAll('.sp-leg')];
     expect(legs.map((l) => l.getAttribute('class'))).toEqual(['sp-leg ok', 'sp-leg ok', 'sp-leg over']);
-    expect(legs[0].querySelector('title')?.textContent).toContain('km/t');
+    // short: the speed and the distance, nothing else; no numbers drawn over the arcs
+    expect(legs[0].querySelector('title')?.textContent).toBe('33 km/t · 1,1 km');
+    expect(strip().querySelector('.sp-num')).toBeNull();
   });
 
   it('caps an extreme arc instead of drawing it over the screen', () => {
     const over = /** @type {Element} */ (strip().querySelectorAll('.sp-leg')[2]);
     expect(over.getAttribute('data-capped')).toBe('1');
-    expect(strip().querySelector('.sp-cap')).not.toBeNull();
+    expect(strip().querySelector('.sp-cap')).toBeNull(); // red is enough: no mark above it
   });
 
   it('rings the selected row\'s stop, and a click on a leg selects the row it arrives at', () => {
