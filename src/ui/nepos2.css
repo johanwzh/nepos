@@ -593,7 +593,8 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .lv-head .sorted { color: var(--text); }
 .lv-head .sorted[data-dir="1"]::after { content: ' ▲'; font-size: 8px; }
 .lv-head .sorted[data-dir="-1"]::after { content: ' ▼'; font-size: 8px; }
-.lv-body { flex: 1; overflow-y: auto; }
+/* Rows are picked, not their text: Shift/Ctrl-click must not mark text too (Ctrl+C copies the rows) */
+.lv-body { flex: 1; overflow-y: auto; user-select: none; }
 .lv-row { padding: 8px 14px 6px 14px; border-bottom: 1px solid var(--border-lt); border-left: 4px solid transparent; cursor: default; }
 .lv-row:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
 .lv-row.selected { background: var(--accent-bg); }
