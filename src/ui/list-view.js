@@ -108,7 +108,7 @@ export function createListView(root, spec) {
       ({ selected: st.sel, anchor: st.anchor } = pick({ selected: st.sel, anchor: st.anchor }, shown, /** @type {string} */ (row.dataset.id),
         { shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey }));
       main.focus({ preventScroll: true });
-      render();
+      showSelection(); // the rows stay in place, so a double-click lands on the same row
     });
     body.addEventListener('dblclick', (e) => {
       const row = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('.lv-row'));
@@ -146,11 +146,12 @@ export function createListView(root, spec) {
         st.sel = new Set([shown[next]]);
         st.anchor = shown[next];
       }
-      render();
+      showSelection();
+      /** @type {any} */ ([...root.querySelectorAll('.lv-body .lv-row')].find((r) => /** @type {HTMLElement} */ (r).dataset.id === shown[next]))?.scrollIntoView?.({ block: 'nearest' });
     } else if (ctrl && e.key.toLowerCase() === 'a') {
       e.preventDefault();
       st.sel = new Set(shown);
-      render();
+      showSelection();
     } else if (ctrl && e.key.toLowerCase() === 'c') {
       e.preventDefault();
       void copySelected();
@@ -204,11 +205,17 @@ export function createListView(root, spec) {
       const id = spec.rowId(r);
       const days = spec.band ? spec.band(r) : null;
       const state = days ? `lv-${validityOf(days, now)}` : 'lv-noband';
-      return `<div class="lv-row ${state}${st.sel.has(id) ? ' selected' : ''} ${spec.rowClass?.(r) ?? ''}" data-id="${esc(id)}">
+      return `<div class="lv-row ${state} ${spec.rowClass?.(r) ?? ''}" data-id="${esc(id)}">
         <div class="lv-rec" style="grid-template-columns:${grid}">${spec.columns.map((c) => `<span class="lv-c lv-c-${c.key}">${c.cell(r)}</span>`).join('')}</div>
         ${days ? `<div class="lv-band">${validityBar(days, now)}</div>` : ''}</div>`;
     }).join('') || `<div class="lv-empty">${esc(spec.empty?.() ?? t('noMatches'))}</div>`;
     body.scrollTop = st.scroll;
+    showSelection();
+  }
+
+  /** Mark the selected rows and set the tools, without rebuilding the rows. */
+  function showSelection() {
+    root.querySelectorAll('.lv-body .lv-row').forEach((r) => r.classList.toggle('selected', st.sel.has(/** @type {string} */ (/** @type {HTMLElement} */ (r).dataset.id))));
     const sel = selected();
     for (const tool of spec.tools) {
       const b = /** @type {HTMLButtonElement | null} */ (root.querySelector(`#${tool.id}`));

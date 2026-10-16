@@ -56,6 +56,18 @@ beforeEach(() => {
 });
 
 describe('the shared list frame', () => {
+  it('keeps the clicked row in place on a click, so a real double-click lands on it and edits (same as Rediger)', () => {
+    const row = rows()[1];
+    row.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    // Chrome counts a double-click only when both clicks hit the same element
+    expect(rows()[1]).toBe(row);
+    expect(row.classList.contains('selected')).toBe(true);
+    expect(/** @type {HTMLButtonElement} */ (root.querySelector('#t-edit')).disabled).toBe(false);
+    row.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 2 }));
+    row.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(edits).toEqual(['b']);
+  });
+
   it('has a left pane with Finn and Verktøy apart, and sortable headers on top', () => {
     expect(root.querySelector('.lv-pane .lv-find')).not.toBeNull();
     expect(root.querySelector('.lv-pane .lv-tools')).not.toBeNull();
