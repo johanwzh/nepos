@@ -349,6 +349,8 @@ function renderViewed() {
   const c = state.candidate;
   const box = $('map-viewed');
   if (!box) return;
+  // Only while a stop cell is selected: that is when the map shows platforms to act on
+  /** @type {HTMLElement} */ (box.parentElement).hidden = state.row == null || state.recording;
   box.textContent = c ? `${c.stopPlaceName} · ${t('wsQuay', c.publicCode)}` : t('mapViewedNone');
   box.classList.toggle('none', !c);
   const can = !!c && state.row != null && !state.recording && !grid.readOnly;

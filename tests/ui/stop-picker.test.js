@@ -306,6 +306,16 @@ describe('the stop at the selected row, at the top of the map pane', () => {
     expect(card().textContent).toContain('ikke koblet til et stopp');
   });
 
+  it('shows Bruk / Legg til over / under only while a stop cell is selected', () => {
+    const bar = () => /** @type {HTMLElement} */ (document.querySelector('.map-viewbar'));
+    pickRow(3);
+    expect(bar().hidden).toBe(false);
+    const time = /** @type {HTMLElement} */ (document.querySelector('[data-r="0"][data-c="0"]'));
+    time.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    expect(bar().hidden).toBe(true);
+  });
+
   it('keeps Registrer stopp and Tøm stopp at the bottom of the pane', () => {
     const tools = /** @type {HTMLElement} */ (document.querySelector('#panel-right .map-tools'));
     expect(tools.querySelector('#map-rec')).not.toBeNull();

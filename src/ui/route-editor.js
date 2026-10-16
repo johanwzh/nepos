@@ -86,6 +86,35 @@ let saving = false;
  * Save the open route (backup first). Returns false when nothing was saved.
  * @param {HTMLButtonElement | null} [trigger]
  */
+/** @type {Set<string>} lines saved without a name in this session */
+const savedNameless = new Set();
+
+/**
+ * A name made from the timetable: the bold stops in order ("Oslo – Drammen – Gol"), or the first and
+ * last stop when fewer than two are bold.
+ */
+function nameFromStops() {
+  const rows = grid.stops.filter((s) => !s.isDwellArr && String(s.name ?? '').trim());
+  const bold = rows.filter((s) => s.bold);
+  const picked = bold.length >= 2 ? bold : rows.length ? [rows[0], rows[rows.length - 1]] : [];
+  return picked.map((s) => String(s.name).trim()).filter((n, i, all) => n !== all[i - 1]).join(' – ');
+}
+
+/** The name field's right-click menu. @param {MouseEvent} e @param {() => void} make */
+function nameMenu(e, make) {
+  document.querySelector('.map-ctx')?.remove();
+  const menu = document.createElement('div');
+  menu.className = 'map-ctx';
+  menu.style.left = `${e.clientX}px`;
+  menu.style.top = `${e.clientY}px`;
+  const b = document.createElement('button');
+  b.textContent = t('routeNameFromStops');
+  b.addEventListener('mousedown', (ev) => { ev.preventDefault(); ev.stopPropagation(); menu.remove(); make(); });
+  menu.appendChild(b);
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener('mousedown', () => menu.remove(), { once: true }), 0);
+}
+
 export async function saveRoute(trigger = null) {
   if (!app.fs || !app.meta || !app.activeRoute || !app.routeState || isReadOnly() || saving) return false;
   commitPending();
@@ -102,6 +131,8 @@ export async function saveRoute(trigger = null) {
   const ok = await runAction(() => writeRoute(fs, code, text), trigger).finally(() => { saving = false; });
   if (!ok) return false;
   app.routes = app.routes.map((r) => (r.code === code ? { code, text, status, issues } : r));
+  // A line saved without a name gets its name field outlined until it has one (user test 2026-10-16)
+  if (app.routeState?.routeName) savedNameless.delete(code); else savedNameless.add(code);
   await pruneProjectCopy();
   // Edits made while the file was being written are not in it: they stay unsaved.
   if (app.activeRoute === code && currentText() === text) {
@@ -251,7 +282,7 @@ function renderHeader() {
     ...(rs.brandingId && !brandKnown ? [`<option value="${esc(rs.brandingId)}" selected>⚠ ${esc(rs.brandingId)}</option>`] : [])].join('');
   hdr.innerHTML = `
     <div class="rh-parta">
-      <input class="rh-name" id="rh-name" value="${esc(rs.routeName)}" placeholder="${esc(t('routeNamePh'))}"${dis}>
+      <input class="rh-name${!rs.routeName && savedNameless.has(String(app.activeRoute)) ? ' missing' : ''}" id="rh-name" value="${esc(rs.routeName)}" title="${esc(t('routeNameHint'))}"${dis}>
       <div class="rh-row">
         <button class="rh-mode-tile${rs.mode ? '' : ' empty'}" id="rh-mode-tile" title="${esc(modeTitle)}"${dis}>${modeIconSvg(rs.mode, rs.submode)}</button>
         <input class="rh-public" id="rh-public" value="${esc(rs.publicCode)}" placeholder="${esc(t('publicCodePh'))}"${dis}>
@@ -267,7 +298,11 @@ function renderHeader() {
   for (const id of ['rh-name', 'rh-public', 'rh-private']) $(id).addEventListener('keydown', (/** @type {Event} */ e) => e.stopPropagation());
   renderOrgPickers();
   if (ro) return;
-  $('rh-name').addEventListener('change', () => { rs.routeName = $('rh-name').value.trim(); markDirty(); });
+  $('rh-name').addEventListener('change', () => { rs.routeName = $('rh-name').value.trim(); $('rh-name').classList.toggle('missing', !rs.routeName && savedNameless.has(String(app.activeRoute))); markDirty(); });
+  $('rh-name').addEventListener('contextmenu', (/** @type {MouseEvent} */ e) => {
+    e.preventDefault();
+    nameMenu(e, () => { rs.routeName = nameFromStops(); $('rh-name').value = rs.routeName; $('rh-name').classList.remove('missing'); markDirty(); });
+  });
   $('rh-public').addEventListener('change', () => { rs.publicCode = $('rh-public').value.trim(); markDirty(); });
   $('rh-private').addEventListener('change', () => { rs.privateCode = $('rh-private').value.trim(); markDirty(); });
   $('rh-branding').addEventListener('change', () => { rs.brandingId = $('rh-branding').value; markDirty(); renderHeader(); });
