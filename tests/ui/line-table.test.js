@@ -9,6 +9,7 @@ import { initGrid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
 import { initLineTable } from '../../src/ui/line-table.js';
+import { resetListStates } from '../../src/ui/list-view.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
@@ -23,13 +24,16 @@ const route = (/** @type {string} */ code, /** @type {string} */ pub, /** @type 
 
 const key = (/** @type {string} */ k, opts = {}) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...opts }));
 const table = () => /** @type {HTMLElement} */ (document.getElementById('line-table'));
-const rows = () => /** @type {HTMLElement[]} */ ([...document.querySelectorAll('#lt-body tr')]);
-const names = () => rows().map((r) => r.querySelector('.lt-name')?.textContent);
+const rows = () => /** @type {HTMLElement[]} */ ([...document.querySelectorAll('#line-table .lv-row')]);
+const names = () => rows().map((r) => r.querySelector('.lv-c-name')?.textContent);
 const btn = (/** @type {string} */ id) => /** @type {HTMLButtonElement} */ (document.getElementById(id));
+const field = (/** @type {string} */ id) => /** @type {HTMLInputElement & HTMLSelectElement} */ (document.getElementById(id));
+const click = (/** @type {HTMLElement} */ el, opts = {}) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, ...opts }));
 
 let wired = false;
 beforeEach(async () => {
-  localStorage.clear();
+  resetListStates();
+  app.linesFilterCal = null;
   loadAppMarkup();
   initShell();
   setPage('edit');
@@ -49,130 +53,113 @@ beforeEach(async () => {
   /** @type {any} */ (document.getElementById('check-dlg')).close();
 });
 
-describe('lines pane, maxi view', () => {
-  it('is its own page, Alt+2', () => {
+describe('Linjer on the shared list frame', () => {
+  it('is its own page (Alt+2), sorted by public code, with Finn and Verktøy in a left pane', () => {
     key('2', { altKey: true });
     expect(currentPage()).toBe('lines');
-    expect(document.getElementById('page-lines')?.contains(table())).toBe(true);
-    expect(table().hidden).toBe(false);
-    expect(names()).toEqual(['Alta', 'Bergen', 'Drammen']); // by public code, numerically
-  });
-
-  it('searches and sorts; the sort is remembered', () => {
-    setPage('lines');
-    const search = /** @type {HTMLInputElement} */ (document.getElementById('lt-search'));
-    search.value = 'berg';
-    search.dispatchEvent(new Event('input'));
-    expect(names()).toEqual(['Bergen']);
-    search.value = '';
-    search.dispatchEvent(new Event('input'));
-    /** @type {HTMLElement} */ (document.querySelector('#line-table th[data-col="name"]')).click();
+    expect(table().querySelector('.lv-pane .lv-find #lt-search')).not.toBeNull();
+    expect(table().querySelector('.lv-pane .lv-tools #lt-edit')).not.toBeNull();
     expect(names()).toEqual(['Alta', 'Bergen', 'Drammen']);
-    /** @type {HTMLElement} */ (document.querySelector('#line-table th[data-col="name"]')).click();
-    expect(names()).toEqual(['Drammen', 'Bergen', 'Alta']);
-    expect(JSON.parse(/** @type {string} */ (localStorage.getItem('nepos.lineSort')))).toEqual({ col: 'name', dir: -1 });
   });
 
-  it('selects by click, Shift-click and Ctrl-click; actions need a selection', () => {
+  it('shows each line as a record over its timeline band, with a validity strip; drafts are hatched', () => {
     setPage('lines');
-    expect(btn('lt-dup').disabled).toBe(true);
-    expect(btn('lt-del').disabled).toBe(true);
-    rows()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    rows()[2].dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
-    expect(rows().filter((r) => r.classList.contains('selected'))).toHaveLength(3);
-    rows()[1].dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true }));
-    expect(rows().filter((r) => r.classList.contains('selected'))).toHaveLength(2);
-    expect(btn('lt-dup').disabled).toBe(false);
-  });
-
-  it('filters on status and shows expired lines', () => {
-    setPage('lines');
-    const alta = /** @type {HTMLElement} */ (rows().find((r) => r.textContent?.includes('Alta')));
+    const alta = rows()[0];
+    expect(alta.querySelector('.lv-band .vb')).not.toBeNull();
+    expect(alta.classList.contains('lv-expired')).toBe(true);
     expect(alta.textContent).toContain('Utløpt');
-    const status = /** @type {HTMLSelectElement} */ (document.getElementById('lt-f-status'));
-    status.value = 'expired';
-    status.dispatchEvent(new Event('change'));
-    expect(names()).toEqual(['Alta']);
+    expect(rows()[1].classList.contains('lv-future')).toBe(true); // cal-new is 2099
   });
 
-  it('sets "Eksporter ikke" on the selected lines, unsaved', () => {
+  it('searches and sorts', () => {
     setPage('lines');
-    expect(document.querySelector('#line-table th[data-col="exported"]')?.textContent).toBe('Eksporter ikke');
-    expect(document.querySelector('#line-table th[data-col="public"]')?.textContent).toBe('Ikke åpen rute');
-    rows()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    const exp = /** @type {HTMLSelectElement} */ (document.getElementById('lt-exp'));
-    exp.value = '1';
-    exp.dispatchEvent(new Event('change'));
-    expect(app.drafts.get('b')?.exported).toBe(false);
-    expect(rows()[0].textContent).toContain('●');
-    expect(rows()[0].querySelector('.lt-flag-exp')?.textContent).toBe('✓');
+    field('lt-search').value = 'berg';
+    field('lt-search').dispatchEvent(new Event('input'));
+    expect(names()).toEqual(['Bergen']);
+    field('lt-search').value = '';
+    field('lt-search').dispatchEvent(new Event('input'));
+    /** @type {HTMLElement} */ (table().querySelector('.lv-head [data-col="name"]')).click();
+    /** @type {HTMLElement} */ (table().querySelector('.lv-head [data-col="name"]')).click();
+    expect(names()).toEqual(['Drammen', 'Bergen', 'Alta']);
   });
 
-  it('does not pass keys to the grid behind it (review I4)', async () => {
-    await selectRoute('a');
-    const cell = () => document.querySelector('[data-r="0"][data-c="0"]')?.textContent;
-    expect(cell()).toBe('0700');
+  it('selects by click and Shift-click; Rediger opens the line in the timetable', () => {
     setPage('lines');
-    rows()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    key('Delete');
-    key('Escape');
-    expect(cell()).toBe('0700');
+    expect(btn('lt-edit').disabled).toBe(true);
+    click(rows()[0]);
+    click(rows()[2], { shiftKey: true });
+    expect(rows().filter((r) => r.classList.contains('selected'))).toHaveLength(3);
+    click(rows()[1]);
+    btn('lt-edit').click();
+    expect(app.activeRoute).toBe('a');
+    expect(currentPage()).toBe('edit');
   });
 
-  it('opens a line in the timetable on double-click', () => {
+  it('opens a line on double-click', () => {
     setPage('lines');
     rows()[1].dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     expect(app.activeRoute).toBe('a');
     expect(currentPage()).toBe('edit');
   });
-});
 
-describe('lines pane language', () => {
-  it('follows a language switch, keeping the search', async () => {
+  it('filters on validity', () => {
     setPage('lines');
-    const search = /** @type {HTMLInputElement} */ (document.getElementById('lt-search'));
-    search.value = 'berg';
-    search.dispatchEvent(new Event('input'));
-    app.settings.lang = 'en';
-    refreshAll();
-    expect(document.querySelector('#line-table th[data-col="name"]')?.textContent).toBe('Name');
-    expect(document.getElementById('lt-dup')?.textContent).toBe('Duplicate');
-    expect(/** @type {HTMLInputElement} */ (document.getElementById('lt-search')).value).toBe('berg');
-    expect(names()).toEqual(['Bergen']);
-    app.settings.lang = 'no';
-    refreshAll();
-  });
-});
-
-describe('Linjer, unified with Kalendere', () => {
-  it('has "+ Ny linje", which opens the new line in the timetable', async () => {
-    setPage('lines');
-    /** @type {HTMLElement} */ (document.getElementById('lt-new')).click();
-    for (let i = 0; i < 6; i++) await Promise.resolve();
-    await new Promise((r) => setTimeout(r, 0));
-    expect(app.routes).toHaveLength(4);
-    expect(currentPage()).toBe('edit');
+    field('lt-f-status').value = 'expired';
+    field('lt-f-status').dispatchEvent(new Event('change'));
+    expect(names()).toEqual(['Alta']);
   });
 
-  it('shows each line\'s calendars as chips that open the calendar, and a validity bar', () => {
+  it('sets "Eksporter ikke" on the selected lines, unsaved, and then shows them as drafts', () => {
     setPage('lines');
-    const alta = /** @type {HTMLElement} */ (rows().find((r) => r.textContent?.includes('Alta')));
-    expect(alta.querySelector('.vb')).not.toBeNull();
-    const chip = /** @type {HTMLElement} */ (alta.querySelector('.lt-calchip'));
-    expect(chip.textContent).toBe('Gammel');
-    chip.click();
+    click(rows()[0]);
+    field('lt-exp').value = '1';
+    field('lt-exp').dispatchEvent(new Event('change'));
+    expect(app.drafts.get('b')?.exported).toBe(false);
+    expect(rows()[0].classList.contains('lv-draft')).toBe(true);
+    expect(rows()[0].textContent).toContain('Utkast');
+  });
+
+  it('looks the same after a visit to another page', () => {
+    setPage('lines');
+    field('lt-search').value = 'a';
+    field('lt-search').dispatchEvent(new Event('input'));
+    click(rows()[0]);
+    setPage('edit');
+    setPage('lines');
+    expect(field('lt-search').value).toBe('a');
+    expect(rows().filter((r) => r.classList.contains('selected'))).toHaveLength(1);
+  });
+
+  it('a calendar chip opens the calendar; the calendar filter can be removed', () => {
+    setPage('lines');
+    /** @type {HTMLElement} */ (rows()[0].querySelector('.lt-calchip')).click();
     expect(currentPage()).toBe('calendars');
     expect(app.calendarSelected).toBe('cal-old');
-  });
-
-  it('can be filtered to the lines that use one calendar, and the filter can be removed', () => {
     app.linesFilterCal = 'cal-old';
     setPage('lines');
     expect(names()).toEqual(['Alta']);
-    const chip = /** @type {HTMLElement} */ (document.getElementById('lt-f-cal'));
-    expect(chip.textContent).toContain('Gammel');
-    /** @type {HTMLElement} */ (chip.querySelector('button')).click();
-    expect(app.linesFilterCal).toBeNull();
+    /** @type {HTMLElement} */ (document.querySelector('#lt-f-cal button')).click();
     expect(names()).toHaveLength(3);
+  });
+
+  it('follows a language switch, keeping the search', () => {
+    setPage('lines');
+    field('lt-search').value = 'berg';
+    field('lt-search').dispatchEvent(new Event('input'));
+    app.settings.lang = 'en';
+    refreshAll();
+    expect(table().querySelector('.lv-head [data-col="name"]')?.textContent).toBe('Name');
+    expect(field('lt-search').value).toBe('berg');
+    app.settings.lang = 'no';
+    refreshAll();
+  });
+
+  it('"+ Ny linje" opens the new line in the timetable', async () => {
+    setPage('lines');
+    btn('lt-new').click();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(app.routes).toHaveLength(4);
+    expect(currentPage()).toBe('edit');
   });
 });

@@ -1,19 +1,20 @@
-// The Linjer page (Alt+3; was the lines pane's maxi view, navigation spec §3.2): a table of all
-// lines with search, sort, filters, multi-select and batch actions. Double-click opens a line.
-// Batch edits leave the lines unsaved (§2); "Lagre" saves the selected lines.
+// The Linjer page (Alt+2), on the shared list frame (list-view.js): every line with its timeline
+// band (all its valid days), a validity strip, and drafts (not exported) hatched. Finn: search and
+// filters; Verktøy: + Ny linje, Rediger, Dupliser, the batch edits, Slett. Rediger (or double-click,
+// or Enter) opens the line in Rediger rutetabell. Batch edits leave the lines unsaved (§2).
 import { app } from './state.js';
 import { $, onRefresh, onLinesChanged, showMessage, currentPage, setPage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { modeIconSvg } from './mode-icons.js';
 import { modeLabel } from '../i18n/modes.js';
-import { lineRows, sortLines, loadLineSort, saveLineSort } from './line-rows.js';
+import { lineRows } from './line-rows.js';
 import { editLines, setOrg, duplicateLines, deleteLines } from './line-batch.js';
-import { selectRoute, saveRoutes, newRoute } from './route-editor.js';
-import { validityBar, todayYmd } from './validity-bar.js';
-import { pick } from './selection.js';
-import { unionDays } from '../core/calendars.js';
+import { selectRoute, newRoute } from './route-editor.js';
 import { createOrgPicker } from './org-picker.js';
 import { replaceCalendarInState } from '../core/calendar-replace.js';
+import { unionDays } from '../core/calendars.js';
+import { createListView, validityOf } from './list-view.js';
+import { todayYmd } from './validity-bar.js';
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -21,37 +22,44 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 const day = (d) => (d ? `${d.slice(6, 8)}.${d.slice(4, 6)}.${d.slice(0, 4)}` : '');
 const lang = () => /** @type {'no' | 'en'} */ (app.settings.lang);
 
-const COLS = ['mode', 'code', 'name', 'branding', 'authority', 'operator', 'calendars', 'valid', 'bar', 'exported', 'public', 'status'];
-/** Columns that cannot be sorted on. */
-const NO_SORT = new Set(['calendars', 'bar']);
+/** @typedef {import('./line-rows.js').LineRow & { days: string[] }} Row */
 
-/** @type {Set<string>} */
-let selected = new Set();
-/** @type {string | null} */
-let anchor = null;
-/** @type {string[]} the codes in the order shown */
-let shown = [];
+/** Whole days from a to b (YYYYMMDD). @param {string} a @param {string} b */
+const daysBetween = (a, b) => Math.round((Date.UTC(+b.slice(0, 4), +b.slice(4, 6) - 1, +b.slice(6, 8)) - Date.UTC(+a.slice(0, 4), +a.slice(4, 6) - 1, +a.slice(6, 8))) / 86400000);
 
-/** @param {string} id */
-const field = (id) => /** @type {HTMLInputElement & HTMLSelectElement} */ (document.getElementById(id));
+/** @type {ReturnType<typeof createListView> | null} */
+let view = null;
 
+/** The line's valid days: every day of every calendar its table sets use. @param {string[]} ids */
+const daysOf = (ids) => unionDays(/** @type {any[]} */ (ids.map((id) => app.calendars.find((c) => c.id === id)).filter(Boolean)));
+const calName = (/** @type {string} */ id) => app.calendars.find((c) => c.id === id)?.name ?? `⚠ ${id}`;
 
-/** @param {import('./line-rows.js').LineRow} r */
-function matches(r) {
-  if (app.linesFilterCal && !r.calendarIds.includes(app.linesFilterCal)) return false;
-  const q = field('lt-search').value.trim().toLowerCase();
-  if (q && ![r.publicCode, r.name, r.brand, r.authority, r.operator].some((v) => v.toLowerCase().includes(q))) return false;
-  const mode = field('lt-f-mode').value, org = field('lt-f-org').value, status = field('lt-f-status').value;
-  const exp = field('lt-f-exp').value, pub = field('lt-f-pub').value;
-  if (mode && r.mode !== mode) return false;
-  if (org && r.authority !== org && r.operator !== org) return false;
-  if (status === 'problems' && !(r.errors || r.warnings || r.damaged)) return false;
-  if (status === 'expired' && !r.expired) return false;
-  if (status === 'unsaved' && !r.unsaved) return false;
-  if (exp && !r.exported !== (exp === '1')) return false; // '1' = Eksporter ikke is set
-  if (pub && !r.isPublic !== (pub === '1')) return false;
-  return true;
+/** @returns {Row[]} */
+function rows() {
+  return lineRows().map((r) => ({ ...r, days: daysOf(r.calendarIds) }));
 }
+
+/** The status tag: validity, draft, unsaved, problems. @param {Row} r */
+function status(r) {
+  const now = todayYmd();
+  const v = validityOf(r.days, now);
+  const text = v === 'valid' ? t('lvValid') : v === 'future' ? t('lvFrom', day(r.days[0])) : v === 'expired' ? t('lineExpired')
+    : v === 'none' ? t('calNoDates') : t('lvEndsIn', daysBetween(now, r.days[r.days.length - 1]));
+  const parts = [`<span class="lv-tag ${v}">${esc(text)}</span>`];
+  if (!r.exported) parts.push(`<span class="lv-tag draft">${esc(t('lvDraft'))}</span>`);
+  if (r.unsaved) parts.push('<span class="lv-unsaved">●</span>');
+  if (r.damaged) parts.push(`<span class="lv-problems bad">⚠ ${esc(t('statusDamaged'))}</span>`);
+  else if (r.errors || r.warnings) parts.push(`<span class="lv-problems${r.errors ? ' bad' : ''}">⚠ ${r.errors + r.warnings}</span>`);
+  return parts.join(' ');
+}
+
+/** @param {{ edited: string[], skipped: string[] }} result */
+function reportSkipped(result) {
+  if (result.skipped.length) showMessage(t('batchSkipped', result.skipped.join(', ')));
+}
+
+/** @param {string[]} sel @param {(rs: any) => void} fn */
+const batch = (sel, fn) => reportSkipped(editLines(sel, fn));
 
 /** @param {HTMLSelectElement} sel @param {[string, string][]} options value, label (the first is "all") */
 function fillSelect(sel, options) {
@@ -60,189 +68,171 @@ function fillSelect(sel, options) {
   sel.value = options.some(([v]) => v === keep) ? keep : options[0][0];
 }
 
-/** @param {import('./line-rows.js').LineRow} r */
-function statusText(r) {
-  return [r.unsaved ? '●' : '', r.damaged ? `⚠ ${t('statusDamaged')}` : r.errors || r.warnings ? `⚠ ${r.errors + r.warnings}` : '',
-    r.expired ? t('lineExpired') : ''].filter(Boolean).join(' ');
+/** Edit a line: open it in Rediger rutetabell. @param {string} code */
+function editLine(code) {
+  void selectRoute(code);
+  setPage('edit');
 }
 
-/** @param {{ edited: string[], skipped: string[] }} result */
-function reportSkipped(result) {
-  if (result.skipped.length) showMessage(t('batchSkipped', result.skipped.join(', ')));
-}
-
-/** @param {(rs: any) => void} fn */
-const batch = (fn) => reportSkipped(editLines([...selected], fn));
-
-function render() {
-  const el = $('line-table');
-  if (!el || !document.getElementById('lt-body')) return; // not built yet
-  if (builtLang !== app.settings.lang) buildChrome();
-  el.hidden = !app.meta;
-  if (el.hidden || currentPage() !== 'lines') return; // drawn while its page is shown
-  selected = new Set([...selected].filter((c) => app.routes.some((r) => r.code === c))); // lines can go away
-  const all = lineRows();
-  const sort = loadLineSort();
+/** @param {HTMLElement} box @param {Record<string, any>} state @param {() => void} changed */
+function renderFinders(box, state, changed) {
+  box.innerHTML = `
+    <input id="lt-search" type="search" autocomplete="off" placeholder="${esc(t('ltSearch'))}">
+    <span id="lt-f-cal"></span>
+    <select id="lt-f-mode"></select>
+    <select id="lt-f-org"></select>
+    <select id="lt-f-status"><option value="">${esc(t('ltAllStatus'))}</option><option value="valid">${esc(t('lvValid'))}</option><option value="future">${esc(t('lvFuture'))}</option>
+      <option value="ending">${esc(t('lvEnding'))}</option><option value="expired">${esc(t('lineExpired'))}</option><option value="problems">${esc(t('ltProblems'))}</option><option value="unsaved">${esc(t('unsavedDot'))}</option></select>
+    <select id="lt-f-exp"><option value="">${esc(t('flagExported'))}: ${esc(t('ltAll'))}</option><option value="1">${esc(t('flagExported'))}: ${esc(t('yes'))}</option><option value="0">${esc(t('flagExported'))}: ${esc(t('no'))}</option></select>
+    <select id="lt-f-pub"><option value="">${esc(t('flagPublic'))}: ${esc(t('ltAll'))}</option><option value="1">${esc(t('flagPublic'))}: ${esc(t('yes'))}</option><option value="0">${esc(t('flagPublic'))}: ${esc(t('no'))}</option></select>`;
+  const field = (/** @type {string} */ id) => /** @type {HTMLInputElement & HTMLSelectElement} */ (box.querySelector('#' + id));
+  const all = rows();
   fillSelect(field('lt-f-mode'), [['', t('ltAllModes')], ...[...new Set(all.map((r) => r.mode).filter(Boolean))].sort().map((m) => /** @type {[string, string]} */ ([m, modeLabel(m, lang())]))]);
   fillSelect(field('lt-f-org'), [['', t('ltAllOrgs')], ...[...new Set(all.flatMap((r) => [r.authority, r.operator]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'nb')).map((o) => /** @type {[string, string]} */ ([o, o]))]);
-  const rows = sortLines(all, sort).filter(matches);
-  shown = rows.map((r) => r.code);
-  const filterCal = app.linesFilterCal ? app.calendars.find((c) => c.id === app.linesFilterCal) : null;
-  $('lt-f-cal').innerHTML = app.linesFilterCal ? `<span class="lt-fchip">${esc(t('ltFilterCal', filterCal?.name ?? app.linesFilterCal))}<button title="${esc(t('ltFilterClear'))}">×</button></span>` : '';
-  $('lt-f-cal').querySelector('button')?.addEventListener('click', () => { app.linesFilterCal = null; render(); });
-  const now = todayYmd();
-  const calName = (/** @type {string} */ id) => app.calendars.find((c) => c.id === id)?.name ?? `⚠ ${id}`;
-  const lineDays = (/** @type {string[]} */ ids) => unionDays(/** @type {any[]} */ (ids.map((id) => app.calendars.find((c) => c.id === id)).filter(Boolean)));
+  for (const id of ['lt-search', 'lt-f-mode', 'lt-f-org', 'lt-f-status', 'lt-f-exp', 'lt-f-pub']) {
+    const el = field(id);
+    if (state[id] != null) el.value = state[id];
+    el.addEventListener(id === 'lt-search' ? 'input' : 'change', () => { state[id] = el.value; changed(); });
+  }
+}
 
-  el.querySelectorAll('th[data-col]').forEach((/** @type {Element} */ th) => {
-    const col = /** @type {HTMLElement} */ (th).dataset.col;
-    th.classList.toggle('sorted', col === sort.col);
-    th.setAttribute('data-dir', col === sort.col ? String(sort.dir) : '');
-  });
-  $('lt-body').innerHTML = rows.map((r) => `<tr data-code="${esc(r.code)}" class="${selected.has(r.code) ? 'selected' : ''}${r.code === app.activeRoute ? ' active' : ''}">
-    <td><input type="checkbox" class="lt-check"${selected.has(r.code) ? ' checked' : ''}></td>
-    <td title="${esc(modeLabel(r.mode, lang()))}">${modeIconSvg(r.mode, r.submode)}</td>
-    <td class="lt-code">${esc(r.publicCode)}</td><td class="lt-name">${esc(r.name)}</td><td>${esc(r.brand)}</td>
-    <td>${esc(r.authority)}</td><td>${esc(r.operator)}</td>
-    <td class="lt-cals">${r.calendarIds.map((id) => `<button class="lt-calchip" data-cal="${esc(id)}">${esc(calName(id))}</button>`).join('')}</td>
-    <td class="lt-valid">${r.firstDay ? `${day(r.firstDay)} – ${day(r.lastDay)}` : ''}</td>
-    <td class="lt-bar">${validityBar(lineDays(r.calendarIds), now)}</td>
-    <td class="lt-flag lt-flag-exp">${r.exported ? '' : '✓'}</td><td class="lt-flag lt-flag-pub">${r.isPublic ? '' : '✓'}</td>
-    <td class="lt-status${r.errors || r.damaged ? ' has-errors' : ''}">${esc(statusText(r))}</td></tr>`).join('')
-    || `<tr><td colspan="${COLS.length + 1}" class="lt-empty">${esc(t(app.routes.length ? 'noMatches' : 'ltNoLines'))}</td></tr>`;
+/** @param {Row} r @param {Record<string, any>} st */
+function matches(r, st) {
+  if (app.linesFilterCal && !r.calendarIds.includes(app.linesFilterCal)) return false;
+  const q = String(st['lt-search'] ?? '').trim().toLowerCase();
+  if (q && ![r.publicCode, r.name, r.brand, r.authority, r.operator, r.privateCode ?? ''].some((v) => String(v).toLowerCase().includes(q))) return false;
+  const mode = st['lt-f-mode'], org = st['lt-f-org'], stat = st['lt-f-status'], exp = st['lt-f-exp'], pub = st['lt-f-pub'];
+  if (mode && r.mode !== mode) return false;
+  if (org && r.authority !== org && r.operator !== org) return false;
+  const v = validityOf(r.days, todayYmd());
+  if (stat === 'problems' && !(r.errors || r.warnings || r.damaged)) return false;
+  if (stat === 'unsaved' && !r.unsaved) return false;
+  if (['valid', 'future', 'ending', 'expired'].includes(stat) && v !== stat) return false;
+  if (exp && !r.exported !== (exp === '1')) return false; // '1' = Eksporter ikke is set
+  if (pub && !r.isPublic !== (pub === '1')) return false;
+  return true;
+}
 
-  const none = !selected.size;
-  for (const id of ['lt-dup', 'lt-del', 'lt-save', 'lt-cal', 'lt-exp', 'lt-pub', 'lt-brand']) field(id).disabled = none;
-  $('lt-count').textContent = none ? '' : t('ltSelected', selected.size);
+/** The batch edits (the Verktøy section): organisations, merkevare, flags, calendar. @param {HTMLElement} box @param {string[]} sel */
+function renderBatch(box, sel) {
+  const none = !sel.length;
+  box.innerHTML = `<div class="lv-h lv-h-sub">${esc(t('lvBatch'))}</div><div id="lt-orgs" class="lt-orgs"></div>
+    <select id="lt-brand"${none ? ' disabled' : ''}></select>
+    <select id="lt-exp"${none ? ' disabled' : ''}><option value="">${esc(t('flagExported'))}…</option><option value="1">${esc(t('yes'))}</option><option value="0">${esc(t('no'))}</option></select>
+    <select id="lt-pub"${none ? ' disabled' : ''}><option value="">${esc(t('flagPublic'))}…</option><option value="1">${esc(t('yes'))}</option><option value="0">${esc(t('no'))}</option></select>
+    <button class="lv-tool" id="lt-cal"${none ? ' disabled' : ''}>${esc(t('ltReplaceCalendar'))}</button>`;
+  const field = (/** @type {string} */ id) => /** @type {HTMLInputElement & HTMLSelectElement} */ (box.querySelector('#' + id));
   fillSelect(field('lt-brand'), [['', t('ltSetBranding')], ['-', t('brandingNone')],
     ...[...app.brandings].sort((a, b) => a.name.localeCompare(b.name, 'nb')).map((b) => /** @type {[string, string]} */ ([b.id, b.name]))]);
-  const pickers = $('lt-orgs');
-  pickers.innerHTML = '';
+  const orgs = /** @type {HTMLElement} */ (box.querySelector('#lt-orgs'));
   for (const role of /** @type {('authority' | 'operator')[]} */ (['authority', 'operator'])) {
-    pickers.appendChild(createOrgPicker({ role, currentId: '', currentName: '', projectCompanies: app.orgs,
+    orgs.appendChild(createOrgPicker({ role, currentId: '', currentName: '', projectCompanies: app.orgs,
       registerCompanies: app.orgRegister?.companies ?? [], invalid: '', disabled: none,
-      onPick: (company) => batch((rs) => setOrg(rs, role, company)) }));
+      onPick: (company) => batch(sel, (rs) => setOrg(rs, role, company)) }));
   }
-}
-
-/** @param {MouseEvent} e */
-function onRowClick(e) {
-  const target = /** @type {HTMLElement} */ (e.target);
-  const chip = /** @type {HTMLElement | null} */ (target.closest('.lt-calchip'));
-  if (chip) { // a calendar: open it in Kalendere
-    app.calendarSelected = /** @type {string} */ (chip.dataset.cal);
-    app.calendarMonth = '';
-    setPage('calendars');
-    return;
-  }
-  const tr = /** @type {HTMLElement | null} */ (target.closest('tr[data-code]'));
-  if (!tr) return;
-  ({ selected, anchor } = pick({ selected, anchor }, shown, /** @type {string} */ (tr.dataset.code),
-    { shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey, toggle: target.classList.contains('lt-check') }));
-  render();
-}
-
-function openCalendarDialog() {
-  // The calendars the selected lines use now (unsaved edits included), to replace with another.
-  const used = new Set(lineRows().filter((r) => selected.has(r.code)).flatMap((r) => r.calendarIds));
-  const name = (/** @type {string} */ id) => app.calendars.find((c) => c.id === id)?.name ?? `⚠ ${id}`;
-  fillSelect(field('lt-cal-from'), [...used].map((id) => /** @type {[string, string]} */ ([id, name(id)])).concat(used.size ? [] : [['', '—']]));
-  fillSelect(field('lt-cal-to'), app.calendars.filter((c) => c.name.trim()).map((c) => /** @type {[string, string]} */ ([c.id, c.name])).concat(app.calendars.length ? [] : [['', '—']]));
-  /** @type {HTMLDialogElement} */ ($('lt-cal-dlg')).showModal();
-}
-
-/** The language the toolbar and headings were built in; rebuilt when it changes. */
-let builtLang = '';
-const FILTERS = ['lt-f-mode', 'lt-f-org', 'lt-f-status', 'lt-f-exp', 'lt-f-pub'];
-
-/** Build the toolbar, headings and dialog in the current language, keeping the search and filters. */
-function buildChrome() {
-  const kept = { search: field('lt-search')?.value ?? '', filters: FILTERS.map((id) => field(id)?.value ?? '') };
-  const el = $('line-table');
-  el.innerHTML = `
-    <div class="lt-bar">
-      <button class="pop-btn primary" id="lt-new">${esc(t('ltNewLine'))}</button>
-      <input id="lt-search" type="search" autocomplete="off" placeholder="${esc(t('ltSearch'))}">
-      <span id="lt-f-cal"></span>
-      <select id="lt-f-mode"></select><select id="lt-f-org"></select>
-      <select id="lt-f-status"><option value="">${esc(t('ltAllStatus'))}</option><option value="problems">${esc(t('ltProblems'))}</option><option value="expired">${esc(t('lineExpired'))}</option><option value="unsaved">${esc(t('unsavedDot'))}</option></select>
-      <select id="lt-f-exp"><option value="">${esc(t('flagExported'))}: ${esc(t('ltAll'))}</option><option value="1">${esc(t('flagExported'))}: ${esc(t('yes'))}</option><option value="0">${esc(t('flagExported'))}: ${esc(t('no'))}</option></select>
-      <select id="lt-f-pub"><option value="">${esc(t('flagPublic'))}: ${esc(t('ltAll'))}</option><option value="1">${esc(t('flagPublic'))}: ${esc(t('yes'))}</option><option value="0">${esc(t('flagPublic'))}: ${esc(t('no'))}</option></select>
-      <span class="lt-spacer"></span>
-    </div>
-    <div class="lt-bar lt-actions">
-      <span id="lt-count"></span>
-      <button class="pop-btn" id="lt-dup">${esc(t('ltDuplicate'))}</button>
-      <button class="pop-btn" id="lt-del">${esc(t('ltDelete'))}</button>
-      <span id="lt-orgs" class="lt-orgs"></span>
-      <select id="lt-brand"></select>
-      <select id="lt-exp"><option value="">${esc(t('flagExported'))}…</option><option value="1">${esc(t('yes'))}</option><option value="0">${esc(t('no'))}</option></select>
-      <select id="lt-pub"><option value="">${esc(t('flagPublic'))}…</option><option value="1">${esc(t('yes'))}</option><option value="0">${esc(t('no'))}</option></select>
-      <button class="pop-btn" id="lt-cal">${esc(t('ltReplaceCalendar'))}</button>
-      <button class="pop-btn primary" id="lt-save">${esc(t('ltSave'))}</button>
-    </div>
-    <div class="lt-scroll"><table class="lt-table">
-      <thead><tr><th></th>${COLS.map((c) => (NO_SORT.has(c) ? `<th>${esc(t(`ltCol_${c}`))}</th>` : `<th data-col="${c}">${esc(t(`ltCol_${c}`))}</th>`)).join('')}</tr></thead>
-      <tbody id="lt-body"></tbody>
-    </table></div>
-    <dialog class="n2-dialog" id="lt-cal-dlg">
-      <p><strong>${esc(t('ltReplaceCalendar'))}</strong></p>
-      <p><select id="lt-cal-from"></select> → <select id="lt-cal-to"></select></p>
-      <div class="n2-actions"><button class="pop-btn" id="lt-cal-cancel">${esc(t('cancel'))}</button><button class="pop-btn primary" id="lt-cal-ok">${esc(t('ok'))}</button></div>
-    </dialog>`;
-  builtLang = app.settings.lang;
-
-  field('lt-search').addEventListener('input', render);
-  for (const id of ['lt-f-mode', 'lt-f-org', 'lt-f-status', 'lt-f-exp', 'lt-f-pub']) field(id).addEventListener('change', render);
-  el.querySelectorAll('th[data-col]').forEach((/** @type {Element} */ th) => th.addEventListener('click', () => {
-    const col = /** @type {string} */ (/** @type {HTMLElement} */ (th).dataset.col);
-    const sort = loadLineSort();
-    saveLineSort({ col, dir: sort.col === col ? /** @type {1 | -1} */ (-sort.dir) : 1 });
-    render();
-  }));
-  $('lt-body').addEventListener('click', onRowClick);
-  $('lt-body').addEventListener('dblclick', (/** @type {MouseEvent} */ e) => {
-    const tr = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('tr[data-code]'));
-    if (!tr) return;
-    void selectRoute(/** @type {string} */ (tr.dataset.code));
-    setPage('edit');
-  });
-  $('lt-new').addEventListener('click', async () => { await newRoute(); setPage('edit'); });
-  $('lt-dup').addEventListener('click', async () => { const made = await duplicateLines([...selected]); if (made.length) selected = new Set(made); render(); });
-  $('lt-del').addEventListener('click', async () => { await deleteLines([...selected]); selected = new Set([...selected].filter((c) => app.routes.some((r) => r.code === c))); render(); });
-  $('lt-save').addEventListener('click', () => { void saveRoutes([...selected]); });
   for (const [id, prop] of /** @type {[string, string][]} */ ([['lt-exp', 'exported'], ['lt-pub', 'isPublic']])) {
     field(id).addEventListener('change', () => {
       const v = field(id).value;
-      field(id).value = '';
-      if (v) batch((rs) => { rs[prop] = v !== '1'; }); // '1' sets the flag: not exported / not public
+      if (v) batch(sel, (rs) => { rs[prop] = v !== '1'; }); // '1' sets the flag: not exported / not public
     });
   }
   field('lt-brand').addEventListener('change', () => {
     const v = field('lt-brand').value;
-    if (v) batch((rs) => { rs.brandingId = v === '-' ? '' : v; });
+    if (v) batch(sel, (rs) => { rs.brandingId = v === '-' ? '' : v; });
   });
-  $('lt-cal').addEventListener('click', openCalendarDialog);
-  $('lt-cal-cancel').addEventListener('click', () => /** @type {HTMLDialogElement} */ ($('lt-cal-dlg')).close());
-  $('lt-cal-ok').addEventListener('click', () => {
-    const from = field('lt-cal-from').value, to = field('lt-cal-to').value;
-    /** @type {HTMLDialogElement} */ ($('lt-cal-dlg')).close();
-    if (from && to && from !== to) batch((rs) => { replaceCalendarInState(rs, from, to); });
-  });
-  field('lt-search').value = kept.search;
-  FILTERS.forEach((id, i) => {
-    const sel = field(id);
-    const v = kept.filters[i];
-    if (v && ![...sel.options].some((o) => o.value === v)) sel.add(new Option(v, v)); // refilled on render
-    sel.value = v;
-  });
+  field('lt-cal').addEventListener('click', () => openCalendarDialog(sel));
+}
+
+/** @param {string[]} sel */
+function openCalendarDialog(sel) {
+  const used = new Set(lineRows().filter((r) => sel.includes(r.code)).flatMap((r) => r.calendarIds));
+  const field = (/** @type {string} */ id) => /** @type {HTMLSelectElement} */ ($(id));
+  fillSelect(field('lt-cal-from'), [...used].map((id) => /** @type {[string, string]} */ ([id, calName(id)])).concat(used.size ? [] : [['', '—']]));
+  fillSelect(field('lt-cal-to'), app.calendars.filter((c) => c.name.trim()).map((c) => /** @type {[string, string]} */ ([c.id, c.name])).concat(app.calendars.length ? [] : [['', '—']]));
+  const dlg = /** @type {HTMLDialogElement} */ ($('lt-cal-dlg'));
+  dlg.dataset.sel = JSON.stringify(sel);
+  dlg.showModal();
+}
+
+/** The lines in the order the list shows them (the editor's navigator follows this). */
+export function lineOrder() {
+  return view ? view.order() : [];
+}
+
+function render() {
+  const el = $('line-table');
+  if (!el || !view) return;
+  el.hidden = !app.meta;
+  if (el.hidden || currentPage() !== 'lines') return; // drawn while its page is shown
+  view.render();
+  // the calendar filter (from Kalendere's "Brukes av"), shown as a removable chip in Finn
+  const chip = /** @type {HTMLElement | null} */ (el.querySelector('#lt-f-cal'));
+  if (chip) {
+    chip.innerHTML = app.linesFilterCal ? `<span class="lt-fchip">${esc(t('ltFilterCal', calName(app.linesFilterCal)))}<button title="${esc(t('ltFilterClear'))}">×</button></span>` : '';
+    chip.querySelector('button')?.addEventListener('click', () => { app.linesFilterCal = null; render(); });
+  }
 }
 
 export function initLineTable() {
-  if (field('lt-search')) field('lt-search').value = ''; // a fresh page
-  buildChrome();
-  selected = new Set();
-  anchor = null;
+  const el = $('line-table');
+  el.innerHTML = '';
+  delete el.dataset.lv;
+  view = createListView(el, {
+    id: 'lines',
+    defaultSort: { col: 'code', dir: 1 },
+    rows,
+    rowId: (r) => r.code,
+    columns: [
+      { key: 'mode', label: () => t('ltCol_mode'), width: '28px', sort: (r) => r.mode, cell: (r) => modeIconSvg(r.mode, r.submode), text: (r) => r.mode },
+      { key: 'code', label: () => t('ltCol_code'), width: '64px', sort: (r) => r.publicCode, cell: (r) => esc(r.publicCode), text: (r) => r.publicCode },
+      { key: 'name', label: () => t('ltCol_name'), width: 'minmax(0, 2fr)', sort: (r) => r.name, cell: (r) => esc(r.name), text: (r) => r.name },
+      { key: 'branding', label: () => t('ltCol_branding'), sort: (r) => r.brand, cell: (r) => esc(r.brand), text: (r) => r.brand },
+      { key: 'authority', label: () => t('ltCol_authority'), sort: (r) => r.authority, cell: (r) => esc(r.authority), text: (r) => r.authority },
+      { key: 'operator', label: () => t('ltCol_operator'), sort: (r) => r.operator, cell: (r) => esc(r.operator), text: (r) => r.operator },
+      { key: 'calendars', label: () => t('ltCol_calendars'), width: 'minmax(0, 1.2fr)', cell: (r) => r.calendarIds.map((id) => `<button class="lt-calchip" data-cal="${esc(id)}">${esc(calName(id))}</button>`).join(''), text: (r) => r.calendarIds.map(calName).join(', ') },
+      { key: 'valid', label: () => t('ltCol_valid'), width: '170px', sort: (r) => r.days[0] ?? '', cell: (r) => (r.days.length ? `${day(r.days[0])} – ${day(r.days[r.days.length - 1])}` : ''), text: (r) => (r.days.length ? `${day(r.days[0])} – ${day(r.days[r.days.length - 1])}` : '') },
+      { key: 'status', label: () => t('ltCol_status'), width: '220px', sort: (r) => `${r.exported ? 1 : 0}${validityOf(r.days, todayYmd())}`, cell: status },
+    ],
+    band: (r) => r.days,
+    rowClass: (r) => (r.exported ? '' : 'lv-draft'),
+    renderFinders,
+    matches,
+    tools: [
+      { id: 'lt-new', label: () => t('ltNewLine'), run: () => { void newRoute().then(() => setPage('edit')); } },
+      { id: 'lt-edit', label: () => t('lvEdit'), enabled: (sel) => sel.length === 1, run: (sel) => editLine(sel[0]) },
+      { id: 'lt-dup', label: () => t('ltDuplicate'), enabled: (sel) => sel.length > 0, run: async (sel) => { const made = await duplicateLines(sel); if (made.length) view?.select(made); render(); } },
+      { id: 'lt-del', label: () => t('ltDelete'), danger: true, enabled: (sel) => sel.length > 0, run: async (sel) => { await deleteLines(sel); render(); } },
+    ],
+    renderExtraTools: renderBatch,
+    onEdit: editLine,
+    onDelete: async (sel) => { await deleteLines(sel); render(); },
+    empty: () => t(app.routes.length ? 'noMatches' : 'ltNoLines'),
+  });
+  // a calendar chip opens that calendar in Kalendere
+  el.addEventListener('click', (e) => {
+    const chip = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('.lt-calchip'));
+    if (!chip) return;
+    app.calendarSelected = /** @type {string} */ (chip.dataset.cal);
+    app.calendarMonth = '';
+    setPage('calendars');
+  });
+  // the "Bytt kalender" window
+  if (!document.getElementById('lt-cal-dlg')) {
+    const dlg = document.createElement('dialog');
+    dlg.className = 'n2-dialog';
+    dlg.id = 'lt-cal-dlg';
+    dlg.innerHTML = `<p><strong>${esc(t('ltReplaceCalendar'))}</strong></p><p><select id="lt-cal-from"></select> → <select id="lt-cal-to"></select></p>
+      <div class="n2-actions"><button class="pop-btn" id="lt-cal-cancel">${esc(t('cancel'))}</button><button class="pop-btn primary" id="lt-cal-ok">${esc(t('ok'))}</button></div>`;
+    document.body.appendChild(dlg);
+    $('lt-cal-cancel').addEventListener('click', () => dlg.close());
+    $('lt-cal-ok').addEventListener('click', () => {
+      const from = /** @type {HTMLSelectElement} */ ($('lt-cal-from')).value, to = /** @type {HTMLSelectElement} */ ($('lt-cal-to')).value;
+      const sel = JSON.parse(dlg.dataset.sel ?? '[]');
+      dlg.close();
+      if (from && to && from !== to) batch(sel, (rs) => { replaceCalendarInState(rs, from, to); });
+    });
+  }
   onRefresh(render);
   onLinesChanged(render);
 }
+

@@ -8,7 +8,7 @@ import { findRole, orgRole } from '../core/orgs.js';
 import { normalizeRanges } from '../core/calendars.js';
 
 /**
- * @typedef {{ code: string, name: string, publicCode: string, label: string, mode: string, submode: string,
+ * @typedef {{ code: string, name: string, publicCode: string, privateCode: string, label: string, mode: string, submode: string,
  *   brandingId: string, brand: string, authority: string, operator: string, orgIds: string[], calendarIds: string[],
  *   firstDay: string, lastDay: string, expired: boolean, exported: boolean, isPublic: boolean,
  *   unsaved: boolean, damaged: boolean, errors: number, warnings: number }} LineRow
@@ -70,7 +70,7 @@ export function lineRows() {
     const authId = s.orgIds.find((id) => orgRole(id) === 'authority' || findRole(app.orgs, id)?.role === 'authority') ?? '';
     const operId = s.orgIds.find((id) => id !== authId) ?? '';
     return {
-      code: r.code, name: s.name, publicCode: s.publicCode,
+      code: r.code, name: s.name, publicCode: s.publicCode, privateCode: s.privateCode ?? '',
       // What the lines pane shows: public code, branding, private code, name, ID — the first there is.
       label: s.publicCode || brand || s.privateCode || s.name || r.code,
       mode: s.mode, submode: s.submode, brandingId: s.brandingId, brand,
