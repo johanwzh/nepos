@@ -4,6 +4,7 @@
 import { app } from './state.js';
 import { t, setLang } from '../i18n/strings.js';
 import { writeSettings } from '../project/settings.js';
+import { renderEnturSettings } from './entur-settings.js';
 import { writeProjectName } from '../project/meta.js';
 import { VERSION } from '../version.js';
 import { applyColourTheme } from './theme.js';
@@ -125,6 +126,7 @@ export function openProjectSettings() {
   if (!app.meta) return;
   $('pop-name').value = app.meta.name ?? '';
   $('pop-codespace').textContent = app.meta.codespace ?? '';
+  renderEnturSettings();
   $('settings-dlg').showModal();
   $('pop-name').focus();
 }

@@ -627,3 +627,37 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 #line-table { position: absolute; inset: 0; }
 .cl-list-host { flex: 1; min-height: 0; }
 #calendars-body .ce-switch { border-right: none; border-left: 1px solid var(--border-lt); order: 2; }
+/* Ressurser: merkevarer and organisations in one list; their editors with the navigator on the right */
+#page-assets { flex-direction: column; }
+.resources-body { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg-panel); }
+.resources-body > .assets-coming, .resources-body > .rs-problems { padding: 12px 16px; margin: 0; }
+.rs-list-host { flex: 1; min-height: 0; position: relative; }
+.rs-list-host > .lv { position: absolute; inset: 0; }
+.re-editor { display: flex; flex: 1; min-height: 0; }
+.re-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 16px 20px 0; overflow: auto; font-size: 13px; }
+.re-title { font-size: 18px; font-weight: 600; padding-bottom: 8px; border-bottom: 1px solid var(--border-lt); }
+.re-row { display: grid; grid-template-columns: 110px minmax(0, 420px) auto; gap: 10px; align-items: center; }
+.re-label { color: var(--text-m); font-size: 12px; }
+.re-static { color: var(--text-m); font-size: 12px; overflow-wrap: anywhere; }
+.re-facts { display: flex; flex-direction: column; gap: 2px; color: var(--text-m); }
+.re-role { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--border-lt); border-radius: 6px; max-width: 680px; }
+.re-role-h { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-m); }
+.re-note { color: var(--text-m); font-size: 12px; }
+.re-in.invalid, .re-alias.invalid { outline: 2px solid var(--g-dec-c); outline-offset: -1px; }
+.re-main .ce-foot { margin-top: auto; }
+.re-del { margin-right: auto; }
+.re-nav { width: 210px; flex: none; border-left: 1px solid var(--border-lt); padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.re-back { margin-bottom: 8px; align-self: flex-start; border: none !important; background: transparent !important; color: var(--accent); padding: 4px 6px; }
+.re-item { padding: 6px 8px; border-radius: 4px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.re-item:hover { background: var(--bg-raised); }
+.re-item.active { background: var(--accent-bg); font-weight: 600; }
+.re-item.re-org { color: var(--text-m); }
+.re-item.re-org.active { color: var(--text); }
+/* Prosjektinnstillinger → Entur-tilkobling */
+#settings-dlg .set-section { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border-lt); font-size: 12px; }
+#settings-dlg .set-h { font-weight: 600; margin-bottom: 6px; }
+#settings-dlg .org-status { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+#settings-dlg .org-status.bad { color: var(--g-dec-c); }
+#settings-dlg .org-missing-note { color: var(--text-m); margin: 8px 0; }
+#settings-dlg .set-urls { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; color: var(--text-m); }
+#settings-dlg .set-urls dd { margin: 0; font-family: ui-monospace, monospace; font-size: 11px; overflow-wrap: anywhere; }

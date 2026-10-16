@@ -599,28 +599,6 @@ button, select, input, textarea {
    ASSETS PAGE
    ═══════════════════════════════════════════════════════════════════ */
 #page-assets { flex-direction: row; }
-.assets-nav {
-    flex: none;
-    width: 150px;
-    background: var(--bg-raised);
-    border-right: 1px solid var(--border);
-    padding: 8px 0;
-}
-.assets-nav-item {
-    padding: 8px 14px;
-    cursor: pointer;
-    font-size: 12px;
-    color: var(--text-m);
-    border-left: 2px solid transparent;
-    white-space: nowrap;
-}
-.assets-nav-item:hover { color: var(--text); background: var(--bg-panel); }
-.assets-nav-item.active {
-    color: var(--accent);
-    border-left-color: var(--accent);
-    background: var(--accent-bg);
-    font-weight: 500;
-}
 .assets-body {
     flex: 1;
     overflow-y: auto;

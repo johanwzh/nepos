@@ -5,7 +5,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { loadAppMarkup, flush } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
 import { initShell, setPage, currentPage } from '../../src/ui/shell.js';
-import { initAssetsNav } from '../../src/ui/assets-nav.js';
 import { initCalendarsPage } from '../../src/ui/calendars-page.js';
 import { createMemoryFs, readText } from '../../src/project/fs.js';
 import { writeCalendars } from '../../src/project/calendars-store.js';
@@ -32,7 +31,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-10-16T12:00:00'));
   loadAppMarkup();
-  initShell(); initAssetsNav(); initCalendarsPage(); initCalendarReplace();
+  initShell(); initCalendarsPage(); initCalendarReplace();
   fs = createMemoryFs();
   Object.assign(app, { fs, meta: { formatVersion: 1, name: 'X', codespace: 'TST' }, calendars: [], calendarsError: null, calendarDrafts: new Map(),
     calendarSelected: null, calendarMonth: '', routes: [], orgs: [], orgsError: null, drafts: new Map(), activeRoute: null, routeState: null });
@@ -46,7 +45,7 @@ describe('Kalendere: a page of its own', () => {
     setPage('edit');
     key('3');
     expect(currentPage()).toBe('calendars');
-    expect([...document.querySelectorAll('.assets-nav-item')].map((e) => /** @type {HTMLElement} */ (e).dataset.sec)).toEqual(['brandings', 'orgs']);
+    expect(document.getElementById('resources-body')).not.toBeNull();
   });
 
   it('lists the calendars with their span, days, use and status; double-click opens one', () => {
