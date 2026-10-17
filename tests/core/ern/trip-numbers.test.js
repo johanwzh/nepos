@@ -51,3 +51,19 @@ describe('trip numbers', () => {
     expect(other.slice(0, other.indexOf('</ServiceJourney>'))).not.toContain('<PrivateCode>');
   });
 });
+
+describe('train numbers (rail): the NeTEx TrainNumber, not PrivateCode (user test 2026-10-17)', () => {
+  it('writes a TrainNumber in the TimetableFrame and a TrainNumberRef on the ServiceJourney', () => {
+    const rs = parseERN(ERN('rail', ['#TTL;-1;0;;10;Tognummer;0', '#TTC;0;;10;4401;64']));
+    const line = buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs }], orgs: [], brandings: [],
+      calendars: [{ id: 'h1', name: 'Vår', ranges: [['20260101', '20260630']] }], timestamp: '2026-10-14T00:00:00' })[1].xml;
+    const sj = line.slice(line.indexOf(`<ServiceJourney id="TST:ServiceJourney:${U[0]}"`));
+    const body = sj.slice(0, sj.indexOf('</ServiceJourney>'));
+    expect(body).not.toContain('<PrivateCode>');
+    const ref = /<TrainNumberRef ref="([^"]+)"/.exec(body)?.[1];
+    expect(ref).toMatch(/^TST:TrainNumber:/);
+    expect(body.indexOf('<trainNumbers>')).toBeLessThan(body.indexOf('<passingTimes>'));
+    expect(line).toMatch(new RegExp(`<TrainNumber id="${ref}" version="1">\\s*<ForAdvertisement>4401</ForAdvertisement>`));
+    expect(line.indexOf('<trainNumbers>', line.indexOf('</vehicleJourneys>'))).toBeGreaterThan(0); // in the TimetableFrame, after the journeys
+  });
+});
