@@ -3,3 +3,5 @@ dist/
 *.log
 user-tests*/
 .superpowers/
+# backups of the work folder
+*.zip

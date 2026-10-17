@@ -22,7 +22,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
     // Notes (#FOT) and dates (#UNT) for the current table, put on their column or cell once it is built
     let _pendingNotes = [];
     // The trip-number row (#TTL) of the current table; numbers (#TTC) go on the columns
-    let _tripRow = false;
+    let _tripRow = false, _ttlRow = NaN;
 
     function finalizeTAB() {
         if (!curPer || !curSet || !inTab) return;
@@ -63,7 +63,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         rs.grids[key] = grid;
         cols=[]; rows=[]; cellMap={};
         _pendingNotes = [];
-        _tripRow = false;
+        _tripRow = false; _ttlRow = NaN;
     }
 
     for (const rawLine of text.split(/\r?\n/)) {
@@ -194,9 +194,11 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 break;
             }
             case '#TTL':
-                if (parseInt(f[1]) === -1) _tripRow = true;
+                _ttlRow = parseInt(f[1]);
+                if (_ttlRow === -1) _tripRow = true;
                 break;
             case '#TTC': {
+                if (_ttlRow !== -1) break; // a cell of another info row
                 const col = cols.find((c) => c.x === parseInt(f[1]));
                 if (col && f[4]) col.tripNo = f[4];
                 break;

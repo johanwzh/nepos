@@ -419,3 +419,66 @@ describe('the right-click menu stays inside the window (user test 2026-10-17)', 
     expect(parseInt(menu.style.left, 10) + 220).toBeLessThanOrEqual(800);
   });
 });
+
+describe('loose ends (2026-10-17)', () => {
+  beforeEach(() => { initGrid(); });
+  const at = (/** @type {number} */ r, /** @type {number} */ c) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="${c}"]`));
+
+  it('after copying at an interval, the marker stays on the column it was on', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [
+      { dayCode: 'D', note: '', dates: [], cells: [cell('0700'), cell('0745')] },
+      { dayCode: 'D', note: '', dates: [], cells: [cell('1000'), cell('1045')] }] }, { readOnly: false });
+    at(0, 1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById('gc-copy-int')).click();
+    const box = /** @type {HTMLElement} */ (document.querySelector('.float-box'));
+    const set = (/** @type {string} */ sel, /** @type {string} */ v) => { const i = /** @type {HTMLInputElement} */ (box.querySelector(sel)); i.value = v; i.dispatchEvent(new Event('input')); };
+    set('.cpi-interval', '30');
+    set('.cpi-last', '08:00');
+    /** @type {HTMLElement} */ (box.querySelector('.fb-apply')).click();
+    press('ArrowDown'); press('ArrowUp'); // back on the time grid
+    expect(/** @type {HTMLElement} */ (document.querySelector('.is-anchor')).textContent).toBe('1000');
+  });
+
+  it('a drag released outside the window stops at the next move', () => {
+    at(0, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    at(1, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true, buttons: 0 })); // no button held any more
+    expect(at(1, 0).classList.contains('in-range')).toBe(false);
+  });
+
+  it('a trip number in a read-only table cannot be selected', () => {
+    loadGrid({ stops: [stop('A')], cols: [{ dayCode: 'D', note: '', dates: [], tripNo: '5', cells: [cell('0700')] }], tripRow: true }, { readOnly: true });
+    /** @type {HTMLElement} */ (document.querySelector('.g-tn-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    expect(document.querySelector('.tn-sel')).toBeNull();
+  });
+});
+
+describe('copying a stop between rows with Ctrl+C / Ctrl+V (user test 2026-10-17)', () => {
+  beforeEach(() => { initGrid(); });
+  const nameCell = (/** @type {number} */ ri) => /** @type {HTMLElement} */ (document.querySelector(`.g-td-name[data-ri="${ri}"]`));
+
+  it('copies the stop (its Quay ID) and pastes it on another row', async () => {
+    /** @type {string[]} */ const wrote = [];
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (/** @type {string} */ s) => { wrote.push(s); } }, configurable: true });
+    nameCell(0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    press('c', { ctrlKey: true });
+    await new Promise((res) => setTimeout(res, 0));
+    expect(wrote).toEqual(['NSR:Quay:7203']);
+    nameCell(1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    const ev = new Event('paste', { bubbles: true, cancelable: true });
+    /** @type {any} */ (ev).clipboardData = { getData: () => 'NSR:Quay:7203' };
+    document.dispatchEvent(ev);
+    expect(grid.stops[1]).toMatchObject({ stopId: 'NSR:Quay:7203', name: 'Sentrum' });
+    expect(grid.cols[0].cells[1].time).toBe('0745'); // the times are not touched
+  });
+
+  it('pastes nothing that is not a Quay ID into a stop', () => {
+    nameCell(1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    const ev = new Event('paste', { bubbles: true, cancelable: true });
+    /** @type {any} */ (ev).clipboardData = { getData: () => '0800' };
+    document.dispatchEvent(ev);
+    expect(grid.stops[1].stopId).toBe(null);
+    expect(grid.cols[0].cells[1].time).toBe('0745');
+  });
+});

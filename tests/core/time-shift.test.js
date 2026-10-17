@@ -50,3 +50,13 @@ describe('only the selected cells (user test 2026-10-17)', () => {
     expect(times(col)).toEqual(['2357', '0015', '0020']); // the first time wrapped round on its own day
   });
 });
+
+describe('loose ends (2026-10-17)', () => {
+  it('changes the cells in place, so a note box holding a cell still holds the right one', () => {
+    const col = { dayCode: 'D', cells: [cell('0700')] };
+    const before = col.cells[0];
+    shiftTimes(col, [0], 2);
+    expect(col.cells[0]).toBe(before);
+    expect(before.time).toBe('0702');
+  });
+});
