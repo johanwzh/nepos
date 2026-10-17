@@ -4,7 +4,7 @@
 import { app } from './state.js';
 import { t } from '../i18n/strings.js';
 import { grid, selectedColumn, selectedStopRow } from './grid.js';
-import { unionDays, columnDays } from '../core/calendars.js';
+import { unionDays, tripDays } from '../core/calendars.js';
 import { timelineModel, TIMELINE_DAYS } from '../core/timeline.js';
 
 /** @param {string} s */
@@ -29,7 +29,7 @@ export function renderTimeline() {
   const periodDays = unionDays(/** @type {any[]} */ (cals));
   const ci = selectedColumn();
   const col = grid.active && selectedStopRow() == null ? grid.cols[ci] : null;
-  const colDays = col ? columnDays(periodDays, col.dayCode ?? '') : null;
+  const colDays = col ? tripDays(periodDays, col) : null; // its day code, then its own dates
   const m = timelineModel({ periodDays, colDays, today: todayYmd() });
 
   const label = { valid: t('tlValid'), column: t('tlColumn'), removed: t('tlRemoved') };

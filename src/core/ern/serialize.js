@@ -5,7 +5,6 @@ import { ernCodeFor } from '../modes.js';
 /** A column's stable ID (#UID). */
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function fnByIdInRs(rs, id) { return id!=null ? (rs.footnotes||[]).find(f=>f.id===id)||null : null; }
 
 /**
  * Write a route state as ERN text (CRLF line endings).
@@ -17,7 +16,8 @@ function fnByIdInRs(rs, id) { return id!=null ? (rs.footnotes||[]).find(f=>f.id=
 export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     const d   = delivery || {};
     const nl  = '\r\n';
-    const esc = s => (s||'').replace(/;/g, ','); // semicolons not allowed in fields
+    // Semicolons are not allowed in fields, and a line break would end the record: both are replaced
+    const esc = s => (s||'').replace(/;/g, ',').replace(/\s*[\r\n]+\s*/g, ' ');
     const lines = [];
 
     lines.push(`#LEV;${esc(d.name)};${esc(d.codespace)}`);
@@ -71,6 +71,14 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
                 lines.push(`#UID;${col.uid}`);
             });
 
+            // The trip-number row (#TTL once, #TTC per column with a number): a train number for rail
+            // (bit 6 = 64), a trip number otherwise (bit 7 = 128). NeTEx: the ServiceJourney's PrivateCode.
+            if (grid.tripRow) {
+                const rail = rs.mode === 'rail';
+                lines.push(`#TTL;-1;0;;10;${rail ? 'Tognummer' : 'Turnummer'};0`);
+                grid.cols.forEach((col, ci) => { if (col.tripNo) lines.push(`#TTC;${ci};;10;${esc(col.tripNo)};${rail ? 64 : 128}`); });
+            }
+
             grid.stops.forEach((stop, ri) => {
                 const sid = (stop.stopId != null) ? stop.stopId : -1;
                 const pNep = (stop.price != null && stop.price >= 0) ? stop.price.toFixed(6) : '-1';
@@ -93,30 +101,18 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
                 });
             });
 
-            // FOT (text footnotes) and UNT (date exceptions) — written after all TRL/TRC
-            // Column-level (y=-1)
-            grid.cols.forEach((col, ci) => {
-                const fn = fnByIdInRs(rs, col.footnoteId);
-                if (!fn) return;
-                if (fn.text) lines.push(`#FOT;${ci};-1;${esc(fn.text)};0`);
-                fn.exceptions?.forEach(ex => {
-                    const pmu = ex.runsOnly ? 8192 : 16384;
-                    lines.push(`#UNT;${ci};-1;${ex.from||''};${pmu};${ex.to||''};${pmu};0;0;`);
-                });
-            });
-            // Cell-level
-            grid.stops.forEach((stop, ri) => {
-                grid.cols.forEach((col, ci) => {
-                    const cell = col.cells[ri];
-                    const fn = fnByIdInRs(rs, cell?.footnoteId);
-                    if (!fn) return;
-                    if (fn.text) lines.push(`#FOT;${ci};${ri};${esc(fn.text)};0`);
-                    fn.exceptions?.forEach(ex => {
-                        const pmu = ex.runsOnly ? 8192 : 16384;
-                        lines.push(`#UNT;${ci};${ri};${ex.from||''};${pmu};${ex.to||''};${pmu};0;0;`);
-                    });
-                });
-            });
+            // FOT (notes) and UNT (dates) — written after all TRL/TRC; a column's are row -1
+            /** @param {any} at @param {number} ci @param {number} ri */
+            const notesOf = (at, ci, ri) => {
+                if (at?.note) lines.push(`#FOT;${ci};${ri};${esc(at.note)};0`);
+                for (const d of at?.dates ?? []) {
+                    if (!d.from && !d.to) continue;
+                    const pmu = d.on ? 8192 : 16384;
+                    lines.push(`#UNT;${ci};${ri};${d.from||''};${pmu};${d.to||''};${pmu};0;0;`);
+                }
+            };
+            grid.cols.forEach((col, ci) => notesOf(col, ci, -1));
+            grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => notesOf(col.cells[ri], ci, ri)));
         }
     }
 

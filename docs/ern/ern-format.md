@@ -692,8 +692,7 @@ it starts on.
 NeTEx: each trip is a `ServiceJourney` without day types, plus one `DatedServiceJourney` per
 operating day (`ServiceJourneyRef` + `OperatingDayRef`), with derived UUID v5 IDs. The shared file's
 `ServiceCalendarFrame` holds only `OperatingDay`s (`<cs>:OperatingDay:YYYY-MM-DD`). No `DayType`,
-`DayTypeAssignment` or `OperatingPeriod` is written. Footnote date exceptions (`#UNT`) are kept in
-the file but not exported.
+`DayTypeAssignment` or `OperatingPeriod` is written. A column's own dates (`#UNT` on the column) are applied: its days are the period's days filtered by the day code, plus the days it adds (whatever the day code says), minus the days it removes (removing wins). `#UNT` on a single cell is kept but not exported yet (the export check warns).
 
 ### #LEV — Leveranse (Delivery) *Nepos*
 
@@ -767,11 +766,25 @@ text. `:` is safe because the field delimiter is `;`.
 For bits 10 and 11, fields 4 and 5 (delta X / delta Y) give the target cell as a column and row
 offset relative to this cell, within the same `#TAB`.
 
-### #UNT period mask as used by Nepos
+### #FOT and #UNT — notes and dates *Nepos 2*
 
-Nepos writes the same value in both PMU fields: `8192` (bit 13, "runs only" in this period) or
-`16384` (bit 14, "does not run" in this period). A runs-only exception whose from and to dates
-are equal is exported to NeTEx as a specific operating date.
+A column (row `-1`) or a cell has its own note (`#FOT`, text only) and its own dates (`#UNT`,
+inclusive ranges). They are separate: there is no shared footnote that ties a text to dates. Nepos
+writes the same value in both PMU fields: `8192` (bit 13, the trip also runs on these days) or
+`16384` (bit 14, it does not run on these days). A `#UNT` without dates is not written.
+
+### #TTL and #TTC — the trip-number row *Nepos 2*
+
+```
+#TTL;-1;0;;10;Turnummer;0
+#TTC;column_index;;10;number;128
+```
+
+Written after the table's `#TUR` records when the trip-number row is shown. `#TTL` row index `-1`
+(the row sits between the day codes and the first stop); its label follows the line's mode
+("Tognummer" for rail, "Turnummer" otherwise). One `#TTC` per column that has a number; flags `64`
+(bit 6, train number) for rail, `128` (bit 7, trip number) otherwise. NeTEx: the ServiceJourney's
+`PrivateCode`. Other `#TTL`/`#TTC` uses (info rows) are not read.
 
 ---
 

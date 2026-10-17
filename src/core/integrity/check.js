@@ -12,7 +12,7 @@ import { isValidMode } from '../modes.js';
  */
 
 // Records the Nepos parser reads and writes back. Anything else would be dropped on save.
-const KNOWN = new Set(['#LEV', '#RUT', '#SEK', '#CUR', '#TRA', '#KOM', '#PER', '#TAB', '#TUR', '#TRL', '#TRC', '#FOT', '#UNT', '#MOD', '#BRA', '#EKS', '#OFF', '#UID', '#KAL']);
+const KNOWN = new Set(['#LEV', '#RUT', '#SEK', '#CUR', '#TRA', '#KOM', '#PER', '#TAB', '#TUR', '#TRL', '#TRC', '#FOT', '#UNT', '#TTL', '#TTC', '#MOD', '#BRA', '#EKS', '#OFF', '#UID', '#KAL']);
 
 /**
  * @param {string} text decoded route file
@@ -85,6 +85,8 @@ export function checkRouteFile(text) {
         if (f[4] && f[4] !== '0') damaged('unsupported-field', n, '#TRC hour offset');
         break;
       case '#FOT':
+      case '#TTL':
+      case '#TTC':
         if (!haveTUR) damaged('out-of-order', n, rec);
         break;
       case '#MOD':

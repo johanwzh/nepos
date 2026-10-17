@@ -1,7 +1,7 @@
 // NeTEx data collection, ported from Nepos 1.5.7 (nepos.html lines 5818–6040).
 // Pure: takes the parsed routes and stop database as input instead of reading app state.
 import { journeyStops, routeHasTrips } from './journeys.js';
-import { unionDays, columnDays, isoDate } from '../calendars.js';
+import { unionDays, tripDays, isoDate } from '../calendars.js';
 import { findRole, exportOrgId, netexOrgId } from '../orgs.js';
 
 /**
@@ -69,7 +69,7 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
                 for (const call of calls) if (!usedStops.has(call.stopId)) usedStops.set(call.stopId, { id: call.stopId, name: call.name });
                 const last = calls[calls.length-1];
                 destDisps.set(last.stopId, last.name);
-                const days = columnDays(periodDays, col.dayCode);
+                const days = tripDays(periodDays, col); // the day code, then the trip's own dates
                 colDays.set(col, days);
                 for (const d of days) if (!operDays.has(d)) operDays.set(d, { ntxId: `${cs}:OperatingDay:${isoDate(d)}`, date: isoDate(d) });
             }

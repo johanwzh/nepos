@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { cellToMins, minsToCell, interpolateTime, extrapolateTime, speedUnit, toKmh } from '../../src/core/interpolate.js';
+import { cellToMins, minsToCell, interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan } from '../../src/core/interpolate.js';
 
 const stop = (/** @type {string} */ id, extra = {}) => ({ name: id, stopId: id, bold: false, sep: false, isDwellArr: false, price: null, ...extra });
-const cell = (/** @type {string} */ time, dayOffset = 0) => ({ time, dayOffset, suffix: '', interchange: null, footnoteId: null });
+const cell = (/** @type {string} */ time, dayOffset = 0) => ({ time, dayOffset, suffix: '', interchange: null });
 // Stops on a north-south line; 0.09° latitude ≈ 10 km.
 const POS = { A: [10, 60], B: [10, 60.09], C: [10, 60.27], D: [10, 60.36] };
 const posOf = (/** @type {any} */ s) => /** @type {any} */ (POS)[s.stopId] ?? null;
@@ -96,5 +96,39 @@ describe('speed units', () => {
     expect(speedUnit(3)).toBe('kmh');   // train
     expect(toKmh(10, 'knots')).toBeCloseTo(18.52);
     expect(toKmh(50, 'kmh')).toBe(50);
+  });
+});
+
+describe('interpolateSpan (a column, or the part of it that is selected)', () => {
+  const times = (/** @type {any[]} */ fills) => fills.map((x) => `${x.ri}:${x.cell.time}`);
+
+  it('fills every empty cell between the times inside the span, by distance', () => {
+    const grid = { stops: [stop('A'), stop('B'), stop('C'), stop('D')], cols: [{ cells: [cell('0700'), null, null, cell('0730')] }] };
+    expect(times(interpolateSpan(grid, 0, 0, 3, posOf))).toEqual(['1:0708', '2:0723']);
+  });
+
+  it('only between times inside the span: nothing before the first or after the last one', () => {
+    const grid = { stops: [stop('A'), stop('B'), stop('C'), stop('D')], cols: [{ cells: [null, cell('0710'), null, cell('0730')] }] };
+    expect(times(interpolateSpan(grid, 0, 0, 2, posOf))).toEqual([]); // 0730 is outside the span
+    expect(times(interpolateSpan(grid, 0, 0, 3, posOf))).toEqual(['2:0723']); // C is 20 of the 30 km from B to D
+  });
+
+  it('leaves | cells alone but counts their stops, and splits evenly where a position is missing', () => {
+    const grid = { stops: [stop('A'), stop('X'), stop('Y'), stop('D')], cols: [{ cells: [cell('0700'), cell('|'), null, cell('0730')] }] };
+    expect(times(interpolateSpan(grid, 0, 0, 3, posOf))).toEqual(['2:0720']);
+  });
+
+  it('crosses midnight, and never gives a time earlier than the one before', () => {
+    const grid = { stops: [stop('A'), stop('B'), stop('C'), stop('D')], cols: [{ cells: [cell('2350'), null, null, cell('0020', 1)] }] };
+    const fills = interpolateSpan(grid, 0, 0, 3, posOf);
+    expect(fills.map((x) => [x.cell.time, x.cell.dayOffset])).toEqual([['2358', 0], ['0013', 1]]); // 7.5 and 22.5 of 30 minutes, rounded
+  });
+});
+
+describe('review fixes', () => {
+  it('a dwell stop gets one time on both rows, also when the stretch is split evenly', () => {
+    const grid = { stops: [stop('A'), stop('X', { isDwellArr: true }), stop('X'), stop('D')], cols: [{ cells: [cell('0800'), null, null, cell('0830')] }] };
+    const fills = interpolateSpan(grid, 0, 0, 3, posOf); // X has no position: even split, the dwell pair counts once
+    expect(fills.map((x) => `${x.ri}:${x.cell.time}`)).toEqual(['1:0815', '2:0815']);
   });
 });

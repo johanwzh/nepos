@@ -9,7 +9,7 @@ import { newRouteState } from '../../src/ui/route-state.js';
 import { quayInfo } from '../../src/ui/quays.js';
 
 const stop = (/** @type {string} */ id) => ({ name: id, stopId: id, bold: false, sep: false, isDwellArr: false, price: null });
-const cell = (/** @type {string} */ time) => ({ time, dayOffset: 0, suffix: '', interchange: null, footnoteId: null });
+const cell = (/** @type {string} */ time) => ({ time, dayOffset: 0, suffix: '', interchange: null });
 const at = (/** @type {number} */ lat) => ({ quayId: '', publicCode: '', stopPlaceId: '', stopPlaceName: '', mode: 'bus', lat, lon: 10 });
 const menu = async (/** @type {number} */ r, /** @type {number} */ c) => {
   document.querySelector(`[data-r="${r}"][data-c="${c}"]`)?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
@@ -47,17 +47,19 @@ describe('filling times', () => {
     expect(grid.cols[0].cells[2]?.time).toBe('0720'); // 20 km at 60 km/h from 0700 (row 1 is empty, row 0 is the anchor)
   });
 
-  it('offers nothing for a cell that already has a time', async () => {
+  it('from a cell that has a time, interpolates its whole column, never changing a typed time; extrapolation is hidden', async () => {
     await menu(0, 0);
-    for (const id of ['gc-interp', 'gc-extrap-fwd', 'gc-extrap-bwd']) expect(item(id).classList.contains('dis')).toBe(true);
+    for (const id of ['gc-extrap-fwd', 'gc-extrap-bwd']) expect(item(id).style.display).toBe('none');
     item('gc-interp').click();
-    expect(grid.cols[0].cells[0]?.time).toBe('0700');
+    expect(grid.cols[0].cells.map((c) => c?.time)).toEqual(['0700', '0710', '0720']);
   });
 
-  it('offers no interpolation without positions', async () => {
+  it('splits evenly by stops when positions are missing', async () => {
     quayInfo.clear();
     await menu(1, 0);
-    expect(item('gc-interp').classList.contains('dis')).toBe(true);
+    expect(item('gc-interp').classList.contains('dis')).toBe(false);
+    item('gc-interp').click();
+    expect(grid.cols[0].cells[1]?.time).toBe('0710');
   });
 
   it('tells the map after every render', () => {

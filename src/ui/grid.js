@@ -11,14 +11,23 @@ import { parseCellInput } from '../core/grid-input.js';
 import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
-import { fnById, footnoteSummary, openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
-import { interpolateTime, extrapolateTime, speedUnit, toKmh } from '../core/interpolate.js';
+import { openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
+import { interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan } from '../core/interpolate.js';
+import { openDayCodeHelper } from './day-code-helper.js';
+import { sortColumns } from '../core/column-sort.js';
+import { openCopyInterval } from './copy-interval.js';
+import { openTimeNudge } from './time-nudge.js';
+import { shiftTimes } from '../core/time-shift.js';
+import { openDatePicker } from './date-picker.js';
+import { unionDays, tripDays } from '../core/calendars.js';
 import { app } from './state.js';
 
 /** The grid being edited: one period × direction of the open route. */
 export const grid = {
   /** @type {any[]} */ stops: [],
   /** @type {any[]} */ cols: [],
+  /** the trip-number row is shown (a column's number is col.tripNo) */
+  tripRow: false,
   active: false,
   readOnly: false,
 };
@@ -49,7 +58,11 @@ function posOf(stop) {
 let ancR = 0, ancC = 0, endR = 0, endC = 0;
 let editing = false, editBuf = '';
 let inDC = false, dcCol = 0, dcEdit = false, dcBuf = '';
+/** The trip-number row: selected (its column is dcCol), being typed in */
+let inTN = false, tnEdit = false, tnBuf = '';
 let inStopCol = false;
+/** A mouse button is held after a click in a time cell: moving over cells extends the range */
+let dragging = false;
 let ctxR = -1, ctxC = -1, ctxIsStop = false, ctxStopRow = -1, ctxDCCol = -1;
 let ixMode = false;
 /** @type {{ r: number, c: number, type: string } | null} */
@@ -60,7 +73,7 @@ const $ = (/** @type {string} */ id) => /** @type {any} */ (document.getElementB
 const clampR = (/** @type {number} */ r) => Math.max(0, Math.min(grid.stops.length - 1, r));
 const clampC = (/** @type {number} */ c) => Math.max(0, Math.min(grid.cols.length - 1, c));
 const esc = (/** @type {string} */ s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const snapshot = () => JSON.stringify([grid.stops, grid.cols]);
+const snapshot = () => JSON.stringify([grid.stops, grid.cols, grid.tripRow]);
 
 /** Index of the selected column (for the footnote preview and, in Plan 3, the map). */
 export function selectedColumn() {
@@ -75,6 +88,8 @@ export function selectedColumn() {
 export function loadGrid(data, { readOnly = false } = {}) {
   grid.stops = JSON.parse(JSON.stringify(data.stops));
   grid.cols = JSON.parse(JSON.stringify(data.cols));
+  grid.tripRow = !!(/** @type {any} */ (data).tripRow);
+  inTN = false; tnEdit = false; tnBuf = '';
   // Every column on screen has its stable ID, so saving twice writes the same text.
   for (const col of grid.cols) if (!col.uid) col.uid = crypto.randomUUID();
   grid.readOnly = readOnly;
@@ -93,12 +108,13 @@ export function commitPending() {
   if (!grid.active || grid.readOnly) return;
   if (editing) commitEdit();
   if (dcEdit) commitDayCode();
+  if (tnEdit) commitTripNo();
   if (inStopEdit) commitStopEdit();
 }
 
 /** A copy of the grid's data, for storing in the route state. */
 export function gridData() {
-  return { stops: JSON.parse(JSON.stringify(grid.stops)), cols: JSON.parse(JSON.stringify(grid.cols)) };
+  return { stops: JSON.parse(JSON.stringify(grid.stops)), cols: JSON.parse(JSON.stringify(grid.cols)), tripRow: grid.tripRow };
 }
 
 /** The grid now matches what is saved. */
@@ -108,6 +124,7 @@ export function markGridClean() {
 
 export function clearGrid() {
   grid.active = false;
+  grid.tripRow = false;
   grid.stops = [];
   grid.cols = [];
   $('tbl-wrap').style.display = 'none';
@@ -342,6 +359,7 @@ export function render() {
   renderInsertRow(tbl);
   renderFootRow(tbl);
   renderDayCodeRow(tbl);
+  if (grid.tripRow) renderTripRow(tbl);
   grid.stops.forEach((stop, ri) => renderStopRow(tbl, stop, ri, linked));
   renderBottomRow(tbl);
   updateFnPreview(inDC ? { type: 'col', ri: 0, ci: dcCol } : inStopCol ? null : { type: 'cell', ri: ancR, ci: ancC });
@@ -385,15 +403,88 @@ function renderFootRow(tbl) {
   grid.cols.forEach((col, ci) => {
     const td = tr.insertCell();
     td.className = 'cw-time';
-    if (col.footnoteId != null) {
+    // The column's note and dates, as small marks over the day code
+    if (col.note) {
       const dot = document.createElement('span');
       dot.className = 'fn-col-dot';
-      dot.title = footnoteSummary(fnById(col.footnoteId));
+      dot.title = col.note;
       dot.addEventListener('click', () => openFnEditor('col', 0, ci));
       td.appendChild(dot);
     }
+    if (col.dates?.length) {
+      const mark = document.createElement('span');
+      mark.className = 'dt-col-mark';
+      mark.textContent = '📅';
+      mark.title = datesSummary(col.dates);
+      mark.addEventListener('click', () => openDates('col', 0, ci));
+      td.appendChild(mark);
+    }
   });
   tr.insertCell().className = 'cw-ins g-add';
+}
+
+/** The trip-number row, between the day codes and the first stop. @param {HTMLTableElement} tbl */
+function renderTripRow(tbl) {
+  const tr = tbl.insertRow();
+  tr.className = 'g-row-tn';
+  tr.insertCell().className = 'cw-ins g-sticky0';
+  const th = tr.insertCell();
+  th.className = 'cw-name g-sticky1 g-tn-label';
+  th.textContent = t(app.routeState?.mode === 'rail' ? 'tnTrain' : 'tnTrip');
+  grid.cols.forEach((col, ci) => {
+    const td = tr.insertCell();
+    td.className = 'cw-time g-tn-cell';
+    td.dataset.ci = String(ci);
+    const isSel = inTN && ci === dcCol && !tnEdit, isEdit = inTN && ci === dcCol && tnEdit;
+    if (isEdit) { td.classList.add('tn-edit'); td.innerHTML = esc(tnBuf) + '▌'; }
+    else { td.textContent = col.tripNo ?? ''; if (isSel) td.classList.add('tn-sel'); }
+    td.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      commitEdit(); commitDayCode(); commitStopEdit(); commitTripNo();
+      inStopCol = false; inDC = false; inTN = true; dcCol = ci; tnEdit = false;
+      render();
+    });
+  });
+  tr.insertCell().className = 'cw-ins g-add';
+}
+
+function commitTripNo() {
+  if (!tnEdit) return;
+  tnEdit = false;
+  if (grid.cols[dcCol]) grid.cols[dcCol].tripNo = tnBuf.trim();
+  tnBuf = '';
+  render();
+}
+
+/** @param {KeyboardEvent} e */
+function keyTripNav(e) {
+  switch (e.key) {
+    case 'ArrowLeft': e.preventDefault(); dcCol = Math.max(0, dcCol - 1); render(); break;
+    case 'ArrowRight': e.preventDefault(); dcCol = Math.min(grid.cols.length - 1, dcCol + 1); render(); break;
+    case 'ArrowUp': e.preventDefault(); inTN = false; inDC = true; render(); break;
+    case 'ArrowDown': e.preventDefault(); inTN = false; inDC = true; downFromDayCodes(true); break;
+    case 'Escape': e.preventDefault(); inTN = false; render(); break;
+    case 'Enter': case 'F2': e.preventDefault(); tnEdit = true; tnBuf = grid.cols[dcCol]?.tripNo ?? ''; render(); break;
+    case 'Delete': case 'Backspace': e.preventDefault(); if (grid.cols[dcCol]) grid.cols[dcCol].tripNo = ''; render(); break;
+    default:
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); tnEdit = true; tnBuf = e.key; render(); }
+  }
+}
+
+/** @param {KeyboardEvent} e */
+function keyTripEdit(e) {
+  switch (e.key) {
+    case 'Escape': e.preventDefault(); tnEdit = false; tnBuf = ''; render(); break;
+    case 'Enter': e.preventDefault(); commitTripNo(); break;
+    case 'Backspace': e.preventDefault(); tnBuf = tnBuf.slice(0, -1); render(); break;
+    case 'ArrowLeft': e.preventDefault(); commitTripNo(); dcCol = Math.max(0, dcCol - 1); render(); break;
+    case 'ArrowRight': e.preventDefault(); commitTripNo(); dcCol = Math.min(grid.cols.length - 1, dcCol + 1); render(); break;
+    case 'ArrowUp': e.preventDefault(); commitTripNo(); inTN = false; inDC = true; render(); break;
+    case 'ArrowDown': e.preventDefault(); commitTripNo(); inTN = false; inDC = true; downFromDayCodes(true); break;
+    default:
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && tnBuf.length < 20) { e.preventDefault(); tnBuf += e.key; render(); }
+  }
 }
 
 /** @param {HTMLTableElement} tbl */
@@ -488,8 +579,8 @@ function renderStopRow(tbl, stop, ri, linked) {
     td.dataset.r = String(ri);
     td.dataset.c = String(ci);
     const cell = col.cells[ri];
-    const isSel = !inDC && !inStopCol && !inStopEdit && ri === ancR && ci === ancC;
-    const isRange = !inDC && !inStopCol && !inStopEdit && inRect(ri, ci) && !isSel;
+    const isSel = !inDC && !inTN && !inStopCol && !inStopEdit && ri === ancR && ci === ancC;
+    const isRange = !inDC && !inTN && !inStopCol && !inStopEdit && inRect(ri, ci) && !isSel;
     if (cell && cell.interchange) td.classList.add(cell.interchange.type === 'guaranteed' ? 'g-ix-g' : 'g-ix-s');
     const srcs = ixSources(ri, ci);
     if (srcs.length) td.classList.add(srcs[0].type === 'guaranteed' ? 'g-ix-tg' : 'g-ix-ts');
@@ -501,7 +592,8 @@ function renderStopRow(tbl, stop, ri, linked) {
       else td.classList.add('g-ix-dim');
     }
     if (cell && cell.time === '|') td.classList.add('is-pipe');
-    if (cell?.footnoteId != null) { td.classList.add('has-fn'); td.title = footnoteSummary(fnById(cell.footnoteId)); }
+    if (cell?.note) { td.classList.add('has-fn'); td.title = cell.note; }
+    if (cell?.dates?.length) { td.classList.add('has-dates'); td.title = [td.title, datesSummary(cell.dates)].filter(Boolean).join(' · '); }
     if (isDecreasing(ri, ci) && !ixMode) td.classList.add('is-dec');
     if (isRange && !ixMode) td.classList.add('in-range');
     if (isSel && editing) { td.classList.add('is-edit'); td.innerHTML = cellHTML(cell, true, editBuf); }
@@ -519,6 +611,7 @@ function renderStopRow(tbl, stop, ri, linked) {
       if (inStopEdit) commitStopEdit();
       inStopCol = false; inDC = false;
       if (e.shiftKey) { endR = ri; endC = ci; } else { ancR = ri; ancC = ci; endR = ri; endC = ci; }
+      dragging = true; // click and drag selects a range
       render();
     });
     td.addEventListener('contextmenu', (e) => {
@@ -581,7 +674,8 @@ function commitEdit() {
       const prev = grid.cols[ancC].cells[ancR];
       if (prev && p.time !== '|') p.dayOffset = prev.dayOffset || 0;
       p.interchange = prev && p.time !== '|' ? prev.interchange : null;
-      p.footnoteId = prev && p.time !== '|' ? prev.footnoteId ?? null : null;
+      // A new time keeps the cell's note and dates
+      if (prev && p.time !== '|') { if (prev.note) p.note = prev.note; if (prev.dates?.length) p.dates = prev.dates; }
       grid.cols[ancC].cells[ancR] = p;
     }
   }
@@ -609,17 +703,20 @@ function scrollTo(r, c) {
 /** @param {KeyboardEvent} e */
 function onKeyDown(e) {
   if (!grid.active || currentPage() !== 'edit') return;
-  if ($('fn-editor').classList.contains('open') || document.querySelector('dialog[open]')) return;
+  // A floating box (note, dates, helpers) or a dialog has the keyboard
+  if (document.querySelector('.float-box, .nudge-box, dialog[open]')) return;
   if (inStopEdit) return; // the name input handles its own keys
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if (ixMode) { if (e.key === 'Escape') { e.preventDefault(); exitIx(); } return; }
   if ($('grid-ctx').style.display === 'block') { if (e.key === 'Escape') hideCtx(); return; }
-  if ((e.ctrlKey || e.metaKey) && !editing && !dcEdit && !inStopCol) {
+  if ((e.ctrlKey || e.metaKey) && !editing && !dcEdit && !inStopCol && !inDC && !inTN && !tnEdit) {
     if (e.key === 'c') { e.preventDefault(); copySelection(); return; }
     if (e.key === 'x' && !grid.readOnly) { e.preventDefault(); copySelection().then(() => { clearSelection(); render(); }); return; }
   }
   if (grid.readOnly) { keyReadOnly(e); return; }
+  if (tnEdit) { keyTripEdit(e); return; }
+  if (inTN) { keyTripNav(e); return; }
   if (dcEdit) { keyDayCodeEdit(e); return; }
   if (inDC) { keyDayCodeNav(e); return; }
   if (inStopCol) { keyStopCol(e); return; }
@@ -669,7 +766,7 @@ function keyNav(e) {
   switch (e.key) {
     case 'ArrowUp':
       e.preventDefault();
-      if (ancR === 0 && !sh) { inDC = true; dcCol = ancC; render(); return; }
+      if (ancR === 0 && !sh) { dcCol = ancC; if (grid.tripRow) inTN = true; else inDC = true; render(); return; }
       if (sh) extend(endR - 1, endC); else setAnchor(ancR - 1, ancC);
       render(); scrollTo(ancR, ancC); break;
     case 'ArrowDown': e.preventDefault(); if (sh) extend(endR + 1, endC); else setAnchor(ancR + 1, ancC); render(); scrollTo(ancR, ancC); break;
@@ -683,7 +780,7 @@ function keyNav(e) {
     case 'F7': e.preventDefault(); openFnEditor('cell', ancR, ancC); break;
     case 'Enter': e.preventDefault(); startEdit(''); break;
     case 'Delete': case 'Backspace': e.preventDefault(); clearSelection(); render(); break;
-    case '|': e.preventDefault(); grid.cols[ancC].cells[ancR] = { time: '|', dayOffset: 0, suffix: '', interchange: null, footnoteId: null }; render(); break;
+    case '|': e.preventDefault(); grid.cols[ancC].cells[ancR] = { time: '|', dayOffset: 0, suffix: '', interchange: null }; render(); break;
     default:
       if (e.key.length === 1 && /\d/.test(e.key) && !e.ctrlKey && !e.metaKey) { e.preventDefault(); startEdit(e.key); }
   }
@@ -707,12 +804,23 @@ function keyEdit(e) {
   }
 }
 
+/**
+ * Down from the day-code row: the next row below it, in the same column (like a spreadsheet) — the
+ * trip-number row when shown, else the first stop. From the trip-number row (pastTrip): the first stop.
+ */
+function downFromDayCodes(pastTrip = false) {
+  inDC = false;
+  if (grid.tripRow && !pastTrip) { inTN = true; render(); return; }
+  inTN = false; ancC = dcCol; endC = dcCol; ancR = 0; endR = 0;
+  render(); scrollTo(ancR, ancC);
+}
+
 /** @param {KeyboardEvent} e */
 function keyDayCodeNav(e) {
   switch (e.key) {
     case 'ArrowLeft': e.preventDefault(); dcCol = Math.max(0, dcCol - 1); render(); break;
     case 'ArrowRight': e.preventDefault(); dcCol = Math.min(grid.cols.length - 1, dcCol + 1); render(); break;
-    case 'ArrowDown': e.preventDefault(); inDC = false; ancC = dcCol; endC = dcCol; render(); scrollTo(ancR, ancC); break;
+    case 'ArrowDown': e.preventDefault(); downFromDayCodes(); break;
     case 'Escape': e.preventDefault(); inDC = false; render(); break;
     case 'F7': e.preventDefault(); openFnEditor('col', 0, dcCol); break;
     case 'Enter': e.preventDefault(); dcEdit = true; dcBuf = grid.cols[dcCol].dayCode; render(); break;
@@ -728,7 +836,7 @@ function keyDayCodeEdit(e) {
     case 'Enter': e.preventDefault(); commitDayCode(); break;
     case 'ArrowLeft': e.preventDefault(); commitDayCode(); dcCol = Math.max(0, dcCol - 1); render(); break;
     case 'ArrowRight': e.preventDefault(); commitDayCode(); dcCol = Math.min(grid.cols.length - 1, dcCol + 1); render(); break;
-    case 'ArrowDown': e.preventDefault(); commitDayCode(); inDC = false; ancC = dcCol; endC = dcCol; render(); scrollTo(ancR, ancC); break;
+    case 'ArrowDown': e.preventDefault(); commitDayCode(); downFromDayCodes(); break;
     case 'Backspace': e.preventDefault(); dcBuf = dcBuf.slice(0, -1); render(); break;
     default:
       if (e.key.length === 1 && /[A-Za-z0-9]/.test(e.key) && !e.ctrlKey && !e.metaKey) { e.preventDefault(); dcBuf += e.key.toUpperCase(); render(); }
@@ -750,6 +858,8 @@ async function copySelection() {
 /** Paste uses the paste event, so the browser never asks for clipboard permission. @param {ClipboardEvent} e */
 function onPaste(e) {
   if (!grid.active || grid.readOnly || currentPage() !== 'edit' || inStopEdit) return;
+  // Only into the times: never while the day-code or trip-number row has the keyboard
+  if (inDC || dcEdit || inTN || tnEdit || document.querySelector('.float-box, .nudge-box')) return;
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
   const text = e.clipboardData?.getData('text');
@@ -769,31 +879,100 @@ function onPaste(e) {
       const prev = grid.cols[c].cells[r];
       if (prev && p.time !== '|') p.dayOffset = prev.dayOffset || 0;
       p.interchange = null;
-      p.footnoteId = null;
       grid.cols[c].cells[r] = p;
     });
   });
   render();
 }
 
+/** Dates as a tooltip: how many days added and removed. @param {{ from: string, to: string, on: boolean }[]} dates */
+function datesSummary(dates) {
+  const on = dates.filter((d) => d.on).length, off = dates.length - on;
+  return t('datesSummary', on, off);
+}
+
+/** The days of the open period (its calendars). */
+function periodDays() {
+  const rs = app.routeState;
+  const per = rs?.periods?.find((/** @type {any} */ p) => p.id === rs.activePer);
+  const cals = (per?.calendarIds ?? []).map((/** @type {string} */ id) => app.calendars.find((c) => c.id === id)).filter(Boolean);
+  return unionDays(/** @type {any[]} */ (cals));
+}
+
+/**
+ * The date picker for a trip (its own dates on top of its calendars and day code) or a single time
+ * (on top of the trip's days).
+ * @param {'col' | 'cell'} type @param {number} ri @param {number} ci
+ */
+function openDates(type, ri, ci) {
+  const col = grid.cols[ci];
+  const at = type === 'col' ? col : col?.cells[ri];
+  if (!at || grid.readOnly) return;
+  const base = type === 'col' ? tripDays(periodDays(), { dayCode: col.dayCode }) : tripDays(periodDays(), col);
+  const anchor = /** @type {HTMLElement | null} */ (document.querySelector(type === 'col' ? `.g-dc-cell[data-ci="${ci}"]` : `[data-r="${ri}"][data-c="${ci}"]`));
+  const r = anchor?.getBoundingClientRect();
+  openDatePicker({
+    x: r?.left ?? 200, y: (r?.bottom ?? 160) + 4, title: t(type === 'col' ? 'dpTitleCol' : 'dpTitleCell'), base, dates: at.dates ?? [],
+    onApply: (dates) => { at.dates = dates; render(); },
+  });
+}
+
 // ─── Context menu ───────────────────────────────────────────────────────────
+/** The selected rectangle of time cells. */
+function selRect() {
+  return { r0: Math.min(ancR, endR), r1: Math.max(ancR, endR), c0: Math.min(ancC, endC), c1: Math.max(ancC, endC) };
+}
+
+/** The timed cells (not |) in the selection. */
+function timedInSelection() {
+  const { r0, r1, c0, c1 } = selRect();
+  const out = [];
+  for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) {
+    const cell = grid.cols[c]?.cells[r];
+    if (cell && cell.time && cell.time !== '|') out.push(cell);
+  }
+  return out;
+}
+
+/** What "Interpoler tider" would fill: per column of the selection (a single cell: the whole column). */
+function interpolationFills() {
+  const { r0, r1, c0, c1 } = selRect();
+  const single = r0 === r1 && c0 === c1;
+  /** @type {{ ci: number, ri: number, cell: any }[]} */
+  const out = [];
+  for (let c = c0; c <= c1; c++) {
+    if (!grid.cols[c]) continue;
+    for (const f of interpolateSpan(grid, c, single ? 0 : r0, single ? grid.stops.length - 1 : r1, posOf)) out.push({ ci: c, ...f });
+  }
+  return out;
+}
+
 /** @param {number} x @param {number} y @param {boolean} [isDC] */
 function showCtx(x, y, isDC = false) {
   const isStop = ctxIsStop && !isDC;
   $('gctx-time').style.display = !isStop && !isDC ? '' : 'none';
   $('gctx-stop').style.display = isStop ? '' : 'none';
   $('gctx-dc').style.display = isDC ? '' : 'none';
+  if (isDC) $('gc-tripno').textContent = t(grid.tripRow ? 'ctxTripHide' : 'ctxTripShow');
   if (!isStop && !isDC && ctxC >= 0 && ctxC < grid.cols.length) {
     const cell = grid.cols[ctxC].cells[ctxR];
     const timed = !!(cell && cell.time && cell.time !== '|'), withIx = timed && !!cell.interchange;
     $('gc-ix-g').className = 'gci' + (timed && !withIx ? '' : ' dis');
     $('gc-ix-s').className = 'gci' + (timed && !withIx ? '' : ' dis');
     $('gc-ix-del').className = 'gci red' + (withIx ? '' : ' dis');
-    // Filling a time: only an empty cell, and only with positions (1.5.7).
-    const empty = !cell || !cell.time;
-    $('gc-interp').className = 'gci' + (empty && interpolateTime(grid, ctxC, ctxR, posOf) ? '' : ' dis');
-    $('gc-extrap-fwd').className = 'gci' + (empty && extrapolateTime(grid, ctxC, ctxR, 'fwd', 1, posOf) ? '' : ' dis');
-    $('gc-extrap-bwd').className = 'gci' + (empty && extrapolateTime(grid, ctxC, ctxR, 'bwd', 1, posOf) ? '' : ' dis');
+    // Boarding restrictions: ticked when every timed cell in the selection has it
+    const sfx = timedInSelection().map((c) => c.suffix || '');
+    for (const [k, key] of /** @type {[string, string][]} */ ([['a', 'ctxSfxA'], ['p', 'ctxSfxP'], ['x', 'ctxSfxX']])) {
+      $(`gc-sfx-${k}`).textContent = (sfx.length && sfx.every((v) => v === k) ? '✓ ' : '    ') + t(key);
+      $(`gc-sfx-${k}`).className = 'gci' + (sfx.length ? '' : ' dis');
+    }
+    $('gc-sfx-none').className = 'gci' + (sfx.some((v) => v) ? '' : ' dis');
+    // Interpolating: between the times inside the selection (one cell selected: its whole column)
+    $('gc-interp').className = 'gci' + (interpolationFills().length ? '' : ' dis');
+    $('gc-nudge').className = 'gci' + (timedInSelection().length || grid.cols[ctxC]?.cells.some((/** @type {any} */ x) => x?.time && x.time !== '|') ? '' : ' dis');
+    // Extrapolation by speed is hidden (user test 2026-10-17); the code stays for later
+    $('gc-extrap-fwd').style.display = 'none';
+    $('gc-extrap-bwd').style.display = 'none';
   } else if (isStop) {
     const stop = grid.stops[ctxStopRow];
     $('gc-bold').textContent = (stop.bold ? '✓ ' : '    ') + t('ctxBold');
@@ -813,7 +992,7 @@ function hideCtx() {
 // ─── Insert / delete ────────────────────────────────────────────────────────
 /** @param {number} at */
 function insertCol(at) {
-  grid.cols.splice(at, 0, { dayCode: '', uid: crypto.randomUUID(), footnote: '', footnoteId: null, cells: grid.stops.map(() => null) });
+  grid.cols.splice(at, 0, { dayCode: '', uid: crypto.randomUUID(), note: '', dates: [], cells: grid.stops.map(() => null) });
   for (const col of grid.cols) for (const cell of col.cells) if (cell && cell.interchange && cell.interchange.targetC >= at) cell.interchange.targetC++;
   if (!inDC) { if (ancC >= at && grid.cols.length > 1) ancC++; if (endC >= at && grid.cols.length > 1) endC++; } else if (dcCol >= at) dcCol++;
   ancC = clampC(ancC); endC = clampC(endC);
@@ -835,6 +1014,15 @@ export function addStopRowAt(at) {
   if (grid.readOnly) return;
   insertRow(Math.max(0, Math.min(grid.stops.length, at)));
 }
+/** Put new columns right after column ci; interchanges to later columns move with them. @param {number} ci @param {any[]} cols */
+function insertColumnsAfter(ci, cols) {
+  if (!cols.length) return;
+  for (const col of grid.cols) for (const cell of col.cells) if (cell?.interchange && cell.interchange.targetC > ci) cell.interchange.targetC += cols.length;
+  grid.cols.splice(ci + 1, 0, ...cols);
+  inDC = false;
+  render();
+}
+
 /** @param {number} ci */
 function deleteCol(ci) {
   if (grid.cols[ci].cells.some((/** @type {any} */ c) => c !== null) && !confirm(t('confirmDelCol'))) return;
@@ -901,6 +1089,20 @@ export function initGrid() {
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('paste', onPaste);
     document.addEventListener('mousedown', (e) => {
+      const el = /** @type {HTMLElement} */ (e.target);
+      if (!inTN || !el.closest?.('#tbl') || el.closest('.g-tn-cell')) return;
+      commitTripNo();
+      inTN = false;
+    }, true);
+    document.addEventListener('mouseover', (e) => {
+      if (!dragging || inDC || ixMode) return;
+      const td = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest?.('#tbl [data-r][data-c]'));
+      if (!td) return;
+      const r = Number(td.dataset.r), c = Number(td.dataset.c);
+      if (r !== endR || c !== endC) { endR = r; endC = c; render(); }
+    });
+    document.addEventListener('mouseup', () => { dragging = false; });
+    document.addEventListener('mousedown', (e) => {
       if (!/** @type {HTMLElement} */ (e.target).closest?.('#grid-ctx')) hideCtx();
     });
     onQuaysLoaded(updateStopMarks);
@@ -940,7 +1142,39 @@ export function initGrid() {
     const value = parseFloat(answer.replace(',', '.'));
     return extrapolateTime(grid, c, r, direction, toKmh(value, unit), posOf);
   });
-  $('gc-interp').addEventListener('click', () => fill((r, c) => interpolateTime(grid, c, r, posOf)));
+  for (const k of ['a', 'p', 'x', 'none']) {
+    $(`gc-sfx-${k}`).addEventListener('click', () => {
+      hideCtx();
+      if (grid.readOnly) return;
+      for (const cell of timedInSelection()) cell.suffix = k === 'none' ? '' : k;
+      render();
+    });
+  }
+  $('gc-nudge').addEventListener('click', () => {
+    hideCtx();
+    if (grid.readOnly) return;
+    // The selection, or one cell's whole column; re-applied from a snapshot on every notch
+    const { r0, r1, c0, c1 } = selRect();
+    const single = r0 === r1 && c0 === c1;
+    const rows = [];
+    for (let r = single ? 0 : r0; r <= (single ? grid.stops.length - 1 : r1); r++) rows.push(r);
+    const cols = [];
+    for (let c = c0; c <= c1; c++) if (grid.cols[c]) cols.push(c);
+    const snapshot = cols.map((c) => grid.cols[c].cells.map((/** @type {any} */ x) => (x ? { ...x } : x)));
+    const restore = () => cols.forEach((c, i) => { grid.cols[c].cells = snapshot[i].map((/** @type {any} */ x) => (x ? { ...x } : x)); });
+    const head = /** @type {HTMLElement | null} */ (document.querySelector(`.g-dc-cell[data-ci="${c0}"]`))?.getBoundingClientRect();
+    openTimeNudge({
+      x: head?.left ?? 200, y: (head?.top ?? 120) - 44,
+      onShift: (total) => { restore(); for (const c of cols) shiftTimes(grid.cols[c], rows, total); render(); },
+      onUndo: () => { restore(); render(); },
+    });
+  });
+  $('gc-interp').addEventListener('click', () => {
+    hideCtx();
+    if (grid.readOnly) return;
+    for (const f of interpolationFills()) grid.cols[f.ci].cells[f.ri] = f.cell;
+    render();
+  });
   $('gc-extrap-fwd').addEventListener('click', () => extrapolate('fwd'));
   $('gc-extrap-bwd').addEventListener('click', () => extrapolate('bwd'));
   $('gc-ix-g').addEventListener('click', () => { hideCtx(); if (hasTime(ctxR, ctxC)) enterIx(ctxR, ctxC, 'guaranteed'); });
@@ -961,5 +1195,40 @@ export function initGrid() {
     hideCtx(); render();
   });
   $('gc-add-note').addEventListener('click', () => { hideCtx(); openFnEditor('cell', ctxR, ctxC); });
+  $('gc-tripno').addEventListener('click', () => {
+    hideCtx();
+    if (grid.readOnly) return;
+    if (grid.tripRow) {
+      const numbered = grid.cols.some((/** @type {any} */ c) => c.tripNo);
+      if (numbered && !confirm(t('confirmTripHide'))) return;
+      for (const c of grid.cols) c.tripNo = '';
+      inTN = false;
+    }
+    grid.tripRow = !grid.tripRow;
+    render();
+  });
+  $('gc-dc-days').addEventListener('click', (e) => {
+    hideCtx();
+    const ci = ctxDCCol >= 0 ? ctxDCCol : dcCol;
+    if (grid.readOnly || !grid.cols[ci]) return;
+    openDayCodeHelper({ code: grid.cols[ci].dayCode, x: e.clientX, y: e.clientY, onApply: (code) => { grid.cols[ci].dayCode = code; render(); } });
+  });
+  for (const [id, by] of /** @type {[string, 'time' | 'daycode'][]} */ ([['gc-sort-time', 'time'], ['gc-sort-dc', 'daycode']])) {
+    $(id).addEventListener('click', () => {
+      hideCtx();
+      if (grid.readOnly) return;
+      sortColumns(grid, by);
+      inDC = false; ancC = 0; endC = 0;
+      render();
+    });
+  }
+  $('gc-copy-int').addEventListener('click', (e) => {
+    hideCtx();
+    const ci = ctxDCCol >= 0 ? ctxDCCol : dcCol;
+    if (grid.readOnly || !grid.cols[ci]) return;
+    openCopyInterval({ col: grid.cols[ci], x: e.clientX, y: e.clientY, onApply: (copies) => insertColumnsAfter(ci, copies) });
+  });
+  $('gc-dc-dates').addEventListener('click', () => { hideCtx(); openDates('col', 0, ctxDCCol >= 0 ? ctxDCCol : dcCol); });
+  $('gc-cell-dates').addEventListener('click', () => { hideCtx(); openDates('cell', ctxR, ctxC); });
   $('gc-dc-note').addEventListener('click', () => { hideCtx(); openFnEditor('col', 0, ctxDCCol >= 0 ? ctxDCCol : dcCol); });
 }

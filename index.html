@@ -216,36 +216,18 @@
       </div>
     </dialog>
 
-    <div id="fn-editor">
-      <div class="fn-hdr">
-        <span class="fn-hdr-title" id="fn-title"></span>
-        <select id="fn-def-sel"></select>
-        <button class="fn-close-btn" id="fn-close">×</button>
-      </div>
-      <div class="fn-body">
-        <div>
-          <label class="fn-label" id="fn-text-label"></label>
-          <input type="text" class="fn-text-in" id="fn-text" autocomplete="off">
-        </div>
-        <div>
-          <label class="fn-label" id="fn-exc-label"></label>
-          <div class="fn-exc-list" id="fn-exc-list"></div>
-          <button class="fn-add-exc" id="fn-add-exc"></button>
-        </div>
-      </div>
-      <div class="fn-footer">
-        <button class="fn-remove-btn" id="fn-remove"></button>
-        <div class="fn-spacer"></div>
-        <button class="fn-apply-btn" id="fn-apply"></button>
-      </div>
-    </div>
-
     <div id="grid-ctx" style="display:none">
       <div id="gctx-time">
         <div class="gci" id="gc-clear" data-lk="ctxClear"></div>
         <div class="gci" id="gc-offset" data-lk="ctxOffset"></div>
         <div class="gcs"></div>
+        <div class="gci" id="gc-sfx-a"></div>
+        <div class="gci" id="gc-sfx-p"></div>
+        <div class="gci" id="gc-sfx-x"></div>
+        <div class="gci" id="gc-sfx-none" data-lk="ctxSfxNone"></div>
+        <div class="gcs"></div>
         <div class="gci" id="gc-interp" data-lk="ctxInterp"></div>
+        <div class="gci" id="gc-nudge" data-lk="ctxNudge"></div>
         <div class="gci" id="gc-extrap-fwd" data-lk="ctxExtrapFwd"></div>
         <div class="gci" id="gc-extrap-bwd" data-lk="ctxExtrapBwd"></div>
         <div class="gcs"></div>
@@ -254,13 +236,21 @@
         <div class="gci red" id="gc-ix-del" data-lk="ctxIxRemove"></div>
         <div class="gcs"></div>
         <div class="gci" id="gc-add-note" data-lk="ctxNote"></div>
+        <div class="gci" id="gc-cell-dates" data-lk="ctxCellDates"></div>
       </div>
       <div id="gctx-stop">
         <div class="gci" id="gc-bold"></div>
         <div class="gci" id="gc-sep"></div>
       </div>
       <div id="gctx-dc">
+        <div class="gci" id="gc-dc-days" data-lk="ctxDcDays"></div>
+        <div class="gci" id="gc-tripno"></div>
         <div class="gci" id="gc-dc-note" data-lk="ctxNote"></div>
+        <div class="gci" id="gc-dc-dates" data-lk="ctxColDates"></div>
+        <div class="gcs"></div>
+        <div class="gci" id="gc-copy-int" data-lk="ctxCopyInterval"></div>
+        <div class="gci" id="gc-sort-time" data-lk="ctxSortTime"></div>
+        <div class="gci" id="gc-sort-dc" data-lk="ctxSortDayCode"></div>
       </div>
     </div>
 

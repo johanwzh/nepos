@@ -129,21 +129,25 @@ describe('route editor — review fixes', () => {
     expect(app.dirty).toBe(true);
   });
 
-  it('leaves out a date exception without dates', async () => {
+  it('F7 opens the note box for the cell: text only, Ctrl+Enter applies, and it is saved as #FOT', async () => {
     await selectRoute('20');
     press('F7');
-    document.getElementById('fn-add-exc').click();
-    document.getElementById('fn-apply').click();
+    const box = /** @type {HTMLElement} */ (document.querySelector('.float-box'));
+    expect(box.querySelector('.note-text')).not.toBeNull();
+    expect(box.textContent).not.toContain('unntak'); // no date exceptions here any more
+    const text = /** @type {HTMLTextAreaElement} */ (box.querySelector('.note-text'));
+    text.value = 'Bytt buss';
+    text.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true }));
+    expect(document.querySelector('.float-box')).toBeNull();
+    expect(grid.cols[0].cells[0].note).toBe('Bytt buss');
     document.getElementById('ef-save').click();
     await flush();
-    expect(await readRoute(fs, '20')).not.toContain('#UNT');
-    expect(app.routes.find((r) => r.code === '20').status).not.toBe('damaged');
+    expect(await readRoute(fs, '20')).toContain('#FOT;0;0;Bytt buss;0');
   });
 
   it('refuses to save a route that would be damaged, and says so', async () => {
     await selectRoute('20');
-    app.routeState.footnotes.push({ id: 9, text: '', exceptions: [{ runsOnly: false, from: '', to: '' }] });
-    grid.cols[0].footnoteId = 9; // the grid on screen
+    grid.cols[0].dates = [{ from: '2026', to: '2026', on: false }]; // not a date: the file would be damaged
     const before = await readRoute(fs, '20');
     typeKeys('0800');
     press('Enter');
@@ -157,9 +161,9 @@ describe('route editor — review fixes', () => {
   it('closes the note editor when another route opens', async () => {
     await selectRoute('20');
     press('F7');
-    expect(document.getElementById('fn-editor').classList.contains('open')).toBe(true);
+    expect(document.querySelector('.float-box')).not.toBeNull();
     await selectRoute('30');
-    expect(document.getElementById('fn-editor').classList.contains('open')).toBe(false);
+    expect(document.querySelector('.float-box')).toBeNull();
   });
 
   it('keeps a half-typed time when switching lines', async () => {
