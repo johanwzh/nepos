@@ -21,7 +21,9 @@ import { initSpeedStrip } from './ui/speed-strip.js';
 import { initOrgRegister } from './ui/org-register.js';
 import { initMenus } from './ui/menus.js';
 import { initHelp } from './ui/help.js';
+import { initNoAutofill } from './ui/no-autofill.js';
 
+initNoAutofill(document);
 initShell();
 initOrgRegister({ fetchOnStart: true });
 initMenus();
