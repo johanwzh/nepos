@@ -227,3 +227,29 @@ describe('sorting columns (user test 2026-10-17)', () => {
     expect(grid.cols.map((c) => `${c.dayCode} ${c.cells[0].time}`)).toEqual(['D 0600', 'D 0800', '6 0700']);
   });
 });
+
+describe('copying a column at an interval (user test 2026-10-17)', () => {
+  beforeEach(() => {
+    initGrid();
+    loadGrid({
+      stops: [stop('A'), stop('B')],
+      cols: [{ dayCode: 'D', footnote: '', footnoteId: null, cells: [cell('0700'), cell('0745')] },
+        { dayCode: 'D', footnote: '', footnoteId: null, cells: [cell('1000'), cell('1045')] }],
+    }, { readOnly: false });
+    // the 07:45 arrival connects to the 10:00 column
+    grid.cols[0].cells[1].interchange = { targetR: 0, targetC: 1, type: 'guaranteed' };
+  });
+
+  it('says how many copies it will make, puts them after the column, and keeps interchanges pointing right', () => {
+    /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById('gc-copy-int')).click();
+    const box = /** @type {HTMLElement} */ (document.querySelector('.float-box'));
+    const set = (/** @type {string} */ sel, /** @type {string} */ v) => { const i = /** @type {HTMLInputElement} */ (box.querySelector(sel)); i.value = v; i.dispatchEvent(new Event('input')); };
+    set('.cpi-interval', '30');
+    set('.cpi-last', '09:00');
+    expect(box.querySelector('.cpi-sum')?.textContent).toContain('4');
+    /** @type {HTMLElement} */ (box.querySelector('.fb-apply')).click();
+    expect(grid.cols.map((c) => c.cells[0].time)).toEqual(['0700', '0730', '0800', '0830', '0900', '1000']);
+    expect(grid.cols[0].cells[1].interchange.targetC).toBe(5); // still the 10:00 column
+  });
+});

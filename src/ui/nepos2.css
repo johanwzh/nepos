@@ -740,3 +740,6 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .dch-hol { padding: 0 10px; }
 .dch-code { margin-top: 10px; height: 18px; font-weight: 600; }
 .dch-code.bad { color: var(--g-dec-c); font-weight: 400; }
+.cpi-row { display: grid; grid-template-columns: 170px 90px; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; color: var(--text-m); }
+.cpi-row input { height: 28px; padding: 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text); font: inherit; }
+.cpi-sum { margin-top: 10px; height: 18px; font-weight: 600; }

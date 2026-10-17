@@ -15,6 +15,7 @@ import { fnById, footnoteSummary, openFnEditor, closeFnEditor, updateFnPreview }
 import { interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan } from '../core/interpolate.js';
 import { openDayCodeHelper } from './day-code-helper.js';
 import { sortColumns } from '../core/column-sort.js';
+import { openCopyInterval } from './copy-interval.js';
 import { app } from './state.js';
 
 /** The grid being edited: one period × direction of the open route. */
@@ -882,6 +883,15 @@ export function addStopRowAt(at) {
   if (grid.readOnly) return;
   insertRow(Math.max(0, Math.min(grid.stops.length, at)));
 }
+/** Put new columns right after column ci; interchanges to later columns move with them. @param {number} ci @param {any[]} cols */
+function insertColumnsAfter(ci, cols) {
+  if (!cols.length) return;
+  for (const col of grid.cols) for (const cell of col.cells) if (cell?.interchange && cell.interchange.targetC > ci) cell.interchange.targetC += cols.length;
+  grid.cols.splice(ci + 1, 0, ...cols);
+  inDC = false;
+  render();
+}
+
 /** @param {number} ci */
 function deleteCol(ci) {
   if (grid.cols[ci].cells.some((/** @type {any} */ c) => c !== null) && !confirm(t('confirmDelCol'))) return;
@@ -1044,5 +1054,11 @@ export function initGrid() {
       render();
     });
   }
+  $('gc-copy-int').addEventListener('click', (e) => {
+    hideCtx();
+    const ci = ctxDCCol >= 0 ? ctxDCCol : dcCol;
+    if (grid.readOnly || !grid.cols[ci]) return;
+    openCopyInterval({ col: grid.cols[ci], x: e.clientX, y: e.clientY, onApply: (copies) => insertColumnsAfter(ci, copies) });
+  });
   $('gc-dc-note').addEventListener('click', () => { hideCtx(); openFnEditor('col', 0, ctxDCCol >= 0 ? ctxDCCol : dcCol); });
 }
