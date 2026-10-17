@@ -203,11 +203,11 @@ Special comment record. Comments about a time span, fares, changes, a stretch of
 
 ### #KOM
 
-Comment record. A comment on the period's table, in one language. Any number per period: one per language.
+Comment record. A description of the period's table, in one language. Any number per period: one per language.
 
 | Field | Type | Description |
 |---|---|---|
-| 0 | text | The comment. |
+| 0 | text | The description. |
 | 1 | text | Language, as a three-letter ISO 639 code (`nob`, `nno`, `eng`, `deu`, `sme`, …). Empty means `nob`. |
 
 ### #KON
@@ -388,12 +388,12 @@ Flags (field 4):
 
 ### #FOT
 
-Footnote record. A note on a trip or on a time cell; one per note and language.
+Footnote record. A note on the whole table, on a trip or on a time cell; one per note and language.
 
 | Field | Type | Description |
 |---|---|---|
-| 0 | int | X position of the note (its column). |
-| 1 | int | Y position of the note (its row). `-1` = a note on the trip (`#TUR`). |
+| 0 | int | X position of the note (its column). `-1` = a note on the whole table. |
+| 1 | int | Y position of the note (its row). `-1` = a note on the trip (`#TUR`), or on the whole table. |
 | 2 | text | The note. |
 | 3 | text | Language, as a three-letter ISO 639 code. Empty means `nob`. The old values `0` (Norwegian) and `1` (English) are deprecated. |
 
