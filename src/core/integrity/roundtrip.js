@@ -10,6 +10,7 @@ import { orgRole } from '../orgs.js';
 /**
  * Apply the deliberate Nepos 2 changes to one record, so they do not count as losses.
  * @param {string} line trimmed record line
+ * @returns {string | null} null: a record Nepos leaves out on purpose
  */
 function normalize(line) {
   const f = line.split(';');
@@ -30,10 +31,34 @@ function normalize(line) {
       if (role) { f[3] = role === 'authority' ? '1' : '0'; f[4] = role === 'operator' ? '1' : '0'; }
       return f.join(';');
     }
-    case '#TRL': { // the price is written with six decimals
-      const price = Number(f[6]);
-      if (f[6] !== undefined && f[6] !== '' && Number.isFinite(price) && price >= 0) f[6] = price.toFixed(6);
+    case '#TRL': { // both row layouts (ERN 2.0 and Nepos's older one) compare as row, stop, name, bold, underline, price, km, zone, flags, platform
+      const old = (f[4] ?? '').trim() === '34';
+      const bits = Math.max(0, parseInt(old ? f[5] : f[4], 10) || 0);
+      const p = Number(old ? f[6] : f[7]);
+      const price = (old ? f[6] : f[7]) !== undefined && Number.isFinite(p) && p >= 0 ? p.toFixed(6) : '-1';
+      const rest = old ? ['-1', '-1', '0', f[9] ?? '-1'] : [f[5], f[6], f[8], f[9]].map((v, i) => (v ?? '').trim() || ['-1', '-1', '0', '-1'][i]);
+      return ['#TRL', f[1], f[2], f[3], (bits & (old ? 1 : 2)) ? 1 : 0, (bits & (old ? 2 : 8)) ? 1 : 0, price, ...rest].join(';');
+    }
+    case '#TRC': { // request stop: bit 3 in Nepos's older files, bit 8 in ERN 2.0
+      const m = parseInt(f[7] ?? '', 10) || 0;
+      if (m & 8) f[7] = String((m & ~8) | 256);
       return f.join(';');
+    }
+    case '#MOD': // renamed in ERN 2.0
+      return ['#TRM', ...f.slice(1)].join(';');
+    case '#BRA':
+      return ['#MRK', ...f.slice(1)].join(';');
+    case '#CUR': // Nepos 2 does not keep the currency (ERN 2.0: #VAL)
+    case '#VAL':
+      return null;
+    case '#KOM': case '#KON': case '#KOE': case '#KOT': { // one comment per language
+      const lang = f[0] === '#KOM' ? ((f[2] ?? '').trim().toLowerCase() || 'nob') : { '#KON': 'nno', '#KOE': 'eng', '#KOT': 'deu' }[f[0]];
+      return `#KOM;${f[1] ?? ''};${lang}`;
+    }
+    case '#FOT': { // the language: empty or 0 = Bokmål
+      const lang = (f[4] ?? '').trim().toLowerCase();
+      if (lang === '' || lang === '0') f[4] = 'nob';
+      return f.slice(0, 5).join(';');
     }
     default:
       return line;
@@ -54,6 +79,7 @@ function keyRecords(text) {
     if (!line) return;
     const record = line.split(';')[0];
     const norm = normalize(line);
+    if (norm === null) return; // left out on purpose
     let where = '';
     if (record === '#PER') { per++; tab = -1; row = -1; where = `P${per}`; }
     else if (record === '#KAL') where = `P${per}`;

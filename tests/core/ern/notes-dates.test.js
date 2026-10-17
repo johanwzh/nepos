@@ -26,10 +26,10 @@ describe('notes and dates on columns and cells', () => {
     grid.cols[0].cells[0].note = 'Bytt buss';
     grid.cols[0].cells[0].dates = [{ from: '20260101', to: '20260102', on: false }];
     const text = serializeERN(rs, 'r', OPTS);
-    expect(text).toContain('#FOT;2;-1;Kjører ikke i fellesferien.;0');
+    expect(text).toContain('#FOT;2;-1;Kjører ikke i fellesferien.;nob');
     expect(text).toContain('#UNT;2;-1;20260706;16384;20260802;16384;0;0;');
     expect(text).toContain('#UNT;1;-1;20260615;8192;20260615;8192;0;0;');
-    expect(text).toContain('#FOT;0;0;Bytt buss;0');
+    expect(text).toContain('#FOT;0;0;Bytt buss;nob');
     expect(text).toContain('#UNT;0;0;20260101;16384;20260102;16384;0;0;');
     const again = /** @type {any} */ (Object.values(parseERN(text).grids)[0]);
     expect(again.cols[0].cells[0]).toMatchObject({ note: 'Bytt buss', dates: [{ from: '20260101', to: '20260102', on: false }] });
@@ -47,6 +47,6 @@ describe('review fixes', () => {
     const rs = parseERN(sample.routes[0].text);
     /** @type {any} */ (Object.values(rs.grids)[0]).cols[0].note = 'Linje 1\nLinje 2\r\nLinje 3';
     const text = serializeERN(rs, 'r', OPTS);
-    expect(text).toContain('#FOT;0;-1;Linje 1 Linje 2 Linje 3;0');
+    expect(text).toContain('#FOT;0;-1;Linje 1 Linje 2 Linje 3;nob');
   });
 });

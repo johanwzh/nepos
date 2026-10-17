@@ -7,7 +7,7 @@ no server, no login, nothing leaves your computer until you export.
 Nepos 2 is a rewrite of Nepos 1.x for modern timetables built on NSR (the national stop register).
 
 - **User guide (Norwegian):** [docs/user-guide.md](docs/user-guide.md)
-- **ERN file format:** [docs/ern/ern-format.md](docs/ern/ern-format.md)
+- **ERN standard (version 2.0, being curated):** [docs/ern/ern-standard.md](docs/ern/ern-standard.md)
 
 ## What it does
 

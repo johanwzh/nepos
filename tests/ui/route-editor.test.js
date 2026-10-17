@@ -142,7 +142,7 @@ describe('route editor — review fixes', () => {
     expect(grid.cols[0].cells[0].note).toBe('Bytt buss');
     document.getElementById('ef-save').click();
     await flush();
-    expect(await readRoute(fs, '20')).toContain('#FOT;0;0;Bytt buss;0');
+    expect(await readRoute(fs, '20')).toContain('#FOT;0;0;Bytt buss;nob');
   });
 
   it('refuses to save a route that would be damaged, and says so', async () => {
@@ -193,7 +193,7 @@ describe('route editor — review fixes', () => {
 describe('organisation pickers', () => {
   beforeEach(async () => {
     const sek = ['#SEK;NOG:Authority:aaaaaaaaaa1;Eksempel fylkeskommune;1;0;0;0', '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0', '#SEK;TST:Operator:9;Gammel;0;1;0;0'].join('\r\n') + '\r\n';
-    const text = route20.replace(/^#SEK;.*\r\n/gm, '').replace('#CUR;', sek + '#CUR;').replace(';20;', ';70;');
+    const text = route20.replace(/^#SEK;.*\r\n/gm, '').replace('#TRA;', sek + '#TRA;').replace(';20;', ';70;');
     await writeRoute(fs, '70', text);
     await openFs(fs);
     /** @type {any} */ (document.getElementById('check-dlg')).close();
