@@ -16,6 +16,8 @@ import { interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan } f
 import { openDayCodeHelper } from './day-code-helper.js';
 import { sortColumns } from '../core/column-sort.js';
 import { openCopyInterval } from './copy-interval.js';
+import { openTimeNudge } from './time-nudge.js';
+import { shiftTimes } from '../core/time-shift.js';
 import { app } from './state.js';
 
 /** The grid being edited: one period × direction of the open route. */
@@ -839,6 +841,7 @@ function showCtx(x, y, isDC = false) {
     $('gc-sfx-none').className = 'gci' + (sfx.some((v) => v) ? '' : ' dis');
     // Interpolating: between the times inside the selection (one cell selected: its whole column)
     $('gc-interp').className = 'gci' + (interpolationFills().length ? '' : ' dis');
+    $('gc-nudge').className = 'gci' + (timedInSelection().length || grid.cols[ctxC]?.cells.some((/** @type {any} */ x) => x?.time && x.time !== '|') ? '' : ' dis');
     // Extrapolation by speed is hidden (user test 2026-10-17); the code stays for later
     $('gc-extrap-fwd').style.display = 'none';
     $('gc-extrap-bwd').style.display = 'none';
@@ -1013,6 +1016,25 @@ export function initGrid() {
       render();
     });
   }
+  $('gc-nudge').addEventListener('click', () => {
+    hideCtx();
+    if (grid.readOnly) return;
+    // The selection, or one cell's whole column; re-applied from a snapshot on every notch
+    const { r0, r1, c0, c1 } = selRect();
+    const single = r0 === r1 && c0 === c1;
+    const rows = [];
+    for (let r = single ? 0 : r0; r <= (single ? grid.stops.length - 1 : r1); r++) rows.push(r);
+    const cols = [];
+    for (let c = c0; c <= c1; c++) if (grid.cols[c]) cols.push(c);
+    const snapshot = cols.map((c) => grid.cols[c].cells.map((/** @type {any} */ x) => (x ? { ...x } : x)));
+    const restore = () => cols.forEach((c, i) => { grid.cols[c].cells = snapshot[i].map((/** @type {any} */ x) => (x ? { ...x } : x)); });
+    const head = /** @type {HTMLElement | null} */ (document.querySelector(`.g-dc-cell[data-ci="${c0}"]`))?.getBoundingClientRect();
+    openTimeNudge({
+      x: head?.left ?? 200, y: (head?.top ?? 120) - 44,
+      onShift: (total) => { restore(); for (const c of cols) shiftTimes(grid.cols[c], rows, total); render(); },
+      onUndo: () => { restore(); render(); },
+    });
+  });
   $('gc-interp').addEventListener('click', () => {
     hideCtx();
     if (grid.readOnly) return;

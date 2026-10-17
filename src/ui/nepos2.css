@@ -743,3 +743,14 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .cpi-row { display: grid; grid-template-columns: 170px 90px; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; color: var(--text-m); }
 .cpi-row input { height: 28px; padding: 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text); font: inherit; }
 .cpi-sum { margin-top: 10px; height: 18px; font-weight: 600; }
+/* The mini-jog for shifting times, floating over the column */
+.nudge-box { position: fixed; z-index: 1100; display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: var(--bg-panel); color: var(--text);
+  border: 1px solid var(--border); border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,.2); font-size: 12px; }
+.nudge-read { min-width: 52px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.nudge-hint { color: var(--text-m); font-size: 11px; }
+.jd { color: var(--text-m); display: inline-grid; place-items: center; line-height: 0; border-radius: 50%; flex: none; }
+.jd:focus { outline: 2px solid var(--accent-bg); outline-offset: 2px; }
+.jd-face { cursor: ns-resize; touch-action: none; display: block; }
+.jd:hover .jd-rim { stroke: var(--accent); }
+.jd-dot { fill: var(--accent); }
+body.scrubbing, body.scrubbing * { cursor: ns-resize !important; user-select: none; }

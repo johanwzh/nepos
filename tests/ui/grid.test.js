@@ -253,3 +253,32 @@ describe('copying a column at an interval (user test 2026-10-17)', () => {
     expect(grid.cols[0].cells[1].interchange.targetC).toBe(5); // still the 10:00 column
   });
 });
+
+describe('nudging times with the mini-jog (user test 2026-10-17)', () => {
+  beforeEach(() => { initGrid(); });
+  const open = () => {
+    /** @type {HTMLElement} */ (document.querySelector('[data-r="0"][data-c="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById('gc-nudge')).click();
+    return /** @type {HTMLElement} */ (document.querySelector('.nudge-box .jd'));
+  };
+  const key = (/** @type {Element} */ el, /** @type {string} */ k, shiftKey = false) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey, bubbles: true, cancelable: true }));
+
+  it('moves the whole column live, one minute a notch (Shift: ten), and Enter keeps it', () => {
+    const jog = open();
+    key(jog, 'ArrowUp');
+    key(jog, 'ArrowUp', true);
+    expect(grid.cols[0].cells.map((c) => c.time)).toEqual(['0711', '0756']);
+    expect(document.querySelector('.nudge-read')?.textContent).toBe('+11 min');
+    key(jog, 'Enter');
+    expect(document.querySelector('.nudge-box')).toBeNull();
+    expect(grid.cols[0].cells.map((c) => c.time)).toEqual(['0711', '0756']);
+  });
+
+  it('Esc puts the times back', () => {
+    const jog = open();
+    key(jog, 'ArrowDown');
+    expect(grid.cols[0].cells[0].time).toBe('0659');
+    key(jog, 'Escape');
+    expect(grid.cols[0].cells.map((c) => c.time)).toEqual(['0700', '0745']);
+  });
+});

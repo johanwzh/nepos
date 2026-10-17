@@ -36,8 +36,9 @@ export function openFloatBox({ x, y, title, body, cls = '', onApply, onCancel, a
   const onKey = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); }
     else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.stopPropagation(); doApply(); }
-    else if (box.contains(/** @type {Node} */ (e.target))) e.stopPropagation(); // typing here never reaches the grid
   };
+  // Typing in the box reaches its own fields first, then stops here: never the grid
+  box.addEventListener('keydown', (e) => e.stopPropagation());
   document.addEventListener('keydown', onKey, true);
   apply.addEventListener('click', doApply);
   box.querySelector('.fb-cancel')?.addEventListener('click', cancel);
