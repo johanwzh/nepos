@@ -61,9 +61,9 @@ function normalize(line, dst) {
     case '#CUR': // Nepos 2 does not keep the currency (ERN 2.0: #VAL)
     case '#VAL':
       return null;
-    case '#KOM': case '#KON': case '#KOE': case '#KOT': { // one comment per language
+    case '#KOM': case '#KON': case '#KOE': case '#KOT': { // the line note, one per language: saved as #FOT -1;-1
       const lang = f[0] === '#KOM' ? ((f[2] ?? '').trim().toLowerCase() || 'nob') : { '#KON': 'nno', '#KOE': 'eng', '#KOT': 'deu' }[f[0]];
-      return `#KOM;${f[1] ?? ''};${lang}`;
+      return `#FOT;-1;-1;${f[1] ?? ''};${lang}`;
     }
     case '#FOT': { // the language: empty or 0 = Bokmål
       const lang = (f[4] ?? '').trim().toLowerCase();
@@ -102,7 +102,8 @@ function keyRecords(text) {
     const norm = normalize(line, dst);
     if (norm === null) return; // left out on purpose
     let where = '';
-    if (record === '#PER') { per++; tab = -1; row = -1; where = `P${per}`; }
+    if (['#KOM', '#KON', '#KOE', '#KOT'].includes(record)) where = 'P0T0'; // the line note goes into the first table
+    else if (record === '#PER') { per++; tab = -1; row = -1; where = `P${per}`; }
     else if (record === '#KAL') where = `P${per}`;
     else if (record === '#TAB') { tab++; row = -1; where = `P${per}T${tab}`; }
     else if (record === '#TUR' || record === '#FOT' || record === '#UNT' || record === '#DSK') where = `P${per}T${tab}`;

@@ -31,7 +31,7 @@ describe('checkRouteFile', () => {
   });
 
   it('marks a second #KOM as damaged (only the first is kept)', () => {
-    expect(codes(nepos2.replace('#KOM;', '#KOM;Første\r\n#KOM;'))).toContain('extra-comment');
+    expect(codes(nepos2.replace('#TAB;', '#KOM;Første\r\n#KOM;Andre\r\n#TAB;'))).toContain('extra-comment');
   });
 
   it('marks fields Nepos would drop as damaged', () => {

@@ -89,13 +89,6 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
         for (const per of rs.periods.filter((/** @type {any} */ p) => p.setId === set.id)) {
             lines.push('#PER;;;;;;');
             for (const id of per.calendarIds) lines.push(`#KAL;${esc(id)}`);
-            // The route-wide comment once, in the first period
-            if (!komWritten) {
-                // The route's comment (Bokmål: no language code), then the same in other languages
-                if (rs.kom?.trim()) lines.push(`#KOM;${esc(rs.kom)}`);
-                for (const k of rs.komOther || []) if (k.text?.trim()) lines.push(`#KOM;${esc(k.text)};${esc(k.lang)}`);
-                komWritten = true;
-            }
             lines.push('#TAB;0;;;;');
 
             const grid = rs.grids[`${per.id}:${set.id}`] || { stops:[], cols:[] };
@@ -151,6 +144,12 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
                     lines.push(`#UNT;${ci};${ri};${d.from||''};${pmu};${d.to||''};${pmu};0;0;`);
                 }
             };
+            // The line's note once, on the whole of the first table (#FOT -1;-1), then other languages
+            if (!komWritten) {
+                if (rs.kom?.trim()) lines.push(`#FOT;-1;-1;${esc(rs.kom)};nob`);
+                for (const k of rs.komOther || []) if (k.text?.trim()) lines.push(`#FOT;-1;-1;${esc(k.text)};${esc(k.lang)}`);
+                komWritten = true;
+            }
             grid.cols.forEach((col, ci) => notesOf(col, ci, -1));
             grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => notesOf(col.cells[ri], ci, ri)));
             lines.push(...(dskLines.get(grid) ?? []));

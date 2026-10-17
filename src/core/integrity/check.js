@@ -64,10 +64,11 @@ export function checkRouteFile(text) {
         if (f[7]) damaged('unsupported-field', n, '#RUT return name');
         break;
       case '#KOM': {
-        // One comment per language: a second one in the same language would be lost
+        // Older files' line note: one per language (a second one would be lost); saved as #FOT -1;-1
         const lang = (f[2] ?? '').trim().toLowerCase() || 'nob';
         if (komLangs.has(lang)) damaged('extra-comment', n);
         komLangs.add(lang);
+        outdated('old-line-note', n);
         break;
       }
       case '#KON':

@@ -135,8 +135,8 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 if (curPer && (f[1]||'').trim()) curPer.calendarIds.push(f[1].trim());
                 break;
             case '#KOM': {
-                // A comment in one language (ERN 2.0: field 1, empty = Bokmål). The Bokmål one is the
-                // route's comment; others are kept and written back.
+                // Older files: the line's note in one language (field 1, empty = Bokmål). ERN 2.0 has #KOM as
+                // the table's description and the note as #FOT -1;-1; Nepos reads it as the note and saves it so.
                 const lang = (f[2]||'').trim().toLowerCase();
                 if (!lang || lang === 'nob') { if (!rs.kom) rs.kom = f[1]||''; }
                 else rs.komOther.push({ text: f[1]||'', lang });
@@ -228,6 +228,13 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 // A note on a column (row -1) or a cell
                 const txt = f[3] || '';
                 if (!txt) break;
+                // On the whole table (X = -1): the line's note (rs.kom, Bokmål; other languages kept beside it)
+                if (parseInt(f[1]) === -1) {
+                    const lang = (f[4]||'').trim().toLowerCase();
+                    if (!lang || lang === 'nob' || lang === '0') { if (!rs.kom) rs.kom = txt; }
+                    else if (!rs.komOther.some((/** @type {any} */ k) => k.lang === lang)) rs.komOther.push({ text: txt, lang });
+                    break;
+                }
                 // Language (field 3): a three-letter code, empty = Bokmål; older files: 0 = Norwegian, 1 = English
                 const lang = (f[4]||'').trim().toLowerCase();
                 if (lang && lang !== 'nob' && lang !== '0') break; // notes in other languages: not shown (the check says so)
