@@ -9,7 +9,7 @@ const d = (text, vias = []) => ({ text, vias });
 function gridOf(names, ...timed) {
   const stops = names.map(stop);
   const cols = (timed.length ? timed : [names.map((_, i) => i)]).map((rows) => ({ dayCode: 'D', cells: stops.map((_, i) => (rows.includes(i) ? cell(`07${10 + i}`) : null)) }));
-  const grid = { stops, cols };
+  const grid = /** @type {any} */ ({ stops, cols });
   normalizeDests(grid);
   return grid;
 }
