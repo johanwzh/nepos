@@ -51,9 +51,10 @@ export function renderYearView(container, { year, active, readOnly = false, lang
 /**
  * @param {HTMLElement} container
  * @param {{ start: string, count: number, active: Set<string>, readOnly?: boolean, lang: 'no' | 'en', today: string,
- *           onChange: (days: string[], on: boolean) => void }} opts start YYYYMM; today YYYYMMDD ('' = nothing greyed)
+ *           onChange: (days: string[], on: boolean) => void, marks?: Map<string, string> }} opts start YYYYMM; today YYYYMMDD ('' = nothing greyed);
+ *   marks: an extra class per day (the date picker: dp-base, dp-added, dp-removed)
  */
-export function renderMonthsView(container, { start, count, active, readOnly = false, lang, today, onChange }) {
+export function renderMonthsView(container, { start, count, active, readOnly = false, lang, today, onChange, marks }) {
   /** @type {Map<number, Map<string, string>>} */
   const byYear = new Map();
   const holidaysOf = (/** @type {number} */ y) => { if (!byYear.has(y)) byYear.set(y, norwegianHolidays(y)); return /** @type {Map<string, string>} */ (byYear.get(y)); };
@@ -92,6 +93,8 @@ export function renderMonthsView(container, { start, count, active, readOnly = f
       cell.dataset.date = d;
       cell.textContent = String(Number(d.slice(6, 8)));
       if (active.has(d)) cell.classList.add('on');
+      const mark = marks?.get(d);
+      if (mark) cell.classList.add(mark);
       if (today && d < today) cell.classList.add('past');
       if (d === today) cell.classList.add('today');
       if (wd === 7) cell.classList.add('sun');

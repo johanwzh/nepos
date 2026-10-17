@@ -18,6 +18,8 @@ import { sortColumns } from '../core/column-sort.js';
 import { openCopyInterval } from './copy-interval.js';
 import { openTimeNudge } from './time-nudge.js';
 import { shiftTimes } from '../core/time-shift.js';
+import { openDatePicker } from './date-picker.js';
+import { unionDays, tripDays } from '../core/calendars.js';
 import { app } from './state.js';
 
 /** The grid being edited: one period × direction of the open route. */
@@ -807,10 +809,31 @@ function datesSummary(dates) {
   return t('datesSummary', on, off);
 }
 
-/** Open the date picker for a column or a cell (set by initGrid; date-picker.js). */
-let openDates = (/** @type {'col' | 'cell'} */ _type, /** @type {number} */ _ri, /** @type {number} */ _ci) => {};
-/** @param {(type: 'col' | 'cell', ri: number, ci: number) => void} fn */
-export function setDatesOpener(fn) { openDates = fn; }
+/** The days of the open period (its calendars). */
+function periodDays() {
+  const rs = app.routeState;
+  const per = rs?.periods?.find((/** @type {any} */ p) => p.id === rs.activePer);
+  const cals = (per?.calendarIds ?? []).map((/** @type {string} */ id) => app.calendars.find((c) => c.id === id)).filter(Boolean);
+  return unionDays(/** @type {any[]} */ (cals));
+}
+
+/**
+ * The date picker for a trip (its own dates on top of its calendars and day code) or a single time
+ * (on top of the trip's days).
+ * @param {'col' | 'cell'} type @param {number} ri @param {number} ci
+ */
+function openDates(type, ri, ci) {
+  const col = grid.cols[ci];
+  const at = type === 'col' ? col : col?.cells[ri];
+  if (!at || grid.readOnly) return;
+  const base = type === 'col' ? tripDays(periodDays(), { dayCode: col.dayCode }) : tripDays(periodDays(), col);
+  const anchor = /** @type {HTMLElement | null} */ (document.querySelector(type === 'col' ? `.g-dc-cell[data-ci="${ci}"]` : `[data-r="${ri}"][data-c="${ci}"]`));
+  const r = anchor?.getBoundingClientRect();
+  openDatePicker({
+    x: r?.left ?? 200, y: (r?.bottom ?? 160) + 4, title: t(type === 'col' ? 'dpTitleCol' : 'dpTitleCell'), base, dates: at.dates ?? [],
+    onApply: (dates) => { at.dates = dates; render(); },
+  });
+}
 
 // ─── Context menu ───────────────────────────────────────────────────────────
 /** The selected rectangle of time cells. */
@@ -1104,5 +1127,7 @@ export function initGrid() {
     if (grid.readOnly || !grid.cols[ci]) return;
     openCopyInterval({ col: grid.cols[ci], x: e.clientX, y: e.clientY, onApply: (copies) => insertColumnsAfter(ci, copies) });
   });
+  $('gc-dc-dates').addEventListener('click', () => { hideCtx(); openDates('col', 0, ctxDCCol >= 0 ? ctxDCCol : dcCol); });
+  $('gc-cell-dates').addEventListener('click', () => { hideCtx(); openDates('cell', ctxR, ctxC); });
   $('gc-dc-note').addEventListener('click', () => { hideCtx(); openFnEditor('col', 0, ctxDCCol >= 0 ? ctxDCCol : dcCol); });
 }

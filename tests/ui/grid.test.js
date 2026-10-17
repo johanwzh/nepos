@@ -282,3 +282,49 @@ describe('nudging times with the mini-jog (user test 2026-10-17)', () => {
     expect(grid.cols[0].cells.map((c) => c.time)).toEqual(['0700', '0745']);
   });
 });
+
+describe('the date picker (user test 2026-10-17)', () => {
+  beforeEach(() => { initGrid(); });
+  const now = new Date();
+  const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const day = (/** @type {number} */ n) => `${ym}${String(n).padStart(2, '0')}`;
+  const click = (/** @type {string} */ d) => {
+    /** @type {HTMLElement} */ (document.querySelector(`.float-box .yv-day[data-date="${d}"]`)).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+  };
+  const openForColumn = () => {
+    /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById('gc-dc-dates')).click();
+    return /** @type {HTMLElement} */ (document.querySelector('.float-box'));
+  };
+
+  it('shows six months (3 × 2), adds days in "Legg til" mode and removes in "Fjern" mode, Apply keeps them as ranges', () => {
+    const box = openForColumn();
+    expect(box.querySelectorAll('.yv-title')).toHaveLength(6);
+    expect(box.querySelector('.dp-mode.on')?.getAttribute('data-mode')).toBe('add');
+    click(day(10));
+    click(day(11));
+    expect(box.querySelector(`.yv-day[data-date="${day(10)}"]`)?.classList.contains('dp-added')).toBe(true);
+    /** @type {HTMLElement} */ (box.querySelector('.dp-mode[data-mode="remove"]')).click();
+    click(day(20));
+    /** @type {HTMLElement} */ (box.querySelector('.fb-apply')).click();
+    expect(grid.cols[0].dates).toEqual([{ from: day(10), to: day(11), on: true }, { from: day(20), to: day(20), on: false }]);
+  });
+
+  it('clicking a marked day again in its mode unmarks it; Esc keeps the old dates', () => {
+    grid.cols[0].dates = [{ from: day(10), to: day(10), on: true }];
+    const box = openForColumn();
+    click(day(10));
+    expect(box.querySelector(`.yv-day[data-date="${day(10)}"]`)?.classList.contains('dp-added')).toBe(false);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    expect(grid.cols[0].dates).toEqual([{ from: day(10), to: day(10), on: true }]);
+  });
+
+  it('works for a single time too, from the right-click menu', () => {
+    /** @type {HTMLElement} */ (document.querySelector('[data-r="1"][data-c="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById('gc-cell-dates')).click();
+    click(day(12));
+    /** @type {HTMLElement} */ (document.querySelector('.float-box .fb-apply')).click();
+    expect(grid.cols[0].cells[1].dates).toEqual([{ from: day(12), to: day(12), on: true }]);
+  });
+});
