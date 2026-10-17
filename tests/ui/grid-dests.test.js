@@ -273,3 +273,27 @@ describe('review fixes in the grid', () => {
     expect(grid.cols[0].dest).toEqual(d('Q'));
   });
 });
+
+describe('editing an existing destination (user test)', () => {
+  const destCell = (r, c) => /** @type {HTMLElement} */ (document.querySelector(`.cw-dest[data-dr="${r}"][data-dc="${c}"]`));
+  const setup = () => {
+    if (!document.querySelector('.cw-dest')) press('d', { altKey: true });
+    loadGrid({ stops: [stop('Alfa'), stop('Beta'), stop('Ceta')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710'), cell('0720')], dest: d('Ceta', ['Beta']) }] });
+  };
+
+  it('opens the destination with its text and vias on a double click', () => {
+    setup();
+    down(destCell(0, 0));
+    down(destCell(0, 0), { detail: 2 });
+    expect(/** @type {HTMLInputElement} */ (document.querySelector('.dest-box .de-text'))?.value).toBe('Ceta');
+    expect([...document.querySelectorAll('.dest-box .de-via-text')].map((x) => /** @type {HTMLInputElement} */ (x).value)).toEqual(['Beta']);
+  });
+
+  it('keeps the vias when typing over a destination', () => {
+    setup();
+    down(destCell(0, 0));
+    press('K');
+    expect(/** @type {HTMLInputElement} */ (document.querySelector('.dest-box .de-text'))?.value).toBe('K');
+    expect(document.querySelectorAll('.dest-box .de-via-text')).toHaveLength(1);
+  });
+});
