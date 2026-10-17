@@ -92,13 +92,18 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                 }));
                 for (const st of jpStopList) routePointsMap.set(st.stopId, st.name);
 
-                // JP key = sequence of stopIds
-                const jpKey = `${di}:${jpStopList.map(s=>s.stopId??s.name).join(':')}`;
+                // JP key = the stop sequence and the boarding rules at each stop (a/p/x): trips that differ
+                // in either need their own pattern. The ID stays as before for a pattern without rules.
+                const rules = jpStopList.map(s => (s.forBoarding ? '' : 'a') + (s.forAlighting ? '' : 'p') + (s.requestStop ? 'x' : '')).join(',');
+                const ruled = /[apx]/.test(rules) ? `|rules:${rules}` : '';
+                const jpKey = `${di}:${jpStopList.map(s=>s.stopId??s.name).join(':')}${ruled}`;
                 if (!jpMap.has(jpKey)) {
-                    const jpId = `${cs}:JourneyPattern:${uuid5(`${setKey}|${jpStopList.map(s=>s.stopId).join('|')}`)}`;
+                    const jpId = `${cs}:JourneyPattern:${uuid5(`${setKey}|${jpStopList.map(s=>s.stopId).join('|')}${ruled}`)}`;
                     jpMap.set(jpKey, { jpId, stopList:jpStopList, routeId, name: `${set.name}-${++jpN}` });
                 }
-                const { jpId, stopList } = jpMap.get(jpKey);
+                // The pattern gives the IDs; the times are this trip's own
+                const { jpId } = jpMap.get(jpKey);
+                const stopList = jpStopList;
 
                 // Build ServiceJourney
                 // The trip's operating days (collect.js): none → no trip
@@ -154,7 +159,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     const staySeated = type==='stayseated' ? '\n        <StaySeated>true</StaySeated>' : '';
                     const guaranteed = type==='guaranteed'  ? '\n        <Guaranteed>true</Guaranteed>' : '';
                     ixs.push({ fromSjId: sjId, toSjId, xml: `      <!-- interchange from col ${ci} to col ${targetC} -->
-      <ServiceJourneyInterchange id="${cs}:ServiceJourneyInterchange:${sjId.split(':').pop()}-${targetC}" version="1">${staySeated}${guaranteed}
+      <ServiceJourneyInterchange id="${cs}:ServiceJourneyInterchange:${sjId.split(':').pop()}-${ri}-${targetC}-${targetR}" version="1">${staySeated}${guaranteed}
         <FromPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(srcStop.stopId)}"/>
         <ToPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(tgtStop.stopId)}"/>
         <FromJourneyRef ref="${sjId}" version="1"/>

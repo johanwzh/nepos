@@ -887,9 +887,7 @@ function onPaste(e) {
   const text = e.clipboardData?.getData('text');
   if (!text) return;
   e.preventDefault();
-  if (inDC && dcEdit) { dcBuf = text.trim().toUpperCase(); commitDayCode(); return; }
   if (inStopCol) { pasteStop(text.trim()); return; }
-  if (inDC) return;
   text.split(/\r?\n/).forEach((line, dr) => {
     if (!line) return;
     line.split('\t').forEach((val, dc) => {
@@ -902,6 +900,8 @@ function onPaste(e) {
       const prev = grid.cols[c].cells[r];
       if (prev && p.time !== '|') p.dayOffset = prev.dayOffset || 0;
       p.interchange = null;
+      // A pasted time keeps the cell's note and dates, as a typed one does
+      if (prev && p.time !== '|') { if (prev.note) p.note = prev.note; if (prev.dates?.length) p.dates = prev.dates; }
       grid.cols[c].cells[r] = p;
     });
   });
@@ -1084,6 +1084,8 @@ function deleteRow(ri) {
 
 /** @param {number} ri */
 function dropRow(ri) {
+  // The departure row of a dwell stop goes: its arrival row is an ordinary stop again
+  if (grid.stops[ri - 1]?.isDwellArr) grid.stops[ri - 1].isDwellArr = false;
   grid.stops.splice(ri, 1);
   for (const col of grid.cols) col.cells.splice(ri, 1);
   for (const col of grid.cols) for (const cell of col.cells) {

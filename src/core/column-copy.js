@@ -4,6 +4,10 @@
 // day later: its day code moves on (shiftDayCode) and its times are written on its own day. Copies get
 // new IDs; marks and notes come along, interchanges do not.
 import { shiftDayCode } from './day-codes.js';
+import { addDays } from './calendars.js';
+
+/** A trip's own dates, a number of days later. @param {any[] | undefined} dates @param {number} n */
+const moveDates = (dates, n) => (n && dates?.length ? dates.map((d) => ({ ...d, from: d.from ? addDays(d.from, n) : d.from, to: d.to ? addDays(d.to, n) : d.to })) : dates);
 
 /** @param {any} c */
 const abs = (c) => (c.dayOffset || 0) * 1440 + Number(c.time.slice(0, 2)) * 60 + Number(c.time.slice(2, 4));
@@ -32,13 +36,14 @@ export function copiesAtInterval(col, interval, lastStart) {
       uid: crypto.randomUUID(),
       dayCode: shiftDayCode(col.dayCode, copyDay - startDay),
       tripNo: '', // a trip number belongs to one trip
+      dates: moveDates(col.dates, copyDay - startDay), // its own dates move with it
       cells: col.cells.map((/** @type {any} */ c) => {
         if (!c) return null;
-        if (!timed(c)) return { ...c, interchange: null };
+        if (!timed(c)) return { ...c, interchange: null, dates: moveDates(c.dates, copyDay - startDay) };
         const rel = abs(c) + shift - base;
         const dayOffset = Math.floor(rel / 1440);
         const m = rel - dayOffset * 1440;
-        return { ...c, time: String(Math.floor(m / 60)).padStart(2, '0') + String(m % 60).padStart(2, '0'), dayOffset, interchange: null };
+        return { ...c, time: String(Math.floor(m / 60)).padStart(2, '0') + String(m % 60).padStart(2, '0'), dayOffset, interchange: null, dates: moveDates(c.dates, copyDay - startDay) };
       }),
     });
   }

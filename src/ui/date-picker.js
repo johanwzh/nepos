@@ -5,7 +5,7 @@
 // added days (green), removed days (red, struck). Apply (Ctrl+Enter) keeps them as ranges.
 import { app } from './state.js';
 import { t } from '../i18n/strings.js';
-import { addDays } from '../core/calendars.js';
+import { addDays, rangeDays } from '../core/calendars.js';
 import { renderMonthsView } from './year-view.js';
 import { openFloatBox } from './float-box.js';
 
@@ -24,8 +24,7 @@ function daysOf(ranges, on) {
   /** @type {Set<string>} */ const out = new Set();
   for (const r of ranges) {
     if (r.on !== on) continue;
-    const to = r.to || r.from;
-    for (let d = r.from || to; d && d <= to; d = addDays(d, 1)) out.add(d);
+    for (const d of rangeDays(r)) out.add(d);
   }
   return out;
 }
