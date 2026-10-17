@@ -28,6 +28,7 @@ export function shiftTimes(col, rows, minutes) {
     const v = m + wrap;
     const dayOffset = Math.floor(v / 1440);
     const rest = v - dayOffset * 1440;
-    col.cells[r] = { ...col.cells[r], time: String(Math.floor(rest / 60)).padStart(2, '0') + String(rest % 60).padStart(2, '0'), dayOffset };
+    // In place: anything holding the cell (an open note box) keeps the right one
+    Object.assign(col.cells[r], { time: String(Math.floor(rest / 60)).padStart(2, '0') + String(rest % 60).padStart(2, '0'), dayOffset });
   }
 }

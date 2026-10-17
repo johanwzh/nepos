@@ -83,7 +83,7 @@ export function selectedColumn() {
 
 /**
  * Show a period × direction.
- * @param {{ stops: any[], cols: any[] }} data
+ * @param {{ stops: any[], cols: any[], tripRow?: boolean }} data
  * @param {{ readOnly?: boolean }} [opts]
  */
 export function loadGrid(data, { readOnly = false } = {}) {
@@ -440,7 +440,7 @@ function renderTripRow(tbl) {
     if (isEdit) { td.classList.add('tn-edit'); td.innerHTML = esc(tnBuf) + '▌'; }
     else { td.textContent = col.tripNo ?? ''; if (isSel) td.classList.add('tn-sel'); }
     td.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || grid.readOnly) return;
       e.preventDefault();
       commitEdit(); commitDayCode(); commitStopEdit(); commitTripNo();
       inStopCol = false; inDC = false; inTN = true; dcCol = ci; tnEdit = false;
@@ -711,6 +711,15 @@ function onKeyDown(e) {
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if (ixMode) { if (e.key === 'Escape') { e.preventDefault(); exitIx(); } return; }
   if ($('grid-ctx').style.display === 'block') { if (e.key === 'Escape') hideCtx(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'c' && inStopCol && !inStopEdit) {
+    const stop = grid.stops[ancR];
+    if (stop?.stopId) {
+      e.preventDefault();
+      stopClip = { quayId: String(stop.stopId), name: stop.name };
+      void navigator.clipboard?.writeText(String(stop.stopId)).catch(() => {});
+    }
+    return;
+  }
   if ((e.ctrlKey || e.metaKey) && !editing && !dcEdit && !inStopCol && !inDC && !inTN && !tnEdit) {
     if (e.key === 'c') { e.preventDefault(); copySelection(); return; }
     if (e.key === 'x' && !grid.readOnly) { e.preventDefault(); copySelection().then(() => { clearSelection(); render(); }); return; }
@@ -856,6 +865,18 @@ async function copySelection() {
   try { await navigator.clipboard.writeText(lines.join('\n')); } catch { /* clipboard not available */ }
 }
 
+/** The stop copied last with Ctrl+C (its name comes along when the same Quay ID is pasted). */
+let stopClip = /** @type {{ quayId: string, name: string } | null} */ (null);
+
+/** A Quay ID pasted on a stop row becomes that row's stop, with its name. @param {string} id */
+function pasteStop(id) {
+  if (!NSR_QUAY_PATTERN.test(id) || !grid.stops[ancR] || grid.readOnly) return;
+  const info = quayInfo.has(id) ? quayInfo.get(id) : undefined;
+  const name = stopClip?.quayId === id ? stopClip.name : info?.stopPlaceName ?? '';
+  if (!name) grid.stops[ancR].name = ''; // the lookup fills it in
+  setStopOnRow(ancR, { quayId: id, name, info });
+}
+
 /** Paste uses the paste event, so the browser never asks for clipboard permission. @param {ClipboardEvent} e */
 function onPaste(e) {
   if (!grid.active || grid.readOnly || currentPage() !== 'edit' || inStopEdit) return;
@@ -867,7 +888,8 @@ function onPaste(e) {
   if (!text) return;
   e.preventDefault();
   if (inDC && dcEdit) { dcBuf = text.trim().toUpperCase(); commitDayCode(); return; }
-  if (inDC || inStopCol) return;
+  if (inStopCol) { pasteStop(text.trim()); return; }
+  if (inDC) return;
   text.split(/\r?\n/).forEach((line, dr) => {
     if (!line) return;
     line.split('\t').forEach((val, dc) => {
@@ -1019,6 +1041,9 @@ function insertColumnsAfter(ci, cols) {
   if (!cols.length) return;
   for (const col of grid.cols) for (const cell of col.cells) if (cell?.interchange && cell.interchange.targetC > ci) cell.interchange.targetC += cols.length;
   grid.cols.splice(ci + 1, 0, ...cols);
+  if (ancC > ci) ancC += cols.length;
+  if (endC > ci) endC += cols.length;
+  if (dcCol > ci) dcCol += cols.length;
   inDC = false;
   render();
 }
@@ -1096,6 +1121,7 @@ export function initGrid() {
     }, true);
     document.addEventListener('mouseover', (e) => {
       if (!dragging || inDC || ixMode) return;
+      if ((e.buttons & 1) === 0) { dragging = false; return; } // released outside the window
       const td = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest?.('#tbl [data-r][data-c]'));
       if (!td) return;
       const r = Number(td.dataset.r), c = Number(td.dataset.c);

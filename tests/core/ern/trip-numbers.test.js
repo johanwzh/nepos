@@ -67,3 +67,10 @@ describe('train numbers (rail): the NeTEx TrainNumber, not PrivateCode (user tes
     expect(line.indexOf('<trainNumbers>', line.indexOf('</vehicleJourneys>'))).toBeGreaterThan(0); // in the TimetableFrame, after the journeys
   });
 });
+
+describe('loose ends (2026-10-17)', () => {
+  it('reads only the trip-number row\'s cells, not those of other info rows', () => {
+    const rs = parseERN(ERN('bus', ['#TTL;3;0;;10;Info;0', '#TTC;0;;10;x;0', '#TTL;-1;0;;10;Turnummer;0', '#TTC;1;;10;202;128']));
+    expect(gridOf(rs).cols.map((/** @type {any} */ c) => c.tripNo)).toEqual(['', '202']);
+  });
+});
