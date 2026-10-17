@@ -43,6 +43,11 @@ JavaScript with JSDoc types, Vite for the build and Vitest (jsdom) for the tests
 - How it was built, plan by plan: [docs/superpowers/plans/](docs/superpowers/plans/).
 - What's next — open requests, ideas and known small issues: [docs/backlog.md](docs/backlog.md).
 
+## Licence
+
+Copyright © 2026 johanwzh. Licensed under the EUPL (European Union Public Licence) v. 1.2 — see
+[LICENSE](LICENSE).
+
 ## Credits
 
 Transport mode icons: Entur's icon set ([@entur/icons](https://www.npmjs.com/package/@entur/icons),
