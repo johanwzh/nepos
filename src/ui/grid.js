@@ -285,6 +285,14 @@ function stopRows(ri) {
   return grid.stops[at - 1]?.isDwellArr ? [grid.stops[at - 1], stop] : [stop];
 }
 
+/** @type {((info: import('../services/nsr.js').QuayInfo) => void)[]} */
+const stopInfoListeners = [];
+
+/** Called when a stop put into a row turns out to have NSR facts (its mode sets a new line's mode). @param {(info: import('../services/nsr.js').QuayInfo) => void} fn */
+export function onStopInfo(fn) {
+  addOnce(stopInfoListeners, fn);
+}
+
 /**
  * Put a Quay into a row (stop picking spec §3: only on Bruk). An empty name is filled from NSR.
  * @param {number} ri
@@ -300,11 +308,13 @@ export function setStopOnRow(ri, pick) {
     r.stopId = pick.quayId;
     if (pick.name) r.name = pick.name;
   }
+  if (pick.info) for (const fn of stopInfoListeners) fn(pick.info);
   render();
   if (pick.info !== undefined) return;
   const stop = rows[rows.length - 1];
   loadQuays([pick.quayId]).then(() => {
     const info = quayInfo.get(pick.quayId);
+    if (info) for (const fn of stopInfoListeners) fn(info);
     if (!info || stop.name.trim() || !grid.stops.includes(stop)) return;
     if (inStopEdit) { updateStopMarks(); return; } // a name is being typed: never rebuild under it
     for (const r of rows) r.name = info.stopPlaceName;

@@ -5,7 +5,7 @@
 import { app } from './state.js';
 import { $, onRefresh, refreshAll, runAction, markDirty, setBeforeLeave, beforeLeave, showMessage, currentPage, onBeforeViewChange, notifyLinesChanged } from './shell.js';
 import { t } from '../i18n/strings.js';
-import { grid, loadGrid, gridData, markGridClean, clearGrid, render as renderGrid, onGridChange, commitPending, onGridRender } from './grid.js';
+import { grid, loadGrid, gridData, markGridClean, clearGrid, render as renderGrid, onGridChange, commitPending, onGridRender, onStopInfo } from './grid.js';
 import { newRouteState, fillMissingPeriod, gridKey, periodsOf } from './route-state.js';
 import { parseERN } from '../core/ern/parse.js';
 import { serializeERN } from '../core/ern/serialize.js';
@@ -14,7 +14,7 @@ import { orgNameList, findRole, addToCopy } from '../core/orgs.js';
 import { createOrgPicker } from './org-picker.js';
 import { openModeMenu } from './mode-menu.js';
 import { modeIconSvg } from './mode-icons.js';
-import { ernCodeFor } from '../core/modes.js';
+import { ernCodeFor, TRANSMODEL_MODES } from '../core/modes.js';
 import { modeLabel, submodeLabel } from '../i18n/modes.js';
 import { writeOrgs } from '../project/orgs-store.js';
 import { pruneProjectCopy } from './org-register.js';
@@ -564,7 +564,23 @@ function renderEditor() {
 
 let listenersWired = false;
 
+/**
+ * A line without a mode takes the mode of the first stop put into it (user 2026-10-18): the stop picker then
+ * keeps the stops to that mode. The submode is left for the user.
+ * @param {import('../services/nsr.js').QuayInfo} info
+ */
+function adoptModeFromStop(info) {
+  const rs = app.routeState;
+  if (!rs || isRouteReadOnly() || (rs.mode && rs.mode !== 'other')) return;
+  const m = TRANSMODEL_MODES.find((x) => x.mode === info.mode && x.mode !== 'other');
+  if (!m) return;
+  rs.mode = m.mode; rs.submode = ''; rs.transportMode = ernCodeFor(m.mode, '', rs.transportMode);
+  markDirty();
+  renderHeader();
+}
+
 export function initRouteEditor() {
+  onStopInfo(adoptModeFromStop);
   onGridRender(renderTimeline); // the column under the cursor shows on the timeline
   onRefresh(renderEditor);
   onGridChange(() => { if (app.dirty) notifyLinesChanged(); else markDirty(); });
