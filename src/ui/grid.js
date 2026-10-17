@@ -19,6 +19,7 @@ import { openCopyInterval } from './copy-interval.js';
 import { openTimeNudge } from './time-nudge.js';
 import { shiftTimes } from '../core/time-shift.js';
 import { openDatePicker } from './date-picker.js';
+import { placeMenu } from './place-menu.js';
 import { unionDays, tripDays } from '../core/calendars.js';
 import { app } from './state.js';
 
@@ -704,7 +705,7 @@ function scrollTo(r, c) {
 function onKeyDown(e) {
   if (!grid.active || currentPage() !== 'edit') return;
   // A floating box (note, dates, helpers) or a dialog has the keyboard
-  if (document.querySelector('.float-box, .nudge-box, dialog[open]')) return;
+  if (document.querySelector('.float-box, dialog[open]')) return;
   if (inStopEdit) return; // the name input handles its own keys
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -859,7 +860,7 @@ async function copySelection() {
 function onPaste(e) {
   if (!grid.active || grid.readOnly || currentPage() !== 'edit' || inStopEdit) return;
   // Only into the times: never while the day-code or trip-number row has the keyboard
-  if (inDC || dcEdit || inTN || tnEdit || document.querySelector('.float-box, .nudge-box')) return;
+  if (inDC || dcEdit || inTN || tnEdit || document.querySelector('.float-box')) return;
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
   const text = e.clipboardData?.getData('text');
@@ -980,8 +981,7 @@ function showCtx(x, y, isDC = false) {
   }
   const m = $('grid-ctx');
   m.style.display = 'block';
-  m.style.left = `${x}px`;
-  m.style.top = `${y}px`;
+  placeMenu(m, x, y); // inside the window, also near its bottom and right edge
 }
 function hideCtx() {
   const m = $('grid-ctx');
@@ -1153,20 +1153,18 @@ export function initGrid() {
   $('gc-nudge').addEventListener('click', () => {
     hideCtx();
     if (grid.readOnly) return;
-    // The selection, or one cell's whole column; re-applied from a snapshot on every notch
-    const { r0, r1, c0, c1 } = selRect();
-    const single = r0 === r1 && c0 === c1;
-    const rows = [];
-    for (let r = single ? 0 : r0; r <= (single ? grid.stops.length - 1 : r1); r++) rows.push(r);
-    const cols = [];
-    for (let c = c0; c <= c1; c++) if (grid.cols[c]) cols.push(c);
-    const snapshot = cols.map((c) => grid.cols[c].cells.map((/** @type {any} */ x) => (x ? { ...x } : x)));
-    const restore = () => cols.forEach((c, i) => { grid.cols[c].cells = snapshot[i].map((/** @type {any} */ x) => (x ? { ...x } : x)); });
-    const head = /** @type {HTMLElement | null} */ (document.querySelector(`.g-dc-cell[data-ci="${c0}"]`))?.getBoundingClientRect();
+    // A standing tool: each notch moves the cells selected at that moment, and only those
+    const head = /** @type {HTMLElement | null} */ (document.querySelector(`.g-dc-cell[data-ci="${selRect().c0}"]`))?.getBoundingClientRect();
     openTimeNudge({
       x: head?.left ?? 200, y: (head?.top ?? 120) - 44,
-      onShift: (total) => { restore(); for (const c of cols) shiftTimes(grid.cols[c], rows, total); render(); },
-      onUndo: () => { restore(); render(); },
+      onNudge: (minutes) => {
+        if (grid.readOnly || inDC || inTN || inStopCol) return;
+        const { r0, r1, c0, c1 } = selRect();
+        const rows = [];
+        for (let r = r0; r <= r1; r++) rows.push(r);
+        for (let c = c0; c <= c1; c++) if (grid.cols[c]) shiftTimes(grid.cols[c], rows, minutes);
+        render();
+      },
     });
   });
   $('gc-interp').addEventListener('click', () => {

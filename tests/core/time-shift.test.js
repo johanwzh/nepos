@@ -40,3 +40,13 @@ describe('review fixes', () => {
     expect(times(col)).toEqual(['2351+1', '0006+2']);
   });
 });
+
+describe('only the selected cells (user test 2026-10-17)', () => {
+  it('never moves a time that is not in the given rows, even when the first time wraps', () => {
+    const col = { dayCode: '6', cells: [cell('0002'), cell('0010'), cell('0020')] };
+    shiftTimes(col, [1], 5);
+    expect(times(col)).toEqual(['0002', '0015', '0020']);
+    shiftTimes(col, [0], -5);
+    expect(times(col)).toEqual(['2357', '0015', '0020']); // the first time wrapped round on its own day
+  });
+});

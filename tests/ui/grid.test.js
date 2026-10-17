@@ -256,30 +256,42 @@ describe('copying a column at an interval (user test 2026-10-17)', () => {
 
 describe('nudging times with the mini-jog (user test 2026-10-17)', () => {
   beforeEach(() => { initGrid(); });
+  const at = (/** @type {number} */ r, /** @type {number} */ c) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="${c}"]`));
   const open = () => {
-    /** @type {HTMLElement} */ (document.querySelector('[data-r="0"][data-c="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    at(0, 0).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
     /** @type {HTMLElement} */ (document.getElementById('gc-nudge')).click();
     return /** @type {HTMLElement} */ (document.querySelector('.nudge-box .jd'));
   };
   const key = (/** @type {Element} */ el, /** @type {string} */ k, shiftKey = false) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey, bubbles: true, cancelable: true }));
+  const times = () => grid.cols[0].cells.map((c) => c.time);
 
-  it('moves the whole column live, one minute a notch (Shift: ten), and Enter keeps it', () => {
-    const jog = open();
+  it('only ever moves the selected cells, one minute a notch (Shift: ten)', () => {
+    const jog = open(); // one cell selected: only that cell
     key(jog, 'ArrowUp');
     key(jog, 'ArrowUp', true);
-    expect(grid.cols[0].cells.map((c) => c.time)).toEqual(['0711', '0756']);
+    expect(times()).toEqual(['0711', '0745']);
     expect(document.querySelector('.nudge-read')?.textContent).toBe('+11 min');
-    key(jog, 'Enter');
-    expect(document.querySelector('.nudge-box')).toBeNull();
-    expect(grid.cols[0].cells.map((c) => c.time)).toEqual(['0711', '0756']);
   });
 
-  it('Esc puts the times back', () => {
+  it('stays open as a tool while the selection changes, and acts on the new selection', () => {
     const jog = open();
+    at(0, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    at(1, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    expect(document.querySelector('.nudge-box')).not.toBeNull(); // a click in the grid keeps it open
     key(jog, 'ArrowDown');
-    expect(grid.cols[0].cells[0].time).toBe('0659');
+    expect(times()).toEqual(['0659', '0744']);
+  });
+
+  it('closes with ✕ or Esc, keeping what was done', () => {
+    const jog = open();
+    key(jog, 'ArrowUp');
     key(jog, 'Escape');
-    expect(grid.cols[0].cells.map((c) => c.time)).toEqual(['0700', '0745']);
+    expect(document.querySelector('.nudge-box')).toBeNull();
+    expect(times()).toEqual(['0701', '0745']);
+    open();
+    /** @type {HTMLElement} */ (document.querySelector('.nudge-box .nudge-x')).click();
+    expect(document.querySelector('.nudge-box')).toBeNull();
   });
 });
 
@@ -391,5 +403,19 @@ describe('review fixes: cut and paste never reach hidden times', () => {
     /** @type {any} */ (ev).clipboardData = { getData: () => '0900\n0930' };
     document.dispatchEvent(ev);
     expect(grid.cols[0].cells.map((c) => c?.time)).toEqual(['0700', '0745']);
+  });
+});
+
+describe('the right-click menu stays inside the window (user test 2026-10-17)', () => {
+  beforeEach(() => { initGrid(); });
+  it('opens upwards when there is no room below, and leftwards near the right edge', () => {
+    Object.defineProperty(window, 'innerHeight', { value: 600, configurable: true });
+    Object.defineProperty(window, 'innerWidth', { value: 800, configurable: true });
+    const menu = /** @type {HTMLElement} */ (document.getElementById('grid-ctx'));
+    Object.defineProperty(menu, 'offsetHeight', { value: 400, configurable: true });
+    Object.defineProperty(menu, 'offsetWidth', { value: 220, configurable: true });
+    /** @type {HTMLElement} */ (document.querySelector('[data-r="1"][data-c="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 700, clientY: 560 }));
+    expect(parseInt(menu.style.top, 10) + 400).toBeLessThanOrEqual(600);
+    expect(parseInt(menu.style.left, 10) + 220).toBeLessThanOrEqual(800);
   });
 });

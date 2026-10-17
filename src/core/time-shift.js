@@ -16,13 +16,14 @@ const abs = (c) => (c.dayOffset || 0) * 1440 + Number(c.time.slice(0, 2)) * 60 +
 export function shiftTimes(col, rows, minutes) {
   /** @type {Map<number, number>} row → new minutes */
   const next = new Map();
-  col.cells.forEach((c, r) => { if (timed(c)) next.set(r, abs(c) + (rows.includes(r) ? minutes : 0)); });
-  const first = [...next.values()][0];
-  if (first === undefined) return;
-  // The day the trip starts on (its first time's day offset) never changes: the times wrap within it
-  const firstCell = col.cells.find(timed);
-  const day = Math.floor(abs(firstCell) / 1440) * 1440;
-  const wrap = first < day ? 1440 : first >= day + 1440 ? -1440 : 0;
+  col.cells.forEach((c, r) => { if (timed(c) && rows.includes(r)) next.set(r, abs(c) + minutes); });
+  if (!next.size) return;
+  // Only the given rows change. The day the trip starts on never changes: when its first time moves
+  // past that day's start or end, the moved times wrap round within it
+  const firstRow = col.cells.findIndex(timed);
+  const day = Math.floor(abs(col.cells[firstRow]) / 1440) * 1440;
+  const first = next.get(firstRow);
+  const wrap = first === undefined ? 0 : first < day ? 1440 : first >= day + 1440 ? -1440 : 0;
   for (const [r, m] of next) {
     const v = m + wrap;
     const dayOffset = Math.floor(v / 1440);

@@ -13,6 +13,7 @@ import { DEFAULT_SETTINGS } from '../project/settings.js';
 import { pickerState, setPickerMap } from './stop-picker.js';
 import { pickerMapModel } from '../core/picker-map-model.js';
 import { modeIconSvg } from './mode-icons.js';
+import { placeMenu } from './place-menu.js';
 
 
 /** @type {any} */ let map = null;
@@ -72,6 +73,7 @@ function quayMenu(id, ev) {
     menu.appendChild(b);
   }
   document.body.appendChild(menu);
+  placeMenu(menu, ev.clientX, ev.clientY);
   setTimeout(() => document.addEventListener('mousedown', closeQuayMenu, { once: true }), 0);
 }
 function closeQuayMenu() { document.querySelector('.map-ctx')?.remove(); }

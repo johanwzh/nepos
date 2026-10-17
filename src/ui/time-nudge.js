@@ -1,5 +1,6 @@
-// "Forskyv tider…" (user test 2026-10-17): the mini-jog floating over the column. Each notch moves the
-// times one minute (Shift: ten); the change is live. Enter or a click outside keeps it, Esc undoes it.
+// "Forskyv tider…" (user test 2026-10-17): the mini-jog as a standing tool. It stays open until closed
+// (✕ or Esc) while the selection in the grid changes; each notch moves whatever is selected at that
+// moment one minute (Shift: ten). The readout counts the minutes moved while it has been open.
 import { t } from '../i18n/strings.js';
 import { jogDial } from './jog/jogDial.js';
 
@@ -7,47 +8,48 @@ import { jogDial } from './jog/jogDial.js';
 let closeOpen = null;
 
 /**
- * @param {{ x: number, y: number, onShift: (total: number) => void, onUndo: () => void, onDone?: () => void }} opts
- *   onShift gets the total minutes from where it started (the caller re-applies from its own snapshot)
+ * @param {{ x: number, y: number, onNudge: (minutes: number) => void, onClose?: () => void }} opts
  */
-export function openTimeNudge({ x, y, onShift, onUndo, onDone }) {
+export function openTimeNudge({ x, y, onNudge, onClose }) {
   closeOpen?.();
   let total = 0;
   const box = document.createElement('div');
   box.className = 'nudge-box';
-  box.innerHTML = `<span class="nudge-read">0 min</span><span class="nudge-jog"></span><span class="nudge-hint">${t('nudgeHint')}</span>`;
+  box.innerHTML = `<span class="nudge-read">0 min</span><span class="nudge-jog"></span><span class="nudge-hint">${t('nudgeHint')}</span><button class="nudge-x" title="Esc">✕</button>`;
   const read = /** @type {HTMLElement} */ (box.querySelector('.nudge-read'));
   const jog = jogDial({
     size: 30, detents: true, pxPerNotch: 9,
     onNudge: (/** @type {1 | -1} */ dir, /** @type {boolean} */ coarse) => {
-      total += dir * (coarse ? 10 : 1);
+      const d = dir * (coarse ? 10 : 1);
+      total += d;
       read.textContent = `${total > 0 ? '+' : ''}${total} min`;
-      onShift(total);
+      onNudge(d);
     },
   });
   /** @type {HTMLElement} */ (box.querySelector('.nudge-jog')).appendChild(jog);
   document.body.appendChild(box);
   // The jog's own arrow keys reach it first; they stop here, never reaching the grid
   box.addEventListener('keydown', (e) => e.stopPropagation());
-  box.style.left = `${Math.max(8, Math.min(x, window.innerWidth - 240))}px`;
+  box.style.left = `${Math.max(8, Math.min(x, window.innerWidth - 300))}px`;
   box.style.top = `${Math.max(8, y)}px`;
 
   const close = () => {
     box.remove();
     document.removeEventListener('keydown', onKey, true);
-    document.removeEventListener('mousedown', onOutside, true);
     if (closeOpen === close) closeOpen = null;
+    onClose?.();
   };
-  /** @param {KeyboardEvent} e */
+  /** @param {KeyboardEvent} e Esc closes the tool, from the jog or from the grid */
   const onKey = (e) => {
-    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); onUndo(); }
-    else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); close(); onDone?.(); }
+    if (e.key !== 'Escape' || document.querySelector('.float-box, dialog[open]')) return;
+    e.preventDefault(); e.stopPropagation(); close();
   };
-  /** @param {MouseEvent} e */
-  const onOutside = (e) => { if (!box.contains(/** @type {Node} */ (e.target))) { close(); onDone?.(); } };
   document.addEventListener('keydown', onKey, true);
-  setTimeout(() => document.addEventListener('mousedown', onOutside, true), 0);
+  box.querySelector('.nudge-x')?.addEventListener('click', close);
   closeOpen = close;
   jog.focus();
   return { close };
 }
+
+/** Is the tool open? */
+export const nudgeOpen = () => closeOpen !== null;

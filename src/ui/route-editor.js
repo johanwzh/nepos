@@ -24,6 +24,7 @@ import { showProjectCheck } from './project-ui.js';
 import { renderTimeline } from './timeline.js';
 import { unsavedCalendarCount, saveAllCalendars, discardAllCalendars } from './calendar-drafts.js';
 import { issueMessage } from './messages.js';
+import { placeMenu } from './place-menu.js';
 import { parkOpenLine, takeDraft, unsavedCodes } from './drafts.js';
 
 /** @param {string} s */
@@ -113,6 +114,7 @@ function nameMenu(e, make) {
   b.addEventListener('mousedown', (ev) => { ev.preventDefault(); ev.stopPropagation(); menu.remove(); make(); });
   menu.appendChild(b);
   document.body.appendChild(menu);
+  placeMenu(menu, e.clientX, e.clientY);
   setTimeout(() => document.addEventListener('mousedown', () => menu.remove(), { once: true }), 0);
 }
 
