@@ -817,4 +817,12 @@ td.has-dates { box-shadow: inset -3px 0 0 #3a9b5b; }
 .dest-box .de-sugg-item.on, .dest-box .de-sugg-item:hover { background: var(--accent-bg); }
 .dest-box .de-via { display: flex; gap: 4px; align-items: center; }
 .dest-box .de-via-text { flex: 1; }
+.dest-box .de-text, .dest-box .de-via-text { height: 28px; padding: 0 8px; border: 1px solid var(--border); border-radius: 3px;
+  background: var(--bg-raised); color: var(--text); font-size: 13px; font-family: inherit; }
+.dest-box .de-text:focus, .dest-box .de-via-text:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+/* The whole destination, readable, when the cell is hovered or selected: it spills over the next columns */
+#tbl.dest-shown .cw-dest:hover .dest-in, #tbl.dest-shown .cw-dest.dest-sel .dest-in { overflow: visible; }
+#tbl.dest-shown .cw-dest:hover .dest-label, #tbl.dest-shown .cw-dest.dest-sel .dest-label { width: max-content; max-width: 360px; font-size: 12px;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; z-index: 6; overflow: visible;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .35); }
 .dest-box .de-add-via { align-self: flex-start; }

@@ -420,7 +420,6 @@ function addDestColumns(tbl) {
 
 /** Selecting, editing (double click) and the menu of a destination cell. @param {HTMLElement} td @param {number} r @param {number} ci */
 function wireDestCell(td, r, ci) {
-  td.addEventListener('dblclick', () => openDestEditorAt(r, ci));
   td.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     if (ixMode || grid.readOnly) return;
@@ -443,6 +442,8 @@ function wireDestCell(td, r, ci) {
     inStopCol = false; inDC = false; inTN = false; inDest = true;
     if (e.shiftKey) { destR2 = r; destC2 = ci; } else { destR = r; destC = ci; destR2 = r; destC2 = ci; }
     render();
+    // A double click opens the destination (the grid is rebuilt on every click, so the browser's dblclick never arrives)
+    if (e.detail >= 2 && !e.shiftKey) { destDrag = null; openDestEditorAt(r, ci); }
   });
 }
 
