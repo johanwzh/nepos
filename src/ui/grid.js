@@ -22,6 +22,7 @@ import { openDatePicker } from './date-picker.js';
 import { placeMenu } from './place-menu.js';
 import { unionDays, tripDays } from '../core/calendars.js';
 import { app } from './state.js';
+import { normalizeDests } from '../core/destinations.js';
 
 /** The grid being edited: one period × direction of the open route. */
 export const grid = {
@@ -90,6 +91,7 @@ export function loadGrid(data, { readOnly = false } = {}) {
   grid.stops = JSON.parse(JSON.stringify(data.stops));
   grid.cols = JSON.parse(JSON.stringify(data.cols));
   grid.tripRow = !!(/** @type {any} */ (data).tripRow);
+  normalizeDests(grid); // a start and one change slot per stop for every column
   inTN = false; tnEdit = false; tnBuf = '';
   // Every column on screen has its stable ID, so saving twice writes the same text.
   for (const col of grid.cols) if (!col.uid) col.uid = crypto.randomUUID();
@@ -1014,7 +1016,7 @@ function hideCtx() {
 // ─── Insert / delete ────────────────────────────────────────────────────────
 /** @param {number} at */
 function insertCol(at) {
-  grid.cols.splice(at, 0, { dayCode: '', uid: crypto.randomUUID(), note: '', dates: [], cells: grid.stops.map(() => null) });
+  grid.cols.splice(at, 0, { dayCode: '', uid: crypto.randomUUID(), note: '', dates: [], cells: grid.stops.map(() => null), dest: null, dests: grid.stops.map(() => null) });
   for (const col of grid.cols) for (const cell of col.cells) if (cell && cell.interchange && cell.interchange.targetC >= at) cell.interchange.targetC++;
   if (!inDC) { if (ancC >= at && grid.cols.length > 1) ancC++; if (endC >= at && grid.cols.length > 1) endC++; } else if (dcCol >= at) dcCol++;
   ancC = clampC(ancC); endC = clampC(endC);
@@ -1023,7 +1025,7 @@ function insertCol(at) {
 /** @param {number} at */
 function insertRow(at) {
   grid.stops.splice(at, 0, { name: '', stopId: null, bold: false, sep: false, isDwellArr: false, price: null });
-  for (const col of grid.cols) col.cells.splice(at, 0, null);
+  for (const col of grid.cols) { col.cells.splice(at, 0, null); col.dests.splice(at, 0, null); }
   for (const col of grid.cols) for (const cell of col.cells) if (cell && cell.interchange && cell.interchange.targetR >= at) cell.interchange.targetR++;
   // The new row's stop cell is selected, so the map pane offers to find its stop at once; Enter or
   // F2 names it (user test 2026-10-16: no name box popping up)
@@ -1065,7 +1067,7 @@ function deleteCol(ci) {
 /** A new empty stop row at the bottom (recording stops); its index. */
 export function appendStopRow() {
   grid.stops.push({ name: '', stopId: null, bold: false, sep: false, isDwellArr: false, price: null });
-  for (const col of grid.cols) col.cells.push(null);
+  for (const col of grid.cols) { col.cells.push(null); col.dests.push(null); }
   render();
   return grid.stops.length - 1;
 }
@@ -1087,7 +1089,7 @@ function dropRow(ri) {
   // The departure row of a dwell stop goes: its arrival row is an ordinary stop again
   if (grid.stops[ri - 1]?.isDwellArr) grid.stops[ri - 1].isDwellArr = false;
   grid.stops.splice(ri, 1);
-  for (const col of grid.cols) col.cells.splice(ri, 1);
+  for (const col of grid.cols) { col.cells.splice(ri, 1); col.dests.splice(ri, 1); }
   for (const col of grid.cols) for (const cell of col.cells) {
     if (cell && cell.interchange) {
       if (cell.interchange.targetR === ri) cell.interchange = null;

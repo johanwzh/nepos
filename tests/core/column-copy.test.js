@@ -52,3 +52,14 @@ describe('code review 2026-10-17', () => {
     expect(copies[0].cells[1].dates).toEqual([{ from: '20261225', to: '20261225', on: false }]);
   });
 });
+
+describe('copiesAtInterval and destinations', () => {
+  it('gives each copy its own destinations', () => {
+    const src = /** @type {any} */ ({ ...col('D', [cell('0800'), cell('0815')]), dest: { text: 'A', vias: [] }, dests: [null, { text: 'B', vias: [] }] });
+    const [copy] = copiesAtInterval(src, 60, 10 * 60);
+    copy.dests[1].text = 'X';
+    copy.dest.vias.push('Y');
+    expect(src.dests[1].text).toBe('B');
+    expect(src.dest.vias).toEqual([]);
+  });
+});
