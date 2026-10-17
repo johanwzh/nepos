@@ -180,6 +180,7 @@ async function search() {
     const hits = await services.search(text, opts('geocoder'));
     if (!current()) return;
     state.hits = hits;
+    kbIndex = -1;
     setStatus(hits.length ? '' : t('wsNoResults'));
     render();
   } catch (e) {
@@ -193,6 +194,7 @@ const quayInfoOf = (place, quay) => ({ quayId: quay.quayId, publicCode: quay.pub
 /** A stop place with one Quay: that Quay is the candidate; with several: list them. @param {StopPlace} place */
 function showPlace(place) {
   state.place = place;
+  kbIndex = state.hits.length ? 1 : 0; // its first platform is ready for Enter (after the Back row)
   state.candidate = place.quays.length === 1 ? quayInfoOf(place, place.quays[0]) : null;
   if (!place.quays.length) setStatus(t('wsNoQuays'));
   render();
@@ -336,6 +338,20 @@ function done() {
 }
 
 /** @param {string} html @param {() => void} onClick @param {string} [cls] */
+/** The result row marked for the keyboard (arrows or Tab in the search box, then Enter); -1: none */
+let kbIndex = -1;
+
+/** The rows the keyboard can pick in the search list. */
+const pickable = () => /** @type {HTMLElement[]} */ ([...($('sp-list')?.querySelectorAll('.sp-row:not(.sp-off)') ?? [])]);
+
+/** Mark the keyboard's row. */
+function markKb() {
+  const rows = pickable();
+  if (kbIndex >= rows.length) kbIndex = rows.length - 1;
+  rows.forEach((r, i) => r.classList.toggle('kb', i === kbIndex));
+  rows[kbIndex]?.scrollIntoView?.({ block: 'nearest' });
+}
+
 function row(html, onClick, cls = 'sp-row') {
   const div = document.createElement('div');
   div.className = cls;
@@ -413,6 +429,7 @@ function render() {
     }
   }
 
+  markKb();
   renderViewed();
   map?.show(state);
 }
@@ -425,14 +442,25 @@ export function initStopPicker() {
   q.addEventListener('keydown', (e) => {
     e.stopPropagation(); // the grid and the shell must not see typing in the search box
     if (e.key === 'Escape') { e.preventDefault(); focusGrid(); return; }
+    // Arrows (or Tab, while there are results) move through the list; Enter picks the marked row
+    const rows = pickable();
+    const down = e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey), up = e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey);
+    if ((down || up) && rows.length) {
+      e.preventDefault();
+      kbIndex = down ? Math.min(rows.length - 1, kbIndex + 1) : Math.max(0, kbIndex - 1);
+      markKb();
+      return;
+    }
     if (e.key !== 'Enter') return;
     e.preventDefault();
+    if (kbIndex >= 0 && rows[kbIndex]) { rows[kbIndex].click(); return; }
     if (state.candidate) apply();
     else if (state.direct && q.value.trim() === state.direct.quayId && state.direct.info !== undefined) applyDirect();
     else void search();
   });
   q.addEventListener('input', () => {
     // New text: the old candidate must never be applied by an Enter before the search answers.
+    kbIndex = -1;
     if (state.candidate || state.direct) { state.candidate = null; state.direct = null; render(); }
     schedule();
   });

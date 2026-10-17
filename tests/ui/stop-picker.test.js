@@ -423,3 +423,24 @@ describe('stop picking review fixes', () => {
     expect(nameCell(3).title).toContain('F6');
   });
 });
+
+describe('the search list with the keyboard (user 2026-10-18)', () => {
+  it('moves through the results with the arrows (or Tab) and picks with Enter', async () => {
+    pickRow(3);
+    await search('Storsenter');
+    expect(rows()).toHaveLength(1);
+    press('ArrowDown', q());
+    expect(rows()[0].classList.contains('kb')).toBe(true);
+    press('Enter', q());
+    await settle();
+    // The stop place is open: its first platform is ready for Enter, Tab moves on
+    const quays = rows().filter((r) => !r.classList.contains('sp-back'));
+    expect(quays).toHaveLength(2);
+    expect(quays[0].classList.contains('kb')).toBe(true);
+    q().dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    expect(rows().filter((r) => !r.classList.contains('sp-back'))[1].classList.contains('kb')).toBe(true);
+    press('Enter', q());
+    await settle();
+    expect(grid.stops[3].stopId).toBe('NSR:Quay:62');
+  });
+});

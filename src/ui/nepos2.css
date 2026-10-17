@@ -283,6 +283,7 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .sp-list { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .sp-row { padding: 4px 6px; cursor: pointer; border-radius: 3px; }
 .sp-row:hover, .sp-row.on { background: var(--accent-bg); }
+.sp-row.kb { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--accent-bg); }
 .sp-row small, .sp-place small { display: block; color: var(--text-f); }
 .sp-place { padding: 4px 6px; font-weight: 600; }
 .sp-card { border: 1px dashed var(--accent); border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
