@@ -12,7 +12,7 @@ import { isValidMode } from '../modes.js';
  */
 
 // Records the Nepos parser reads and writes back. Anything else would be dropped on save.
-const KNOWN = new Set(['#LEV', '#RUT', '#SEK', '#VAL', '#TRA', '#KOM', '#PER', '#TAB', '#TUR', '#TRL', '#TRC', '#FOT', '#UNT', '#TTL', '#TTC', '#TRM', '#MRK', '#EKS', '#OFF', '#UID', '#KAL',
+const KNOWN = new Set(['#LEV', '#RUT', '#SEK', '#VAL', '#TRA', '#KOM', '#PER', '#TAB', '#TUR', '#TRL', '#TRC', '#FOT', '#UNT', '#TTL', '#TTC', '#TRM', '#MRK', '#EKS', '#OFF', '#UID', '#KAL', '#DSS', '#DST', '#DSK',
   // Nepos's older names and the deprecated comment records: read, and updated to ERN 2.0
   '#MOD', '#BRA', '#CUR', '#KON', '#KOE', '#KOT']);
 
@@ -38,6 +38,11 @@ export function checkRouteFile(text) {
   let seenLEV = false, seenRUT = false, seenPER = false, inTAB = false, haveTUR = false, haveTRL = false;
   /** @type {Set<string>} */ const komLangs = new Set();
   let lastRec = ''; // #UID belongs to the record directly before it
+  /** @type {Set<string>} notes already given once */ const noted = new Set();
+  /** @param {string} code @param {number} line */
+  const noteOnce = (code, line) => { if (!noted.has(code)) issues.push({ code, severity: 'note', line }); noted.add(code); };
+  /** @type {Map<string, string[]>} #DST ID → its via IDs (all languages) */ const dstVias = new Map();
+  /** @type {{ id: string, line: number }[]} */ const dstLines = [];
 
   text.split(/\r?\n/).forEach((raw, i) => {
     const n = i + 1;
@@ -123,6 +128,17 @@ export function checkRouteFile(text) {
       case '#UID':
         if (lastRec !== '#TUR' && lastRec !== '#TRA') damaged('out-of-order', n, rec);
         break;
+      case '#DSS': // the vehicle's sign: Nepos makes data for journey planning only
+        noteOnce('sign-not-kept', n);
+        break;
+      case '#DST': {
+        const id = (f[1] ?? '').trim();
+        dstVias.set(id, [...(dstVias.get(id) ?? []), ...f.slice(4).map((v) => v.trim()).filter(Boolean)]);
+        dstLines.push({ id, line: n });
+        const lang = (f[3] ?? '').trim().toLowerCase();
+        if (lang && lang !== 'nob') noteOnce('destination-language-not-kept', n);
+        break;
+      }
       case '#UNT':
         if (!haveTUR) damaged('out-of-order', n, rec);
         if (!isValidDate(f[3] ?? '') || !isValidDate(f[5] ?? '')) damaged('invalid-date', n);
@@ -130,6 +146,18 @@ export function checkRouteFile(text) {
     }
     lastRec = rec;
   });
+
+  // A destination whose vias lead back to itself (the standard forbids it)
+  /** @param {string} from @param {string} target @param {Set<string>} seen @returns {boolean} */
+  const leadsTo = (from, target, seen) => {
+    if (from === target) return true;
+    if (seen.has(from)) return false;
+    seen.add(from);
+    return (dstVias.get(from) ?? []).some((v) => leadsTo(v, target, seen));
+  };
+  for (const { id, line } of dstLines) {
+    if ((dstVias.get(id) ?? []).some((v) => leadsTo(v, id, new Set()))) damaged('destination-via-loop', line, id);
+  }
 
   // Anything else a save would lose or change (see roundtrip.js). Lines already reported as
   // damaged above are not reported twice.
