@@ -5,7 +5,7 @@ import { app } from '../../src/ui/state.js';
 import { initShell, refreshAll } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
-import { initGrid, grid } from '../../src/ui/grid.js';
+import { initGrid, grid, setStopOnRow } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { initRouteEditor, selectRoute, newRoute } from '../../src/ui/route-editor.js';
 import { createMemoryFs, readText } from '../../src/project/fs.js';
@@ -310,5 +310,27 @@ describe('the line name (user test 2026-10-16)', () => {
     expect(app.routeState.routeName).toBe(`${grid.stops[0].name}-${grid.stops[last].name}`);
     expect(name().value).toBe(app.routeState.routeName);
     expect(app.dirty).toBe(true);
+  });
+});
+
+describe('the first stop sets the line\'s mode (user 2026-10-18)', () => {
+  const quay = (id, mode) => ({ quayId: id, publicCode: '1', stopPlaceId: 'NSR:StopPlace:1', stopPlaceName: id, mode, lat: 0, lon: 0 });
+
+  it('gives a new line the mode of its first stop, without a submode', async () => {
+    await newRoute();
+    await flush();
+    setStopOnRow(0, { quayId: 'NSR:Quay:1', name: 'Oslo S', info: quay('NSR:Quay:1', 'rail') });
+    expect(app.routeState.mode).toBe('rail');
+    expect(app.routeState.submode).toBe('');
+    setStopOnRow(1, { quayId: 'NSR:Quay:2', name: 'Bussterminalen', info: quay('NSR:Quay:2', 'bus') });
+    expect(app.routeState.mode).toBe('rail'); // only while the mode is not set
+  });
+
+  it('leaves a line that has a mode alone', async () => {
+    await selectRoute('20');
+    const before = app.routeState.mode;
+    expect(before).toBeTruthy();
+    setStopOnRow(0, { quayId: 'NSR:Quay:9', name: 'X', info: quay('NSR:Quay:9', before === 'rail' ? 'bus' : 'rail') });
+    expect(app.routeState.mode).toBe(before);
   });
 });
