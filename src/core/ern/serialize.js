@@ -16,7 +16,8 @@ export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0
 export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     const d   = delivery || {};
     const nl  = '\r\n';
-    const esc = s => (s||'').replace(/;/g, ','); // semicolons not allowed in fields
+    // Semicolons are not allowed in fields, and a line break would end the record: both are replaced
+    const esc = s => (s||'').replace(/;/g, ',').replace(/\s*[\r\n]+\s*/g, ' ');
     const lines = [];
 
     lines.push(`#LEV;${esc(d.name)};${esc(d.codespace)}`);

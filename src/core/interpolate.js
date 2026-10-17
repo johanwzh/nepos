@@ -146,11 +146,15 @@ export function interpolateSpan(grid, ci, rFrom, rTo, posOf) {
     }
     const total = cum[cum.length - 1];
     if (total === 0) even = true;
+    // Steps for an even split: a dwell arrival row is the same step as its departure row
+    const step = [0];
+    for (let r = a + 1; r <= b; r++) step.push(step[step.length - 1] + (grid.stops[r - 1]?.isDwellArr ? 0 : 1));
     let last = tA;
     for (let r = a + 1; r < b; r++) {
       const c = col.cells[r];
       if (c && c.time) continue;      // a time or | is never overwritten
-      const share = even ? (r - a) / (b - a) : cum[r - a] / total;
+      const at = grid.stops[r]?.isDwellArr ? r + 1 : r;
+      const share = even ? step[at - a] / step[b - a] : cum[r - a] / total;
       const t = Math.max(last, Math.round(tA + share * (tB - tA)));
       last = t;
       fills.push({ ri: r, cell: minsToCell(t) });

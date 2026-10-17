@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
 import { initShell, setPage, currentPage } from '../../src/ui/shell.js';
-import { grid, initGrid, loadGrid, onGridChange, gridData, selectedStopRow } from '../../src/ui/grid.js';
+import { grid, initGrid, loadGrid, onGridChange, gridData, selectedStopRow, render } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { newRouteState } from '../../src/ui/route-state.js';
 
@@ -368,5 +368,28 @@ describe('the trip-number row (user test 2026-10-17)', () => {
     /** @type {HTMLElement} */ (document.getElementById('gc-tripno')).click();
     expect(document.querySelector('.g-row-tn')).toBeNull();
     expect(grid.cols[0].tripNo).toBe('');
+  });
+});
+
+describe('review fixes: cut and paste never reach hidden times', () => {
+  beforeEach(() => { initGrid(); });
+  it('Ctrl+X in the day-code or trip-number row leaves the times alone', async () => {
+    grid.tripRow = true;
+    render();
+    /** @type {HTMLElement} */ (document.querySelector('.g-tn-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    press('x', { ctrlKey: true });
+    /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    press('x', { ctrlKey: true });
+    for (let i = 0; i < 4; i++) await new Promise((res) => setTimeout(res, 0)); // a cut finishes after the copy
+    expect(grid.cols[0].cells.map((c) => c?.time)).toEqual(['0700', '0745']);
+  });
+  it('a paste in the trip-number row does not change the times', () => {
+    grid.tripRow = true;
+    render();
+    /** @type {HTMLElement} */ (document.querySelector('.g-tn-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    const ev = new Event('paste', { bubbles: true, cancelable: true });
+    /** @type {any} */ (ev).clipboardData = { getData: () => '0900\n0930' };
+    document.dispatchEvent(ev);
+    expect(grid.cols[0].cells.map((c) => c?.time)).toEqual(['0700', '0745']);
   });
 });

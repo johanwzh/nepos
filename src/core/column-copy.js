@@ -26,11 +26,12 @@ export function copiesAtInterval(col, interval, lastStart) {
   for (let k = 1; k * interval <= span && k * interval < 1440; k++) {
     const shift = k * interval;
     const copyDay = Math.floor((start + shift) / 1440);
-    const base = copyDay * 1440; // the copy's own day
+    const base = (copyDay - startDay) * 1440; // the days the copy moved on: its times are written on its own day
     out.push({
       ...col,
       uid: crypto.randomUUID(),
       dayCode: shiftDayCode(col.dayCode, copyDay - startDay),
+      tripNo: '', // a trip number belongs to one trip
       cells: col.cells.map((/** @type {any} */ c) => {
         if (!c) return null;
         if (!timed(c)) return { ...c, interchange: null };

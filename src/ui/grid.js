@@ -710,7 +710,7 @@ function onKeyDown(e) {
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if (ixMode) { if (e.key === 'Escape') { e.preventDefault(); exitIx(); } return; }
   if ($('grid-ctx').style.display === 'block') { if (e.key === 'Escape') hideCtx(); return; }
-  if ((e.ctrlKey || e.metaKey) && !editing && !dcEdit && !inStopCol) {
+  if ((e.ctrlKey || e.metaKey) && !editing && !dcEdit && !inStopCol && !inDC && !inTN && !tnEdit) {
     if (e.key === 'c') { e.preventDefault(); copySelection(); return; }
     if (e.key === 'x' && !grid.readOnly) { e.preventDefault(); copySelection().then(() => { clearSelection(); render(); }); return; }
   }
@@ -858,6 +858,8 @@ async function copySelection() {
 /** Paste uses the paste event, so the browser never asks for clipboard permission. @param {ClipboardEvent} e */
 function onPaste(e) {
   if (!grid.active || grid.readOnly || currentPage() !== 'edit' || inStopEdit) return;
+  // Only into the times: never while the day-code or trip-number row has the keyboard
+  if (inDC || dcEdit || inTN || tnEdit || document.querySelector('.float-box, .nudge-box')) return;
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
   const text = e.clipboardData?.getData('text');

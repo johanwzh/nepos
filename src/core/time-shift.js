@@ -19,7 +19,10 @@ export function shiftTimes(col, rows, minutes) {
   col.cells.forEach((c, r) => { if (timed(c)) next.set(r, abs(c) + (rows.includes(r) ? minutes : 0)); });
   const first = [...next.values()][0];
   if (first === undefined) return;
-  const wrap = first < 0 ? 1440 : first >= 1440 ? -1440 : 0;
+  // The day the trip starts on (its first time's day offset) never changes: the times wrap within it
+  const firstCell = col.cells.find(timed);
+  const day = Math.floor(abs(firstCell) / 1440) * 1440;
+  const wrap = first < day ? 1440 : first >= day + 1440 ? -1440 : 0;
   for (const [r, m] of next) {
     const v = m + wrap;
     const dayOffset = Math.floor(v / 1440);

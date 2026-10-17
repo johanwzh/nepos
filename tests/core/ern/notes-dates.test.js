@@ -41,3 +41,12 @@ describe('notes and dates on columns and cells', () => {
     expect(serializeERN(rs, 'r', OPTS)).not.toContain('#UNT;0;');
   });
 });
+
+describe('review fixes', () => {
+  it('a note with line breaks is written on one line (a newline would damage the file)', () => {
+    const rs = parseERN(sample.routes[0].text);
+    /** @type {any} */ (Object.values(rs.grids)[0]).cols[0].note = 'Linje 1\nLinje 2\r\nLinje 3';
+    const text = serializeERN(rs, 'r', OPTS);
+    expect(text).toContain('#FOT;0;-1;Linje 1 Linje 2 Linje 3;0');
+  });
+});

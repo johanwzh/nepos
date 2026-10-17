@@ -31,3 +31,15 @@ describe('copiesAtInterval', () => {
     expect(copies[0].cells[0]).toMatchObject({ time: '0830', suffix: 'p', interchange: null });
   });
 });
+
+describe('review fixes', () => {
+  it('a trip that starts after midnight (+1) keeps its day: copies on the same day stay +1 with the same day code', () => {
+    const copies = copiesAtInterval(col('5', [cell('0030', 1), cell('0050', 1)]), 60, 2 * 60 + 30); // Saturday morning trips
+    expect(copies.map((c) => `${c.dayCode} ${c.cells[0].time}+${c.cells[0].dayOffset}`)).toEqual(['5 0130+1', '5 0230+1']);
+  });
+
+  it('copies do not take the trip number with them', () => {
+    const copies = copiesAtInterval({ ...col('D', [cell('0800')]), tripNo: '101' }, 60, 10 * 60);
+    expect(copies.map((c) => c.tripNo)).toEqual(['', '']);
+  });
+});

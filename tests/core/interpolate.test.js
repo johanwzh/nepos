@@ -124,3 +124,11 @@ describe('interpolateSpan (a column, or the part of it that is selected)', () =>
     expect(fills.map((x) => [x.cell.time, x.cell.dayOffset])).toEqual([['2358', 0], ['0013', 1]]); // 7.5 and 22.5 of 30 minutes, rounded
   });
 });
+
+describe('review fixes', () => {
+  it('a dwell stop gets one time on both rows, also when the stretch is split evenly', () => {
+    const grid = { stops: [stop('A'), stop('X', { isDwellArr: true }), stop('X'), stop('D')], cols: [{ cells: [cell('0800'), null, null, cell('0830')] }] };
+    const fills = interpolateSpan(grid, 0, 0, 3, posOf); // X has no position: even split, the dwell pair counts once
+    expect(fills.map((x) => `${x.ri}:${x.cell.time}`)).toEqual(['1:0815', '2:0815']);
+  });
+});

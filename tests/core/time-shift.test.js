@@ -30,3 +30,13 @@ describe('shiftTimes (the mini-jog)', () => {
     expect(early.dayCode).toBe('6');
   });
 });
+
+describe('review fixes', () => {
+  it('a trip that starts after midnight (+1) stays on that day when nudged', () => {
+    const col = { dayCode: '5', cells: [cell('0030', 1), cell('0045', 1)] };
+    shiftTimes(col, [0, 1], 1);
+    expect(times(col)).toEqual(['0031+1', '0046+1']);
+    shiftTimes(col, [0, 1], -40); // past the start of that day: wraps round within it
+    expect(times(col)).toEqual(['2351+1', '0006+2']);
+  });
+});
