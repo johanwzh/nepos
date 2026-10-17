@@ -53,6 +53,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     const routePointsMap = new Map(); // stopId → used as RoutePoint
     const routesXml = [], jpsXml = [], noticeSvcXml = [];
     const sjs = []; // ServiceJourney XML for the TimetableFrame
+    /** @type {string[]} */ const trainNumbers = []; // TrainNumbers (rail trip numbers) for the TimetableFrame
     const sjIds = new Set(); // the ServiceJourneys actually written
     const ixs = []; // interchanges: written only when both journeys exist
     const dsjs = []; // DatedServiceJourneys, one per trip per operating day
@@ -117,11 +118,16 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                 });
 
                 sjIds.add(sjId);
-                // The trip number (the grid's trip-number row): the ServiceJourney's PrivateCode
-                const sjPriv = col.tripNo ? `\n        <PrivateCode>${xe(col.tripNo)}</PrivateCode>` : '';
+                // The trip number (the grid's trip-number row): for rail a TrainNumber (NeTEx's own element,
+                // in the TimetableFrame, referred to here); for other modes the ServiceJourney's PrivateCode
+                const isTrain = !!col.tripNo && lineMode === 'rail';
+                const sjPriv = col.tripNo && !isTrain ? `\n        <PrivateCode>${xe(col.tripNo)}</PrivateCode>` : '';
+                const tnId = `${cs}:TrainNumber:${uuid5(`${sjId}|train`)}`;
+                if (isTrain) trainNumbers.push(`      <TrainNumber id="${tnId}" version="1">\n        <ForAdvertisement>${xe(col.tripNo)}</ForAdvertisement>\n      </TrainNumber>`);
+                const sjTrain = isTrain ? `\n        <trainNumbers>\n          <TrainNumberRef ref="${tnId}" version="1"/>\n        </trainNumbers>` : '';
                 sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>${sjPriv}
         <TransportMode>${lineMode}</TransportMode>
-        <JourneyPatternRef ref="${jpId}" version="1"/>
+        <JourneyPatternRef ref="${jpId}" version="1"/>${sjTrain}
         <passingTimes>${ptXml}
         </passingTimes>
       </ServiceJourney>`);
@@ -239,7 +245,7 @@ ${jpsXml.join('\n')}
     const ttFrame = `    <TimetableFrame id="${cs}:TimetableFrame:Line_${routeCode}" version="1">
       <vehicleJourneys>
 ${[...sjOnly, ...dsjs].join('\n')}
-      </vehicleJourneys>${ixOnly.length?`\n      <journeyInterchanges>\n${ixOnly.join('\n')}\n      </journeyInterchanges>`:''}
+      </vehicleJourneys>${trainNumbers.length ? `\n      <trainNumbers>\n${trainNumbers.join('\n')}\n      </trainNumbers>` : ''}${ixOnly.length?`\n      <journeyInterchanges>\n${ixOnly.join('\n')}\n      </journeyInterchanges>`:''}
     </TimetableFrame>`;
 
     const cf = compositeFrame(cs,`Line_${routeCode}`,lineFrom,lineTo,false,svcFrame,ttFrame);
