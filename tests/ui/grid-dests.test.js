@@ -58,3 +58,45 @@ describe('destinations follow rows and columns', () => {
     expect(grid.cols[0].dests[1]).toEqual(d('Ceta'));
   });
 });
+
+describe('destination columns', () => {
+  const open = () => { if (!document.querySelector('.cw-dest')) press('d', { altKey: true }); };
+  const destCell = (r, c) => /** @type {HTMLElement} */ (document.querySelector(`.cw-dest[data-dr="${r}"][data-dc="${c}"]`));
+
+  it('are hidden until Alt+D, then one per trip column in every row, remembered', () => {
+    try { localStorage.removeItem('nepos.destOpen'); } catch { /* none */ }
+    if (document.querySelector('.cw-dest')) press('d', { altKey: true });
+    loadGrid({ stops: grid.stops, cols: grid.cols });
+    expect(document.querySelector('.cw-dest')).toBeNull();
+    press('d', { altKey: true });
+    const rows = [...document.querySelectorAll('#tbl tr')];
+    for (const tr of rows) expect(tr.querySelectorAll('.cw-dest').length).toBe(grid.cols.length);
+    expect(localStorage.getItem('nepos.destOpen')).toBe('1');
+  });
+
+  it('show the destination with its vias where it starts, and a line down to the last stop', () => {
+    grid.cols[0].dest = d('Delta', ['Beta']);
+    grid.cols[0].dests[1] = null;
+    open();
+    loadGrid({ stops: grid.stops, cols: grid.cols });
+    const label = destCell(0, 0).querySelector('.dest-label');
+    expect(label?.textContent).toContain('Delta');
+    expect(destCell(0, 0).querySelector('.dest-via')?.textContent).toBe('via Beta');
+    for (const r of [0, 1, 2, 3]) expect(destCell(r, 0).querySelector('.dl')?.classList.contains('dl-double')).toBe(true);
+  });
+
+  it('start a new colour where the destination changes', () => {
+    open();
+    loadGrid({ stops: grid.stops, cols: grid.cols });
+    expect(destCell(0, 0).querySelector('.dl')?.classList.contains('dl-c0')).toBe(true);
+    expect(destCell(1, 0).querySelector('.dl')?.classList.contains('dl-c1')).toBe(true);
+    expect(destCell(1, 0).querySelector('.dest-label')?.textContent).toContain('Ceta');
+  });
+
+  it('mark a trip without a destination on its first stop', () => {
+    grid.cols[0].dest = null;
+    open();
+    loadGrid({ stops: grid.stops, cols: grid.cols });
+    expect(destCell(0, 0).querySelector('.dest-missing')).not.toBeNull();
+  });
+});

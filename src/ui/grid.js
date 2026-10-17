@@ -23,6 +23,7 @@ import { placeMenu } from './place-menu.js';
 import { unionDays, tripDays } from '../core/calendars.js';
 import { app } from './state.js';
 import { normalizeDests } from '../core/destinations.js';
+import { destColumnsOpen, onDestToggle, destCellInfo, renderDestCell } from './dest-columns.js';
 
 /** The grid being edited: one period × direction of the open route. */
 export const grid = {
@@ -70,6 +71,10 @@ let ixMode = false;
 /** @type {{ r: number, c: number, type: string } | null} */
 let ixSource = null;
 let inStopEdit = false, stopEditRow = -1, stopBuf = '', stopPrevName = '';
+/** The destination columns (destination displays spec): a destination cell is selected (row, column), with a range end */
+let inDest = false, destR = 0, destC = 0, destR2 = 0, destC2 = 0;
+/** The destination columns are sliding open: they get their full width on the next frame */
+let destOpening = false;
 
 const $ = (/** @type {string} */ id) => /** @type {any} */ (document.getElementById(id));
 const clampR = (/** @type {number} */ r) => Math.max(0, Math.min(grid.stops.length - 1, r));
@@ -365,9 +370,74 @@ export function render() {
   if (grid.tripRow) renderTripRow(tbl);
   grid.stops.forEach((stop, ri) => renderStopRow(tbl, stop, ri, linked));
   renderBottomRow(tbl);
+  if (destColumnsOpen()) {
+    addDestColumns(tbl);
+    if (!destOpening) tbl.classList.add('dest-shown');
+  } else tbl.classList.remove('dest-shown');
   updateFnPreview(inDC ? { type: 'col', ri: 0, ci: dcCol } : inStopCol ? null : { type: 'cell', ri: ancR, ci: ancC });
   if (snapshot() !== baseline) onChange();
   for (const fn of renderListeners) fn();
+}
+
+// ─── Destination columns ────────────────────────────────────────────────────
+/** The destination cells selected: a rectangle of rows and columns. */
+function destRect() {
+  return { r0: Math.min(destR, destR2), r1: Math.max(destR, destR2), c0: Math.min(destC, destC2), c1: Math.max(destC, destC2) };
+}
+
+/** A destination cell after each trip's time cell, in every row. @param {HTMLTableElement} tbl */
+function addDestColumns(tbl) {
+  const infos = grid.cols.map((col) => destCellInfo(grid, col));
+  const sel = destRect();
+  let ri = -1;
+  for (const tr of [...tbl.rows]) {
+    const stopRow = tr.classList.contains('g-row-stop');
+    if (stopRow) ri++;
+    [...tr.cells].filter((td) => td.classList.contains('cw-time')).forEach((timeTd, ci) => {
+      const td = document.createElement('td');
+      td.className = 'cw-dest';
+      timeTd.after(td);
+      if (!stopRow) { renderDestCell(td, undefined); return; }
+      const r = ri;
+      td.dataset.dr = String(r);
+      td.dataset.dc = String(ci);
+      renderDestCell(td, infos[ci]?.[r]);
+      if (!infos[ci]?.[r]?.served) td.classList.add('dest-off');
+      if (inDest && r === destR && ci === destC) td.classList.add('dest-sel');
+      else if (inDest && r >= sel.r0 && r <= sel.r1 && ci >= sel.c0 && ci <= sel.c1) td.classList.add('dest-range');
+      wireDestCell(td, r, ci);
+    });
+  }
+}
+
+/** Selecting a destination cell (Task 9 adds editing). @param {HTMLElement} td @param {number} r @param {number} ci */
+function wireDestCell(td, r, ci) {
+  td.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    if (ixMode) { exitIx(); return; }
+    commitEdit(); commitDayCode(); commitTripNo();
+    if (inStopEdit) commitStopEdit();
+    inStopCol = false; inDC = false; inTN = false; inDest = true;
+    if (e.shiftKey) { destR2 = r; destC2 = ci; } else { destR = r; destC = ci; destR2 = r; destC2 = ci; }
+    render();
+  });
+}
+
+/** Show or hide the destination columns: they slide open, and slide shut before they go. */
+function onDestColumnsToggled() {
+  if (!grid.active) return;
+  const tbl = $('tbl');
+  if (destColumnsOpen()) {
+    destOpening = true;
+    tbl.classList.remove('dest-shown');
+    render();
+    setTimeout(() => { destOpening = false; tbl.classList.add('dest-shown'); }, 16);
+  } else {
+    inDest = false;
+    tbl.classList.remove('dest-shown');
+    setTimeout(render, 160);
+  }
 }
 
 /** @param {string} label @param {string} cls @param {string} title @param {() => void} fn */
@@ -1136,6 +1206,12 @@ export function initGrid() {
       if (!/** @type {HTMLElement} */ (e.target).closest?.('#grid-ctx')) hideCtx();
     });
     onQuaysLoaded(updateStopMarks);
+    onDestToggle(onDestColumnsToggled);
+    // A click anywhere else in the grid leaves the destination cells (their own handler selects them)
+    document.addEventListener('mousedown', (e) => {
+      const el = /** @type {HTMLElement} */ (e.target);
+      if (inDest && el.closest?.('#tbl') && !el.closest('.cw-dest')) inDest = false;
+    }, true);
   }
   $('gc-clear').addEventListener('click', () => { clearSelection(); hideCtx(); render(); });
   $('gc-offset').addEventListener('click', () => {

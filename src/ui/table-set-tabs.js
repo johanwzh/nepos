@@ -6,6 +6,7 @@ import { $, onRefresh, markDirty, showMessage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { addTableSet, deleteTableSet, tableSetHasData } from './route-state.js';
 import { switchTableSet, isRouteReadOnly, storeGrid } from './route-editor.js';
+import { toggleDestColumns, destColumnsOpen, onDestToggle } from './dest-columns.js';
 
 export function renderTableSetTabs() {
   const el = $('ts-tabs');
@@ -56,6 +57,13 @@ export function renderTableSetTabs() {
     add.addEventListener('click', openNewTableSet);
     el.appendChild(add);
   }
+  // The destination columns' toggle, at the right end of the row (destination displays spec)
+  const dest = document.createElement('button');
+  dest.className = `ts-dest-toggle${destColumnsOpen() ? ' on' : ''}`;
+  dest.textContent = t('destToggle');
+  dest.title = 'Alt+D';
+  dest.addEventListener('click', toggleDestColumns);
+  el.appendChild(dest);
 }
 
 /** The new-table-set dialog (timetable structure spec §2): name, and the stops to start with. */
@@ -85,6 +93,7 @@ function createFromDialog() {
 let dialogWired = false;
 export function initTableSetTabs() {
   onRefresh(renderTableSetTabs);
+  onDestToggle(renderTableSetTabs); // the toggle shows whether the columns are open
   if (dialogWired) return;
   dialogWired = true;
   document.addEventListener('click', (e) => {
