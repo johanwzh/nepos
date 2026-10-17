@@ -939,7 +939,7 @@ Discount line. Deprecated.
 
 ### #TIT
 
-Supplement linked to a fare. Deprecated.
+Feeder line linked to a fare. Deprecated.
 
 | Field | Type | Description |
 |---|---|---|
@@ -947,7 +947,7 @@ Supplement linked to a fare. Deprecated.
 
 ### #TIM
 
-Supplement linked to a discount. Deprecated.
+Feeder line linked to a discount. Deprecated.
 
 | Field | Type | Description |
 |---|---|---|
@@ -956,26 +956,26 @@ Supplement linked to a discount. Deprecated.
 
 ### #TIL
 
-Supplement line. Deprecated.
+Feeder line. Deprecated.
 
 | Field | Type | Description |
 |---|---|---|
-| 0 | text | Name of the supplement line. |
+| 0 | text | Name of the feeder line. |
 | 1 | int | ID of the line within a branch. The root line has ID `0`. |
 | 2 | int | ID of the parent line within the branch. `-1` if it has no parent. |
-| 3 | text | Description of the supplement line. |
+| 3 | text | Description of the feeder line. |
 | 4 | text | Valid from date. |
 | 5 | text | Valid to date. |
 | 6 | text | Valid from time. |
 | 7 | text | Valid to time. |
 | 8 | text | Day code it is valid on. |
-| 9 | float | Supplement in percent. |
-| 10 | float | Supplement as a price. |
+| 9 | float | Surcharge in percent. |
+| 10 | float | Surcharge as a price. |
 | 11 | int | Flags. |
 
 ### #TLT
 
-Supplement line trip. Links a supplement to a trip in a timetable; refers to the supplement line on the line before it in the file. Deprecated.
+Feeder line trip. Links a feeder line to a trip in a timetable; refers to the feeder line on the line before it in the file. Deprecated.
 
 | Field | Type | Description |
 |---|---|---|
