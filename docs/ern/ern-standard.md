@@ -1118,6 +1118,8 @@ A code with more than three weekdays left out is written the other way round: `5
 
 ## Record names
 
+ERN itself stands for *Elektronisk Rutebok for Norge* (Electronic Timetable Book for Norway).
+
 What the record codes stand for, in alphabetical order. Most are Norwegian; a (?) marks an origin that is not certain.
 
 | Record | Stands for | Meaning |
