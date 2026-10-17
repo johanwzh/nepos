@@ -2,7 +2,7 @@
 import { xe, hhmm2t, ernModeNeTEx, pubDelivery, compositeFrame } from './xml.js';
 import { authorityNetworkLocalId } from '../orgs.js';
 import { stopLocalId } from '../quays.js';
-import { journeyStops } from './journeys.js';
+import { tripVariants } from './journeys.js';
 import { uuid5 } from '../uuid5.js';
 import { isoDate } from '../calendars.js';
 import { submodeElement } from '../modes.js';
@@ -74,6 +74,8 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     const sjIdOf = (col, di, per, ci) => col?.uid && UUID_PATTERN.test(col.uid) ? `${cs}:ServiceJourney:${col.uid}` : `${cs}:ServiceJourney:${routeCode}-${di}-${per.id}-${ci}`;
 
     const jpRegistry = new Map(); // "dirIdx:stopSeqKey" → jpId
+    /** A variant's ServiceJourney ID: the usual one keeps the column's, the others are derived from it. @param {string} base @param {{ calls: any[], main: boolean }} v */
+    const variantSjId = (base, v) => (v.main ? base : `${cs}:ServiceJourney:${uuid5(`${base}|calls:${v.calls.map((c) => c.ri).join(',')}`)}`);
 
     // One Route per table set (timetable structure spec §7); its JourneyPatterns are the distinct
     // stop sequences of its trips.
@@ -92,103 +94,108 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
 
             for (let ci=0; ci<grid.cols.length; ci++) {
                 const col = grid.cols[ci];
-                // The trip's calls, exactly as the whole export defines them (journeys.js). A column
-                // with fewer than two calls is not a trip.
-                const calls = journeyStops(grid, col);
-                if (calls.length < 2) continue;
-                const jpStopList = calls.map(({ stopId, name, arrCell, depCell }) => ({
-                    stopId, name, arrCell, depCell,
-                    forBoarding:  depCell.suffix !== 'a',
-                    forAlighting: depCell.suffix !== 'p',
-                    requestStop:  depCell.suffix === 'x',
-                }));
-                for (const st of jpStopList) routePointsMap.set(st.stopId, st.name);
-                // The destination starting at each call: the trip's start on the first, a change further on
-                const segs = destSegments(grid, col).filter((s) => s.state === 'ok');
-                const callDests = calls.map((c, i) => (i === 0 ? segs.find((s) => s.start) : segs.find((s) => !s.start && s.row === c.ri))?.dest ?? null);
-                jpStopList.forEach((st, i) => { /** @type {any} */ (st).dd = callDests[i]; });
+                // One ServiceJourney per variant: a time switched off on some days splits the trip (journeys.js)
+                for (const variant of tripVariants(grid, col, colDays.get(col) ?? [])) {
+                    const calls = variant.calls;
+                    if (calls.length < 2) continue;
+                    const jpStopList = calls.map(({ stopId, name, arrCell, depCell }) => ({
+                        stopId, name, arrCell, depCell,
+                        forBoarding:  depCell.suffix !== 'a',
+                        forAlighting: depCell.suffix !== 'p',
+                        requestStop:  depCell.suffix === 'x',
+                    }));
+                    for (const st of jpStopList) routePointsMap.set(st.stopId, st.name);
+                    // The destination starting at each call: the trip's start on the first, a change further on
+                    const segs = destSegments(grid, col).filter((s) => s.state === 'ok');
+                    const inEffect = (/** @type {number} */ row) => segs.filter((s) => s.row <= row).pop()?.dest ?? null;
+                    const callDests = calls.map((c, i) => (i === 0 ? inEffect(c.ri) : i < calls.length - 1 && inEffect(c.ri) !== inEffect(calls[i - 1].ri) ? inEffect(c.ri) : null));
+                    jpStopList.forEach((st, i) => { /** @type {any} */ (st).dd = callDests[i]; });
 
-                // JP key = the stop sequence and the boarding rules at each stop (a/p/x): trips that differ
-                // in either need their own pattern. The ID stays as before for a pattern without rules.
-                const rules = jpStopList.map(s => (s.forBoarding ? '' : 'a') + (s.forAlighting ? '' : 'p') + (s.requestStop ? 'x' : '')).join(',');
-                const ruled = (/[apx]/.test(rules) ? `|rules:${rules}` : '')
-                    // trips with other destinations need their own pattern
-                    + (callDests.some(Boolean) ? `|dd:${callDests.map((d) => (d ? destKey(d) : '')).join(',')}` : '');
-                const jpKey = `${di}:${jpStopList.map(s=>s.stopId??s.name).join(':')}${ruled}`;
-                if (!jpMap.has(jpKey)) {
-                    const jpId = `${cs}:JourneyPattern:${uuid5(`${setKey}|${jpStopList.map(s=>s.stopId).join('|')}${ruled}`)}`;
-                    jpMap.set(jpKey, { jpId, stopList:jpStopList, routeId, name: `${set.name}-${++jpN}` });
-                }
-                // The pattern gives the IDs; the times are this trip's own
-                const { jpId } = jpMap.get(jpKey);
-                const stopList = jpStopList;
+                    // JP key = the stop sequence and the boarding rules at each stop (a/p/x): trips that differ
+                    // in either need their own pattern. The ID stays as before for a pattern without rules.
+                    const rules = jpStopList.map(s => (s.forBoarding ? '' : 'a') + (s.forAlighting ? '' : 'p') + (s.requestStop ? 'x' : '')).join(',');
+                    const ruled = (/[apx]/.test(rules) ? `|rules:${rules}` : '')
+                        // trips with other destinations need their own pattern
+                        + (callDests.some(Boolean) ? `|dd:${callDests.map((d) => (d ? destKey(d) : '')).join(',')}` : '');
+                    const jpKey = `${di}:${jpStopList.map(s=>s.stopId??s.name).join(':')}${ruled}`;
+                    if (!jpMap.has(jpKey)) {
+                        const jpId = `${cs}:JourneyPattern:${uuid5(`${setKey}|${jpStopList.map(s=>s.stopId).join('|')}${ruled}`)}`;
+                        jpMap.set(jpKey, { jpId, stopList:jpStopList, routeId, name: `${set.name}-${++jpN}` });
+                    }
+                    // The pattern gives the IDs; the times are this trip's own
+                    const { jpId } = jpMap.get(jpKey);
+                    const stopList = jpStopList;
 
-                // Build ServiceJourney
-                // The trip's operating days (collect.js): none → no trip
-                const days = colDays.get(col) ?? [];
-                if (!days.length) continue;
+                    // Build ServiceJourney
+                    // The trip's operating days (collect.js): none → no trip
+                    const days = variant.days;
+                    if (!days.length) continue;
 
-                const sjId = sjIdOf(col, di, per, ci);
-                let ptXml = '';
-                stopList.forEach((s,idx) => {
-                    const spijpId = `${cs}:StopPointInJourneyPattern:${jpId.split(':').pop()}-${idx+1}`;
-                    const arrTime = s.arrCell ? `\n            <ArrivalTime>${hhmm2t(s.arrCell.time)}</ArrivalTime>${s.arrCell.dayOffset?`\n            <ArrivalDayOffset>${s.arrCell.dayOffset}</ArrivalDayOffset>`:''}` : '';
-                    const depTime = `\n            <DepartureTime>${hhmm2t(s.depCell.time)}</DepartureTime>${s.depCell.dayOffset?`\n            <DepartureDayOffset>${s.depCell.dayOffset}</DepartureDayOffset>`:''}`;
-                    ptXml += `
+                    const sjId = variantSjId(sjIdOf(col, di, per, ci), variant);
+                    let ptXml = '';
+                    stopList.forEach((s,idx) => {
+                        const spijpId = `${cs}:StopPointInJourneyPattern:${jpId.split(':').pop()}-${idx+1}`;
+                        const arrTime = s.arrCell ? `\n            <ArrivalTime>${hhmm2t(s.arrCell.time)}</ArrivalTime>${s.arrCell.dayOffset?`\n            <ArrivalDayOffset>${s.arrCell.dayOffset}</ArrivalDayOffset>`:''}` : '';
+                        const depTime = `\n            <DepartureTime>${hhmm2t(s.depCell.time)}</DepartureTime>${s.depCell.dayOffset?`\n            <DepartureDayOffset>${s.depCell.dayOffset}</DepartureDayOffset>`:''}`;
+                        ptXml += `
           <TimetabledPassingTime id="${cs}:TimetabledPassingTime:${sjId.split(':').pop()}-${idx+1}" version="1">
             <StopPointInJourneyPatternRef ref="${spijpId}" version="1"/>${arrTime}${depTime}
           </TimetabledPassingTime>`;
-                });
+                    });
 
-                sjIds.add(sjId);
-                // The trip's note, and each time's note (on its passing time; a dwell stop's arrival note too)
-                if (col.note?.trim()) assign(ttAssigns, col.note.trim(), sjId);
-                stopList.forEach((/** @type {any} */ s, /** @type {number} */ idx) => {
-                    const tpt = `${cs}:TimetabledPassingTime:${sjId.split(':').pop()}-${idx+1}`;
-                    for (const c of [s.arrCell, s.depCell]) if (c?.note?.trim()) assign(ttAssigns, c.note.trim(), tpt);
-                });
-                // The trip number (the grid's trip-number row): for rail a TrainNumber (NeTEx's own element,
-                // in the TimetableFrame, referred to here); for other modes the ServiceJourney's PrivateCode
-                const isTrain = !!col.tripNo && lineMode === 'rail';
-                const sjPriv = col.tripNo && !isTrain ? `\n        <PrivateCode>${xe(col.tripNo)}</PrivateCode>` : '';
-                const tnId = `${cs}:TrainNumber:${uuid5(`${sjId}|train`)}`;
-                if (isTrain) trainNumbers.push(`      <TrainNumber id="${tnId}" version="1">\n        <ForAdvertisement>${xe(col.tripNo)}</ForAdvertisement>\n      </TrainNumber>`);
-                const sjTrain = isTrain ? `\n        <trainNumbers>\n          <TrainNumberRef ref="${tnId}" version="1"/>\n        </trainNumbers>` : '';
-                sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>${sjPriv}
+                    sjIds.add(sjId);
+                    // The trip's note, and each time's note (on its passing time; a dwell stop's arrival note too)
+                    if (col.note?.trim()) assign(ttAssigns, col.note.trim(), sjId);
+                    stopList.forEach((/** @type {any} */ s, /** @type {number} */ idx) => {
+                        const tpt = `${cs}:TimetabledPassingTime:${sjId.split(':').pop()}-${idx+1}`;
+                        for (const c of [s.arrCell, s.depCell]) if (c?.note?.trim()) assign(ttAssigns, c.note.trim(), tpt);
+                    });
+                    // The trip number (the grid's trip-number row): for rail a TrainNumber (NeTEx's own element,
+                    // in the TimetableFrame, referred to here); for other modes the ServiceJourney's PrivateCode
+                    const isTrain = !!col.tripNo && lineMode === 'rail';
+                    const sjPriv = col.tripNo && !isTrain ? `\n        <PrivateCode>${xe(col.tripNo)}</PrivateCode>` : '';
+                    const tnId = `${cs}:TrainNumber:${uuid5(`${sjId}|train`)}`;
+                    if (isTrain) trainNumbers.push(`      <TrainNumber id="${tnId}" version="1">\n        <ForAdvertisement>${xe(col.tripNo)}</ForAdvertisement>\n      </TrainNumber>`);
+                    const sjTrain = isTrain ? `\n        <trainNumbers>\n          <TrainNumberRef ref="${tnId}" version="1"/>\n        </trainNumbers>` : '';
+                    sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>${sjPriv}
         <TransportMode>${lineMode}</TransportMode>
         <JourneyPatternRef ref="${jpId}" version="1"/>${sjTrain}
         <passingTimes>${ptXml}
         </passingTimes>
       </ServiceJourney>`);
-                for (const d of days) dsjs.push(`      <DatedServiceJourney id="${cs}:DatedServiceJourney:${uuid5(`${sjId}|${d}`)}" version="1"${pubAttr}>
+                    for (const d of days) dsjs.push(`      <DatedServiceJourney id="${cs}:DatedServiceJourney:${uuid5(`${sjId}|${d}`)}" version="1"${pubAttr}>
         <ServiceJourneyRef ref="${sjId}" version="1"/>
         <OperatingDayRef ref="${cs}:OperatingDay:${isoDate(d)}"/>
       </DatedServiceJourney>`);
 
-                // Interchanges from TRC bits 10/11
-                for (let ri=0; ri<grid.stops.length; ri++) {
-                    const cell = col.cells[ri];
-                    if (!cell?.interchange) continue;
-                    const { targetC, targetR, type } = cell.interchange;
-                    if (targetC<0||targetC>=grid.cols.length) continue;
-                    // The target cell itself needs a time: otherwise the target stop is not in the
-                    // target journey (and may not be exported at all).
-                    const tgtCell = grid.cols[targetC]?.cells?.[targetR];
-                    if (!tgtCell?.time || tgtCell.time === '|') continue;
-                    const tgtStop = grid.stops[targetR];
-                    const srcStop = grid.stops[ri];
-                    if (!tgtStop||!srcStop) continue;
-                    if (srcStop.stopId == null || tgtStop.stopId == null) continue; // no ScheduledStopPoint to refer to
-                    const toSjId = sjIdOf(grid.cols[targetC], di, per, targetC);
-                    const staySeated = type==='stayseated' ? '\n        <StaySeated>true</StaySeated>' : '';
-                    const guaranteed = type==='guaranteed'  ? '\n        <Guaranteed>true</Guaranteed>' : '';
-                    ixs.push({ fromSjId: sjId, toSjId, xml: `      <!-- interchange from col ${ci} to col ${targetC} -->
+                    // Interchanges from TRC bits 10/11
+                    for (let ri=0; ri<grid.stops.length; ri++) {
+                        const cell = col.cells[ri];
+                        if (!cell?.interchange || !calls.some((c) => c.ri === ri || (c.arrCell && c.ri - 1 === ri))) continue;
+                        const { targetC, targetR, type } = cell.interchange;
+                        if (targetC<0||targetC>=grid.cols.length) continue;
+                        // The target cell itself needs a time: otherwise the target stop is not in the
+                        // target journey (and may not be exported at all).
+                        const tgtCell = grid.cols[targetC]?.cells?.[targetR];
+                        if (!tgtCell?.time || tgtCell.time === '|') continue;
+                        const tgtStop = grid.stops[targetR];
+                        const srcStop = grid.stops[ri];
+                        if (!tgtStop||!srcStop) continue;
+                        if (srcStop.stopId == null || tgtStop.stopId == null) continue; // no ScheduledStopPoint to refer to
+                        const tgtVariants = tripVariants(grid, grid.cols[targetC], colDays.get(grid.cols[targetC]) ?? []);
+                        const tgtVariant = tgtVariants.find((v) => v.calls.some((c) => c.ri === targetR || (c.arrCell && c.ri - 1 === targetR)));
+                        if (!tgtVariant) continue;
+                        const toSjId = variantSjId(sjIdOf(grid.cols[targetC], di, per, targetC), tgtVariant);
+                        const staySeated = type==='stayseated' ? '\n        <StaySeated>true</StaySeated>' : '';
+                        const guaranteed = type==='guaranteed'  ? '\n        <Guaranteed>true</Guaranteed>' : '';
+                        ixs.push({ fromSjId: sjId, toSjId, xml: `      <!-- interchange from col ${ci} to col ${targetC} -->
       <ServiceJourneyInterchange id="${cs}:ServiceJourneyInterchange:${sjId.split(':').pop()}-${ri}-${targetC}-${targetR}" version="1">${staySeated}${guaranteed}
         <FromPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(srcStop.stopId)}"/>
         <ToPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(tgtStop.stopId)}"/>
         <FromJourneyRef ref="${sjId}" version="1"/>
         <ToJourneyRef ref="${toSjId}" version="1"/>
       </ServiceJourneyInterchange>` });
+                    }
                 }
             }
         }

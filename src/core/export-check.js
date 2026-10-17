@@ -4,7 +4,7 @@
 import { quayStatus, stopLocalId } from './quays.js';
 import { findRole, aliasIssues, orgRole } from './orgs.js';
 import { ROUTE_CODE_PATTERN } from './route-names.js';
-import { journeyStops } from './netex/journeys.js';
+import { journeyStops, tripVariants } from './netex/journeys.js';
 import { calendarDays, unionDays, tripDays } from './calendars.js';
 import { isAllowedDayCode } from './day-codes.js';
 import { destSegments, hasViaWord, firstWord } from './destinations.js';
@@ -14,7 +14,7 @@ export const CHECK_CODES = [
   'orgs-unreadable', 'route-damaged', 'no-trips', 'route-code', 'no-period', 'no-authority', 'no-operator', 'stop-missing', 'stop-not-nsr', 'stop-id-clash', 'col-no-daycode',
   'col-one-stop', 'no-name', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'no-mode', 'branding-missing', 'brandings-unreadable', 'table-set-name', 'no-calendar',
   'calendar-missing', 'calendar-empty', 'day-code', 'no-operating-days', 'calendars-unreadable', 'stop-not-seen', 'stop-mode',
-  'stop-unchecked', 'col-decreasing', 'col-exceptions-ignored', 'route-no-trips',
+  'stop-unchecked', 'col-decreasing', 'cell-dates-also', 'cell-dates-short', 'route-no-trips',
   'route-changed-on-disk', 'dest-missing', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
 ];
 
@@ -150,7 +150,7 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
         const unnamed = grid.stops.filter((/** @type {any} */ st, /** @type {number} */ ri) => timed(col.cells[ri]) && (st.stopId == null || st.stopId === '') && !st.isDwellArr).length;
         if (journeyStops(grid, col).length + unnamed >= 2) trips++;
         else add('error', 'col-one-stop', { ...r, where: at });
-        checkExceptions(rs, per, col, at, (level, c, extra) => add(level, c, { ...r, ...extra }));
+        checkCellDates(grid, col, periodDays, at, (level, c, extra) => add(level, c, { ...r, ...extra }));
         if (journeyStops(grid, col).length >= 2) checkDestinations(grid, col, (level, c, extra) => add(level, c, { ...r, where: at, ...extra }));
         // An empty day code would be exported as "every day" — never what the user meant.
         if (!col.dayCode) add('error', 'col-no-daycode', { ...r, where: at });
@@ -191,12 +191,15 @@ function checkDestinations(grid, col, add) {
 }
 
 /**
- * A trip's own dates are exported; dates on a single stop are not yet (that splits the trip; backlog 6).
- * @param {any} _rs @param {any} _per @param {any} col
+ * Dates on a single time (user 2026-10-17): a time can be switched off on some of the trip's days, which
+ * splits the trip in the export. "Runs also" on a single time does nothing; days on which only one stop
+ * is left are not exported.
+ * @param {any} grid @param {any} col @param {string[]} periodDays
  * @param {{ tableSet: string, period: string, column: number }} at
  * @param {(level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void} add
  */
-function checkExceptions(_rs, _per, col, at, add) {
-  const count = col.cells.reduce((/** @type {number} */ n, /** @type {any} */ c) => n + (c?.dates?.length ?? 0), 0);
-  if (count) add('warning', 'col-exceptions-ignored', { where: at, detail: String(count) });
+function checkCellDates(grid, col, periodDays, at, add) {
+  if (col.cells.some((/** @type {any} */ c) => c?.dates?.some((/** @type {any} */ d) => d.on))) add('warning', 'cell-dates-also', { where: at });
+  const short = tripVariants(grid, col, tripDays(periodDays, col)).filter((v) => v.calls.length < 2).reduce((n, v) => n + v.days.length, 0);
+  if (short && journeyStops(grid, col).length >= 2) add('warning', 'cell-dates-short', { where: at, detail: String(short) });
 }

@@ -22,6 +22,15 @@ const route = () => parseERN([
   '#DSK;0;0;;1',
 ].join('\r\n') + '\r\n', { lang: 'no' });
 const grid0 = (/** @type {any} */ rs) => rs.grids[`${rs.periods[0].id}:${rs.periods[0].setId}`];
+/** The clean route, running on to a third stop. */
+const three = () => {
+  const rs = route();
+  const g = grid0(rs);
+  g.stops.push({ name: 'Jernbanetorget', stopId: 'NSR:Quay:7203', bold: false, sep: false, isDwellArr: false, price: null });
+  g.cols[0].cells.push({ time: '0720', dayOffset: 0, suffix: '', interchange: null });
+  g.cols[0].dests.push(null);
+  return rs;
+};
 
 /** @param {any} rs @param {object} [extra] */
 const check = (rs, extra = {}) => checkForExport({ routes: [{ code: '50', rs, status: 'ok' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], calendars: CALENDARS, orgsProblem: '', quayInfo: NSR, ...extra });
@@ -189,12 +198,26 @@ describe('checkForExport', () => {
       expect(codes(issues)).toEqual(['error:route-code']);
     });
 
-    it('exports a trip\'s own dates (no warning), but warns about dates on single stops', () => {
-      const rs = route();
+    it('exports a trip\'s own dates and a time switched off on some days without a warning', () => {
+      const rs = three();
       grid0(rs).cols[0].dates = [{ from: '20260301', to: '20260301', on: false }];
       expect(codes(check(rs))).toEqual([]);
-      grid0(rs).cols[0].cells[1].dates = [{ from: '20260301', to: '20260301', on: true }];
-      expect(codes(check(rs))).toEqual(['warning:col-exceptions-ignored']);
+      grid0(rs).cols[0].cells[1].dates = [{ from: '20260302', to: '20260302', on: false }];
+      expect(codes(check(rs))).toEqual([]);
+    });
+
+    it('warns that "runs also" on a single time does nothing', () => {
+      const rs = route();
+      grid0(rs).cols[0].cells[1].dates = [{ from: '20260302', to: '20260302', on: true }];
+      expect(codes(check(rs))).toEqual(['warning:cell-dates-also']);
+    });
+
+    it('warns when switching times off leaves a day with only one stop', () => {
+      const rs = route();
+      grid0(rs).cols[0].cells[1].dates = [{ from: '20260302', to: '20260303', on: false }];
+      const issues = check(rs);
+      expect(codes(issues)).toEqual(['warning:cell-dates-short']);
+      expect(issues[0].detail).toBe('2');
     });
 
     it('warns about route files that changed on disk', () => {
