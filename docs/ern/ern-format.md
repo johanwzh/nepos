@@ -1,15 +1,12 @@
 # ERN Format Specification
 
-ERN is a Norwegian timetable data format developed in the early 1990s, used by NRI/WinConsult (formerly DGBuss/DataGrafikk) for public transport schedule editing and publishing. The format stores timetable data as literal table grids — rows are stops, columns are departures — mirroring printed timetables.
+ERN is a Norwegian timetable data format developed in the early 1990s, used by NRI/WinConsult (formerly DGBuss/DataGrafikk) for public transport schedule editing and publishing. The format stores timetable data as literal table grids — rows are stops, columns are departures — mirroring printed timetables. Nepos has adopted this format in order to create an easier interface for creating timetable information in a human-readable way before exporting it to other computer readable data.
 
-**Maintenance rule:** Nepos is the only remaining user of ERN, and this document is the format's
-reference. Any change to the format is written here first; Nepos then implements what this
-document says. Sections marked *Nepos* describe extensions and deviations from the original NRI
-layout.
+**Maintenance rule:** Nepos is the only remaining user of ERN, and this document a direct continuation of the format. Any change to the format is written here before implemented in Nepos.
 
 ERN uses semicolon-delimited `.txt` files where each line is prefixed by a `#XXX` record type code. Files are encoded in **Windows-1252** (single-byte, Norwegian characters ø æ å Ø Æ Å are not UTF-8).
 
-**Source:** Official NRI format documentation v1.8 (nri_format_norsk_v1.8.txt), cross-checked against real ERN file R100.TXT.
+The last official NRI format documentation was v1.8 (last updated in 2013), now expanded on to meet the demands of conversion to NeTEx and data creation possibilites.
 
 ---
 
@@ -23,13 +20,13 @@ An ERN file contains one or more `#RUT` blocks. Each block follows this hierarch
   #TRA        ← Route variant (one or more per RUT)
     #KOR      ← Connections between periods (optional)
     #PER      ← Validity period (one or more per TRA)
-      #KOM    ← Comments / footnote definitions (Bokmål)
-      #KON    ← Comments (Nynorsk)
-      #KOE    ← Comments (English)
-      #KOT    ← Comments (German)
+      #KOM    ← Note/footnote definitions (Bokmål)
+      #KON    ← Note/footnote (Nynorsk)
+      #KOE    ← Note/footnote (English)
+      #KOT    ← Note/footnote (German)
       #KOS    ← Special comments (time window, fare, change, stretch, capacity)
       #FRE    ← Frequency time limits (for frequency routes)
-      #PMK    ← PageMaker layout data (NRI-internal, ignore)
+      #PMK    ← PageMaker layout data (NRI-internal)
       #TAB    ← Table header (1–2 per PER: outbound and/or return)
         #TUR  ← Column / departure definition
           #HKP ← Accessibility (handicap) info per departure
@@ -60,13 +57,15 @@ An ERN file contains one or more `#RUT` blocks. Each block follows this hierarch
 |-----|-------|---------|-------------|
 | 0 | Internal ID | `2477` | Numeric identifier (-1 if unavailable) |
 | 1 | Public code | `45-100` | Published route number |
-| 2 | Name | `Bodø Lufthavn - Fauske jb.st.` | Route name |
-| 3 | Extra name | *(empty)* | Subtitle or area description |
+| 2 | Name | `Bodø-Fauske-Narvik` | Route name |
+| 3 | Extra name | Valdresekspressen | Brand name as text (replaced in Nepos by #BRA |
 | 4 | Transport mode | `1` | See transport mode table below |
 | 5 | Priority | `0` | International=4, National=3, Regional=2, Local=1, 0=none |
 | 6 | Return route name | *(empty)* | If different from outbound name; empty if same |
 
 **Transport modes (pos 4):**
+
+Deprecated. Nepos uses the Transmodel transport modes.
 
 | Code | Mode |
 |------|------|
@@ -183,7 +182,7 @@ All values are times in minutes.
 
 | Pos | Field | Example | Description |
 |-----|-------|---------|-------------|
-| 0 | Direction | `0` or `1` | 0 = Tur (outbound), 1 = Retur (return) |
+| 0 | Direction | `0` or `1` | 0 = Tur (outbound), 1 = Retur (inbound) |
 | 1 | Km header | `Km` | Label for km column |
 | 2 | Zone header | `Sone` | Label for zone column |
 | 3 | Price header | `Kr` | Label for price column |
@@ -203,7 +202,7 @@ All values are times in minutes.
 | 4 | Comfort | `0` | Abstract comfort factor |
 | 5 | Replacement mode | *(optional)* | Transport mode if this is a replacement service |
 
-All fields beyond field 1 are typically `0` for standard timetables (confirmed in R100.TXT).
+All fields beyond field 1 are typically `0` for standard timetables.
 
 ### #HKP — Handikap (Accessibility, per departure)
 
@@ -250,7 +249,7 @@ A free-text column (not a departure). Used for headers, notes, etc.
 | Bit | Meaning |
 |-----|---------|
 | 0 | Italic |
-| 1 | Bold (halvfet) |
+| 1 | Bold |
 | 2 | Strikethrough |
 | 3 | Underline |
 
@@ -265,7 +264,7 @@ A free-text column (not a departure). Used for headers, notes, etc.
 
 Value `34` (bits 1+5) observed consistently in R100.TXT — these are NRI-internal bits.
 
-A stop appearing **twice consecutively** (same stop ID, two TRL rows) represents a dwell/pause — arrival row followed by departure row. Confirmed in R100.TXT (stop 6650 Bodø sentrumsterminal appears at TRL;1 and TRL;2).
+A stop appearing **twice consecutively** (same stop ID, two TRL rows) represents a dwell/pause — arrival row followed by departure row. Example: stop 6650 Bodø sentrumsterminal appears at TRL;1 and TRL;2.
 
 ### #TRC — TurCelle (Cell / Passing time)
 
@@ -287,8 +286,8 @@ A stop appearing **twice consecutively** (same stop ID, two TRL rows) represents
 
 | Bit | Meaning |
 |-----|---------|
-| 0 | Alight only (avstigningsbegrensning) — displayed as suffix `a` |
-| 1 | Board only (påstigningsbegrensning) — displayed as suffix `p` |
+| 0 | Alight only (kun avstigning) — displayed as suffix `a` |
+| 1 | Board only (kun påstigning) — displayed as suffix `p` |
 | 2 | Minute-time cell |
 | 3 | Frequency cell (rush period 1) |
 | 4 | Frequency cell (rush period 2) |
@@ -321,6 +320,8 @@ Free-text information row inserted into the table (connecting services, day mark
 | 3 | Font size | Default 10 |
 | 4 | Label | Display text for row header |
 | 5 | Flags | Reserved for future use; set to 0 |
+
+Note: the original ERN-applications used custom a font to include symbols, such as bus, or sleeper car icons.
 
 ### #TTC — TabellTekstCelle (Info row cell)
 
@@ -419,7 +420,7 @@ Date-based exception for a column or cell. Can belong to a TRC or a TUR (row_ind
 | 2 | To date | *(empty)* | YYYYMMDD, empty if single day |
 | 3 | Day | `0` | Day number |
 | 4 | Flag | `1` | Status flag |
-| 5 | Description | `1. Nyttårsdag` | Name of the holiday |
+| 5 | Description | `New Years' day` | Name of the holiday |
 
 ### #KOR — Korrespondanse (Connection between routes)
 
@@ -542,10 +543,10 @@ Transfer link between two stops.
 
 | Cell state | Display | Meaning |
 |------------|---------|---------|
-| TRC with HHMM | `07:45` | Stops here at this time |
-| TRC mask bit 8 | `07:45x` | Request stop. The symbol is red. |
-| TRC mask bit 0 | `07:45a` | Alight only. The symbol is red. |
-| TRC mask bit 1 | `07:45p` | Board only. The symbol is red. |
+| TRC with HHMM | `0745` | Stops here at this time |
+| TRC mask bit 8 | `0745x` | Request stop. The symbol is red. |
+| TRC mask bit 0 | `0745a` | Alight only. The symbol is red. |
+| TRC mask bit 1 | `0745p` | Board only. The symbol is red. |
 | TRC mask bit 7 | `–` | Stops but time unknown |
 | TRC value `\|` | `\|` | Passes through without stopping. The symbol is red. |
 | No TRC, before first stop | `...` | Departure not yet started |
@@ -556,7 +557,7 @@ Double-listed stops (same stop ID, consecutive TRL rows) = dwell/pause. A separa
 
 ---
 
-## Verified Example (from R100.TXT)
+## Verified Example (from an original Reggi-created file "R100.TXT")
 
 ```
 #RUT;2477;45-100;Bodø Lufthavn - Fauske jb.st.;;1;0
@@ -577,21 +578,13 @@ Double-listed stops (same stop ID, consecutive TRL rows) = dwell/pause. A separa
 #TAB;1;Km;Sone;Kr    ← return table follows
 ```
 
-Key observations from R100.TXT:
-- `#SEK` has 7 fields (the 7th, offset=-1, is not in the v1.8 spec but appears in practice)
-- `#TUR` fields 2–4 are `0;0;0` for standard routes (no on-demand, no CO2, no comfort data)
-- `#TRL` flag value `34` (bits 1+5) is NRI-internal and appears consistently
-- `#TRL` typography `2` = bold on first/key stops; `10` = bold+underline on certain return stops
-- All `#TRC` mask values are `0` in this file (no request stops, no alight/board restrictions)
-- File encoding is Windows-1252 (not UTF-8)
-
 ---
 
 ## Nepos Conventions and Deviations
 
 Nepos reads and writes the records above with the following extensions and known deviations.
 
-**Rule for Nepos additions (Nepos 2).** Nepos never reuses or extends an ERN field for another
+**Rule for Nepos additions (Nepos 2.x).** Nepos never reuses or extends an ERN field for another
 purpose. Where ERN defines a field, Nepos uses it exactly as defined. Information ERN has no field
 for gets a **new record**, documented here together with its NeTEx mapping.
 
@@ -829,5 +822,3 @@ The record codes come from Norwegian words:
 | ALI | Alias | Alias |
 
 ---
-
-*Based on the NRI ERN import/export format v1.8 (Norsk Reiseinformasjon AS, 2013). Maintained as part of Nepos; this document is the reference Nepos implements.*
