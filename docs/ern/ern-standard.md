@@ -1118,83 +1118,83 @@ A code with more than three weekdays left out is written the other way round: `5
 
 ## Record names
 
-What the record codes stand for. Most are Norwegian; a (?) marks an origin that is not certain.
+What the record codes stand for, in alphabetical order. Most are Norwegian; a (?) marks an origin that is not certain.
 
 | Record | Stands for | Meaning |
 |---|---|---|
-| `#LEV` | levering | Delivery |
-| `#RUT` | rute | Route |
-| `#TRM` | transportmodus | Transport mode |
-| `#MRK` | merkevare | Brand |
-| `#EKS` | eksport | Export |
-| `#OFF` | offentlig | Public |
+| `#ALI` | alias | Alias |
 | `#AVG` | avgang | Departure–arrival |
-| `#SEK` | selskap (?) | Company on the route |
-| `#VAL` | valuta | Currency |
-| `#DSS` | destinasjonsskilt | Destination sign |
-| `#DST` | destinasjon | Destination |
-| `#TRA` | trasé (?) | Route pattern |
-| `#UID` | unique ID | Stable ID |
-| `#KOR` | korrespondanse | Connection |
-| `#PER` | periode | Period |
-| `#KAL` | kalender | Calendar |
-| `#FRE` | frekvens | Frequency time |
-| `#KOS` | kommentar, spesiell | Special comment |
-| `#KOM` | kommentar | Comment (route information) |
-| `#KON` | kommentar, nynorsk | Comment in Nynorsk |
-| `#KOE` | kommentar, engelsk | Comment in English |
-| `#KOT` | kommentar, tysk | Comment in German |
-| `#TAB` | tabell | Table |
-| `#TUR` | tur | Trip |
-| `#TUT` | tekst-tur (?) | Text column |
-| `#HKP` | handikap | Accessibility |
-| `#TRL` | tur-rad-linje (?) | Trip row |
-| `#TTL` | tekst-linje (?) | Text row |
-| `#TRC` | tur-rute-celle (?) | Time cell |
-| `#TTC` | tekst-celle (?) | Text cell |
-| `#FOT` | fotnote | Footnote |
-| `#UNT` | unntak | Exception |
 | `#BOD` | bookingdata | Booking data |
 | `#BOF` | bookingfotnote | Booking note |
-| `#DSK` | destinasjonskobling | Destination link |
 | `#DAG` | dag | Days |
-| `#MCT` | minimum connection time | Minimum connection time |
-| `#RIR` | rute i rute | Route in route |
-| `#PMK` | publikasjonsmal (?) | Publication |
-| `#LAY` | layout | Layout |
-| `#STL` | stil | Style |
-| `#LND` | land | Country |
+| `#DSK` | destinasjonskobling | Destination link |
+| `#DSS` | destinasjonsskilt | Destination sign |
+| `#DST` | destinasjon | Destination |
+| `#EKS` | eksport | Export |
+| `#FOT` | fotnote | Footnote |
+| `#FRE` | frekvens | Frequency time |
 | `#FYL` | fylke | County |
-| `#KOM` | kommune | Municipality (place information) |
-| `#REG` | region | Region |
-| `#STE` | sted | Place |
-| `#PST` | poststed | Postcode |
-| `#HPL` | holdeplass | Stop |
-| `#PAR` | parkering | Park and ride |
-| `#STP` | stoppunkt | Stop point |
 | `#GAN` | gangavstand | Walking distance |
-| `#ALI` | alias | Alias |
-| `#SEL` | selskap | Company |
-| `#TXR` | takst, regulativ (?) | Fare scale |
-| `#TXE` | takst, enkelt | Single fare |
-| `#TXD` | takst, diverse | Other fare |
-| `#TCR` | takstkobling, rute (?) | Fare link to a route |
-| `#TCS` | takstkobling, selskap (?) | Fare link to a company |
-| `#TCK` | takstkobling, kommune (?) | Fare link to a municipality |
-| `#TCF` | takstkobling, fylke (?) | Fare link to a county |
-| `#TRR` | takstregulativ, rute (?) | Route membership of a fare |
-| `#TRT` | takstregulativ, topp (?) | Fare scale head |
-| `#TRS` | takstregulativ, celle (?) | Fare scale cell |
-| `#TEC` | takst, enkelt, celle (?) | Single fare price |
-| `#TDC` | takst, diverse, celle (?) | Other fare price |
+| `#HKP` | handikap | Accessibility |
+| `#HPL` | holdeplass | Stop |
+| `#KAL` | kalender | Calendar |
+| `#KOE` | kommentar, engelsk | Comment in English |
+| `#KOM` | kommentar | Comment (route information) |
+| `#KOM` | kommune | Municipality (place information) |
+| `#KON` | kommentar, nynorsk | Comment in Nynorsk |
+| `#KOR` | korrespondanse | Connection |
+| `#KOS` | kommentar, spesiell | Special comment |
+| `#KOT` | kommentar, tysk | Comment in German |
+| `#LAY` | layout | Layout |
+| `#LEV` | levering | Delivery |
+| `#LND` | land | Country |
+| `#MCT` | minimum connection time | Minimum connection time |
 | `#MOD` | moderasjon | Discount |
+| `#MOF` | moderasjon, fylke | Discount link to a county |
+| `#MOK` | moderasjon, kommune | Discount link to a municipality |
+| `#MOL` | moderasjon, linje | Discount line |
 | `#MOR` | moderasjon, rute | Discount link to a route |
 | `#MOS` | moderasjon, selskap | Discount link to a company |
-| `#MOK` | moderasjon, kommune | Discount link to a municipality |
-| `#MOF` | moderasjon, fylke | Discount link to a county |
-| `#MOL` | moderasjon, linje | Discount line |
-| `#TIT` | tilbringer, takst (?) | Feeder line linked to a fare |
-| `#TIM` | tilbringer, moderasjon (?) | Feeder line linked to a discount |
-| `#TIL` | tilbringer, linje (?) | Feeder line |
-| `#TLT` | tilbringerlinje, tur (?) | Feeder line trip |
+| `#MRK` | merkevare | Brand |
+| `#OFF` | offentlig | Public |
 | `#OVM` | overgangsmoderasjon | Transfer discount |
+| `#PAR` | parkering | Park and ride |
+| `#PER` | periode | Period |
+| `#PMK` | PageMaker | Publication |
+| `#PST` | poststed | Postcode |
+| `#REG` | region | Region |
+| `#RIR` | rute i rute | Route in route |
+| `#RUT` | rute | Route |
+| `#SEK` | selskapskobling (?) | Company on the route: links a company to the route |
+| `#SEL` | selskap | Company |
+| `#STE` | sted | Place |
+| `#STL` | stil | Style |
+| `#STP` | stoppunkt | Stop point |
+| `#TAB` | tabell | Table |
+| `#TCF` | takstkobling, fylke (?) | Fare link to a county |
+| `#TCK` | takstkobling, kommune (?) | Fare link to a municipality |
+| `#TCR` | takstkobling, rute (?) | Fare link to a route |
+| `#TCS` | takstkobling, selskap (?) | Fare link to a company |
+| `#TDC` | takst, diverse, celle (?) | Other fare price |
+| `#TEC` | takst, enkelt, celle (?) | Single fare price |
+| `#TIL` | tilbringer, linje (?) | Feeder line |
+| `#TIM` | tilbringer, moderasjon (?) | Feeder line linked to a discount |
+| `#TIT` | tilbringer, takst (?) | Feeder line linked to a fare |
+| `#TLT` | tilbringerlinje, tur (?) | Feeder line trip |
+| `#TRA` | trasé | Route pattern |
+| `#TRC` | turcelle | Time cell |
+| `#TRL` | turlinje | Trip row |
+| `#TRM` | transportmodus | Transport mode |
+| `#TRR` | takstregulativ, rute (?) | Route membership of a fare |
+| `#TRS` | takstregulativ, celle (?) | Fare scale cell |
+| `#TRT` | takstregulativ, topp (?) | Fare scale head |
+| `#TTC` | tekstcelle (?) | Text cell: a cell of free text |
+| `#TTL` | tekstlinje | Text row: a row of free text instead of a stop |
+| `#TUR` | tur | Trip |
+| `#TUT` | tur-tekst | Text column: a trip column turned into free text |
+| `#TXD` | takst, diverse | Other fare |
+| `#TXE` | takst, enkelt | Single fare |
+| `#TXR` | takst, regulativ (?) | Fare scale |
+| `#UID` | unique ID | Stable ID |
+| `#UNT` | unntak | Exception |
+| `#VAL` | valuta | Currency |
