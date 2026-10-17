@@ -4,7 +4,7 @@
 import { $ } from './shell.js';
 import { t } from '../i18n/strings.js';
 
-export const GITHUB_URL = 'https://github.com/johanwzh/nepos-online';
+export const GITHUB_URL = 'https://github.com/johanwzh/nepos';
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
