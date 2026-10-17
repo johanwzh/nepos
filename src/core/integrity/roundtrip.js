@@ -10,9 +10,10 @@ import { orgRole } from '../orgs.js';
 /**
  * Apply the deliberate Nepos 2 changes to one record, so they do not count as losses.
  * @param {string} line trimmed record line
+ * @param {Map<string, string>} dst Bokmål #DST ID → its text and via texts
  * @returns {string | null} null: a record Nepos leaves out on purpose
  */
-function normalize(line) {
+function normalize(line, dst) {
   const f = line.split(';');
   switch (f[0]) {
     case '#LEV': // personal data is removed on purpose
@@ -48,6 +49,15 @@ function normalize(line) {
       return ['#TRM', ...f.slice(1)].join(';');
     case '#BRA':
       return ['#MRK', ...f.slice(1)].join(';');
+    case '#DSS': // the vehicle's sign is not kept (the integrity check notes it)
+      return null;
+    case '#DST': { // destinations are renumbered and compacted on save: compared where they are used (#DSK)
+      return null;
+    }
+    case '#DSK': { // only the destination counts, by its text and vias
+      const id = (f[4] ?? '').trim();
+      return id ? `#DSK;${f[1]};${f[2]};${dst.get(id) ?? `?${id}`}` : null;
+    }
     case '#CUR': // Nepos 2 does not keep the currency (ERN 2.0: #VAL)
     case '#VAL':
       return null;
@@ -74,17 +84,28 @@ function keyRecords(text) {
   let per = -1, tab = -1, row = -1;
   /** @type {{ line: number, key: string, record: string }[]} */
   const out = [];
+  // Bokmål destinations by ID, as text and via texts: their IDs change on save
+  /** @type {Map<string, { text: string, vias: string[] }>} */ const recs = new Map();
+  for (const raw of text.split(/\r?\n/)) {
+    const f = raw.trim().split(';');
+    const lang = (f[3] ?? '').trim().toLowerCase();
+    if (f[0] === '#DST' && (!lang || lang === 'nob')) recs.set((f[1] ?? '').trim(), { text: f[2] ?? '', vias: f.slice(4).map((v) => v.trim()).filter(Boolean) });
+  }
+  /** @type {Map<string, string>} */ const dst = new Map();
+  /** A via that leads back to the record is left out, as the parser does. @param {string} from @param {string} target @param {Set<string>} seen @returns {boolean} */
+  const leadsTo = (from, target, seen) => from === target || (!seen.has(from) && (seen.add(from), (recs.get(from)?.vias ?? []).some((v) => leadsTo(v, target, seen))));
+  for (const [id, r] of recs) dst.set(id, [r.text, ...r.vias.filter((v) => recs.has(v) && !leadsTo(v, id, new Set())).map((v) => recs.get(v)?.text)].join('|'));
   text.split(/\r?\n/).forEach((raw, i) => {
     const line = raw.trim();
     if (!line) return;
     const record = line.split(';')[0];
-    const norm = normalize(line);
+    const norm = normalize(line, dst);
     if (norm === null) return; // left out on purpose
     let where = '';
     if (record === '#PER') { per++; tab = -1; row = -1; where = `P${per}`; }
     else if (record === '#KAL') where = `P${per}`;
     else if (record === '#TAB') { tab++; row = -1; where = `P${per}T${tab}`; }
-    else if (record === '#TUR' || record === '#FOT' || record === '#UNT') where = `P${per}T${tab}`;
+    else if (record === '#TUR' || record === '#FOT' || record === '#UNT' || record === '#DSK') where = `P${per}T${tab}`;
     else if (record === '#TRL') { row++; where = `P${per}T${tab}R${row}`; }
     else if (record === '#TRC') where = `P${per}T${tab}R${row}`;
     out.push({ line: i + 1, key: `${where}|${norm}`, record });

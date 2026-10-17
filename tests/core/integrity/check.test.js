@@ -81,3 +81,44 @@ describe('summarizeIntegrity', () => {
       .toEqual({ ok: 2, outdated: 1, damaged: 1 });
   });
 });
+
+describe('destination records', () => {
+  /** nepos2 with destinations on the first column (start and a change). */
+  const withDests = () => {
+    const rs = parseERN(nepos2);
+    const grid = /** @type {any} */ (Object.values(rs.grids)[0]);
+    grid.cols[0].dest = { text: 'Florø', vias: ['Førde'] };
+    grid.cols[0].dests[1] = { text: 'Florø', vias: [] };
+    return serializeERN(rs, '10', { delivery: sample.delivery, orgs: sample.orgs });
+  };
+
+  it('passes destinations written by Nepos', () => {
+    const text = withDests();
+    expect(text).toContain('#DSK');
+    expect(checkRouteFile(text)).toEqual({ status: 'ok', issues: [] });
+  });
+
+  it('notes signs and other languages that Nepos does not keep, without calling the file damaged', () => {
+    const text = withDests().replace('#DST;1;', '#DSS;1;FLORØ;;\r\n#DST;1;Floro;eng\r\n#DST;1;');
+    const result = checkRouteFile(text);
+    expect(result.status).toBe('ok');
+    expect(result.issues.map((i) => [i.code, i.severity])).toEqual([['sign-not-kept', 'note'], ['destination-language-not-kept', 'note']]);
+  });
+
+  it('does not count other destination IDs as lost', () => {
+    const text = withDests().replace(/#DST;1;/g, '#DST;71;').replace(/(#DST;\d+;[^;\r\n]*;;)1\b/g, '$171').replace(/(#DSK;\d+;\d+;;)1\b/g, '$171');
+    expect(text).toContain('#DST;71;');
+    expect(checkRouteFile(text).status).toBe('ok');
+  });
+});
+
+describe('destination via loop (review)', () => {
+  it('is a note, not damage: saving repairs it', () => {
+    const rs = parseERN(nepos2);
+    /** @type {any} */ (Object.values(rs.grids)[0]).cols[0].dest = { text: 'Florø', vias: ['Førde'] };
+    const text = serializeERN(rs, '10', { delivery: sample.delivery, orgs: sample.orgs }).replace(/#DST;1;([^;\r\n]*);/, '#DST;1;$1;;9\r\n#DST;9;X;;1');
+    const r = checkRouteFile(text);
+    expect(r.issues).toContainEqual(expect.objectContaining({ code: 'destination-via-loop', severity: 'note' }));
+    expect(r.issues.filter((i) => i.severity === 'damaged')).toEqual([]);
+  });
+});

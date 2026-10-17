@@ -57,15 +57,14 @@ export function genSharedXml(data, { deliveryName = '', timestamp } = {}) {
         <QuayRef ref="${xe(quayRef(sid, cs))}"/>
       </PassengerStopAssignment>`).join('\n');
 
-    const ddXml = [...destDisps.entries()].map(([sid,name])=>`      <DestinationDisplay id="${cs}:DestinationDisplay:${stopLocalId(sid)}" version="1">
-        <FrontText>${xe(name)}</FrontText>
-      </DestinationDisplay>`).join('\n');
+    // One per distinct destination (destination displays spec); a via refers to its own display
+    const ddXml = [...destDisps.values()].map((/** @type {any} */ dd)=>{
+        const vias = dd.viaIds.length ? `\n        <vias>${dd.viaIds.map((/** @type {string} */ v) => `\n          <Via>\n            <DestinationDisplayRef ref="${xe(v)}" version="1"/>\n          </Via>`).join('')}\n        </vias>` : '';
+        return `      <DestinationDisplay id="${xe(dd.id)}" version="1">\n        <FrontText>${xe(dd.text)}</FrontText>${vias}\n      </DestinationDisplay>`;
+    }).join('\n');
 
     const svcFrame = `    <ServiceFrame id="${cs}:ServiceFrame:shared" version="1">
-${netXml}
-      <destinationDisplays>
-${ddXml}
-      </destinationDisplays>
+${netXml}${ddXml ? `\n      <destinationDisplays>\n${ddXml}\n      </destinationDisplays>` : ''}
       <scheduledStopPoints>
 ${sspXml}
       </scheduledStopPoints>

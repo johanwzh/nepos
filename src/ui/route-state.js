@@ -4,7 +4,7 @@ const emptyGrid = () => ({ stops: [], cols: [] });
 /** A new line's first grid: 3 empty stops by 3 empty trips, ready to type into (user test 2026-10-16). @returns {{ stops: any[], cols: any[] }} */
 const starterGrid = () => ({
   stops: [0, 1, 2].map(() => ({ name: '', stopId: null, bold: false, sep: false, isDwellArr: false, price: null })),
-  cols: [0, 1, 2].map(() => ({ dayCode: '', uid: crypto.randomUUID(), note: '', dates: [], cells: [null, null, null] })),
+  cols: [0, 1, 2].map(() => ({ dayCode: '', uid: crypto.randomUUID(), note: '', dates: [], cells: [null, null, null], dest: null, dests: [null, null, null] })),
 });
 
 /** @param {'no' | 'en' | string} _lang */

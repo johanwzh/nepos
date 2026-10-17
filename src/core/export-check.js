@@ -7,6 +7,7 @@ import { ROUTE_CODE_PATTERN } from './route-names.js';
 import { journeyStops } from './netex/journeys.js';
 import { calendarDays, unionDays, tripDays } from './calendars.js';
 import { isAllowedDayCode } from './day-codes.js';
+import { destSegments, hasViaWord, firstWord } from './destinations.js';
 
 /** Every code the check can give; each has a text 'chk:<code>' in both languages. */
 export const CHECK_CODES = [
@@ -14,7 +15,7 @@ export const CHECK_CODES = [
   'col-one-stop', 'no-name', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'no-mode', 'branding-missing', 'brandings-unreadable', 'table-set-name', 'no-calendar',
   'calendar-missing', 'calendar-empty', 'day-code', 'no-operating-days', 'calendars-unreadable', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'col-exceptions-ignored', 'route-no-trips',
-  'route-changed-on-disk',
+  'route-changed-on-disk', 'dest-missing', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
 ];
 
 /**
@@ -150,6 +151,7 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
         if (journeyStops(grid, col).length + unnamed >= 2) trips++;
         else add('error', 'col-one-stop', { ...r, where: at });
         checkExceptions(rs, per, col, at, (level, c, extra) => add(level, c, { ...r, ...extra }));
+        if (journeyStops(grid, col).length >= 2) checkDestinations(grid, col, (level, c, extra) => add(level, c, { ...r, where: at, ...extra }));
         // An empty day code would be exported as "every day" — never what the user meant.
         if (!col.dayCode) add('error', 'col-no-daycode', { ...r, where: at });
         else if (!isAllowedDayCode(col.dayCode)) add('error', 'day-code', { ...r, where: at, detail: col.dayCode });
@@ -166,6 +168,26 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
     }
   }
   return trips;
+}
+
+/**
+ * A trip's destinations (destination displays spec): every trip needs one; "via" is data, not text;
+ * a change on a stop the trip does not serve, and a destination or via the trip does not go on to,
+ * are warnings (destinations are not linked to stops, so the user has to be attentive).
+ * @param {any} grid @param {any} col
+ * @param {(level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void} add
+ */
+function checkDestinations(grid, col, add) {
+  if (!col.dest) { add('error', 'dest-missing'); return; }
+  const calls = journeyStops(grid, col);
+  const word = (/** @type {string} */ s) => firstWord(s).toLowerCase();
+  for (const seg of destSegments(grid, col)) {
+    if (hasViaWord(seg.dest.text)) add('error', 'dest-via-text', { detail: seg.dest.text });
+    if (seg.state === 'unserved') { add('warning', 'dest-unserved', { detail: grid.stops[seg.row]?.name ?? '' }); continue; }
+    if (seg.state !== 'ok') continue;
+    const ahead = new Set(calls.filter((c) => c.ri > seg.row).map((c) => word(c.name)));
+    for (const text of [seg.dest.text, ...seg.dest.vias]) if (!ahead.has(word(text))) add('warning', 'dest-not-on-route', { detail: text });
+  }
 }
 
 /**
