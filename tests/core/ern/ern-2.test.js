@@ -38,9 +38,9 @@ describe('ERN 2.0: what Nepos writes', () => {
     expect(lines).toContain('#TRC;0;0800;0;0;0;0;256');
   });
 
-  it('writes a language code on notes; a comment without one is Bokmål', () => {
+  it('writes a language code on notes; the line note is a note on the whole table', () => {
     expect(lines).toContain('#FOT;0;-1;Merknad;nob');
-    expect(lines).toContain('#KOM;Hei');
+    expect(lines).toContain('#FOT;-1;-1;Hei;nob');
   });
 
   it('reads back what it writes, and the check finds nothing to update', () => {
@@ -64,7 +64,7 @@ describe('ERN 2.0: reading older files', () => {
   it('offers to update them, and nothing is lost by doing so', () => {
     const res = checkRouteFile(OLD);
     expect(res.status).toBe('outdated');
-    expect(new Set(res.issues.map((i) => i.code))).toEqual(new Set(['old-record-name', 'old-row-layout', 'old-request-stop', 'old-language-code']));
+    expect(new Set(res.issues.map((i) => i.code))).toEqual(new Set(['old-record-name', 'old-row-layout', 'old-request-stop', 'old-language-code', 'old-line-note']));
   });
 
   it('reads a classic ERN row (typography in field 3, price in field 6)', () => {
@@ -73,12 +73,12 @@ describe('ERN 2.0: reading older files', () => {
     expect([s0.name, s0.bold, s0.sep, s0.price]).toEqual(['Halden rb.st.', true, false, 45]);
   });
 
-  it('turns comments in other languages (#KON, #KOE, #KOT, #KOM with a code) into #KOM with a language code', () => {
+  it('turns comments in other languages (#KON, #KOE, #KOT, #KOM with a code) into line notes (#FOT -1;-1) with a language code', () => {
     const multi = OLD.replace('#KOM;Hei', '#KOM;Hei\r\n#KOE;Hello\r\n#KON;Hei på deg\r\n#KOM;Hallo;deu');
     const rs = parseERN(multi);
     expect(rs.kom).toBe('Hei');
     const out = serializeERN(rs, 'r', OPTS).split('\r\n');
-    expect(out).toEqual(expect.arrayContaining(['#KOM;Hei', '#KOM;Hello;eng', '#KOM;Hei på deg;nno', '#KOM;Hallo;deu']));
+    expect(out).toEqual(expect.arrayContaining(['#FOT;-1;-1;Hei;nob', '#FOT;-1;-1;Hello;eng', '#FOT;-1;-1;Hei på deg;nno', '#FOT;-1;-1;Hallo;deu']));
     expect(checkRouteFile(multi).status).toBe('outdated'); // nothing lost: the old records are only renamed
   });
 

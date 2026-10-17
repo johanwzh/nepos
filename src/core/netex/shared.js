@@ -48,7 +48,6 @@ export function genSharedXml(data, { deliveryName = '', timestamp } = {}) {
 
     const sspXml = [...usedStops.values()].map(s=>`      <ScheduledStopPoint id="${cs}:ScheduledStopPoint:${stopLocalId(s.id)}" version="1">
         <Name>${xe(s.name)}</Name>
-        <TimingPointStatus>timingPoint</TimingPointStatus>
       </ScheduledStopPoint>`).join('\n');
 
     // PassengerStopAssignments point at the NSR Quays themselves (spec §8): no _stops.xml.
