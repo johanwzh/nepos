@@ -64,3 +64,21 @@ describe('destination displays in NeTEx', () => {
     for (const m of (line + shared).matchAll(/<DestinationDisplayRef ref="([^"]+)"/g)) expect(ids.has(m[1])).toBe(true);
   });
 });
+
+describe('element order (review)', () => {
+  const firstPoint = (/** @type {number} */ mask) => {
+    const t = ern(['#DSK;0;0;;1', '#DSK;1;0;;1', '#DSK;2;0;;1']).replace('#TRC;0;0700;0;0;0;0;0', `#TRC;0;0700;0;0;0;0;${mask}`);
+    const files = buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs: parseERN(t) }], orgs: [], brandings: [], calendars: [{ id: 'h1', name: 'Vår', ranges: [['20260101', '20260630']] }], timestamp: 'x' });
+    const line = files[1].xml;
+    return line.slice(line.indexOf('<StopPointInJourneyPattern '), line.indexOf('</StopPointInJourneyPattern>'));
+  };
+  const inOrder = (/** @type {string} */ sp, /** @type {string[]} */ els) => { const at = els.map((s) => sp.indexOf(s)); return at.every((v, i) => v > 0 && (i === 0 || v > at[i - 1])); };
+
+  it('writes ForAlighting before DestinationDisplayRef', () => {
+    expect(inOrder(firstPoint(2), ['<ScheduledStopPointRef', '<ForAlighting>', '<DestinationDisplayRef'])).toBe(true);
+  });
+
+  it('writes DestinationDisplayRef before RequestStop', () => {
+    expect(inOrder(firstPoint(256), ['<ScheduledStopPointRef', '<DestinationDisplayRef', '<RequestStop>'])).toBe(true);
+  });
+});

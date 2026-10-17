@@ -89,3 +89,16 @@ describe('writing destinations', () => {
     expect(serializeERN(parseERN(file()), 'r', OPTS)).not.toMatch(/#DS[KT]/);
   });
 });
+
+describe('review fixes', () => {
+  it('keeps a change on a row above the first stop the trip serves now, and the start stays the start', () => {
+    const rs = parseERN(file());
+    colOf(rs).dest = d('Ceta');
+    colOf(rs).dests[1] = d('Beta');
+    colOf(rs).cells[0] = null;
+    colOf(rs).cells[1] = null; // the trip now starts at Ceta: the change at Beta is flagged
+    const again = parseERN(serializeERN(rs, 'r', OPTS));
+    expect(colOf(again).dest).toEqual(d('Ceta'));
+    expect(colOf(again).dests[1]).toEqual(d('Beta'));
+  });
+});

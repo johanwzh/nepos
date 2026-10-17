@@ -156,7 +156,8 @@ export function checkRouteFile(text) {
     return (dstVias.get(from) ?? []).some((v) => leadsTo(v, target, seen));
   };
   for (const { id, line } of dstLines) {
-    if ((dstVias.get(id) ?? []).some((v) => leadsTo(v, id, new Set()))) damaged('destination-via-loop', line, id);
+    // Nepos reads it without the looping via, so saving repairs it
+    if ((dstVias.get(id) ?? []).some((v) => leadsTo(v, id, new Set()))) issues.push({ code: 'destination-via-loop', severity: 'note', line, detail: id });
   }
 
   // Anything else a save would lose or change (see roundtrip.js). Lines already reported as

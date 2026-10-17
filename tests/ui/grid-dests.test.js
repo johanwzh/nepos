@@ -231,3 +231,45 @@ describe('dragging destinations', () => {
     expect(grid.cols[0].dests[2]).toBe(null);
   });
 });
+
+describe('review fixes in the grid', () => {
+  const destCell = (r, c) => /** @type {HTMLElement} */ (document.querySelector(`.cw-dest[data-dr="${r}"][data-dc="${c}"]`));
+  const openCols = () => { if (!document.querySelector('.cw-dest')) press('d', { altKey: true }); };
+
+  it('"Remove change" on a flagged change above the start removes that change, not the start', () => {
+    openCols();
+    loadGrid({ stops: [stop('Alfa'), stop('Beta'), stop('Ceta')], cols: [{ dayCode: 'D', cells: [null, cell('0710'), cell('0720')], dest: d('Ceta'), dests: [d('X'), null, null] }] });
+    destCell(0, 0).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 5, clientY: 5 }));
+    document.getElementById('gc-dest-remove')?.click();
+    expect(grid.cols[0].dest).toEqual(d('Ceta'));
+    expect(grid.cols[0].dests[0]).toBe(null);
+  });
+
+  it('Ctrl+Z does nothing after the columns changed', () => {
+    window.confirm = () => true;
+    openCols();
+    loadGrid({ stops: [stop('Alfa'), stop('Beta')], cols: [0, 1].map(() => ({ dayCode: 'D', cells: [cell('0700'), cell('0710')] })) });
+    grid.cols[1].dest = d('Y');
+    loadGrid({ stops: grid.stops, cols: grid.cols });
+    down(destCell(0, 0));
+    press('a');
+    const input = /** @type {HTMLInputElement} */ (document.querySelector('.dest-box .de-text'));
+    input.value = 'Alfa2';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    down(document.querySelectorAll('.g-ibtn-del')[2]); // delete column 0 (the bottom row's ×; row buttons come first)
+    expect(grid.cols).toHaveLength(1);
+    down(destCell(0, 0));
+    press('z', { ctrlKey: true });
+    expect(grid.cols[0].dest).toEqual(d('Y'));
+  });
+
+  it('forgets the undo step when another grid is loaded', () => {
+    openCols();
+    down(destCell(0, 0));
+    press('Delete');
+    loadGrid({ stops: [stop('Alfa'), stop('Beta')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], dest: d('Q') }] });
+    down(destCell(0, 0));
+    press('z', { ctrlKey: true });
+    expect(grid.cols[0].dest).toEqual(d('Q'));
+  });
+});

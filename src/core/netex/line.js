@@ -203,7 +203,7 @@ ${porXml}
                 const alt = s.forAlighting ? '' : '\n            <ForAlighting>false</ForAlighting>';
                 const req = s.requestStop  ? '\n            <RequestStop>true</RequestStop>' : '';
                 return `          <StopPointInJourneyPattern id="${spijpId}" version="1" order="${i+1}">
-            <ScheduledStopPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(s.stopId)}"/>${dd}${brd}${alt}${req}
+            <ScheduledStopPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(s.stopId)}"/>${alt}${brd}${dd}${req}
           </StopPointInJourneyPattern>`;
             }).join('\n');
 

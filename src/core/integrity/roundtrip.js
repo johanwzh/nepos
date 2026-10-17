@@ -51,10 +51,8 @@ function normalize(line, dst) {
       return ['#MRK', ...f.slice(1)].join(';');
     case '#DSS': // the vehicle's sign is not kept (the integrity check notes it)
       return null;
-    case '#DST': { // destinations are renumbered on save: compared by text and vias; other languages are not kept
-      const lang = (f[3] ?? '').trim().toLowerCase();
-      if (lang && lang !== 'nob') return null;
-      return `#DST;${dst.get((f[1] ?? '').trim()) ?? ''}`;
+    case '#DST': { // destinations are renumbered and compacted on save: compared where they are used (#DSK)
+      return null;
     }
     case '#DSK': { // only the destination counts, by its text and vias
       const id = (f[4] ?? '').trim();
@@ -94,15 +92,15 @@ function keyRecords(text) {
     if (f[0] === '#DST' && (!lang || lang === 'nob')) recs.set((f[1] ?? '').trim(), { text: f[2] ?? '', vias: f.slice(4).map((v) => v.trim()).filter(Boolean) });
   }
   /** @type {Map<string, string>} */ const dst = new Map();
-  for (const [id, r] of recs) dst.set(id, [r.text, ...r.vias.filter((v) => v !== id).map((v) => recs.get(v)?.text ?? `?${v}`)].join('|'));
-  /** @type {Set<string>} */ const seenDst = new Set(); // the same destination twice is written once
+  /** A via that leads back to the record is left out, as the parser does. @param {string} from @param {string} target @param {Set<string>} seen @returns {boolean} */
+  const leadsTo = (from, target, seen) => from === target || (!seen.has(from) && (seen.add(from), (recs.get(from)?.vias ?? []).some((v) => leadsTo(v, target, seen))));
+  for (const [id, r] of recs) dst.set(id, [r.text, ...r.vias.filter((v) => recs.has(v) && !leadsTo(v, id, new Set())).map((v) => recs.get(v)?.text)].join('|'));
   text.split(/\r?\n/).forEach((raw, i) => {
     const line = raw.trim();
     if (!line) return;
     const record = line.split(';')[0];
     const norm = normalize(line, dst);
     if (norm === null) return; // left out on purpose
-    if (record === '#DST') { if (seenDst.has(norm)) return; seenDst.add(norm); }
     let where = '';
     if (record === '#PER') { per++; tab = -1; row = -1; where = `P${per}`; }
     else if (record === '#KAL') where = `P${per}`;

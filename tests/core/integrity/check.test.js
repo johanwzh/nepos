@@ -105,14 +105,20 @@ describe('destination records', () => {
     expect(result.issues.map((i) => [i.code, i.severity])).toEqual([['sign-not-kept', 'note'], ['destination-language-not-kept', 'note']]);
   });
 
-  it('marks a destination whose vias lead back to itself as damaged', () => {
-    const text = withDests().replace(/#DST;1;([^;\r\n]*);/, '#DST;1;$1;;9\r\n#DST;9;X;;1');
-    expect(checkRouteFile(text).issues).toContainEqual(expect.objectContaining({ code: 'destination-via-loop', severity: 'damaged' }));
-  });
-
   it('does not count other destination IDs as lost', () => {
     const text = withDests().replace(/#DST;1;/g, '#DST;71;').replace(/(#DST;\d+;[^;\r\n]*;;)1\b/g, '$171').replace(/(#DSK;\d+;\d+;;)1\b/g, '$171');
     expect(text).toContain('#DST;71;');
     expect(checkRouteFile(text).status).toBe('ok');
+  });
+});
+
+describe('destination via loop (review)', () => {
+  it('is a note, not damage: saving repairs it', () => {
+    const rs = parseERN(nepos2);
+    /** @type {any} */ (Object.values(rs.grids)[0]).cols[0].dest = { text: 'Florø', vias: ['Førde'] };
+    const text = serializeERN(rs, '10', { delivery: sample.delivery, orgs: sample.orgs }).replace(/#DST;1;([^;\r\n]*);/, '#DST;1;$1;;9\r\n#DST;9;X;;1');
+    const r = checkRouteFile(text);
+    expect(r.issues).toContainEqual(expect.objectContaining({ code: 'destination-via-loop', severity: 'note' }));
+    expect(r.issues.filter((i) => i.severity === 'damaged')).toEqual([]);
   });
 });

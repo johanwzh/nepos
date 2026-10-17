@@ -2,7 +2,7 @@
 import { orgRole } from '../orgs.js';
 import { modeFromErn } from '../modes.js';
 import { UUID_PATTERN } from './serialize.js';
-import { normalizeDests } from '../destinations.js';
+import { normalizeDests, servedRows } from '../destinations.js';
 
 /**
  * Parse an ERN route file into a route state.
@@ -297,15 +297,19 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         };
         for (const { grid, links } of dskByGrid) {
             normalizeDests(grid);
-            const sorted = [...links].sort((a, b) => a.ri - b.ri);
-            /** @type {Set<number>} */ const started = new Set();
-            for (const { ci, ri, dstId } of sorted) {
-                const col = grid.cols[ci];
-                const dest = destOf(dstId);
-                if (!col || !dest) continue;
-                if (!started.has(ci)) { col.dest = dest; started.add(ci); }
-                else if (ri >= 0 && ri < col.dests.length) col.dests[ri] = dest;
-            }
+            // The start is the #DSK on the first stop the trip serves, else its first one; the others are changes
+            grid.cols.forEach((/** @type {any} */ col, /** @type {number} */ ci) => {
+                const own = links.filter((l) => l.ci === ci).sort((a, b) => a.ri - b.ri);
+                if (!own.length) return;
+                const first = servedRows(grid, col)[0];
+                const start = own.find((l) => l.ri === first) ?? own[0];
+                for (const l of own) {
+                    const dest = destOf(l.dstId);
+                    if (!dest) continue;
+                    if (l === start) col.dest = dest;
+                    else if (l.ri >= 0 && l.ri < col.dests.length) col.dests[l.ri] = dest;
+                }
+            });
         }
     }
 

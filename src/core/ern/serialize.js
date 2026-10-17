@@ -69,7 +69,8 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
                 out.push(`#DSK;${ci};${served[0] ?? Math.max(0, timedRow)};;${dstId(col.dest)}`);
             }
             (col.dests ?? []).forEach((/** @type {any} */ dest, /** @type {number} */ ri) => {
-                if (dest && ri !== last && ri > (served[0] ?? -1)) out.push(`#DSK;${ci};${ri};;${dstId(dest)}`); // none on the last stop
+                // none on the last stop; a change on a row the trip no longer serves is kept (it is flagged)
+                if (dest && ri !== last && ri !== served[0]) out.push(`#DSK;${ci};${ri};;${dstId(dest)}`);
             });
         });
         dskLines.set(grid, out);

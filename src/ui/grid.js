@@ -104,6 +104,7 @@ export function loadGrid(data, { readOnly = false } = {}) {
   grid.cols = JSON.parse(JSON.stringify(data.cols));
   grid.tripRow = !!(/** @type {any} */ (data).tripRow);
   normalizeDests(grid); // a start and one change slot per stop for every column
+  destUndo = ''; inDest = false;
   inTN = false; tnEdit = false; tnBuf = '';
   // Every column on screen has its stable ID, so saving twice writes the same text.
   for (const col of grid.cols) if (!col.uid) col.uid = crypto.randomUUID();
@@ -470,10 +471,13 @@ function projectDestTexts() {
   return [...out].filter(Boolean).sort((a, b) => a.localeCompare(b));
 }
 
+/** What an undo step belongs to: the columns (by ID) and the number of rows. */
+const undoKey = () => `${grid.stops.length}|${grid.cols.map((c) => c.uid).join(',')}`;
+
 /** Run a destination action with one step of undo, then show it. @param {() => void} fn */
 function destAction(fn) {
   if (grid.readOnly) return;
-  destUndo = snapshotDests(grid.cols);
+  destUndo = undoKey() + '\n' + snapshotDests(grid.cols);
   fn();
   render();
 }
@@ -527,7 +531,14 @@ function keyDest(e) {
     const k = e.key.toLowerCase();
     if (k === 'c') { e.preventDefault(); copyDestSelection(); }
     else if (k === 'v' && !grid.readOnly) { e.preventDefault(); pasteDestSelection(); }
-    else if (k === 'z' && destUndo && !grid.readOnly) { e.preventDefault(); restoreDests(grid.cols, destUndo); destUndo = ''; render(); }
+    else if (k === 'z' && destUndo && !grid.readOnly) {
+      e.preventDefault();
+      // Only onto the same columns and rows it was taken from
+      const [key, snap] = [destUndo.slice(0, destUndo.indexOf('\n')), destUndo.slice(destUndo.indexOf('\n') + 1)];
+      if (key === undoKey()) restoreDests(grid.cols, snap);
+      destUndo = '';
+      render();
+    }
     return;
   }
   /** @type {Record<string, [number, number]>} */
@@ -1401,8 +1412,9 @@ export function initGrid() {
   });
   $('gc-dest-remove').addEventListener('click', () => {
     hideCtx();
-    if (!destStartingAt(ctxDestR, ctxDestC)) return;
-    destAction(() => { setDestAt(grid, grid.cols[ctxDestC], ctxDestR, null); });
+    const col = grid.cols[ctxDestC];
+    if (!col || !destStartingAt(ctxDestR, ctxDestC)) return;
+    destAction(() => { if (servedRows(grid, col)[0] === ctxDestR) col.dest = null; else col.dests[ctxDestR] = null; });
   });
   $('gc-offset').addEventListener('click', () => {
     hideCtx();
