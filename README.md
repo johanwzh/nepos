@@ -37,12 +37,6 @@ npm run build    # the static site, in dist/
 Nepos 2 is in active development and user testing; it has not been released. Everything is plain
 JavaScript with JSDoc types, Vite for the build and Vitest (jsdom) for the tests.
 
-## Where things are documented
-
-- Design: [docs/superpowers/specs/](docs/superpowers/specs/) — one document per feature area, newest last.
-- How it was built, plan by plan: [docs/superpowers/plans/](docs/superpowers/plans/).
-- What's next — open requests, ideas and known small issues: [docs/backlog.md](docs/backlog.md).
-
 ## Licence
 
 Copyright © 2026 johanwzh. Licensed under the EUPL (European Union Public Licence) v. 1.2 — see

@@ -5,3 +5,7 @@ user-tests*/
 .superpowers/
 # backups of the work folder
 *.zip
+
+# Working notes: design specs, build plans and the backlog stay private
+docs/superpowers/
+docs/backlog.md
