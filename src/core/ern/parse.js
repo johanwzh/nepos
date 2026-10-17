@@ -2,6 +2,7 @@
 import { orgRole } from '../orgs.js';
 import { modeFromErn } from '../modes.js';
 import { UUID_PATTERN } from './serialize.js';
+import { normalizeDests } from '../destinations.js';
 
 /**
  * Parse an ERN route file into a route state.
@@ -23,6 +24,14 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
     let _pendingNotes = [];
     // The trip-number row (#TTL) of the current table; numbers (#TTC) go on the columns
     let _tripRow = false, _ttlRow = NaN;
+    // Destinations (#DST, Bokmål only: id → text and via IDs) and where they start (#DSK), resolved
+    // once the whole file is read
+    /** @type {Map<string, { text: string, viaIds: string[] }>} */
+    const dstMap = new Map();
+    /** @type {{ ci: number, ri: number, dstId: string }[]} */
+    let _pendingDsk = [];
+    /** @type {{ grid: any, links: { ci: number, ri: number, dstId: string }[] }[]} */
+    const dskByGrid = [];
 
     function finalizeTAB() {
         if (!curPer || !curSet || !inTab) return;
@@ -61,8 +70,10 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
             if (date) (target.dates ??= []).push(date);
         });
         rs.grids[key] = grid;
+        dskByGrid.push({ grid, links: _pendingDsk });
         cols=[]; rows=[]; cellMap={};
         _pendingNotes = [];
+        _pendingDsk = [];
         _tripRow = false; _ttlRow = NaN;
     }
 
@@ -223,6 +234,21 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 _pendingNotes.push({ ci: buildXtoIdx()[parseInt(f[1])] ?? parseInt(f[1]), ri: parseInt(f[2]), note: txt });
                 break;
             }
+            case '#DST': {
+                // A destination in one language; Nepos keeps Bokmål (empty = Bokmål)
+                const lang = (f[3]||'').trim().toLowerCase();
+                const id = (f[1]||'').trim();
+                if (!id || (lang && lang !== 'nob')) break;
+                dstMap.set(id, { text: f[2]||'', viaIds: f.slice(4).map((v) => v.trim()).filter(Boolean) });
+                break;
+            }
+            case '#DSK': {
+                // Where a trip's destination starts or changes; the sign (field 2) is not used by Nepos
+                const dstId = (f[4]||'').trim();
+                if (!dstId) break;
+                _pendingDsk.push({ ci: buildXtoIdx()[parseInt(f[1])] ?? parseInt(f[1]), ri: parseInt(f[2]), dstId });
+                break;
+            }
             case '#UNT': {
                 // Dates on a column or a cell: PMU bit 13 = runs on these days, bit 14 = does not
                 const from=f[3]||'', pmu=parseInt(f[4])||0, to=f[5]||'';
@@ -234,6 +260,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         lastRec = f[0];
     }
     finalizeTAB();
+    resolveDestinations();
     if (!sawMod) { const m = modeFromErn(rs.transportMode); rs.mode = m.mode; rs.submode = m.submode; }
     // A column ID that is not a UUID, or is used twice, is replaced now so every save writes the same
     // text; a missing one is filled in when the grid is shown (line header spec §4).
@@ -251,6 +278,36 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         }
     }
     return rs;
+
+    /** Put each #DSK on its column: the first one is the start, the others are changes. */
+    function resolveDestinations() {
+        /** A via that leads back to the record, directly or through other vias, is skipped. @param {string} from @param {string} target @param {Set<string>} seen @returns {boolean} */
+        const leadsTo = (from, target, seen) => {
+            if (from === target) return true;
+            if (seen.has(from)) return false;
+            seen.add(from);
+            return (dstMap.get(from)?.viaIds ?? []).some((v) => leadsTo(v, target, seen));
+        };
+        /** @param {string} id */
+        const destOf = (id) => {
+            const rec = dstMap.get(id);
+            if (!rec) return null;
+            const vias = rec.viaIds.filter((v) => dstMap.has(v) && !leadsTo(v, id, new Set())).map((v) => /** @type {any} */ (dstMap.get(v)).text);
+            return { text: rec.text, vias };
+        };
+        for (const { grid, links } of dskByGrid) {
+            normalizeDests(grid);
+            const sorted = [...links].sort((a, b) => a.ri - b.ri);
+            /** @type {Set<number>} */ const started = new Set();
+            for (const { ci, ri, dstId } of sorted) {
+                const col = grid.cols[ci];
+                const dest = destOf(dstId);
+                if (!col || !dest) continue;
+                if (!started.has(ci)) { col.dest = dest; started.add(ci); }
+                else if (ri >= 0 && ri < col.dests.length) col.dests[ri] = dest;
+            }
+        }
+    }
 
     function buildXtoIdx() {
         const m={}; cols.forEach((c,i)=>{ m[c.x]=i; }); return m;

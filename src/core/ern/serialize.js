@@ -1,5 +1,6 @@
 // ERN serializer, ported from Nepos 1.5.7 (nepos.html lines 2720–2809). See docs/ern/ern-format.md.
 import { ernCodeFor } from '../modes.js';
+import { servedRows, destKey } from '../destinations.js';
 
 /** A column's stable ID (#UID). */
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -38,6 +39,42 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     } else {
         lines.push(`#SEK;-1;;0;0;0;0`);
     }
+    // Destinations (#DST): each distinct one once, a via before the destination that uses it, before the
+    // table sets; the trips' starts and changes (#DSK) per table below.
+    /** @type {Map<string, string>} destKey → ID */
+    const dstIds = new Map();
+    /** @param {{ text: string, vias: string[] }} dest */
+    const dstId = (dest) => {
+        const viaIds = dest.vias.map((v) => dstId({ text: v, vias: [] }));
+        const key = destKey(dest);
+        if (!dstIds.has(key)) {
+            const id = String(dstIds.size + 1);
+            dstIds.set(key, id);
+            lines.push(`#DST;${id};${esc(dest.text)};${viaIds.length ? `;${viaIds.join(';')}` : ''}`);
+        }
+        return /** @type {string} */ (dstIds.get(key));
+    };
+    /** @type {Map<any, string[]>} grid → its #DSK lines */
+    const dskLines = new Map();
+    for (const set of rs.tableSets) for (const per of rs.periods.filter((/** @type {any} */ p) => p.setId === set.id)) {
+        const grid = rs.grids[`${per.id}:${set.id}`];
+        if (!grid) continue;
+        const out = [];
+        grid.cols.forEach((/** @type {any} */ col, /** @type {number} */ ci) => {
+            const served = servedRows(grid, col);
+            const last = served[served.length - 1];
+            if (col.dest) {
+                // The start goes on the first stop the trip serves (else its first time, else row 0)
+                const timedRow = col.cells.findIndex((/** @type {any} */ c) => c?.time && c.time !== '|');
+                out.push(`#DSK;${ci};${served[0] ?? Math.max(0, timedRow)};;${dstId(col.dest)}`);
+            }
+            (col.dests ?? []).forEach((/** @type {any} */ dest, /** @type {number} */ ri) => {
+                if (dest && ri !== last && ri > (served[0] ?? -1)) out.push(`#DSK;${ci};${ri};;${dstId(dest)}`); // none on the last stop
+            });
+        });
+        dskLines.set(grid, out);
+    }
+
     const usedUids = new Set();
     let komWritten = false;
 
@@ -115,6 +152,7 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
             };
             grid.cols.forEach((col, ci) => notesOf(col, ci, -1));
             grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => notesOf(col.cells[ri], ci, ri)));
+            lines.push(...(dskLines.get(grid) ?? []));
         }
     }
 
