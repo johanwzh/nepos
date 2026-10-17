@@ -15,9 +15,11 @@ const CALENDARS = [{ id: CAL, name: 'Vinter', ranges: /** @type {[string, string
 const route = () => parseERN([
   '#RUT;-1;50;Jernbanetorget - Oslo bussterminal;;1;',
   '#SEK;NOG:Authority:aaaaaaaaaa1;Eksempel fylkeskommune;1;0;0;0', '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0',
+  '#DST;1;Oslo;',
   '#TRA;Tur', '#PER;;;;;;', `#KAL;${CAL}`, '#TAB;0;;;;', '#TUR;0;DX67;0;0;0;0',
   '#TRL;0;NSR:Quay:7203;Jernbanetorget;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0',
   '#TRL;1;NSR:Quay:11972;Oslo bussterminal;34;0;-1;-1;34;-1', '#TRC;0;0710;0;0;0;0;0',
+  '#DSK;0;0;;1',
 ].join('\r\n') + '\r\n', { lang: 'no' });
 const grid0 = (/** @type {any} */ rs) => rs.grids[`${rs.periods[0].id}:${rs.periods[0].setId}`];
 
@@ -235,6 +237,63 @@ describe('checkForExport', () => {
   it('has a text for every code in both languages', () => {
     for (const lang of ['no', 'en']) {
       for (const code of CHECK_CODES) expect(/** @type {any} */ (STRINGS)[lang][`chk:${code}`], `${lang} ${code}`).toBeDefined();
+    }
+  });
+});
+
+describe('destinations', () => {
+  /** The route with a third stop (Oslo S) and the trip running on to it. */
+  const three = () => {
+    const rs = route();
+    const g = grid0(rs);
+    g.stops.push({ name: 'Jernbanetorget', stopId: 'NSR:Quay:7203', bold: false, sep: false, isDwellArr: false, price: null });
+    g.cols[0].cells.push({ time: '0720', dayOffset: 0, suffix: '', interchange: null });
+    g.cols[0].dests.push(null);
+    return rs;
+  };
+  const destCodes = (rs) => codes(check(rs)).filter((c) => c.includes('dest'));
+
+  it('blocks a trip without a destination', () => {
+    const rs = route();
+    grid0(rs).cols[0].dest = null;
+    const issues = check(rs).filter((i) => i.code.startsWith('dest'));
+    expect(codes(issues)).toEqual(['error:dest-missing']);
+    expect(issues[0].where).toMatchObject({ column: 1 });
+  });
+
+  it('blocks via written into the text', () => {
+    const rs = route();
+    grid0(rs).cols[0].dest = { text: 'Oslo via Sentrum', vias: [] };
+    expect(destCodes(rs)).toContain('error:dest-via-text');
+  });
+
+  it('warns about a change on a row the trip does not serve', () => {
+    const rs = three();
+    grid0(rs).cols[0].cells[1] = null;
+    grid0(rs).cols[0].dests[1] = { text: 'Jernbanetorget', vias: [] };
+    grid0(rs).cols[0].dest = { text: 'Jernbanetorget', vias: [] };
+    expect(destCodes(rs)).toEqual(['warning:dest-unserved']);
+  });
+
+  it('warns about a destination or a via the trip does not go to', () => {
+    const rs = route();
+    grid0(rs).cols[0].dest = { text: 'Røros', vias: [] };
+    expect(destCodes(rs)).toEqual(['warning:dest-not-on-route']);
+    grid0(rs).cols[0].dest = { text: 'Oslo', vias: ['Støren'] };
+    expect(check(rs).find((i) => i.code === 'dest-not-on-route')?.detail).toBe('Støren');
+  });
+
+  it('finds nothing wrong with a destination, a via and a change that fit the trip', () => {
+    const rs = three();
+    grid0(rs).cols[0].dest = { text: 'Jernbanetorget', vias: ['Oslo'] };
+    grid0(rs).cols[0].dests[1] = { text: 'Jernbanetorget', vias: [] };
+    expect(destCodes(rs)).toEqual([]);
+  });
+
+  it('has texts for its codes in both languages', () => {
+    for (const code of ['dest-missing', 'dest-via-text', 'dest-unserved', 'dest-not-on-route']) {
+      expect(CHECK_CODES).toContain(code);
+      for (const lang of Object.keys(STRINGS)) expect(STRINGS[lang][`chk:${code}`]).toBeTruthy();
     }
   });
 });
