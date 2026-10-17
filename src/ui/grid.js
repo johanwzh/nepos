@@ -22,7 +22,7 @@ import { openDatePicker } from './date-picker.js';
 import { placeMenu } from './place-menu.js';
 import { unionDays, tripDays } from '../core/calendars.js';
 import { app } from './state.js';
-import { normalizeDests, servedRows, setDestAt, applySuggestion, copyDests, pasteDests, snapshotDests, restoreDests, destLabel } from '../core/destinations.js';
+import { normalizeDests, servedRows, setDestAt, moveChange, viaDrag, applySuggestion, copyDests, pasteDests, snapshotDests, restoreDests, destLabel } from '../core/destinations.js';
 import { destColumnsOpen, onDestToggle, destCellInfo, renderDestCell, openDestEditor } from './dest-columns.js';
 
 /** The grid being edited: one period × direction of the open route. */
@@ -80,6 +80,8 @@ let destUndo = '';
 /** @type {ReturnType<typeof copyDests> | null} */
 let destClip = null;
 let ctxDestR = -1, ctxDestC = -1;
+/** A destination label being dragged: its column and row, and whether it is the column's start */
+let destDrag = /** @type {{ ci: number, from: number, start: boolean, moved: boolean } | null} */ (null);
 
 const $ = (/** @type {string} */ id) => /** @type {any} */ (document.getElementById(id));
 const clampR = (/** @type {number} */ r) => Math.max(0, Math.min(grid.stops.length - 1, r));
@@ -432,6 +434,9 @@ function wireDestCell(td, r, ci) {
     if (e.button !== 0) return;
     e.preventDefault();
     if (ixMode) { exitIx(); return; }
+    // A label can be dragged to another stop (shift at the drop: the stop becomes a via)
+    destDrag = !grid.readOnly && /** @type {HTMLElement} */ (e.target).closest?.('.dest-label')
+      ? { ci, from: r, start: servedRows(grid, grid.cols[ci])[0] === r, moved: false } : null;
     commitEdit(); commitDayCode(); commitTripNo();
     if (inStopEdit) commitStopEdit();
     inStopCol = false; inDC = false; inTN = false; inDest = true;
@@ -535,11 +540,29 @@ function keyDest(e) {
     render();
     return;
   }
-  if (e.key === 'Escape') { e.preventDefault(); inDest = false; render(); return; }
+  if (e.key === 'Escape') { e.preventDefault(); if (destDrag) { destDrag = null; clearDropMarks(); return; } inDest = false; render(); return; }
   if (grid.readOnly) return;
   if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); openDestEditorAt(destR, destC); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelectedDests(); return; }
   if (e.key.length === 1 && !e.altKey) { e.preventDefault(); openDestEditorAt(destR, destC, e.key); }
+}
+
+/** Whether a dragged label may be dropped on a row: tried on a copy of its column. @param {boolean} shift @param {number} to */
+function canDropDest(shift, to) {
+  if (!destDrag) return false;
+  const col = structuredClone(grid.cols[destDrag.ci]);
+  const g = { stops: grid.stops };
+  return shift ? viaDrag(g, col, destDrag.from, to) : !destDrag.start && moveChange(g, col, destDrag.from, to);
+}
+
+function clearDropMarks() {
+  document.querySelectorAll('#tbl .dd-ok, #tbl .dd-no').forEach((el) => el.classList.remove('dd-ok', 'dd-no'));
+}
+
+/** The destination cell under a pointer event, in the dragged label's column. @param {Event} e */
+function dropTarget(e) {
+  const td = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest?.('.cw-dest[data-dr]'));
+  return td && destDrag && Number(td.dataset.dc) === destDrag.ci ? td : null;
 }
 
 /** The destination cells' menu. @param {number} x @param {number} y */
@@ -1337,6 +1360,31 @@ export function initGrid() {
     });
     onQuaysLoaded(updateStopMarks);
     onDestToggle(onDestColumnsToggled);
+    // Dragging a destination label: mark where it may go; drop it there
+    document.addEventListener('mouseover', (e) => {
+      if (!destDrag) return;
+      if ((e.buttons & 1) === 0) { destDrag = null; clearDropMarks(); return; } // released outside the window
+      const td = dropTarget(e);
+      if (!td) return;
+      const to = Number(td.dataset.dr);
+      if (to !== destDrag.from) destDrag.moved = true;
+      clearDropMarks();
+      if (destDrag.moved) td.classList.add(canDropDest(e.shiftKey, to) ? 'dd-ok' : 'dd-no');
+    });
+    document.addEventListener('mouseup', (e) => {
+      const drag = destDrag;
+      destDrag = null;
+      clearDropMarks();
+      if (!drag?.moved) return;
+      destDrag = drag; // dropTarget and canDropDest read it
+      const td = dropTarget(e);
+      const to = td ? Number(td.dataset.dr) : -1;
+      const ok = td && canDropDest(e.shiftKey, to);
+      destDrag = null;
+      if (!ok) return;
+      destR = to; destC = drag.ci; destR2 = to; destC2 = drag.ci;
+      destAction(() => { if (e.shiftKey) viaDrag(grid, grid.cols[drag.ci], drag.from, to); else moveChange(grid, grid.cols[drag.ci], drag.from, to); });
+    });
     // A click anywhere else in the grid leaves the destination cells (their own handler selects them)
     document.addEventListener('mousedown', (e) => {
       const el = /** @type {HTMLElement} */ (e.target);

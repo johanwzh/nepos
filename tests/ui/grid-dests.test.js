@@ -182,3 +182,52 @@ describe('editing destinations', () => {
     expect(grid.cols[1].dests[1]).toEqual(d('Delta'));
   });
 });
+
+describe('dragging destinations', () => {
+  const destCell = (r, c) => /** @type {HTMLElement} */ (document.querySelector(`.cw-dest[data-dr="${r}"][data-dc="${c}"]`));
+  const label = (r, c) => /** @type {HTMLElement} */ (destCell(r, c).querySelector('.dest-label'));
+  // The grid is rebuilt on mousedown: the target cell is looked up after it
+  const drag = (from, [r, c], opts = {}) => {
+    down(from);
+    const to = destCell(r, c);
+    to.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, buttons: 1, ...opts }));
+    to.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, ...opts }));
+  };
+  const setup = () => {
+    if (!document.querySelector('.cw-dest')) press('d', { altKey: true });
+    loadGrid({
+      stops: [stop('Alfa'), stop('Beta'), stop('Ceta'), stop('Delta S')],
+      cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710'), cell('0720'), cell('0730')], dest: d('Delta'), dests: [null, d('Ceta')] }],
+    });
+  };
+
+  it('moves a change to another stop', () => {
+    setup();
+    drag(label(1, 0), [2, 0]);
+    expect(grid.cols[0].dests[2]).toEqual(d('Ceta'));
+    expect(grid.cols[0].dests[1]).toBe(null);
+  });
+
+  it('does not drop a change on the last stop', () => {
+    setup();
+    drag(label(1, 0), [3, 0]);
+    expect(grid.cols[0].dests[1]).toEqual(d('Ceta'));
+    expect(grid.cols[0].dests[3]).toBe(null);
+  });
+
+  it('makes a via with shift+drag of the start', () => {
+    setup();
+    grid.cols[0].dests[1] = null;
+    loadGrid({ stops: grid.stops, cols: grid.cols });
+    drag(label(0, 0), [1, 0], { shiftKey: true });
+    expect(grid.cols[0].dest).toEqual(d('Delta', ['Beta']));
+    expect(grid.cols[0].dests[1]).toEqual(d('Delta'));
+  });
+
+  it('does not move the start without shift', () => {
+    setup();
+    drag(label(0, 0), [2, 0]);
+    expect(grid.cols[0].dest).toEqual(d('Delta'));
+    expect(grid.cols[0].dests[2]).toBe(null);
+  });
+});

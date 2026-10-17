@@ -138,6 +138,27 @@ På en dagkode:
   klikk eller dra over dagene. Datoer på en tur eksporteres. Datoer på en enkelt tid lagres, men
   eksporteres ikke ennå (eksportkontrollen sier fra).
 
+### Destinasjoner
+
+En **destinasjon** er det reisesøket viser at turen går til («Linje 71 mot Røros»). Alle turer må ha
+en før eksport.
+
+- **Alt+D** eller knappen **Destinasjoner** til høyre over tabellen viser og skjuler en smal kolonne
+  etter hver tur. Destinasjonen står med liten skrift der den begynner, og en strek i samme farge
+  går ned til den neste. Grønn, blå og rød går på rundgang. Dobbel strek betyr at destinasjonen har via.
+- **Skriv** i destinasjonscellen på turens første stopp. På et senere stopp skifter destinasjonen der.
+  Enter eller dobbeltklikk åpner den, og der legger du til **via** (aldri skriv «via» i teksten).
+  Nepos foreslår destinasjoner du har brukt før.
+- **Dra** en endring til et annet stopp. **Shift+dra** destinasjonen ned til et stopp: stoppet blir
+  via, og fra stoppet av går turen uten den.
+- **Høyreklikk → Foreslå destinasjoner** lager et forslag fra stoppene: siste stopp er destinasjonen,
+  **fete** stopp blir via, og et **understreket** stopp blir en egen destinasjon før turen går videre.
+  Marker flere kolonner for å foreslå for alle.
+- **Ctrl+C / Ctrl+V** kopierer destinasjonene fra én kolonne til andre. **Delete** fjerner.
+  **Ctrl+Z** angrer siste destinasjonsendring.
+- Eksportkontrollen sier fra om turer uten destinasjon og om destinasjoner som ikke ser ut til å passe
+  med stoppene turen kjører til.
+
 ### Fartsprofilen
 
 Stripen under rutetabellen viser farten mellom stoppene for turen du står i, i luftlinje. Rødt betyr
