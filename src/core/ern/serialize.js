@@ -70,6 +70,14 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
                 lines.push(`#UID;${col.uid}`);
             });
 
+            // The trip-number row (#TTL once, #TTC per column with a number): a train number for rail
+            // (bit 6 = 64), a trip number otherwise (bit 7 = 128). NeTEx: the ServiceJourney's PrivateCode.
+            if (grid.tripRow) {
+                const rail = rs.mode === 'rail';
+                lines.push(`#TTL;-1;0;;10;${rail ? 'Tognummer' : 'Turnummer'};0`);
+                grid.cols.forEach((col, ci) => { if (col.tripNo) lines.push(`#TTC;${ci};;10;${esc(col.tripNo)};${rail ? 64 : 128}`); });
+            }
+
             grid.stops.forEach((stop, ri) => {
                 const sid = (stop.stopId != null) ? stop.stopId : -1;
                 const pNep = (stop.price != null && stop.price >= 0) ? stop.price.toFixed(6) : '-1';

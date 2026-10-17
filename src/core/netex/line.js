@@ -117,7 +117,9 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                 });
 
                 sjIds.add(sjId);
-                sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>
+                // The trip number (the grid's trip-number row): the ServiceJourney's PrivateCode
+                const sjPriv = col.tripNo ? `\n        <PrivateCode>${xe(col.tripNo)}</PrivateCode>` : '';
+                sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>${sjPriv}
         <TransportMode>${lineMode}</TransportMode>
         <JourneyPatternRef ref="${jpId}" version="1"/>
         <passingTimes>${ptXml}

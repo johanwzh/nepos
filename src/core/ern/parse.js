@@ -21,6 +21,8 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
     let cols = [], rows = [], cellMap = {};
     // Notes (#FOT) and dates (#UNT) for the current table, put on their column or cell once it is built
     let _pendingNotes = [];
+    // The trip-number row (#TTL) of the current table; numbers (#TTC) go on the columns
+    let _tripRow = false;
 
     function finalizeTAB() {
         if (!curPer || !curSet || !inTab) return;
@@ -29,7 +31,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         const colXtoIdx = {};
         cols.forEach((c,i) => { colXtoIdx[c.x] = i; });
         const gCols2 = cols.map(c => ({
-            dayCode: c.dayCode, uid: c.uid ?? null, note: '', dates: [],
+            dayCode: c.dayCode, uid: c.uid ?? null, note: '', dates: [], tripNo: c.tripNo ?? '',
             cells: rows.map((_,ri) => {
                 const cell = cellMap[`${c.x}:${ri}`];
                 return cell || null;
@@ -49,7 +51,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 if (trueDwell) stopsCopy[i].isDwellArr = true;
             }
         }
-        const grid = { stops: stopsCopy, cols: gCols2 };
+        const grid = { stops: stopsCopy, cols: gCols2, tripRow: _tripRow };
         // Notes and dates from #FOT/#UNT: on the column (row -1) or on a cell that has a time
         _pendingNotes.forEach(({ ci, ri, note, date }) => {
             if (ci < 0 || ci >= grid.cols.length) return;
@@ -61,6 +63,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         rs.grids[key] = grid;
         cols=[]; rows=[]; cellMap={};
         _pendingNotes = [];
+        _tripRow = false;
     }
 
     for (const rawLine of text.split(/\r?\n/)) {
@@ -188,6 +191,14 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                     };
                 }
                 cellMap[`${cx}:${ri}`] = { time, dayOffset:dOff, suffix, interchange };
+                break;
+            }
+            case '#TTL':
+                if (parseInt(f[1]) === -1) _tripRow = true;
+                break;
+            case '#TTC': {
+                const col = cols.find((c) => c.x === parseInt(f[1]));
+                if (col && f[4]) col.tripNo = f[4];
                 break;
             }
             case '#FOT': {

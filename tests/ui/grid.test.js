@@ -328,3 +328,45 @@ describe('the date picker (user test 2026-10-17)', () => {
     expect(grid.cols[0].cells[1].dates).toEqual([{ from: day(12), to: day(12), on: true }]);
   });
 });
+
+describe('the trip-number row (user test 2026-10-17)', () => {
+  beforeEach(() => { initGrid(); window.confirm = () => true; });
+  const dcMenu = () => /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+  const tn = (/** @type {number} */ ci) => /** @type {HTMLElement} */ (document.querySelector(`.g-tn-cell[data-ci="${ci}"]`));
+
+  it('is shown from the day-code menu, between the day codes and the first stop, and takes typed numbers', () => {
+    expect(document.querySelector('.g-row-tn')).toBeNull();
+    dcMenu();
+    expect(document.getElementById('gc-tripno')?.textContent).toBe('Vis turnummer');
+    /** @type {HTMLElement} */ (document.getElementById('gc-tripno')).click();
+    const row = /** @type {HTMLElement} */ (document.querySelector('.g-row-tn'));
+    expect(row.textContent).toContain('Turnummer');
+    expect(row.previousElementSibling?.querySelector('.g-dc-cell')).not.toBeNull();
+    tn(0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    typeKeys('101');
+    press('Enter');
+    expect(grid.cols[0].tripNo).toBe('101');
+    expect(gridData().tripRow).toBe(true);
+  });
+
+  it('is a row like the others for the arrow keys: day codes → trip numbers → first stop', () => {
+    grid.tripRow = true;
+    /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    press('ArrowDown');
+    expect(tn(0).classList.contains('tn-sel')).toBe(true);
+    press('ArrowDown');
+    expect(/** @type {HTMLElement} */ (document.querySelector('.is-anchor')).dataset.r).toBe('0');
+    press('ArrowUp');
+    expect(tn(0).classList.contains('tn-sel')).toBe(true);
+  });
+
+  it('hides again, taking its numbers away after asking', () => {
+    grid.tripRow = true;
+    grid.cols[0].tripNo = '7';
+    dcMenu();
+    expect(document.getElementById('gc-tripno')?.textContent).toBe('Skjul turnummer');
+    /** @type {HTMLElement} */ (document.getElementById('gc-tripno')).click();
+    expect(document.querySelector('.g-row-tn')).toBeNull();
+    expect(grid.cols[0].tripNo).toBe('');
+  });
+});

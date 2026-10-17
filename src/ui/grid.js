@@ -26,6 +26,8 @@ import { app } from './state.js';
 export const grid = {
   /** @type {any[]} */ stops: [],
   /** @type {any[]} */ cols: [],
+  /** the trip-number row is shown (a column's number is col.tripNo) */
+  tripRow: false,
   active: false,
   readOnly: false,
 };
@@ -56,6 +58,8 @@ function posOf(stop) {
 let ancR = 0, ancC = 0, endR = 0, endC = 0;
 let editing = false, editBuf = '';
 let inDC = false, dcCol = 0, dcEdit = false, dcBuf = '';
+/** The trip-number row: selected (its column is dcCol), being typed in */
+let inTN = false, tnEdit = false, tnBuf = '';
 let inStopCol = false;
 /** A mouse button is held after a click in a time cell: moving over cells extends the range */
 let dragging = false;
@@ -69,7 +73,7 @@ const $ = (/** @type {string} */ id) => /** @type {any} */ (document.getElementB
 const clampR = (/** @type {number} */ r) => Math.max(0, Math.min(grid.stops.length - 1, r));
 const clampC = (/** @type {number} */ c) => Math.max(0, Math.min(grid.cols.length - 1, c));
 const esc = (/** @type {string} */ s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const snapshot = () => JSON.stringify([grid.stops, grid.cols]);
+const snapshot = () => JSON.stringify([grid.stops, grid.cols, grid.tripRow]);
 
 /** Index of the selected column (for the footnote preview and, in Plan 3, the map). */
 export function selectedColumn() {
@@ -84,6 +88,8 @@ export function selectedColumn() {
 export function loadGrid(data, { readOnly = false } = {}) {
   grid.stops = JSON.parse(JSON.stringify(data.stops));
   grid.cols = JSON.parse(JSON.stringify(data.cols));
+  grid.tripRow = !!(/** @type {any} */ (data).tripRow);
+  inTN = false; tnEdit = false; tnBuf = '';
   // Every column on screen has its stable ID, so saving twice writes the same text.
   for (const col of grid.cols) if (!col.uid) col.uid = crypto.randomUUID();
   grid.readOnly = readOnly;
@@ -102,12 +108,13 @@ export function commitPending() {
   if (!grid.active || grid.readOnly) return;
   if (editing) commitEdit();
   if (dcEdit) commitDayCode();
+  if (tnEdit) commitTripNo();
   if (inStopEdit) commitStopEdit();
 }
 
 /** A copy of the grid's data, for storing in the route state. */
 export function gridData() {
-  return { stops: JSON.parse(JSON.stringify(grid.stops)), cols: JSON.parse(JSON.stringify(grid.cols)) };
+  return { stops: JSON.parse(JSON.stringify(grid.stops)), cols: JSON.parse(JSON.stringify(grid.cols)), tripRow: grid.tripRow };
 }
 
 /** The grid now matches what is saved. */
@@ -117,6 +124,7 @@ export function markGridClean() {
 
 export function clearGrid() {
   grid.active = false;
+  grid.tripRow = false;
   grid.stops = [];
   grid.cols = [];
   $('tbl-wrap').style.display = 'none';
@@ -351,6 +359,7 @@ export function render() {
   renderInsertRow(tbl);
   renderFootRow(tbl);
   renderDayCodeRow(tbl);
+  if (grid.tripRow) renderTripRow(tbl);
   grid.stops.forEach((stop, ri) => renderStopRow(tbl, stop, ri, linked));
   renderBottomRow(tbl);
   updateFnPreview(inDC ? { type: 'col', ri: 0, ci: dcCol } : inStopCol ? null : { type: 'cell', ri: ancR, ci: ancC });
@@ -412,6 +421,70 @@ function renderFootRow(tbl) {
     }
   });
   tr.insertCell().className = 'cw-ins g-add';
+}
+
+/** The trip-number row, between the day codes and the first stop. @param {HTMLTableElement} tbl */
+function renderTripRow(tbl) {
+  const tr = tbl.insertRow();
+  tr.className = 'g-row-tn';
+  tr.insertCell().className = 'cw-ins g-sticky0';
+  const th = tr.insertCell();
+  th.className = 'cw-name g-sticky1 g-tn-label';
+  th.textContent = t(app.routeState?.mode === 'rail' ? 'tnTrain' : 'tnTrip');
+  grid.cols.forEach((col, ci) => {
+    const td = tr.insertCell();
+    td.className = 'cw-time g-tn-cell';
+    td.dataset.ci = String(ci);
+    const isSel = inTN && ci === dcCol && !tnEdit, isEdit = inTN && ci === dcCol && tnEdit;
+    if (isEdit) { td.classList.add('tn-edit'); td.innerHTML = esc(tnBuf) + '▌'; }
+    else { td.textContent = col.tripNo ?? ''; if (isSel) td.classList.add('tn-sel'); }
+    td.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      commitEdit(); commitDayCode(); commitStopEdit(); commitTripNo();
+      inStopCol = false; inDC = false; inTN = true; dcCol = ci; tnEdit = false;
+      render();
+    });
+  });
+  tr.insertCell().className = 'cw-ins g-add';
+}
+
+function commitTripNo() {
+  if (!tnEdit) return;
+  tnEdit = false;
+  if (grid.cols[dcCol]) grid.cols[dcCol].tripNo = tnBuf.trim();
+  tnBuf = '';
+  render();
+}
+
+/** @param {KeyboardEvent} e */
+function keyTripNav(e) {
+  switch (e.key) {
+    case 'ArrowLeft': e.preventDefault(); dcCol = Math.max(0, dcCol - 1); render(); break;
+    case 'ArrowRight': e.preventDefault(); dcCol = Math.min(grid.cols.length - 1, dcCol + 1); render(); break;
+    case 'ArrowUp': e.preventDefault(); inTN = false; inDC = true; render(); break;
+    case 'ArrowDown': e.preventDefault(); inTN = false; inDC = true; downFromDayCodes(true); break;
+    case 'Escape': e.preventDefault(); inTN = false; render(); break;
+    case 'Enter': case 'F2': e.preventDefault(); tnEdit = true; tnBuf = grid.cols[dcCol]?.tripNo ?? ''; render(); break;
+    case 'Delete': case 'Backspace': e.preventDefault(); if (grid.cols[dcCol]) grid.cols[dcCol].tripNo = ''; render(); break;
+    default:
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); tnEdit = true; tnBuf = e.key; render(); }
+  }
+}
+
+/** @param {KeyboardEvent} e */
+function keyTripEdit(e) {
+  switch (e.key) {
+    case 'Escape': e.preventDefault(); tnEdit = false; tnBuf = ''; render(); break;
+    case 'Enter': e.preventDefault(); commitTripNo(); break;
+    case 'Backspace': e.preventDefault(); tnBuf = tnBuf.slice(0, -1); render(); break;
+    case 'ArrowLeft': e.preventDefault(); commitTripNo(); dcCol = Math.max(0, dcCol - 1); render(); break;
+    case 'ArrowRight': e.preventDefault(); commitTripNo(); dcCol = Math.min(grid.cols.length - 1, dcCol + 1); render(); break;
+    case 'ArrowUp': e.preventDefault(); commitTripNo(); inTN = false; inDC = true; render(); break;
+    case 'ArrowDown': e.preventDefault(); commitTripNo(); inTN = false; inDC = true; downFromDayCodes(true); break;
+    default:
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && tnBuf.length < 20) { e.preventDefault(); tnBuf += e.key; render(); }
+  }
 }
 
 /** @param {HTMLTableElement} tbl */
@@ -506,8 +579,8 @@ function renderStopRow(tbl, stop, ri, linked) {
     td.dataset.r = String(ri);
     td.dataset.c = String(ci);
     const cell = col.cells[ri];
-    const isSel = !inDC && !inStopCol && !inStopEdit && ri === ancR && ci === ancC;
-    const isRange = !inDC && !inStopCol && !inStopEdit && inRect(ri, ci) && !isSel;
+    const isSel = !inDC && !inTN && !inStopCol && !inStopEdit && ri === ancR && ci === ancC;
+    const isRange = !inDC && !inTN && !inStopCol && !inStopEdit && inRect(ri, ci) && !isSel;
     if (cell && cell.interchange) td.classList.add(cell.interchange.type === 'guaranteed' ? 'g-ix-g' : 'g-ix-s');
     const srcs = ixSources(ri, ci);
     if (srcs.length) td.classList.add(srcs[0].type === 'guaranteed' ? 'g-ix-tg' : 'g-ix-ts');
@@ -642,6 +715,8 @@ function onKeyDown(e) {
     if (e.key === 'x' && !grid.readOnly) { e.preventDefault(); copySelection().then(() => { clearSelection(); render(); }); return; }
   }
   if (grid.readOnly) { keyReadOnly(e); return; }
+  if (tnEdit) { keyTripEdit(e); return; }
+  if (inTN) { keyTripNav(e); return; }
   if (dcEdit) { keyDayCodeEdit(e); return; }
   if (inDC) { keyDayCodeNav(e); return; }
   if (inStopCol) { keyStopCol(e); return; }
@@ -691,7 +766,7 @@ function keyNav(e) {
   switch (e.key) {
     case 'ArrowUp':
       e.preventDefault();
-      if (ancR === 0 && !sh) { inDC = true; dcCol = ancC; render(); return; }
+      if (ancR === 0 && !sh) { dcCol = ancC; if (grid.tripRow) inTN = true; else inDC = true; render(); return; }
       if (sh) extend(endR - 1, endC); else setAnchor(ancR - 1, ancC);
       render(); scrollTo(ancR, ancC); break;
     case 'ArrowDown': e.preventDefault(); if (sh) extend(endR + 1, endC); else setAnchor(ancR + 1, ancC); render(); scrollTo(ancR, ancC); break;
@@ -729,9 +804,14 @@ function keyEdit(e) {
   }
 }
 
-/** Down from the day-code row: the first row below it, in the same column (like a spreadsheet). */
-function downFromDayCodes() {
-  inDC = false; ancC = dcCol; endC = dcCol; ancR = 0; endR = 0;
+/**
+ * Down from the day-code row: the next row below it, in the same column (like a spreadsheet) — the
+ * trip-number row when shown, else the first stop. From the trip-number row (pastTrip): the first stop.
+ */
+function downFromDayCodes(pastTrip = false) {
+  inDC = false;
+  if (grid.tripRow && !pastTrip) { inTN = true; render(); return; }
+  inTN = false; ancC = dcCol; endC = dcCol; ancR = 0; endR = 0;
   render(); scrollTo(ancR, ancC);
 }
 
@@ -871,6 +951,7 @@ function showCtx(x, y, isDC = false) {
   $('gctx-time').style.display = !isStop && !isDC ? '' : 'none';
   $('gctx-stop').style.display = isStop ? '' : 'none';
   $('gctx-dc').style.display = isDC ? '' : 'none';
+  if (isDC) $('gc-tripno').textContent = t(grid.tripRow ? 'ctxTripHide' : 'ctxTripShow');
   if (!isStop && !isDC && ctxC >= 0 && ctxC < grid.cols.length) {
     const cell = grid.cols[ctxC].cells[ctxR];
     const timed = !!(cell && cell.time && cell.time !== '|'), withIx = timed && !!cell.interchange;
@@ -1005,6 +1086,12 @@ export function initGrid() {
     documentWired = true;
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('paste', onPaste);
+    document.addEventListener('mousedown', (e) => {
+      const el = /** @type {HTMLElement} */ (e.target);
+      if (!inTN || !el.closest?.('#tbl') || el.closest('.g-tn-cell')) return;
+      commitTripNo();
+      inTN = false;
+    }, true);
     document.addEventListener('mouseover', (e) => {
       if (!dragging || inDC || ixMode) return;
       const td = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest?.('#tbl [data-r][data-c]'));
@@ -1106,6 +1193,18 @@ export function initGrid() {
     hideCtx(); render();
   });
   $('gc-add-note').addEventListener('click', () => { hideCtx(); openFnEditor('cell', ctxR, ctxC); });
+  $('gc-tripno').addEventListener('click', () => {
+    hideCtx();
+    if (grid.readOnly) return;
+    if (grid.tripRow) {
+      const numbered = grid.cols.some((/** @type {any} */ c) => c.tripNo);
+      if (numbered && !confirm(t('confirmTripHide'))) return;
+      for (const c of grid.cols) c.tripNo = '';
+      inTN = false;
+    }
+    grid.tripRow = !grid.tripRow;
+    render();
+  });
   $('gc-dc-days').addEventListener('click', (e) => {
     hideCtx();
     const ci = ctxDCCol >= 0 ? ctxDCCol : dcCol;
