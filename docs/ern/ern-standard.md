@@ -443,6 +443,56 @@ Day mask (field 6):
 - Bit 1: the day is a Tuesday.
 - Bit 0: the day is a Monday.
 
+### #BOD
+
+Booking data record. How a trip, or a stop on a trip, can or must be booked; at most one per position. The fields follow NeTEx's booking arrangements.
+
+| Field | Type | Description |
+|---|---|---|
+| 0 | int | X position (its column). `-1` = the whole table. |
+| 1 | int | Y position (its row). `-1` = the whole trip (`#TUR`). |
+| 2 | text | Contact person. |
+| 3 | text | Phone. |
+| 4 | text | E-mail. |
+| 5 | text | URL. |
+| 6 | text | Further details about the contact. |
+| 7 | text | Booking access: `public`, `authorisedPublic` or `staff`. |
+| 8 | text | Book when: `timeOfTravelOnly`, `dayOfTravelOnly`, `untilPreviousDay` or `advanceAndDayOfTravel`. |
+| 9 | int | Booking methods: a bitmask, see below. |
+| 10 | int | Buy when: a bitmask, see below. |
+| 11 | text | Latest booking time, as hhmm. |
+| 12 | text | Minimum booking period before departure, as an ISO 8601 duration (`PT5M`). |
+| 13 | text | Maximum booking period before departure, as an ISO 8601 duration (`P14D`). |
+
+An empty field is not given.
+
+Booking methods (field 9):
+
+- Bit 0: call the driver.
+- Bit 1: call the office.
+- Bit 2: online.
+- Bit 3: phone at the stop.
+- Bit 4: text message.
+
+Buy when (field 10):
+
+- Bit 0: on reservation.
+- Bit 1: before boarding.
+- Bit 2: after boarding.
+- Bit 3: on checkout.
+- Bit 4: no ticket is required.
+
+### #BOF
+
+Booking note record. A note on how to book; one per position and language. It belongs to the `#BOD` at the same position. Either record may stand without the other.
+
+| Field | Type | Description |
+|---|---|---|
+| 0 | int | X position (its column). `-1` = the whole table. |
+| 1 | int | Y position (its row). `-1` = the whole trip (`#TUR`). |
+| 2 | text | The note. |
+| 3 | text | Language, as a three-letter ISO 639 code. Empty means `nob`. |
+
 ### #DAG
 
 Days record. A public holiday or special day to take into account in searches; one per day. Deprecated: no known use.
