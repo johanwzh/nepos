@@ -8,6 +8,8 @@ A route is exported as many lines. The order in which the record types are descr
 
 ERN keeps three kinds of data, each in its own files: **routes** (one file per route), **places** (stops and the areas they belong to) and **companies**.
 
+A record or field marked **deprecated** is still part of the format, and files that use it are still valid. A record or field is deprecated when its information has moved to another place in the format, or when it only made sense for a use that no longer exists.
+
 ## Route information
 
 ### #LEV
