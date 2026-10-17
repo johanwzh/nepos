@@ -155,3 +155,24 @@ describe('interpolating times (user test 2026-10-17)', () => {
     expect(/** @type {HTMLElement} */ (document.getElementById('gc-interp')).className).toContain('dis'); // only 0730 inside
   });
 });
+
+describe('boarding restrictions from the right-click menu (user test 2026-10-17)', () => {
+  const at = (/** @type {number} */ r, /** @type {number} */ c) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="${c}"]`));
+  const item = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
+  beforeEach(() => { initGrid(); });
+
+  it('sets a, p or x on every timed cell in the selection, ticks it, and takes it away again', () => {
+    at(0, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    at(1, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    at(1, 0).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    item('gc-sfx-a').click();
+    expect(grid.cols[0].cells.map((c) => c.suffix)).toEqual(['a', 'a']);
+    expect(grid.cols[0].cells[0].time).toBe('0700'); // the time stays
+    at(1, 0).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    expect(item('gc-sfx-a').textContent).toContain('✓');
+    expect(item('gc-sfx-p').textContent).not.toContain('✓');
+    item('gc-sfx-none').click();
+    expect(grid.cols[0].cells.map((c) => c.suffix)).toEqual(['', '']);
+  });
+});

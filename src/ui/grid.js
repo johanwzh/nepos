@@ -791,6 +791,17 @@ function selRect() {
   return { r0: Math.min(ancR, endR), r1: Math.max(ancR, endR), c0: Math.min(ancC, endC), c1: Math.max(ancC, endC) };
 }
 
+/** The timed cells (not |) in the selection. */
+function timedInSelection() {
+  const { r0, r1, c0, c1 } = selRect();
+  const out = [];
+  for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) {
+    const cell = grid.cols[c]?.cells[r];
+    if (cell && cell.time && cell.time !== '|') out.push(cell);
+  }
+  return out;
+}
+
 /** What "Interpoler tider" would fill: per column of the selection (a single cell: the whole column). */
 function interpolationFills() {
   const { r0, r1, c0, c1 } = selRect();
@@ -816,6 +827,13 @@ function showCtx(x, y, isDC = false) {
     $('gc-ix-g').className = 'gci' + (timed && !withIx ? '' : ' dis');
     $('gc-ix-s').className = 'gci' + (timed && !withIx ? '' : ' dis');
     $('gc-ix-del').className = 'gci red' + (withIx ? '' : ' dis');
+    // Boarding restrictions: ticked when every timed cell in the selection has it
+    const sfx = timedInSelection().map((c) => c.suffix || '');
+    for (const [k, key] of /** @type {[string, string][]} */ ([['a', 'ctxSfxA'], ['p', 'ctxSfxP'], ['x', 'ctxSfxX']])) {
+      $(`gc-sfx-${k}`).textContent = (sfx.length && sfx.every((v) => v === k) ? '✓ ' : '    ') + t(key);
+      $(`gc-sfx-${k}`).className = 'gci' + (sfx.length ? '' : ' dis');
+    }
+    $('gc-sfx-none').className = 'gci' + (sfx.some((v) => v) ? '' : ' dis');
     // Interpolating: between the times inside the selection (one cell selected: its whole column)
     $('gc-interp').className = 'gci' + (interpolationFills().length ? '' : ' dis');
     // Extrapolation by speed is hidden (user test 2026-10-17); the code stays for later
@@ -975,6 +993,14 @@ export function initGrid() {
     const value = parseFloat(answer.replace(',', '.'));
     return extrapolateTime(grid, c, r, direction, toKmh(value, unit), posOf);
   });
+  for (const k of ['a', 'p', 'x', 'none']) {
+    $(`gc-sfx-${k}`).addEventListener('click', () => {
+      hideCtx();
+      if (grid.readOnly) return;
+      for (const cell of timedInSelection()) cell.suffix = k === 'none' ? '' : k;
+      render();
+    });
+  }
   $('gc-interp').addEventListener('click', () => {
     hideCtx();
     if (grid.readOnly) return;
