@@ -12,7 +12,7 @@ import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
 import { fnById, footnoteSummary, openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
-import { interpolateTime, extrapolateTime, speedUnit, toKmh } from '../core/interpolate.js';
+import { interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan } from '../core/interpolate.js';
 import { app } from './state.js';
 
 /** The grid being edited: one period × direction of the open route. */
@@ -786,6 +786,24 @@ function onPaste(e) {
 }
 
 // ─── Context menu ───────────────────────────────────────────────────────────
+/** The selected rectangle of time cells. */
+function selRect() {
+  return { r0: Math.min(ancR, endR), r1: Math.max(ancR, endR), c0: Math.min(ancC, endC), c1: Math.max(ancC, endC) };
+}
+
+/** What "Interpoler tider" would fill: per column of the selection (a single cell: the whole column). */
+function interpolationFills() {
+  const { r0, r1, c0, c1 } = selRect();
+  const single = r0 === r1 && c0 === c1;
+  /** @type {{ ci: number, ri: number, cell: any }[]} */
+  const out = [];
+  for (let c = c0; c <= c1; c++) {
+    if (!grid.cols[c]) continue;
+    for (const f of interpolateSpan(grid, c, single ? 0 : r0, single ? grid.stops.length - 1 : r1, posOf)) out.push({ ci: c, ...f });
+  }
+  return out;
+}
+
 /** @param {number} x @param {number} y @param {boolean} [isDC] */
 function showCtx(x, y, isDC = false) {
   const isStop = ctxIsStop && !isDC;
@@ -798,11 +816,11 @@ function showCtx(x, y, isDC = false) {
     $('gc-ix-g').className = 'gci' + (timed && !withIx ? '' : ' dis');
     $('gc-ix-s').className = 'gci' + (timed && !withIx ? '' : ' dis');
     $('gc-ix-del').className = 'gci red' + (withIx ? '' : ' dis');
-    // Filling a time: only an empty cell, and only with positions (1.5.7).
-    const empty = !cell || !cell.time;
-    $('gc-interp').className = 'gci' + (empty && interpolateTime(grid, ctxC, ctxR, posOf) ? '' : ' dis');
-    $('gc-extrap-fwd').className = 'gci' + (empty && extrapolateTime(grid, ctxC, ctxR, 'fwd', 1, posOf) ? '' : ' dis');
-    $('gc-extrap-bwd').className = 'gci' + (empty && extrapolateTime(grid, ctxC, ctxR, 'bwd', 1, posOf) ? '' : ' dis');
+    // Interpolating: between the times inside the selection (one cell selected: its whole column)
+    $('gc-interp').className = 'gci' + (interpolationFills().length ? '' : ' dis');
+    // Extrapolation by speed is hidden (user test 2026-10-17); the code stays for later
+    $('gc-extrap-fwd').style.display = 'none';
+    $('gc-extrap-bwd').style.display = 'none';
   } else if (isStop) {
     const stop = grid.stops[ctxStopRow];
     $('gc-bold').textContent = (stop.bold ? '✓ ' : '    ') + t('ctxBold');
@@ -957,7 +975,12 @@ export function initGrid() {
     const value = parseFloat(answer.replace(',', '.'));
     return extrapolateTime(grid, c, r, direction, toKmh(value, unit), posOf);
   });
-  $('gc-interp').addEventListener('click', () => fill((r, c) => interpolateTime(grid, c, r, posOf)));
+  $('gc-interp').addEventListener('click', () => {
+    hideCtx();
+    if (grid.readOnly) return;
+    for (const f of interpolationFills()) grid.cols[f.ci].cells[f.ri] = f.cell;
+    render();
+  });
   $('gc-extrap-fwd').addEventListener('click', () => extrapolate('fwd'));
   $('gc-extrap-bwd').addEventListener('click', () => extrapolate('bwd'));
   $('gc-ix-g').addEventListener('click', () => { hideCtx(); if (hasTime(ctxR, ctxC)) enterIx(ctxR, ctxC, 'guaranteed'); });

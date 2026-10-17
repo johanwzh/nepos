@@ -127,3 +127,31 @@ describe('navigation like a spreadsheet (user test 2026-10-17)', () => {
     expect(anchor().dataset.r).toBe('0');
   });
 });
+
+describe('interpolating times (user test 2026-10-17)', () => {
+  const at = (/** @type {number} */ r, /** @type {number} */ c) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="${c}"]`));
+  const rightClick = (/** @type {HTMLElement} */ el) => el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
+  beforeEach(() => {
+    initGrid(); // the menu items belong to the freshly loaded markup
+    loadGrid({
+      stops: [stop('A'), stop('B'), stop('C'), stop('D'), stop('E')],
+      cols: [{ dayCode: 'D', footnote: '', footnoteId: null, cells: [cell('0700'), null, null, cell('0730'), null] }],
+    }, { readOnly: false });
+  });
+
+  it('fills the whole column between the times typed (one cell selected), and hides extrapolation', () => {
+    rightClick(at(0, 0));
+    expect(/** @type {HTMLElement} */ (document.getElementById('gc-extrap-fwd')).style.display).toBe('none');
+    expect(/** @type {HTMLElement} */ (document.getElementById('gc-interp')).className).toBe('gci');
+    /** @type {HTMLElement} */ (document.getElementById('gc-interp')).click();
+    expect([1, 2, 4].map((r) => grid.cols[0].cells[r]?.time ?? null)).toEqual(['0710', '0720', null]);
+  });
+
+  it('within a selection, only between the times inside it', () => {
+    at(1, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    at(4, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    rightClick(at(2, 0));
+    expect(/** @type {HTMLElement} */ (document.getElementById('gc-interp')).className).toContain('dis'); // only 0730 inside
+  });
+});

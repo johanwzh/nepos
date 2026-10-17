@@ -110,3 +110,51 @@ export function speedUnit(ernMode) {
 export function toKmh(value, unit) {
   return unit === 'knots' ? value * 1.852 : value;
 }
+
+/**
+ * Fill the empty cells of a column between the times already in it, within rows rFrom…rTo (the
+ * selection, or the whole column): each stretch between two times is split by straight-line distance,
+ * or evenly when a stop has no position. `|` cells are left alone; cells before the first or after the
+ * last time in the span are not touched; times never go backwards (user test 2026-10-17).
+ * @param {{ stops: any[], cols: { cells: any[] }[] }} grid
+ * @param {number} ci
+ * @param {number} rFrom
+ * @param {number} rTo
+ * @param {PosOf} posOf
+ * @returns {{ ri: number, cell: Cell }[]}
+ */
+export function interpolateSpan(grid, ci, rFrom, rTo, posOf) {
+  const col = grid.cols[ci];
+  /** @type {{ ri: number, cell: Cell }[]} */
+  const fills = [];
+  const anchors = [];
+  for (let r = rFrom; r <= rTo; r++) if (cellToMins(col.cells[r]) !== null) anchors.push(r);
+  for (let k = 1; k < anchors.length; k++) {
+    const a = anchors[k - 1], b = anchors[k];
+    if (b - a < 2) continue;
+    const tA = /** @type {number} */ (cellToMins(col.cells[a]));
+    let tB = /** @type {number} */ (cellToMins(col.cells[b]));
+    if (tB < tA) tB += 1440;          // past midnight without a day offset
+    if (tB - tA > 720) continue;      // a big step backwards is a typing error: guess nothing
+    // Distance along the stretch; any stop without a position → split evenly by stops
+    const cum = [0];
+    let even = false;
+    for (let r = a + 1; r <= b; r++) {
+      const d = segment(grid.stops[r - 1], grid.stops[r], posOf);
+      if (d === null) even = true;
+      cum.push(cum[cum.length - 1] + (d ?? 0));
+    }
+    const total = cum[cum.length - 1];
+    if (total === 0) even = true;
+    let last = tA;
+    for (let r = a + 1; r < b; r++) {
+      const c = col.cells[r];
+      if (c && c.time) continue;      // a time or | is never overwritten
+      const share = even ? (r - a) / (b - a) : cum[r - a] / total;
+      const t = Math.max(last, Math.round(tA + share * (tB - tA)));
+      last = t;
+      fills.push({ ri: r, cell: minsToCell(t) });
+    }
+  }
+  return fills;
+}
