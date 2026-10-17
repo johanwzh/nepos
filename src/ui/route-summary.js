@@ -31,8 +31,8 @@ function summarise(text) {
     if (f[0] === '#TRA' || f[0] === '#PER') inTables = true;
     if (inTables) continue;
     if (f[0] === '#RUT' && !sawRut) { sawRut = true; name = f[3] ?? ''; publicCode = f[2] ?? ''; privateCode = (f[1] ?? '').trim() === '-1' ? '' : (f[1] ?? '').trim(); ern = parseInt(f[5] ?? '') || 0; }
-    else if (f[0] === '#MOD' && !mode) { mode = f[1] ?? ''; submode = f[2] ?? ''; }
-    else if (f[0] === '#BRA' && !brandingId) brandingId = f[1] ?? '';
+    else if ((f[0] === '#TRM' || f[0] === '#MOD') && !mode) { mode = f[1] ?? ''; submode = f[2] ?? ''; }
+    else if ((f[0] === '#MRK' || f[0] === '#BRA') && !brandingId) brandingId = f[1] ?? '';
     else if (f[0] === '#EKS') exported = (f[1] ?? '').trim() !== '0';
     else if (f[0] === '#OFF') isPublic = (f[1] ?? '').trim() !== '0';
     else if (f[0] === '#SEK') {

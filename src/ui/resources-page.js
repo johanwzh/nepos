@@ -36,12 +36,12 @@ const brandKey = (b) => `b:${b.id}`;
 const drafts = () => app.resourceDrafts;
 
 // ─── Use ────────────────────────────────────────────────────────────────────
-/** How many route files name each ID, in #SEK (organisations) or #BRA (brandings). */
+/** How many route files name each ID, in #SEK (organisations) or #MRK (brands; #BRA in older files). */
 function usage() {
   /** @type {Map<string, number>} */
   const count = new Map();
   for (const r of app.routes) {
-    const ids = new Set([...r.text.matchAll(/^[ \t]*#(?:SEK|BRA);([^;\r\n]*)/gm)].map((m) => m[1].trim()));
+    const ids = new Set([...r.text.matchAll(/^[ \t]*#(?:SEK|MRK|BRA);([^;\r\n]*)/gm)].map((m) => m[1].trim()));
     for (const id of ids) count.set(id, (count.get(id) ?? 0) + 1);
   }
   return count;

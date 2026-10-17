@@ -23,7 +23,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     const myDays = (rs.periods||[]).flatMap((/** @type {any} */ per) => (rs.grids[`${per.id}:${per.setId}`]?.cols||[]).flatMap((/** @type {any} */ c) => colDays.get(c) ?? [])).sort();
     const lineFrom = myDays[0] ?? '', lineTo = myDays[myDays.length - 1] ?? '';
 
-    // Transmodel mode from #MOD (line header spec §3); files without it fall back to the ERN code.
+    // Transmodel mode from #TRM (#MOD in older files; line header spec §3); files without it fall back to the ERN code.
     const fromErn = ernModeNeTEx(rs.transportMode||6);
     const lineMode = rs.mode || fromErn.mode;
     const lineSub = rs.mode ? rs.submode : fromErn.sub;

@@ -8,12 +8,12 @@ const U1 = '5f0c2e1a-1111-4aaa-8bbb-000000000001';
 const file = (extra = {}) => [
   '#LEV;Test;TST',
   `#RUT;${extra.priv ?? '1008'};X20;Oslo - Gol;;${extra.ern ?? '13'};`,
-  ...(extra.mod === null ? [] : [extra.mod ?? '#MOD;bus;expressBus']),
-  '#BRA;TST:Branding:aaaa',
-  '#SEK;NOG:Operator:x;Buss AS;0;1;0;0', '#CUR;neposcoin;1', '#TRA;gammel', '#PER;;;;;;', '#TAB;0;;;;',
+  ...(extra.mod === null ? [] : [extra.mod ?? '#TRM;bus;expressBus']),
+  '#MRK;TST:Branding:aaaa',
+  '#SEK;NOG:Operator:x;Buss AS;0;1;0;0', '#TRA;gammel', '#PER;;;;;;', '#TAB;0;;;;',
   '#TUR;0;D;0;0;0;0', `#UID;${U1}`, '#TUR;1;D;0;0;0;0',
-  '#TRL;0;NSR:Quay:1;A;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0', '#TRC;1;0800;0;0;0;0;0',
-  '#TRL;1;NSR:Quay:2;B;34;0;-1;-1;34;-1', '#TRC;0;0715;0;0;0;0;0', '#TRC;1;0815;0;0;0;0;0',
+  '#TRL;0;NSR:Quay:1;A;0;-1;-1;-1;0;-1', '#TRC;0;0700;0;0;0;0;0', '#TRC;1;0800;0;0;0;0;0',
+  '#TRL;1;NSR:Quay:2;B;0;-1;-1;-1;0;-1', '#TRC;0;0715;0;0;0;0;0', '#TRC;1;0815;0;0;0;0;0',
 ].join('\r\n') + '\r\n';
 const save = (/** @type {any} */ rs) => serializeERN(rs, 'r1', { delivery: { name: 'Test', codespace: 'TST' } });
 const grid0 = (/** @type {any} */ rs) => rs.grids[`${rs.periods[0].id}:${rs.periods[0].setId}`];
@@ -29,7 +29,7 @@ describe('line details in ERN', () => {
   it('writes them back, giving a column without an ID a new UUID', () => {
     const out = save(parseERN(file()));
     expect(out).toContain('#RUT;1008;X20;Oslo - Gol;;13;');
-    expect(out).toContain('#MOD;bus;expressBus\r\n#BRA;TST:Branding:aaaa\r\n');
+    expect(out).toContain('#TRM;bus;expressBus\r\n#MRK;TST:Branding:aaaa\r\n');
     expect(out).toContain('#TRA;gammel\r\n');
     expect(out).toContain(`#TUR;0;D;0;0;0;0\r\n#UID;${U1}\r\n`);
     const second = /#TUR;1;D;0;0;0;0\r\n#UID;([^\r\n]+)\r\n/.exec(out)?.[1];
@@ -37,20 +37,20 @@ describe('line details in ERN', () => {
     expect(checkRouteFile(out).status).toBe('ok');
   });
 
-  it('writes -1 for an empty private code and no #BRA without a branding', () => {
+  it('writes -1 for an empty private code and no #MRK without a branding', () => {
     const rs = parseERN(file({ priv: '-1' }));
     rs.brandingId = '';
     const out = save(rs);
     expect(out).toContain('#RUT;-1;X20;');
-    expect(out).not.toContain('#BRA');
+    expect(out).not.toContain('#MRK');
   });
 
-  it('derives the mode from the ERN code when there is no #MOD, and keeps that code', () => {
+  it('derives the mode from the ERN code when there is no #TRM, and keeps that code', () => {
     const rs = parseERN(file({ mod: null, ern: '15' }));
     expect([rs.mode, rs.submode, rs.transportMode]).toEqual(['bus', 'airportLinkBus', 15]);
     const out = save(rs);
     expect(out).toContain(';;15;');
-    expect(out).toContain('#MOD;bus;airportLinkBus');
+    expect(out).toContain('#TRM;bus;airportLinkBus');
     expect(checkRouteFile(file({ mod: null, ern: '15' })).status).toBe('ok');
   });
 
@@ -74,7 +74,7 @@ describe('line details in ERN', () => {
 
   it('reports a #UID that does not follow a #TUR as out of order', () => {
     // #UID may follow #TRA (a table set) or #TUR (a column), nothing else
-    const bad = file().replace('#CUR;neposcoin;1\r\n', `#CUR;neposcoin;1\r\n#UID;${U1}\r\n`);
+    const bad = file().replace('#TRA;gammel\r\n', `#UID;${U1}\r\n#TRA;gammel\r\n`);
     expect(checkRouteFile(bad).status).toBe('damaged');
   });
 

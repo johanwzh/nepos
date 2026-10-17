@@ -28,8 +28,4 @@ describe('parseERN', () => {
     expect(parseERN(route10, { lang: 'no' }).tableSets.map((s) => s.name)).toEqual(['Bergen - Florø', 'Florø - Bergen']);
     expect(parseERN(route10).tableSets.map((s) => s.name)).toEqual(['Bergen - Florø', 'Florø - Bergen']);
   });
-
-  it('keeps the route currency id', () => {
-    expect(parseERN(route10).currency).toBe('spd');
-  });
 });

@@ -10,7 +10,7 @@ import { UUID_PATTERN } from './serialize.js';
  */
 export function parseERN(text, { lang: _lang = 'en' } = {}) {
     const rs = {
-        routeName:'', publicCode:'', privateCode:'', mode:'', submode:'', brandingId:'', exported:true, isPublic:true, transportMode:6, kom:'', sek:[],
+        routeName:'', publicCode:'', privateCode:'', mode:'', submode:'', brandingId:'', exported:true, isPublic:true, transportMode:6, kom:'', komOther:[], sek:[],
         // Table sets (#TRA) with their periods (#PER + #KAL), one grid per period (timetable
         // structure spec §1–§4). Grids are keyed `${periodId}:${tableSetId}`.
         tableSets:[], periods:[], activeSet:null, activePer:null,
@@ -99,9 +99,11 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 if (rs.activeSet == null) rs.activeSet = curSet.id;
                 curPer = null;
                 break;
+            case '#TRM': // transport mode (ERN 2.0); #MOD in Nepos's older files
             case '#MOD':
                 rs.mode = (f[1]||'').trim(); rs.submode = (f[2]||'').trim(); sawMod = true;
                 break;
+            case '#MRK': // brand (ERN 2.0); #BRA in Nepos's older files
             case '#BRA':
                 rs.brandingId = (f[1]||'').trim();
                 break;
@@ -121,8 +123,16 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
             case '#KAL':
                 if (curPer && (f[1]||'').trim()) curPer.calendarIds.push(f[1].trim());
                 break;
-            case '#KOM':
-                if (!rs.kom) rs.kom = f[1]||'';  // first #KOM = route-wide comment
+            case '#KOM': {
+                // A comment in one language (ERN 2.0: field 1, empty = Bokmål). The Bokmål one is the
+                // route's comment; others are kept and written back.
+                const lang = (f[2]||'').trim().toLowerCase();
+                if (!lang || lang === 'nob') { if (!rs.kom) rs.kom = f[1]||''; }
+                else rs.komOther.push({ text: f[1]||'', lang });
+                break;
+            }
+            case '#KON': case '#KOE': case '#KOT': // deprecated: #KOM with a language code
+                rs.komOther.push({ text: f[1]||'', lang: { '#KON': 'nno', '#KOE': 'eng', '#KOT': 'deu' }[f[0]] });
                 break;
             case '#PER': {
                 // A period: its days come from its calendars (#KAL); name and dates are not used.
@@ -151,24 +161,23 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 // have numbers). Empty, 0 and negative numbers mean "no stop ID".
                 const rawId = (f[2] ?? '').trim();
                 const sid = rawId === '' || (/^-?\d+$/.test(rawId) && parseInt(rawId, 10) <= 0) ? null : rawId;
-                const priceField = parseFloat(f[6]);
+                // ERN 2.0 / v1.8: typography in field 3 (bold = bit 1, underline = bit 3), price in field 6.
+                // Nepos's older files: field 3 is always 34, its own flags in field 4 (bit 0 bold, bit 1
+                // separator) and the price in field 5.
+                const oldNepos = (f[4]||'').trim() === '34';
+                const priceField = parseFloat(oldNepos ? f[6] : f[7]);
                 const price = (!isNaN(priceField) && priceField >= 0) ? priceField : null;
-                // field[5]: Nepos flags bitmask (bit0=bold, bit1=sep). Negative/NaN → 0.
-                const flags = Math.max(0, parseInt(f[5]) || 0);
+                const bits = Math.max(0, parseInt(oldNepos ? f[5] : f[4]) || 0);
                 rows.push({
                     name: f[3]||'', stopId: sid,
-                    bold: (flags & 1) !== 0, sep: (flags & 2) !== 0,
+                    bold: (bits & (oldNepos ? 1 : 2)) !== 0, sep: (bits & (oldNepos ? 2 : 8)) !== 0,
                     isDwellArr: false, price
                 });
                 break;
             }
-            case '#CUR': {
-                // Prices are hidden in Nepos 2; the currency id and rate are kept exactly as read
-                // so they are written back unchanged.
-                if (f[1]) rs.currency = f[1];
-                if (f[2]) rs.currencyRate = f[2];
+            case '#VAL': // currency (ERN 2.0; #CUR before): Nepos 2 does not use it and does not write it
+            case '#CUR':
                 break;
-            }
             case '#TRC': {
                 const cx   = parseInt(f[1]);
                 const time = f[2]||'';
@@ -179,7 +188,8 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 const ri   = rows.length - 1;
                 if (ri < 0 || !time) break;
                 let suffix = '';
-                if (mask&8) suffix='x'; else if (mask&1) suffix='a'; else if (mask&2) suffix='p';
+                // Request stop: bit 8 (ERN 2.0); Nepos's older files used bit 3
+                if ((mask&256) || (mask&8)) suffix='x'; else if (mask&1) suffix='a'; else if (mask&2) suffix='p';
                 let interchange = null;
                 if ((mask&0x400)||(mask&0x800)) {
                     const colXtoIdx2 = {};
@@ -207,6 +217,9 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 // A note on a column (row -1) or a cell
                 const txt = f[3] || '';
                 if (!txt) break;
+                // Language (field 3): a three-letter code, empty = Bokmål; older files: 0 = Norwegian, 1 = English
+                const lang = (f[4]||'').trim().toLowerCase();
+                if (lang && lang !== 'nob' && lang !== '0') break; // notes in other languages: not shown (the check says so)
                 _pendingNotes.push({ ci: buildXtoIdx()[parseInt(f[1])] ?? parseInt(f[1]), ri: parseInt(f[2]), note: txt });
                 break;
             }

@@ -18,7 +18,7 @@ describe('serializeERN', () => {
 
   it('writes the price back unchanged', () => {
     const out = serializeERN(parseERN(sample.routes[0].text), '10', opts);
-    expect(out).toContain('#TRL;1;102;Askvoll;34;0;12.500000;-1;34;-1');
+    expect(out).toContain('#TRL;1;102;Askvoll;0;-1;-1;12.500000;0;-1');
   });
 
   it('is stable: parse → write → parse → write gives the same text', () => {
@@ -33,11 +33,9 @@ describe('serializeERN', () => {
     expect(out.replace(/\r\n/g, '')).not.toContain('\n');
   });
 
-  it('writes the #CUR rate back exactly as read, even for unknown currencies', () => {
-    const text = sample.routes[0].text.replace('#CUR;spd;9', '#CUR;custom_1;2.50');
-    expect(serializeERN(parseERN(text), '10', opts)).toContain('#CUR;custom_1;2.50\r\n');
-    const spd = sample.routes[0].text.replace('#CUR;spd;9', '#CUR;spd;10');
-    expect(serializeERN(parseERN(spd), '10', opts)).toContain('#CUR;spd;10\r\n');
+  it('does not write the currency (#CUR, ERN 2.0 #VAL) it read', () => {
+    expect(sample.routes[0].text).toContain('#CUR;spd;9');
+    expect(serializeERN(parseERN(sample.routes[0].text), '10', opts)).not.toMatch(/^#(CUR|VAL);/m);
   });
 });
 
@@ -49,6 +47,6 @@ describe('serializeERN keeps what it read', () => {
 
   it('writes a price of 0 as 0, not as "no price"', () => {
     const text = sample.routes[1].text.replace('#TRL;1;105;Eikefjord;34;0;-1;', '#TRL;1;105;Eikefjord;34;0;0.000000;');
-    expect(serializeERN(parseERN(text), '20', opts)).toContain('#TRL;1;105;Eikefjord;34;0;0.000000;-1;34;-1');
+    expect(serializeERN(parseERN(text), '20', opts)).toContain('#TRL;1;105;Eikefjord;0;-1;-1;0.000000;0;-1');
   });
 });

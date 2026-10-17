@@ -20,13 +20,12 @@ const route = (code, name, stops) => [
   `#RUT;-1;${code};${name};;1;`,
   '#SEK;NOG:Authority:aaaaaaaaaa1;Eksempel fylkeskommune;1;0;0;0',
   '#SEK;NOG:Operator:bbbbbbbbbb2;Eksempel Buss AS;0;1;0;0',
-  '#CUR;neposcoin;1',
   `#TRA;${name}`,
   '#PER;;;;;;',
   `#KAL;${SAMPLE_CALENDAR}`,
   '#TAB;0;;;;',
   '#TUR;0;DX67;0;0;0;0',
-  ...stops.flatMap(([id, stopName], i) => [`#TRL;${i};${id};${stopName};34;0;-1;-1;34;-1`, `#TRC;0;07${String(i * 15).padStart(2, '0')};0;0;0;0;0`]),
+  ...stops.flatMap(([id, stopName], i) => [`#TRL;${i};${id};${stopName};0;-1;-1;-1;0;-1`, `#TRC;0;07${String(i * 15).padStart(2, '0')};0;0;0;0;0`]),
 ];
 
 /** @type {[string, string][]} */

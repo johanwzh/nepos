@@ -1,5 +1,4 @@
 // ERN serializer, ported from Nepos 1.5.7 (nepos.html lines 2720–2809). See docs/ern/ern-format.md.
-import { currencyRate } from './currency.js';
 import { ernCodeFor } from '../modes.js';
 
 /** A column's stable ID (#UID). */
@@ -26,13 +25,10 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     const ernCode = ernCodeFor(rs.mode || '', rs.submode || '', rs.transportMode);
     rs.transportMode = ernCode;
     lines.push(`#RUT;${esc(rs.privateCode) || '-1'};${esc(rs.publicCode)};${esc(rs.routeName)};;${ernCode};`);
-    if (rs.mode) lines.push(`#MOD;${esc(rs.mode)};${esc(rs.submode)}`);
-    if (rs.brandingId) lines.push(`#BRA;${esc(rs.brandingId)}`);
+    if (rs.mode) lines.push(`#TRM;${esc(rs.mode)};${esc(rs.submode)}`);
+    if (rs.brandingId) lines.push(`#MRK;${esc(rs.brandingId)}`);
     // The line flags (navigation spec §4) are always written.
     lines.push(`#EKS;${rs.exported === false ? 0 : 1}`, `#OFF;${rs.isPublic === false ? 0 : 1}`);
-    const curId = rs.currency || 'neposcoin';
-    // The rate read from the file wins; the 1.5.7 table is only the fallback for files without one.
-    const curRate = rs.currencyRate ?? currencyRate(curId);
     const sek = rs.sek || [];
     if (sek.length > 0) {
         sek.forEach(s => {
@@ -42,7 +38,6 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     } else {
         lines.push(`#SEK;-1;;0;0;0;0`);
     }
-    lines.push(`#CUR;${curId};${curRate}`);
     const usedUids = new Set();
     let komWritten = false;
 
@@ -57,7 +52,12 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
             lines.push('#PER;;;;;;');
             for (const id of per.calendarIds) lines.push(`#KAL;${esc(id)}`);
             // The route-wide comment once, in the first period
-            if (rs.kom?.trim() && !komWritten) { lines.push(`#KOM;${esc(rs.kom)}`); komWritten = true; }
+            if (!komWritten) {
+                // The route's comment (Bokmål: no language code), then the same in other languages
+                if (rs.kom?.trim()) lines.push(`#KOM;${esc(rs.kom)}`);
+                for (const k of rs.komOther || []) if (k.text?.trim()) lines.push(`#KOM;${esc(k.text)};${esc(k.lang)}`);
+                komWritten = true;
+            }
             lines.push('#TAB;0;;;;');
 
             const grid = rs.grids[`${per.id}:${set.id}`] || { stops:[], cols:[] };
@@ -82,15 +82,17 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
             grid.stops.forEach((stop, ri) => {
                 const sid = (stop.stopId != null) ? stop.stopId : -1;
                 const pNep = (stop.price != null && stop.price >= 0) ? stop.price.toFixed(6) : '-1';
-                const flags = (stop.bold ? 1 : 0) | (stop.sep ? 2 : 0);
-                lines.push(`#TRL;${ri};${sid};${esc(stop.name)};34;${flags};${pNep};-1;34;-1`);
+                // ERN 2.0: typography (bold = bit 1, the separator line = underline, bit 3), km, zone,
+                // price, flags, platform
+                const typo = (stop.bold ? 2 : 0) | (stop.sep ? 8 : 0);
+                lines.push(`#TRL;${ri};${sid};${esc(stop.name)};${typo};-1;-1;${pNep};0;-1`);
                 grid.cols.forEach((col, ci) => {
                     const cell = col.cells[ri];
                     if (!cell || !cell.time) return;
                     let mask = 0;
                     if (cell.suffix === 'a') mask |= 1;
                     if (cell.suffix === 'p') mask |= 2;
-                    if (cell.suffix === 'x') mask |= 8;
+                    if (cell.suffix === 'x') mask |= 256; // request stop: bit 8
                     let dx = 0, dy = 0;
                     if (cell.interchange) {
                         dx = cell.interchange.targetC - ci;
@@ -104,7 +106,7 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
             // FOT (notes) and UNT (dates) — written after all TRL/TRC; a column's are row -1
             /** @param {any} at @param {number} ci @param {number} ri */
             const notesOf = (at, ci, ri) => {
-                if (at?.note) lines.push(`#FOT;${ci};${ri};${esc(at.note)};0`);
+                if (at?.note) lines.push(`#FOT;${ci};${ri};${esc(at.note)};nob`);
                 for (const d of at?.dates ?? []) {
                     if (!d.from && !d.to) continue;
                     const pmu = d.on ? 8192 : 16384;

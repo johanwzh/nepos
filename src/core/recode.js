@@ -24,7 +24,7 @@ export function recodeProject(from, to, { brandings, orgs, routes }) {
       const out = text.split(/(\r?\n)/).map((part) => {
         const f = part.split(';');
         if (f[0] === '#LEV' && f.length >= 3) { f[2] = to; return f.join(';'); }
-        if (f[0] === '#BRA' && f.length >= 2) { f[1] = swap(f[1].trim()); return f.join(';'); }
+        if ((f[0] === '#MRK' || f[0] === '#BRA') && f.length >= 2) { f[1] = swap(f[1].trim()); return f.join(';'); }
         return part;
       }).join('');
       return { code, text: out, changed: out !== text };

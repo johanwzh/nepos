@@ -16,7 +16,7 @@ describe('integrity check: data a save would lose', () => {
 
   it('flags a return table (#TAB;1): Nepos 2 writes one #TAB;0 per period', () => {
     const text = nepos2.replace('#TAB;0;;;;\r\n#TUR;0;DX67', '#TAB;1;;;;\r\n#TUR;0;DX67');
-    expect(lost(text).map((i) => i.line)).toContain(12);
+    expect(lost(text).map((i) => i.line)).toContain(11);
   });
 
   it('flags a second outbound table in the same period (save would drop one)', () => {
@@ -32,7 +32,8 @@ describe('integrity check: data a save would lose', () => {
     // (#PER fields are not kept on purpose: the period's days come from #KAL — structure spec §4)
     expect(lost(nepos2.replace('#TAB;0;;;;', '#TAB;0;Km;Sone;Kr')).length).toBe(1);
     expect(lost(nepos2.replace('#TUR;0;DX67;0;0;0;0', '#TUR;0;DX67;1;0;0;0')).length).toBe(1);
-    expect(lost(nepos2.replace('#TRL;0;104;Florø skysstasjon;34;0;-1;-1;34;-1', '#TRL;0;104;Florø skysstasjon;34;0;-1;-1;34;B')).length).toBe(1);
+    expect(lost(nepos2.replace('#TRL;0;104;Florø skysstasjon;0;-1;-1;-1;0;-1', '#TRL;0;104;Florø skysstasjon;0;-1;-1;-1;0;B')).length).toBe(1);
+    expect(lost(nepos2.replace('#TRL;0;104;Florø skysstasjon;0;-1;-1;-1;0;-1', '#TRL;0;104;Florø skysstasjon;0;3.5;-1;-1;0;-1')).length).toBe(1);
     expect(lost(nepos2.replace('#SEK;3;Kystbuss AS;0;1;0;0', '#SEK;3;Kystbuss AS;0;1;100;0')).length).toBe(1);
   });
 
@@ -50,11 +51,11 @@ describe('integrity check: data a save would lose', () => {
   });
 
   it('flags comment lines, which a save drops', () => {
-    expect(lost(nepos2.replace('#TRA;Florø - Eikefjord\r\n', '#TRA;Florø - Eikefjord\r\n// husk dette\r\n')).map((i) => i.line)).toEqual([9]);
+    expect(lost(nepos2.replace('#TRA;Florø - Eikefjord\r\n', '#TRA;Florø - Eikefjord\r\n// husk dette\r\n')).map((i) => i.line)).toEqual([8]);
   });
 
   it('does not flag a price written with fewer decimals', () => {
-    const text = nepos2.replace('#TRL;1;105;Eikefjord;34;0;-1;', '#TRL;1;105;Eikefjord;34;0;12.5;');
+    const text = nepos2.replace('#TRL;1;105;Eikefjord;0;-1;-1;-1;', '#TRL;1;105;Eikefjord;0;-1;-1;12.5;');
     expect(checkRouteFile(text).status).toBe('ok');
   });
 

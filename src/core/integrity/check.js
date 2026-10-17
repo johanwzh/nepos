@@ -12,7 +12,9 @@ import { isValidMode } from '../modes.js';
  */
 
 // Records the Nepos parser reads and writes back. Anything else would be dropped on save.
-const KNOWN = new Set(['#LEV', '#RUT', '#SEK', '#CUR', '#TRA', '#KOM', '#PER', '#TAB', '#TUR', '#TRL', '#TRC', '#FOT', '#UNT', '#TTL', '#TTC', '#MOD', '#BRA', '#EKS', '#OFF', '#UID', '#KAL']);
+const KNOWN = new Set(['#LEV', '#RUT', '#SEK', '#VAL', '#TRA', '#KOM', '#PER', '#TAB', '#TUR', '#TRL', '#TRC', '#FOT', '#UNT', '#TTL', '#TTC', '#TRM', '#MRK', '#EKS', '#OFF', '#UID', '#KAL',
+  // Nepos's older names and the deprecated comment records: read, and updated to ERN 2.0
+  '#MOD', '#BRA', '#CUR', '#KON', '#KOE', '#KOT']);
 
 /**
  * @param {string} text decoded route file
@@ -33,7 +35,8 @@ export function checkRouteFile(text) {
    */
   const outdated = (code, line) => issues.push(clean({ code, severity: 'outdated', line }));
 
-  let seenLEV = false, seenRUT = false, seenPER = false, inTAB = false, haveTUR = false, haveTRL = false, komCount = 0;
+  let seenLEV = false, seenRUT = false, seenPER = false, inTAB = false, haveTUR = false, haveTRL = false;
+  /** @type {Set<string>} */ const komLangs = new Set();
   let lastRec = ''; // #UID belongs to the record directly before it
 
   text.split(/\r?\n/).forEach((raw, i) => {
@@ -55,9 +58,21 @@ export function checkRouteFile(text) {
         if (f[4]) damaged('unsupported-field', n, '#RUT extra name');
         if (f[7]) damaged('unsupported-field', n, '#RUT return name');
         break;
-      case '#KOM':
-        komCount++;
-        if (komCount > 1) damaged('extra-comment', n);
+      case '#KOM': {
+        // One comment per language: a second one in the same language would be lost
+        const lang = (f[2] ?? '').trim().toLowerCase() || 'nob';
+        if (komLangs.has(lang)) damaged('extra-comment', n);
+        komLangs.add(lang);
+        break;
+      }
+      case '#KON':
+      case '#KOE':
+      case '#KOT':
+        outdated('old-comment-language', n);
+        break;
+      case '#CUR':
+      case '#BRA':
+        outdated('old-record-name', n);
         break;
       case '#PER': // name and dates are not used (the period's days come from #KAL)
         seenPER = true; inTAB = false; haveTUR = false; haveTRL = false;
@@ -78,18 +93,27 @@ export function checkRouteFile(text) {
       case '#TRL':
         if (!inTAB) damaged('out-of-order', n, rec);
         haveTRL = true;
+        if ((f[4] ?? '').trim() === '34') outdated('old-row-layout', n); // Nepos's older row layout
         break;
       case '#TRC':
         if (!haveTRL) damaged('out-of-order', n, rec);
         if (!isValidCellTime(f[2] ?? '')) damaged('invalid-time', n, f[2]);
         if (f[4] && f[4] !== '0') damaged('unsupported-field', n, '#TRC hour offset');
+        if ((parseInt(f[7] ?? '', 10) || 0) & 8) outdated('old-request-stop', n); // request stop is bit 8 now
         break;
       case '#FOT':
+        if (!haveTUR) damaged('out-of-order', n, rec);
+        if (/^[01]$/.test((f[4] ?? '').trim())) outdated('old-language-code', n);
+        break;
       case '#TTL':
       case '#TTC':
         if (!haveTUR) damaged('out-of-order', n, rec);
         break;
       case '#MOD':
+        outdated('old-record-name', n);
+        if (!isValidMode(f[1] ?? '', f[2] ?? '')) damaged('invalid-mode', n, `${f[1] ?? ''} ${f[2] ?? ''}`.trim());
+        break;
+      case '#TRM':
         if (!isValidMode(f[1] ?? '', f[2] ?? '')) damaged('invalid-mode', n, `${f[1] ?? ''} ${f[2] ?? ''}`.trim());
         break;
       case '#EKS':
