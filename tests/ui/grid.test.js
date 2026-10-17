@@ -105,3 +105,25 @@ describe('grid', () => {
     setPage('edit');
   });
 });
+
+describe('navigation like a spreadsheet (user test 2026-10-17)', () => {
+  const at = (/** @type {number} */ r, /** @type {number} */ c) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="${c}"]`));
+  const anchor = () => /** @type {HTMLElement} */ (document.querySelector('.is-anchor'));
+
+  it('selects a range by click and drag', () => {
+    at(0, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    at(1, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true, buttons: 1 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    expect(at(1, 0).classList.contains('in-range')).toBe(true); // the anchor stays marked as the anchor
+    at(0, 0).dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); // after release: nothing changes
+    expect(at(1, 0).classList.contains('in-range')).toBe(true);
+  });
+
+  it('goes from the day-code row down to the first row, wherever the marker was before', () => {
+    at(1, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    press('ArrowDown');
+    expect(anchor().dataset.r).toBe('0');
+  });
+});

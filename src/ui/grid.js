@@ -50,6 +50,8 @@ let ancR = 0, ancC = 0, endR = 0, endC = 0;
 let editing = false, editBuf = '';
 let inDC = false, dcCol = 0, dcEdit = false, dcBuf = '';
 let inStopCol = false;
+/** A mouse button is held after a click in a time cell: moving over cells extends the range */
+let dragging = false;
 let ctxR = -1, ctxC = -1, ctxIsStop = false, ctxStopRow = -1, ctxDCCol = -1;
 let ixMode = false;
 /** @type {{ r: number, c: number, type: string } | null} */
@@ -519,6 +521,7 @@ function renderStopRow(tbl, stop, ri, linked) {
       if (inStopEdit) commitStopEdit();
       inStopCol = false; inDC = false;
       if (e.shiftKey) { endR = ri; endC = ci; } else { ancR = ri; ancC = ci; endR = ri; endC = ci; }
+      dragging = true; // click and drag selects a range
       render();
     });
     td.addEventListener('contextmenu', (e) => {
@@ -707,12 +710,18 @@ function keyEdit(e) {
   }
 }
 
+/** Down from the day-code row: the first row below it, in the same column (like a spreadsheet). */
+function downFromDayCodes() {
+  inDC = false; ancC = dcCol; endC = dcCol; ancR = 0; endR = 0;
+  render(); scrollTo(ancR, ancC);
+}
+
 /** @param {KeyboardEvent} e */
 function keyDayCodeNav(e) {
   switch (e.key) {
     case 'ArrowLeft': e.preventDefault(); dcCol = Math.max(0, dcCol - 1); render(); break;
     case 'ArrowRight': e.preventDefault(); dcCol = Math.min(grid.cols.length - 1, dcCol + 1); render(); break;
-    case 'ArrowDown': e.preventDefault(); inDC = false; ancC = dcCol; endC = dcCol; render(); scrollTo(ancR, ancC); break;
+    case 'ArrowDown': e.preventDefault(); downFromDayCodes(); break;
     case 'Escape': e.preventDefault(); inDC = false; render(); break;
     case 'F7': e.preventDefault(); openFnEditor('col', 0, dcCol); break;
     case 'Enter': e.preventDefault(); dcEdit = true; dcBuf = grid.cols[dcCol].dayCode; render(); break;
@@ -728,7 +737,7 @@ function keyDayCodeEdit(e) {
     case 'Enter': e.preventDefault(); commitDayCode(); break;
     case 'ArrowLeft': e.preventDefault(); commitDayCode(); dcCol = Math.max(0, dcCol - 1); render(); break;
     case 'ArrowRight': e.preventDefault(); commitDayCode(); dcCol = Math.min(grid.cols.length - 1, dcCol + 1); render(); break;
-    case 'ArrowDown': e.preventDefault(); commitDayCode(); inDC = false; ancC = dcCol; endC = dcCol; render(); scrollTo(ancR, ancC); break;
+    case 'ArrowDown': e.preventDefault(); commitDayCode(); downFromDayCodes(); break;
     case 'Backspace': e.preventDefault(); dcBuf = dcBuf.slice(0, -1); render(); break;
     default:
       if (e.key.length === 1 && /[A-Za-z0-9]/.test(e.key) && !e.ctrlKey && !e.metaKey) { e.preventDefault(); dcBuf += e.key.toUpperCase(); render(); }
@@ -900,6 +909,14 @@ export function initGrid() {
     documentWired = true;
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('paste', onPaste);
+    document.addEventListener('mouseover', (e) => {
+      if (!dragging || inDC || ixMode) return;
+      const td = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest?.('#tbl [data-r][data-c]'));
+      if (!td) return;
+      const r = Number(td.dataset.r), c = Number(td.dataset.c);
+      if (r !== endR || c !== endC) { endR = r; endC = c; render(); }
+    });
+    document.addEventListener('mouseup', () => { dragging = false; });
     document.addEventListener('mousedown', (e) => {
       if (!/** @type {HTMLElement} */ (e.target).closest?.('#grid-ctx')) hideCtx();
     });
