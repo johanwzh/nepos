@@ -90,3 +90,149 @@ export function effectiveDestAt(grid, col, row) {
   for (const s of destSegments(grid, col)) if (s.row <= row && s.state !== 'unserved') out = s.dest;
   return out;
 }
+
+// ─── Editing ────────────────────────────────────────────────────────────────
+/** @param {Dest} d @returns {Dest} */
+const clone = (d) => ({ text: d.text, vias: [...d.vias] });
+
+/**
+ * Set (or with null remove) the destination from a row on. On or above the first served row it is the
+ * column's start; further down a change, never on the last served row or a row the trip does not
+ * serve. A change equal to the destination already in effect is removed instead.
+ * @param {{ stops: any[] }} grid @param {any} col @param {number} row @param {Dest | null} dest
+ * @returns {boolean} changed
+ */
+export function setDestAt(grid, col, row, dest) {
+  const served = servedRows(grid, col);
+  if (!served.length) return false;
+  const first = served[0], last = served[served.length - 1];
+  if (row <= first) { col.dest = dest ? clone(dest) : null; return true; }
+  if (!dest) {
+    if (!col.dests[row]) return false;
+    col.dests[row] = null;
+    return true;
+  }
+  if (!served.includes(row) || row === last) return false;
+  col.dests[row] = null;
+  col.dests[row] = sameDest(effectiveDestAt(grid, col, row - 1), dest) ? null : clone(dest);
+  return true;
+}
+
+/**
+ * Move a change to another served row (not the first or the last); one already there is replaced.
+ * @param {{ stops: any[] }} grid @param {any} col @param {number} from @param {number} to
+ */
+export function moveChange(grid, col, from, to) {
+  const dest = col.dests[from];
+  const served = servedRows(grid, col);
+  if (!dest || from === to || !served.includes(to) || to <= served[0] || to === served[served.length - 1]) return false;
+  col.dests[to] = dest;
+  col.dests[from] = null;
+  return true;
+}
+
+/**
+ * Shift+drag: the stop at toRow becomes a via of the destination that starts at labelRow (vias in stop
+ * order), and from that stop on the destination goes on without it.
+ * @param {{ stops: any[] }} grid @param {any} col @param {number} labelRow @param {number} toRow
+ */
+export function viaDrag(grid, col, labelRow, toRow) {
+  const served = servedRows(grid, col);
+  const seg = destSegments(grid, col).find((s) => s.row === labelRow && s.state === 'ok');
+  if (!seg || !served.includes(toRow) || toRow <= labelRow || toRow > seg.end || toRow === served[served.length - 1]) return false;
+  const via = firstWord(grid.stops[toRow].name);
+  if (!via || seg.dest.vias.includes(via)) return false;
+  // Where each existing via is passed, to keep them in stop order
+  const rowOf = (/** @type {string} */ v) => served.find((r) => r > labelRow && firstWord(grid.stops[r].name) === v) ?? Infinity;
+  const vias = [...seg.dest.vias];
+  const at = vias.findIndex((v) => rowOf(v) > toRow);
+  vias.splice(at < 0 ? vias.length : at, 0, via);
+  const updated = { text: seg.dest.text, vias };
+  if (seg.start) col.dest = updated; else col.dests[labelRow] = updated;
+  if (!col.dests[toRow]) col.dests[toRow] = { text: seg.dest.text, vias: vias.filter((v) => v !== via) };
+  return true;
+}
+
+/**
+ * A suggestion from the stop pattern (served stops only): the last stop; a bold stop is a via that
+ * drops off there (bold + underline counts as bold); an underlined stop is a destination of its own,
+ * after which the trip goes on to the next one.
+ * @param {{ stops: any[] }} grid @param {any} col
+ * @returns {{ dest: Dest | null, dests: (Dest | null)[] }}
+ */
+export function suggestDests(grid, col) {
+  /** @type {(Dest | null)[]} */
+  const dests = grid.stops.map(() => null);
+  const served = servedRows(grid, col);
+  if (!served.length) return { dest: null, dests };
+  const first = served[0], last = served[served.length - 1];
+  const inner = served.slice(1, -1);
+  const word = (/** @type {number} */ r) => firstWord(grid.stops[r].name);
+  const splits = inner.filter((r) => grid.stops[r].sep && !grid.stops[r].bold);
+  /** @type {Dest | null} */
+  let dest = null;
+  const bounds = [first, ...splits];
+  bounds.forEach((from, i) => {
+    const to = splits[i] ?? last;
+    const bold = inner.filter((r) => r > from && r < to && grid.stops[r].bold);
+    let vias = bold.map(word);
+    const startDest = { text: word(to), vias: [...vias] };
+    if (i === 0) dest = startDest; else dests[from] = startDest;
+    for (const b of bold) {
+      vias = vias.filter((v, k) => k !== vias.indexOf(word(b)));
+      dests[b] = { text: word(to), vias: [...vias] };
+    }
+  });
+  return { dest, dests };
+}
+
+/** Write the suggestion into the column. @param {{ stops: any[] }} grid @param {any} col */
+export function applySuggestion(grid, col) {
+  const s = suggestDests(grid, col);
+  col.dest = s.dest;
+  col.dests = s.dests;
+  return true;
+}
+
+/**
+ * The destinations in rows r0…r1 of a column, for pasting elsewhere.
+ * @param {{ stops: any[] }} grid @param {any} col @param {number} r0 @param {number} r1
+ * @returns {{ start: Dest | null, changes: { offset: number, dest: Dest }[] }}
+ */
+export function copyDests(grid, col, r0, r1) {
+  const first = servedRows(grid, col)[0];
+  const start = col.dest && first !== undefined && first >= r0 && first <= r1 ? clone(col.dest) : null;
+  const changes = [];
+  for (let r = r0; r <= r1; r++) if (col.dests[r]) changes.push({ offset: r - r0, dest: clone(col.dests[r]) });
+  return { start, changes };
+}
+
+/**
+ * Paste copied destinations from row r0 down: what was there in the range goes, the start goes on the
+ * column's own first served stop, changes that fall on rows it does not serve (or its last) are left out.
+ * @param {{ stops: any[] }} grid @param {any} col
+ * @param {{ start: Dest | null, changes: { offset: number, dest: Dest }[] }} clip @param {number} r0
+ */
+export function pasteDests(grid, col, clip, r0) {
+  const span = Math.max(0, ...clip.changes.map((c) => c.offset));
+  for (let r = r0; r <= r0 + span && r < col.dests.length; r++) col.dests[r] = null;
+  if (clip.start) col.dest = clone(clip.start);
+  const first = servedRows(grid, col)[0];
+  for (const c of clip.changes) {
+    const row = r0 + c.offset;
+    if (clip.start && first !== undefined && row <= first) continue;
+    setDestAt(grid, col, row, c.dest);
+  }
+  return true;
+}
+
+/** The destinations of all columns, for a one-step undo. @param {any[]} cols */
+export function snapshotDests(cols) {
+  return JSON.stringify(cols.map((c) => [c.dest ?? null, c.dests ?? []]));
+}
+
+/** @param {any[]} cols @param {string} snap */
+export function restoreDests(cols, snap) {
+  const data = JSON.parse(snap);
+  cols.forEach((c, i) => { if (data[i]) { c.dest = data[i][0]; c.dests = data[i][1]; } });
+}
