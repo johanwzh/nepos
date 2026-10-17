@@ -19,6 +19,7 @@ import { openCopyInterval } from './copy-interval.js';
 import { openTimeNudge } from './time-nudge.js';
 import { shiftTimes } from '../core/time-shift.js';
 import { openDatePicker } from './date-picker.js';
+import { placeMenu } from './place-menu.js';
 import { unionDays, tripDays } from '../core/calendars.js';
 import { app } from './state.js';
 
@@ -980,8 +981,7 @@ function showCtx(x, y, isDC = false) {
   }
   const m = $('grid-ctx');
   m.style.display = 'block';
-  m.style.left = `${x}px`;
-  m.style.top = `${y}px`;
+  placeMenu(m, x, y); // inside the window, also near its bottom and right edge
 }
 function hideCtx() {
   const m = $('grid-ctx');

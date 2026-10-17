@@ -393,3 +393,17 @@ describe('review fixes: cut and paste never reach hidden times', () => {
     expect(grid.cols[0].cells.map((c) => c?.time)).toEqual(['0700', '0745']);
   });
 });
+
+describe('the right-click menu stays inside the window (user test 2026-10-17)', () => {
+  beforeEach(() => { initGrid(); });
+  it('opens upwards when there is no room below, and leftwards near the right edge', () => {
+    Object.defineProperty(window, 'innerHeight', { value: 600, configurable: true });
+    Object.defineProperty(window, 'innerWidth', { value: 800, configurable: true });
+    const menu = /** @type {HTMLElement} */ (document.getElementById('grid-ctx'));
+    Object.defineProperty(menu, 'offsetHeight', { value: 400, configurable: true });
+    Object.defineProperty(menu, 'offsetWidth', { value: 220, configurable: true });
+    /** @type {HTMLElement} */ (document.querySelector('[data-r="1"][data-c="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 700, clientY: 560 }));
+    expect(parseInt(menu.style.top, 10) + 400).toBeLessThanOrEqual(600);
+    expect(parseInt(menu.style.left, 10) + 220).toBeLessThanOrEqual(800);
+  });
+});
