@@ -3,6 +3,8 @@
 import { journeyStops, routeHasTrips } from './journeys.js';
 import { unionDays, tripDays, isoDate } from '../calendars.js';
 import { findRole, exportOrgId, netexOrgId } from '../orgs.js';
+import { destSegments, destKey } from '../destinations.js';
+import { uuid5 } from '../uuid5.js';
 
 /**
  * Collect everything the NeTEx files need from the parsed routes. Stops are identified by their
@@ -54,7 +56,18 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
     // Used stops, destination displays, and each exported trip's operating days: the period's
     // calendars ∩ the column's day code (timetable structure spec §5).
     const usedStops = new Map();  // stopId → {id, name} (name from the first row that uses it)
-    const destDisps  = new Map();  // stopId → name (final stops of JPs)
+    /** @type {Map<string, { id: string, text: string, viaIds: string[] }>} destKey → one DestinationDisplay */
+    const destDisps = new Map();
+    /** A destination's DestinationDisplay ID; its vias are displays of their own. @param {import('../destinations.js').Dest} d @returns {string} */
+    const destDispId = (d) => {
+        const key = destKey(d);
+        const known = destDisps.get(key);
+        if (known) return known.id;
+        const viaIds = d.vias.map((v) => destDispId({ text: v, vias: [] }));
+        const id = `${cs}:DestinationDisplay:${uuid5(`dd|${key}`)}`;
+        destDisps.set(key, { id, text: d.text, viaIds });
+        return id;
+    };
     const operDays  = new Map();  // YYYYMMDD → {ntxId, date: YYYY-MM-DD}
     const colDays   = new Map();  // column object → its operating days (YYYYMMDD, sorted)
 
@@ -67,8 +80,7 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
                 const calls = journeyStops(grid, col);
                 if (calls.length < 2) continue;
                 for (const call of calls) if (!usedStops.has(call.stopId)) usedStops.set(call.stopId, { id: call.stopId, name: call.name });
-                const last = calls[calls.length-1];
-                destDisps.set(last.stopId, last.name);
+                for (const seg of destSegments(grid, col)) if (seg.state === 'ok') destDispId(seg.dest);
                 const days = tripDays(periodDays, col); // the day code, then the trip's own dates
                 colDays.set(col, days);
                 for (const d of days) if (!operDays.has(d)) operDays.set(d, { ntxId: `${cs}:OperatingDay:${isoDate(d)}`, date: isoDate(d) });
@@ -78,5 +90,5 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
     const allDays = [...operDays.keys()].sort();
     const overallFrom = allDays[0] ?? '', overallTo = allDays[allDays.length - 1] ?? '';
 
-    return { cs, routes, orgs, orgFor, orgMode, brandings, usedStops, destDisps, operDays, colDays, overallFrom, overallTo };
+    return { cs, routes, orgs, orgFor, orgMode, brandings, usedStops, destDisps, destDispId, operDays, colDays, overallFrom, overallTo };
 }

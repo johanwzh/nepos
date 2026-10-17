@@ -7,6 +7,7 @@ import { uuid5 } from '../uuid5.js';
 import { isoDate } from '../calendars.js';
 import { submodeElement } from '../modes.js';
 import { UUID_PATTERN } from '../ern/serialize.js';
+import { destSegments, destKey } from '../destinations.js';
 
 /**
  * @param {string} routeCode
@@ -91,11 +92,17 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     requestStop:  depCell.suffix === 'x',
                 }));
                 for (const st of jpStopList) routePointsMap.set(st.stopId, st.name);
+                // The destination starting at each call: the trip's start on the first, a change further on
+                const segs = destSegments(grid, col).filter((s) => s.state === 'ok');
+                const callDests = calls.map((c, i) => (i === 0 ? segs.find((s) => s.start) : segs.find((s) => !s.start && s.row === c.ri))?.dest ?? null);
+                jpStopList.forEach((st, i) => { /** @type {any} */ (st).dd = callDests[i]; });
 
                 // JP key = the stop sequence and the boarding rules at each stop (a/p/x): trips that differ
                 // in either need their own pattern. The ID stays as before for a pattern without rules.
                 const rules = jpStopList.map(s => (s.forBoarding ? '' : 'a') + (s.forAlighting ? '' : 'p') + (s.requestStop ? 'x' : '')).join(',');
-                const ruled = /[apx]/.test(rules) ? `|rules:${rules}` : '';
+                const ruled = (/[apx]/.test(rules) ? `|rules:${rules}` : '')
+                    // trips with other destinations need their own pattern
+                    + (callDests.some(Boolean) ? `|dd:${callDests.map((d) => (d ? destKey(d) : '')).join(',')}` : '');
                 const jpKey = `${di}:${jpStopList.map(s=>s.stopId??s.name).join(':')}${ruled}`;
                 if (!jpMap.has(jpKey)) {
                     const jpId = `${cs}:JourneyPattern:${uuid5(`${setKey}|${jpStopList.map(s=>s.stopId).join('|')}${ruled}`)}`;
@@ -188,14 +195,10 @@ ${porXml}
 
         // Emit JourneyPatterns
         for (const [, { jpId, stopList, name }] of jpMap) {
-            const lastStop = stopList[stopList.length-1];
-            const ddRef = lastStop?.stopId!=null
-                ? `\n          <DestinationDisplayRef ref="${cs}:DestinationDisplay:${stopLocalId(lastStop.stopId)}"/>` : '';
-
-            // DestinationDisplay only on the FIRST stop (front sign at departure)
-            const spijpList = stopList.map((s,i)=>{
+            // A DestinationDisplay where the trip's destination starts and where it changes
+            const spijpList = stopList.map((/** @type {any} */ s, /** @type {number} */ i)=>{
                 const spijpId = `${cs}:StopPointInJourneyPattern:${jpId.split(':').pop()}-${i+1}`;
-                const dd  = (i===0) ? ddRef : '';
+                const dd  = s.dd ? `\n            <DestinationDisplayRef ref="${xe(data.destDispId(s.dd))}"/>` : '';
                 const brd = s.forBoarding  ? '' : '\n            <ForBoarding>false</ForBoarding>';
                 const alt = s.forAlighting ? '' : '\n            <ForAlighting>false</ForAlighting>';
                 const req = s.requestStop  ? '\n            <RequestStop>true</RequestStop>' : '';
