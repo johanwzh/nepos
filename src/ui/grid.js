@@ -14,6 +14,7 @@ import { NSR_QUAY_PATTERN } from '../core/quays.js';
 import { fnById, footnoteSummary, openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
 import { interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan } from '../core/interpolate.js';
 import { openDayCodeHelper } from './day-code-helper.js';
+import { sortColumns } from '../core/column-sort.js';
 import { app } from './state.js';
 
 /** The grid being edited: one period × direction of the open route. */
@@ -1034,5 +1035,14 @@ export function initGrid() {
     if (grid.readOnly || !grid.cols[ci]) return;
     openDayCodeHelper({ code: grid.cols[ci].dayCode, x: e.clientX, y: e.clientY, onApply: (code) => { grid.cols[ci].dayCode = code; render(); } });
   });
+  for (const [id, by] of /** @type {[string, 'time' | 'daycode'][]} */ ([['gc-sort-time', 'time'], ['gc-sort-dc', 'daycode']])) {
+    $(id).addEventListener('click', () => {
+      hideCtx();
+      if (grid.readOnly) return;
+      sortColumns(grid, by);
+      inDC = false; ancC = 0; endC = 0;
+      render();
+    });
+  }
   $('gc-dc-note').addEventListener('click', () => { hideCtx(); openFnEditor('col', 0, ctxDCCol >= 0 ? ctxDCCol : dcCol); });
 }

@@ -204,3 +204,26 @@ describe('the day-code helper (user test 2026-10-17)', () => {
     expect(grid.cols[0].dayCode).toBe('DX67');
   });
 });
+
+describe('sorting columns (user test 2026-10-17)', () => {
+  beforeEach(() => {
+    initGrid();
+    loadGrid({
+      stops: [stop('A'), stop('B')],
+      cols: [{ dayCode: '6', footnote: '', footnoteId: null, cells: [cell('0700'), cell('0710')] },
+        { dayCode: 'D', footnote: '', footnoteId: null, cells: [cell('0800'), cell('0810')] },
+        { dayCode: 'D', footnote: '', footnoteId: null, cells: [cell('0600'), cell('0610')] }],
+    }, { readOnly: false });
+  });
+  const sortBy = (/** @type {string} */ id) => {
+    /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById(id)).click();
+  };
+
+  it('by departure time, or in day-code blocks then departure, from the day-code menu', () => {
+    sortBy('gc-sort-time');
+    expect(grid.cols.map((c) => c.cells[0].time)).toEqual(['0600', '0700', '0800']);
+    sortBy('gc-sort-dc');
+    expect(grid.cols.map((c) => `${c.dayCode} ${c.cells[0].time}`)).toEqual(['D 0600', 'D 0800', '6 0700']);
+  });
+});
