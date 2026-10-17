@@ -124,6 +124,34 @@ Currency record. The currency of the prices in `#TRL`. Kept for older datasets w
 | 0 | text | Currency code (`NOK`, `EUR`, …). |
 | 1 | decimal | Exchange rate against the dataset's base currency. |
 
+### #DSS
+
+Destination sign record. What the vehicle's own display shows (front and side). One per sign, defined once per route file and used by `#DSK` in any table.
+
+| Field | Type | Description |
+|---|---|---|
+| 0 | text | ID of the sign. |
+| 1 | text | Front text. |
+| 2 | text | Side text. |
+| 3 … | text | Via: the IDs of other `#DSS` records, in order. Any number. |
+
+A via may not point to the record itself, directly or through other vias.
+
+### #DST
+
+Destination record. The destination a journey planner shows ("Line 1 towards Oslo"). It need not be a stop name. One per destination and language, defined once per route file and used by `#DSK` in any table; the records of one destination share its ID.
+
+| Field | Type | Description |
+|---|---|---|
+| 0 | text | ID of the destination. |
+| 1 | text | Destination text. |
+| 2 | text | Language, as a three-letter ISO 639 code. Empty means `nob`. |
+| 3 … | text | Via: the IDs of other `#DST` records, in order. Any number. |
+
+A via may not point to the record itself, directly or through other vias.
+
+The sign and the destination are kept apart on purpose: what a vehicle shows ("EKSPRESSEN") is not always what a traveller should be told it goes to.
+
 ### #TRA
 
 Route pattern record. One per route pattern: a named set of tables, such as Bergen–Oslo and Oslo–Bergen.
@@ -492,6 +520,23 @@ Booking note record. A note on how to book; one per position and language. It be
 | 1 | int | Y position (its row). `-1` = the whole trip (`#TUR`). |
 | 2 | text | The note. |
 | 3 | text | Language, as a three-letter ISO 639 code. Empty means `nob`. |
+
+### #DSK
+
+Destination link record. From this cell on, the trip shows the given sign and/or goes to the given destination; one per cell where either changes.
+
+| Field | Type | Description |
+|---|---|---|
+| 0 | int | X position (its column). |
+| 1 | int | Y position (its row). |
+| 2 | text | ID of the `#DSS` shown from this stop on. Empty = unchanged. |
+| 3 | text | ID of the `#DST` from this stop on. Empty = unchanged. |
+
+Rules:
+
+- A trip has a `#DSK` on the first stop it serves, giving a sign, a destination or both.
+- A sign or destination holds until the next `#DSK` in the same column that changes it. The two change independently.
+- No `#DSK` on the last stop a trip serves.
 
 ### #DAG
 
@@ -1070,3 +1115,86 @@ A day code (`#TUR` field 1, and the fare records) says on which days something r
 | `S` | `S` | School days. |
 
 A code with more than three weekdays left out is written the other way round: `567` (Friday to Sunday), not `DX1234`.
+
+## Record names
+
+What the record codes stand for. Most are Norwegian; a (?) marks an origin that is not certain.
+
+| Record | Stands for | Meaning |
+|---|---|---|
+| `#LEV` | levering | Delivery |
+| `#RUT` | rute | Route |
+| `#TRM` | transportmodus | Transport mode |
+| `#MRK` | merkevare | Brand |
+| `#EKS` | eksport | Export |
+| `#OFF` | offentlig | Public |
+| `#AVG` | avgang | Departure–arrival |
+| `#SEK` | selskap (?) | Company on the route |
+| `#VAL` | valuta | Currency |
+| `#DSS` | destinasjonsskilt | Destination sign |
+| `#DST` | destinasjon | Destination |
+| `#TRA` | trasé (?) | Route pattern |
+| `#UID` | unique ID | Stable ID |
+| `#KOR` | korrespondanse | Connection |
+| `#PER` | periode | Period |
+| `#KAL` | kalender | Calendar |
+| `#FRE` | frekvens | Frequency time |
+| `#KOS` | kommentar, spesiell | Special comment |
+| `#KOM` | kommentar | Comment (route information) |
+| `#KON` | kommentar, nynorsk | Comment in Nynorsk |
+| `#KOE` | kommentar, engelsk | Comment in English |
+| `#KOT` | kommentar, tysk | Comment in German |
+| `#TAB` | tabell | Table |
+| `#TUR` | tur | Trip |
+| `#TUT` | tekst-tur (?) | Text column |
+| `#HKP` | handikap | Accessibility |
+| `#TRL` | tur-rad-linje (?) | Trip row |
+| `#TTL` | tekst-linje (?) | Text row |
+| `#TRC` | tur-rute-celle (?) | Time cell |
+| `#TTC` | tekst-celle (?) | Text cell |
+| `#FOT` | fotnote | Footnote |
+| `#UNT` | unntak | Exception |
+| `#BOD` | bookingdata | Booking data |
+| `#BOF` | bookingfotnote | Booking note |
+| `#DSK` | destinasjonskobling | Destination link |
+| `#DAG` | dag | Days |
+| `#MCT` | minimum connection time | Minimum connection time |
+| `#RIR` | rute i rute | Route in route |
+| `#PMK` | publikasjonsmal (?) | Publication |
+| `#LAY` | layout | Layout |
+| `#STL` | stil | Style |
+| `#LND` | land | Country |
+| `#FYL` | fylke | County |
+| `#KOM` | kommune | Municipality (place information) |
+| `#REG` | region | Region |
+| `#STE` | sted | Place |
+| `#PST` | poststed | Postcode |
+| `#HPL` | holdeplass | Stop |
+| `#PAR` | parkering | Park and ride |
+| `#STP` | stoppunkt | Stop point |
+| `#GAN` | gangavstand | Walking distance |
+| `#ALI` | alias | Alias |
+| `#SEL` | selskap | Company |
+| `#TXR` | takst, regulativ (?) | Fare scale |
+| `#TXE` | takst, enkelt | Single fare |
+| `#TXD` | takst, diverse | Other fare |
+| `#TCR` | takstkobling, rute (?) | Fare link to a route |
+| `#TCS` | takstkobling, selskap (?) | Fare link to a company |
+| `#TCK` | takstkobling, kommune (?) | Fare link to a municipality |
+| `#TCF` | takstkobling, fylke (?) | Fare link to a county |
+| `#TRR` | takstregulativ, rute (?) | Route membership of a fare |
+| `#TRT` | takstregulativ, topp (?) | Fare scale head |
+| `#TRS` | takstregulativ, celle (?) | Fare scale cell |
+| `#TEC` | takst, enkelt, celle (?) | Single fare price |
+| `#TDC` | takst, diverse, celle (?) | Other fare price |
+| `#MOD` | moderasjon | Discount |
+| `#MOR` | moderasjon, rute | Discount link to a route |
+| `#MOS` | moderasjon, selskap | Discount link to a company |
+| `#MOK` | moderasjon, kommune | Discount link to a municipality |
+| `#MOF` | moderasjon, fylke | Discount link to a county |
+| `#MOL` | moderasjon, linje | Discount line |
+| `#TIT` | tilbringer, takst (?) | Feeder line linked to a fare |
+| `#TIM` | tilbringer, moderasjon (?) | Feeder line linked to a discount |
+| `#TIL` | tilbringer, linje (?) | Feeder line |
+| `#TLT` | tilbringerlinje, tur (?) | Feeder line trip |
+| `#OVM` | overgangsmoderasjon | Transfer discount |
