@@ -100,6 +100,21 @@ export function shiftRanges(ranges, days) {
 }
 
 /**
+ * The days of an inclusive range. An end that is not a date ("0" or empty means no date in ERN) is
+ * left out: then the range is just its other end, or nothing.
+ * @param {{ from: string, to: string }} r
+ * @returns {string[]}
+ */
+export function rangeDays(r) {
+  const ok = (/** @type {string} */ d) => /^\d{8}$/.test(d ?? '');
+  const from = ok(r.from) ? r.from : ok(r.to) ? r.to : '';
+  const to = ok(r.to) ? r.to : from;
+  const out = [];
+  for (let d = from; d && d <= to; d = addDays(d, 1)) out.push(d);
+  return out;
+}
+
+/**
  * A trip's operating days (spreadsheet tools spec, 2026-10-17): its period's days filtered by its day
  * code, plus the days its own dates add (whatever the day code says), minus the days they remove
  * (removing always wins).
@@ -110,7 +125,7 @@ export function tripDays(periodDays, col) {
   const days = new Set(columnDays(periodDays, col.dayCode));
   const dates = col.dates ?? [];
   /** @param {{ from: string, to: string }} r */
-  const each = (r) => { const out = []; const to = r.to || r.from; for (let d = r.from || to; d && d <= to; d = addDays(d, 1)) out.push(d); return out; };
+  const each = rangeDays;
   for (const r of dates) if (r.on) for (const d of each(r)) days.add(d);
   for (const r of dates) if (!r.on) for (const d of each(r)) days.delete(d);
   return [...days].sort();

@@ -43,3 +43,12 @@ describe('review fixes', () => {
     expect(copies.map((c) => c.tripNo)).toEqual(['', '']);
   });
 });
+
+describe('code review 2026-10-17', () => {
+  it('moves a copy\'s own dates with it when it runs a day later', () => {
+    const src = { ...col('D', [cell('2330'), { ...cell('2345'), dates: [{ from: '20261224', to: '20261224', on: false }] }]), dates: [{ from: '20261224', to: '20261224', on: false }] };
+    const copies = copiesAtInterval(src, 60, 30); // 00:30 the next day
+    expect(copies[0].dates).toEqual([{ from: '20261225', to: '20261225', on: false }]);
+    expect(copies[0].cells[1].dates).toEqual([{ from: '20261225', to: '20261225', on: false }]);
+  });
+});

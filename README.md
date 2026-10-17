@@ -1,33 +1,49 @@
 # Nepos
 
-Timetable editor that writes ERN files and exports NeTEx. Runs in Chrome or Edge on desktop and
-works on a project folder on your own machine.
+A timetable editor for public transport that writes ERN files and exports NeTEx (Nordic profile) for
+Entur. It runs in Chrome or Edge on a desktop and works on a project folder on your own machine:
+no server, no login, nothing leaves your computer until you export.
+
+Nepos 2 is a rewrite of Nepos 1.x for modern timetables built on NSR (the national stop register).
+
+- **User guide (Norwegian):** [docs/user-guide.md](docs/user-guide.md)
+- **ERN file format:** [docs/ern/ern-format.md](docs/ern/ern-format.md)
+
+## What it does
+
+- **Projects** on a local folder (File System Access API), with a project check that finds and
+  repairs file problems when a project opens.
+- **Lines** in one list (search, filter, sort, batch edits), each with Transmodel mode, codes,
+  branding, authority and operator from Entur's organisation register (NOG).
+- **Timetables** in a spreadsheet-like grid: table sets, project calendars, day codes, boarding marks,
+  interchanges, notes and per-trip dates, trip and train numbers. Tools: interpolate times, copy a
+  trip at an interval, shift times with a jog dial, sort columns, a day-code helper.
+- **Stops** are NSR Quays, picked from search or the map (record a route by clicking platforms),
+  with what NSR knows about each stop.
+- **Checks** as you work (a speed profile per trip, line problems) and before export.
+- **Export** to NeTEx: one file per line plus a shared file, DatedServiceJourneys per operating day.
 
 ## Commands
 
 ```bash
+npm install      # once
 npm run dev      # start Nepos locally, reloads on save
-npm test         # run all checks
-npm run build    # build the version that goes online
+npm test         # all checks (Vitest + TypeScript type check of the JSDoc)
+npm run build    # the static site, in dist/
 ```
 
-The ERN file format is documented in [docs/ern/ern-format.md](docs/ern/ern-format.md).
+## Status (2026-10-17)
+
+Nepos 2 is in active development and user testing; it has not been released. Everything is plain
+JavaScript with JSDoc types, Vite for the build and Vitest (jsdom) for the tests.
 
 ## Where things are documented
 
-- Design (what Nepos 2 is and why): [docs/superpowers/specs/2026-10-13-nepos-2-foundation-design.md](docs/superpowers/specs/2026-10-13-nepos-2-foundation-design.md)
-- How it was built, plan by plan: [docs/superpowers/plans/](docs/superpowers/plans/)
-- What's next — open requests, design sessions and known small issues: [docs/backlog.md](docs/backlog.md)
-
-## Status (2026-10-14)
-
-All planned functionality for 2.0 is built and merged on `main`: projects and the project check,
-organisations, timetable editing, NSR stops (search window, status marks), map panel, filling
-times, and NeTEx export. Since then: organisations come from Entur's register (NOG), with two
-export modes (plan 4a); line details with Transmodel modes and Entur icons, codes, brandings and
-UUID IDs (plan 4b); table sets, calendars and dated journeys in the export (plan 4c); the calendar year view and season tools (plan 4d); menus, saving per line, keys and colour themes (plan 4e); the lines pane (mini and maxi view, batch actions), line flags and continuous validation (plan 4f); stop picking in the map pane with search, browse and Bruk (plan 4g). The user is testing it with a real project; findings go into the backlog.
-Not yet online: publishing to GitHub Pages waits for the user's go-ahead.
+- Design: [docs/superpowers/specs/](docs/superpowers/specs/) — one document per feature area, newest last.
+- How it was built, plan by plan: [docs/superpowers/plans/](docs/superpowers/plans/).
+- What's next — open requests, ideas and known small issues: [docs/backlog.md](docs/backlog.md).
 
 ## Credits
 
-Transport mode icons: Entur's icon set ([@entur/icons](https://www.npmjs.com/package/@entur/icons), EUPL-1.2), recoloured to follow the Nepos theme.
+Transport mode icons: Entur's icon set ([@entur/icons](https://www.npmjs.com/package/@entur/icons),
+EUPL-1.2), recoloured to follow the Nepos theme. Map data © OpenStreetMap contributors.

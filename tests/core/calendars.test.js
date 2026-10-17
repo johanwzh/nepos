@@ -122,3 +122,12 @@ describe('tripDays: the day code, then the trip\'s own dates (spreadsheet tools 
     expect(tripDays(period, { dayCode: '6' })).toEqual(['20260307']); // no dates: just the day code
   });
 });
+
+describe('tripDays with "no date" values (code review 2026-10-17)', () => {
+  it('ignores a range end that is not a date ("0" or empty) instead of counting from 1899', async () => {
+    const { tripDays } = await import('../../src/core/calendars.js');
+    expect(tripDays([], { dayCode: 'D', dates: [{ from: '0', to: '20261005', on: true }] })).toEqual(['20261005']);
+    expect(tripDays([], { dayCode: 'D', dates: [{ from: '20261003', to: '0', on: true }] })).toEqual(['20261003']);
+    expect(tripDays([], { dayCode: 'D', dates: [{ from: '0', to: '0', on: true }] })).toEqual([]);
+  });
+});

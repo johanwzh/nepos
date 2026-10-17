@@ -482,3 +482,27 @@ describe('copying a stop between rows with Ctrl+C / Ctrl+V (user test 2026-10-17
     expect(grid.cols[0].cells[1].time).toBe('0745');
   });
 });
+
+describe('code review 2026-10-17', () => {
+  beforeEach(() => { initGrid(); });
+
+  it('a pasted time keeps the cell\'s note and dates, as a typed time does', () => {
+    grid.cols[0].cells[1].note = 'Bytt';
+    grid.cols[0].cells[1].dates = [{ from: '20261224', to: '20261224', on: false }];
+    /** @type {HTMLElement} */ (document.querySelector('[data-r="1"][data-c="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    const ev = new Event('paste', { bubbles: true, cancelable: true });
+    /** @type {any} */ (ev).clipboardData = { getData: () => '0750' };
+    document.dispatchEvent(ev);
+    expect(grid.cols[0].cells[1]).toMatchObject({ time: '0750', note: 'Bytt', dates: [{ from: '20261224', to: '20261224', on: false }] });
+  });
+
+  it('deleting the departure row of a dwell stop leaves its arrival row as an ordinary stop', () => {
+    loadGrid({ stops: [stop('A'), { ...stop('X', 'NSR:Quay:9'), isDwellArr: true }, stop('X', 'NSR:Quay:9'), stop('Y')],
+      cols: [{ dayCode: 'D', note: '', dates: [], cells: [cell('0700'), cell('0710'), null, cell('0730')] }] }, { readOnly: false });
+    window.confirm = () => true;
+    /** @type {HTMLElement} */ (document.querySelectorAll('.g-ibtn-del')[2]).dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(grid.stops.map((s) => s.name)).toEqual(['A', 'X', 'Y']);
+    expect(grid.stops[1].isDwellArr).toBe(false);
+  });
+});
