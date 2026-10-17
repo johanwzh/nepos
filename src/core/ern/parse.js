@@ -10,7 +10,7 @@ import { UUID_PATTERN } from './serialize.js';
  */
 export function parseERN(text, { lang: _lang = 'en' } = {}) {
     const rs = {
-        routeName:'', publicCode:'', privateCode:'', mode:'', submode:'', brandingId:'', exported:true, isPublic:true, transportMode:6, kom:'', sek:[], footnotes:[],
+        routeName:'', publicCode:'', privateCode:'', mode:'', submode:'', brandingId:'', exported:true, isPublic:true, transportMode:6, kom:'', sek:[],
         // Table sets (#TRA) with their periods (#PER + #KAL), one grid per period (timetable
         // structure spec §1–§4). Grids are keyed `${periodId}:${tableSetId}`.
         tableSets:[], periods:[], activeSet:null, activePer:null,
@@ -19,7 +19,8 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
     let curPer = null, curSet = null, inTab = false, lastRec = '';
     let sawMod = false;
     let cols = [], rows = [], cellMap = {};
-    let _fnParseMap = null, _fnPendingAttach = [];
+    // Notes (#FOT) and dates (#UNT) for the current table, put on their column or cell once it is built
+    let _pendingNotes = [];
 
     function finalizeTAB() {
         if (!curPer || !curSet || !inTab) return;
@@ -28,7 +29,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         const colXtoIdx = {};
         cols.forEach((c,i) => { colXtoIdx[c.x] = i; });
         const gCols2 = cols.map(c => ({
-            dayCode: c.dayCode, uid: c.uid ?? null, footnote: '', footnoteId: null,
+            dayCode: c.dayCode, uid: c.uid ?? null, note: '', dates: [],
             cells: rows.map((_,ri) => {
                 const cell = cellMap[`${c.x}:${ri}`];
                 return cell || null;
@@ -49,18 +50,17 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
             }
         }
         const grid = { stops: stopsCopy, cols: gCols2 };
-        // Apply footnote attachments collected from FOT/UNT records
-        _fnPendingAttach.forEach(({ci,ri,fnId}) => {
+        // Notes and dates from #FOT/#UNT: on the column (row -1) or on a cell that has a time
+        _pendingNotes.forEach(({ ci, ri, note, date }) => {
             if (ci < 0 || ci >= grid.cols.length) return;
-            if (ri === -1) { grid.cols[ci].footnoteId = fnId; }
-            else if (ri >= 0 && ri < grid.stops.length) {
-                const cell = grid.cols[ci].cells[ri];
-                if (cell) cell.footnoteId = fnId;
-            }
+            const target = ri === -1 ? grid.cols[ci] : (ri >= 0 && ri < grid.stops.length ? grid.cols[ci].cells[ri] : null);
+            if (!target) return;
+            if (note != null) target.note = note;
+            if (date) (target.dates ??= []).push(date);
         });
         rs.grids[key] = grid;
         cols=[]; rows=[]; cellMap={};
-        _fnParseMap = null; _fnPendingAttach = [];
+        _pendingNotes = [];
     }
 
     for (const rawLine of text.split(/\r?\n/)) {
@@ -187,24 +187,21 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                         type: (mask&0x800)?'stayseated':'guaranteed'
                     };
                 }
-                cellMap[`${cx}:${ri}`] = { time, dayOffset:dOff, suffix, interchange, footnoteId:null };
+                cellMap[`${cx}:${ri}`] = { time, dayOffset:dOff, suffix, interchange };
                 break;
             }
             case '#FOT': {
-                // Text footnote — attach to column (y=-1) or cell
-                const fx=parseInt(f[1]), fy=parseInt(f[2]), txt=f[3]||'';
+                // A note on a column (row -1) or a cell
+                const txt = f[3] || '';
                 if (!txt) break;
-                const fnObj = getOrCreateFn(rs, {cx:fx, cy:fy, colXtoIdx:buildXtoIdx()});
-                fnObj.text = txt;
+                _pendingNotes.push({ ci: buildXtoIdx()[parseInt(f[1])] ?? parseInt(f[1]), ri: parseInt(f[2]), note: txt });
                 break;
             }
             case '#UNT': {
-                const fx=parseInt(f[1]), fy=parseInt(f[2]);
+                // Dates on a column or a cell: PMU bit 13 = runs on these days, bit 14 = does not
                 const from=f[3]||'', pmu=parseInt(f[4])||0, to=f[5]||'';
-                const runsOnly = (pmu & 8192) > 0;
                 if (!from && !to) break;
-                const fnObj = getOrCreateFn(rs, {cx:fx, cy:fy, colXtoIdx:buildXtoIdx()});
-                fnObj.exceptions.push({ runsOnly, from, to });
+                _pendingNotes.push({ ci: buildXtoIdx()[parseInt(f[1])] ?? parseInt(f[1]), ri: parseInt(f[2]), date: { from, to, on: (pmu & 8192) > 0 } });
                 break;
             }
         }
@@ -231,20 +228,5 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
 
     function buildXtoIdx() {
         const m={}; cols.forEach((c,i)=>{ m[c.x]=i; }); return m;
-    }
-    function getOrCreateFn(rs, {cx,cy,colXtoIdx}) {
-        // Determine attachment key
-        const ci = colXtoIdx[cx] ?? cx;
-        const key = cy===-1 ? `col:${ci}` : `cell:${ci}:${cy}`;
-        if (!_fnParseMap) _fnParseMap = {};
-        if (!_fnParseMap[key]) {
-            const id = rs.footnotes.length + 1;
-            const fn = { id, text:'', exceptions:[] };
-            rs.footnotes.push(fn);
-            _fnParseMap[key] = fn;
-            // Attach — will be applied after finalizeTAB
-            _fnPendingAttach.push({ ci, ri: cy, fnId: id });
-        }
-        return _fnParseMap[key];
     }
 }

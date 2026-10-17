@@ -98,3 +98,20 @@ export function setDays(cal, days, on) {
 export function shiftRanges(ranges, days) {
   return normalizeRanges(ranges.map(([a, b]) => /** @type {[string, string]} */ ([addDays(a, days), addDays(b, days)])));
 }
+
+/**
+ * A trip's operating days (spreadsheet tools spec, 2026-10-17): its period's days filtered by its day
+ * code, plus the days its own dates add (whatever the day code says), minus the days they remove
+ * (removing always wins).
+ * @param {string[]} periodDays sorted YYYYMMDD
+ * @param {{ dayCode: string, dates?: { from: string, to: string, on: boolean }[] }} col
+ */
+export function tripDays(periodDays, col) {
+  const days = new Set(columnDays(periodDays, col.dayCode));
+  const dates = col.dates ?? [];
+  /** @param {{ from: string, to: string }} r */
+  const each = (r) => { const out = []; const to = r.to || r.from; for (let d = r.from || to; d && d <= to; d = addDays(d, 1)) out.push(d); return out; };
+  for (const r of dates) if (r.on) for (const d of each(r)) days.add(d);
+  for (const r of dates) if (!r.on) for (const d of each(r)) days.delete(d);
+  return [...days].sort();
+}

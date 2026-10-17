@@ -4,7 +4,7 @@ const emptyGrid = () => ({ stops: [], cols: [] });
 /** A new line's first grid: 3 empty stops by 3 empty trips, ready to type into (user test 2026-10-16). @returns {{ stops: any[], cols: any[] }} */
 const starterGrid = () => ({
   stops: [0, 1, 2].map(() => ({ name: '', stopId: null, bold: false, sep: false, isDwellArr: false, price: null })),
-  cols: [0, 1, 2].map(() => ({ dayCode: '', uid: crypto.randomUUID(), footnote: '', footnoteId: null, cells: [null, null, null] })),
+  cols: [0, 1, 2].map(() => ({ dayCode: '', uid: crypto.randomUUID(), note: '', dates: [], cells: [null, null, null] })),
 });
 
 /** @param {'no' | 'en' | string} _lang */
@@ -15,7 +15,7 @@ export function newRouteState(_lang) {
     periods: [{ id: 2, setId: 1, calendarIds: [] }],
     activeSet: 1, activePer: 2, nextId: 3,
     grids: { '2:1': starterGrid() },
-    kom: '', sek: [], footnotes: [],
+    kom: '', sek: [],
   };
 }
 

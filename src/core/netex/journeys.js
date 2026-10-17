@@ -45,28 +45,3 @@ export function routeHasTrips(rs) {
   return false;
 }
 
-/**
- * The single dates a column's note says it "runs only" on (from === to). Other exceptions are
- * not exported (the export check warns about them).
- * @param {any} rs
- * @param {{ footnoteId: number | null }} col
- * @returns {string[]} YYYYMMDD
- */
-export function runsOnlyDates(rs, col) {
-  const fn = rs.footnotes?.find((/** @type {any} */ f) => f.id === col.footnoteId);
-  return fn?.exceptions
-    ?.filter((/** @type {any} */ ex) => ex.runsOnly && ex.from && ex.from === ex.to)
-    .map((/** @type {any} */ ex) => ex.from) ?? [];
-}
-
-/**
- * The key of the DayType a column runs on: its "runs only" dates when it has any, otherwise its
- * day code in the period.
- * @param {any} rs
- * @param {{ dayCode: string, footnoteId: number | null }} col
- * @param {string} opKey `${from}-${to}` of the period
- */
-export function dayTypeKey(rs, col, opKey) {
-  const dates = runsOnlyDates(rs, col);
-  return dates.length ? `specific:${[...dates].sort().join(':')}` : `${col.dayCode || 'D'}:${opKey}`;
-}

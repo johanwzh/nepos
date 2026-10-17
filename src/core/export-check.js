@@ -5,7 +5,7 @@ import { quayStatus, stopLocalId } from './quays.js';
 import { findRole, aliasIssues, orgRole } from './orgs.js';
 import { ROUTE_CODE_PATTERN } from './route-names.js';
 import { journeyStops } from './netex/journeys.js';
-import { calendarDays, unionDays, columnDays } from './calendars.js';
+import { calendarDays, unionDays, tripDays } from './calendars.js';
 import { isAllowedDayCode } from './day-codes.js';
 
 /** Every code the check can give; each has a text 'chk:<code>' in both languages. */
@@ -153,7 +153,7 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
         // An empty day code would be exported as "every day" — never what the user meant.
         if (!col.dayCode) add('error', 'col-no-daycode', { ...r, where: at });
         else if (!isAllowedDayCode(col.dayCode)) add('error', 'day-code', { ...r, where: at, detail: col.dayCode });
-        else if (journeyStops(grid, col).length >= 2 && !columnDays(periodDays, col.dayCode).length) add('warning', 'no-operating-days', { ...r, where: at });
+        else if (journeyStops(grid, col).length >= 2 && !tripDays(periodDays, col).length) add('warning', 'no-operating-days', { ...r, where: at });
         let prev = -1;
         grid.stops.forEach((/** @type {any} */ stop, /** @type {number} */ ri) => {
           const cell = col.cells[ri];
@@ -169,14 +169,12 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
 }
 
 /**
- * Footnote date exceptions are not exported (timetable structure spec §4: dates live in calendars).
- * @param {any} rs @param {any} _per @param {any} col
+ * A trip's own dates are exported; dates on a single stop are not yet (that splits the trip; backlog 6).
+ * @param {any} _rs @param {any} _per @param {any} col
  * @param {{ tableSet: string, period: string, column: number }} at
  * @param {(level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void} add
  */
-function checkExceptions(rs, _per, col, at, add) {
-  const fnOf = (/** @type {number | null} */ id) => rs.footnotes?.find((/** @type {any} */ f) => f.id === id);
-  const count = (fnOf(col.footnoteId)?.exceptions ?? []).length
-    + col.cells.reduce((/** @type {number} */ n, /** @type {any} */ c) => n + (c?.footnoteId != null ? fnOf(c.footnoteId)?.exceptions?.length ?? 0 : 0), 0);
+function checkExceptions(_rs, _per, col, at, add) {
+  const count = col.cells.reduce((/** @type {number} */ n, /** @type {any} */ c) => n + (c?.dates?.length ?? 0), 0);
   if (count) add('warning', 'col-exceptions-ignored', { where: at, detail: String(count) });
 }

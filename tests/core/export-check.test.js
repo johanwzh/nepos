@@ -187,17 +187,11 @@ describe('checkForExport', () => {
       expect(codes(issues)).toEqual(['error:route-code']);
     });
 
-    it('warns about date exceptions the export cannot apply', () => {
+    it('exports a trip\'s own dates (no warning), but warns about dates on single stops', () => {
       const rs = route();
-      rs.footnotes = [{ id: 1, text: '', exceptions: [{ runsOnly: false, from: '20260301', to: '20260301' }] }];
-      grid0(rs).cols[0].footnoteId = 1;
-      expect(codes(check(rs))).toEqual(['warning:col-exceptions-ignored']);
-    });
-
-    it('warns about date exceptions on single times', () => {
-      const rs = route();
-      rs.footnotes = [{ id: 1, text: '', exceptions: [{ runsOnly: true, from: '20260301', to: '20260301' }] }];
-      grid0(rs).cols[0].cells[1].footnoteId = 1;
+      grid0(rs).cols[0].dates = [{ from: '20260301', to: '20260301', on: false }];
+      expect(codes(check(rs))).toEqual([]);
+      grid0(rs).cols[0].cells[1].dates = [{ from: '20260301', to: '20260301', on: true }];
       expect(codes(check(rs))).toEqual(['warning:col-exceptions-ignored']);
     });
 
@@ -231,11 +225,10 @@ describe('checkForExport', () => {
       expect(codes(check(rs))).toContain('error:day-code');
     });
 
-    it('warns that footnote date exceptions are not exported', () => {
+    it('warns about a trip whose own dates take away every day', () => {
       const rs = route();
-      rs.footnotes = [{ id: 1, text: 'x', exceptions: [{ runsOnly: true, from: '20260105', to: '20260105' }] }];
-      grid0(rs).cols[0].footnoteId = 1;
-      expect(codes(check(rs))).toEqual(['warning:col-exceptions-ignored']);
+      grid0(rs).cols[0].dates = [{ from: '20200101', to: '20351231', on: false }];
+      expect(codes(check(rs))).toEqual(['warning:no-operating-days']);
     });
   });
 

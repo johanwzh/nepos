@@ -106,3 +106,19 @@ describe('calendar editing helpers', () => {
     expect(norwegianHolidays(2027).get('20270517')).toBe('2. pinsedag, Grunnlovsdag');
   });
 });
+
+describe('tripDays: the day code, then the trip\'s own dates (spreadsheet tools spec)', () => {
+  it('adds days (even ones the day code leaves out) and removes days (removing always wins)', async () => {
+    const { tripDays } = await import('../../src/core/calendars.js');
+    // 2026-03-02 is a Monday; the period is that week
+    const period = ['20260302', '20260303', '20260304', '20260305', '20260306', '20260307', '20260308'];
+    const col = { dayCode: 'DX67', dates: [
+      { from: '20260307', to: '20260307', on: true },   // Saturday: added
+      { from: '20260303', to: '20260304', on: false },  // Tue–Wed: removed
+      { from: '20260304', to: '20260304', on: true },   // added again, but removing wins
+      { from: '20260401', to: '20260401', on: true },   // outside the period: added as well
+    ] };
+    expect(tripDays(period, col)).toEqual(['20260302', '20260305', '20260306', '20260307', '20260401']);
+    expect(tripDays(period, { dayCode: '6' })).toEqual(['20260307']); // no dates: just the day code
+  });
+});
