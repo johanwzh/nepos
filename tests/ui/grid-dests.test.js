@@ -17,7 +17,8 @@ let initialised = false;
 beforeEach(() => {
   loadAppMarkup();
   initShell();
-  if (!initialised) { initGrid(); initFootnoteEditor(); initialised = true; }
+  initGrid(); // the menu items belong to the markup, which is new for each test
+  if (!initialised) { initFootnoteEditor(); initialised = true; }
   app.routeState = newRouteState('no');
   loadGrid({
     stops: [stop('Alfa'), stop('Beta'), stop('Ceta'), stop('Delta')],
@@ -98,5 +99,86 @@ describe('destination columns', () => {
     open();
     loadGrid({ stops: grid.stops, cols: grid.cols });
     expect(destCell(0, 0).querySelector('.dest-missing')).not.toBeNull();
+  });
+});
+
+describe('editing destinations', () => {
+  const destCell = (r, c) => /** @type {HTMLElement} */ (document.querySelector(`.cw-dest[data-dr="${r}"][data-dc="${c}"]`));
+  const twoCols = () => {
+    if (!document.querySelector('.cw-dest')) press('d', { altKey: true });
+    loadGrid({
+      stops: [stop('Alfa'), stop('Beta'), stop('Ceta'), stop('Delta S')],
+      cols: [0, 1].map((k) => ({ dayCode: 'D', cells: [cell(`0${7 + k}00`), cell(`0${7 + k}10`), cell(`0${7 + k}20`), cell(`0${7 + k}30`)] })),
+    });
+  };
+  const textBox = () => /** @type {HTMLInputElement} */ (document.querySelector('.dest-box .de-text'));
+  const typeIn = (input, s) => { input.value = s; input.dispatchEvent(new Event('input')); };
+  const enter = (el) => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+  it('types a destination on the first stop: the trip starts with it', () => {
+    twoCols();
+    down(destCell(0, 0));
+    press('D');
+    expect(textBox().value).toBe('D');
+    typeIn(textBox(), 'Delta');
+    enter(textBox());
+    expect(grid.cols[0].dest).toEqual(d('Delta'));
+    expect(document.querySelector('.dest-box')).toBeNull();
+  });
+
+  it('opens nothing on the last stop', () => {
+    twoCols();
+    down(destCell(3, 0));
+    press('X');
+    expect(document.querySelector('.dest-box')).toBeNull();
+  });
+
+  it('suggests destinations already used', () => {
+    twoCols();
+    grid.cols[0].dest = d('Delta');
+    down(destCell(0, 1));
+    press('d');
+    typeIn(textBox(), 'de');
+    expect([...document.querySelectorAll('.de-sugg-item')].map((x) => x.textContent)).toEqual(['Delta']);
+    document.querySelector('.de-sugg-item')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    enter(textBox());
+    expect(grid.cols[1].dest).toEqual(d('Delta'));
+  });
+
+  it('removes a destination with Delete, and Ctrl+Z brings it back', () => {
+    twoCols();
+    grid.cols[0].dest = d('Delta');
+    loadGrid({ stops: grid.stops, cols: grid.cols });
+    down(destCell(0, 0));
+    press('Delete');
+    expect(grid.cols[0].dest).toBe(null);
+    press('z', { ctrlKey: true });
+    expect(grid.cols[0].dest).toEqual(d('Delta'));
+  });
+
+  it('suggests from bold stops with the right-click menu', () => {
+    twoCols();
+    grid.stops[1].bold = true;
+    loadGrid({ stops: grid.stops, cols: grid.cols });
+    destCell(0, 0).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 10 }));
+    expect(document.getElementById('gctx-dest')?.style.display).toBe('');
+    document.getElementById('gc-dest-suggest')?.click();
+    expect(grid.cols[0].dest).toEqual(d('Delta', ['Beta']));
+    expect(grid.cols[0].dests[1]).toEqual(d('Delta'));
+    expect(grid.cols[1].dest).toBe(null); // only the column clicked
+  });
+
+  it('copies one column and pastes it on another', () => {
+    twoCols();
+    grid.cols[0].dest = d('Delta', ['Beta']);
+    grid.cols[0].dests[1] = d('Delta');
+    loadGrid({ stops: grid.stops, cols: grid.cols });
+    down(destCell(0, 0));
+    down(destCell(3, 0), { shiftKey: true });
+    press('c', { ctrlKey: true });
+    down(destCell(0, 1));
+    press('v', { ctrlKey: true });
+    expect(grid.cols[1].dest).toEqual(d('Delta', ['Beta']));
+    expect(grid.cols[1].dests[1]).toEqual(d('Delta'));
   });
 });

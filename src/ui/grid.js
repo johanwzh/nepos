@@ -22,8 +22,8 @@ import { openDatePicker } from './date-picker.js';
 import { placeMenu } from './place-menu.js';
 import { unionDays, tripDays } from '../core/calendars.js';
 import { app } from './state.js';
-import { normalizeDests } from '../core/destinations.js';
-import { destColumnsOpen, onDestToggle, destCellInfo, renderDestCell } from './dest-columns.js';
+import { normalizeDests, servedRows, setDestAt, applySuggestion, copyDests, pasteDests, snapshotDests, restoreDests, destLabel } from '../core/destinations.js';
+import { destColumnsOpen, onDestToggle, destCellInfo, renderDestCell, openDestEditor } from './dest-columns.js';
 
 /** The grid being edited: one period × direction of the open route. */
 export const grid = {
@@ -75,6 +75,11 @@ let inStopEdit = false, stopEditRow = -1, stopBuf = '', stopPrevName = '';
 let inDest = false, destR = 0, destC = 0, destR2 = 0, destC2 = 0;
 /** The destination columns are sliding open: they get their full width on the next frame */
 let destOpening = false;
+/** One step back for the destination actions (Ctrl+Z), and the destinations copied last */
+let destUndo = '';
+/** @type {ReturnType<typeof copyDests> | null} */
+let destClip = null;
+let ctxDestR = -1, ctxDestC = -1;
 
 const $ = (/** @type {string} */ id) => /** @type {any} */ (document.getElementById(id));
 const clampR = (/** @type {number} */ r) => Math.max(0, Math.min(grid.stops.length - 1, r));
@@ -410,8 +415,19 @@ function addDestColumns(tbl) {
   }
 }
 
-/** Selecting a destination cell (Task 9 adds editing). @param {HTMLElement} td @param {number} r @param {number} ci */
+/** Selecting, editing (double click) and the menu of a destination cell. @param {HTMLElement} td @param {number} r @param {number} ci */
 function wireDestCell(td, r, ci) {
+  td.addEventListener('dblclick', () => openDestEditorAt(r, ci));
+  td.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (ixMode || grid.readOnly) return;
+    const { r0, r1, c0, c1 } = destRect();
+    if (!inDest || r < r0 || r > r1 || ci < c0 || ci > c1) { destR = r; destC = ci; destR2 = r; destC2 = ci; }
+    inDest = true; inStopCol = false; inDC = false; inTN = false;
+    ctxDestR = r; ctxDestC = ci;
+    render();
+    showDestCtx(e.clientX, e.clientY);
+  });
   td.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -422,6 +438,118 @@ function wireDestCell(td, r, ci) {
     if (e.shiftKey) { destR2 = r; destC2 = ci; } else { destR = r; destC = ci; destR2 = r; destC2 = ci; }
     render();
   });
+}
+
+/** The destination that starts at a row of a column (the start on its first served stop), or null. @param {number} r @param {number} ci */
+function destStartingAt(r, ci) {
+  const col = grid.cols[ci];
+  if (!col) return null;
+  return servedRows(grid, col)[0] === r ? col.dest : col.dests[r];
+}
+
+/** Where a destination may start: a stop the trip serves, not its last (unless it is also its first). @param {number} r @param {number} ci */
+function canSetDestAt(r, ci) {
+  const col = grid.cols[ci];
+  const served = col ? servedRows(grid, col) : [];
+  return served.includes(r) && (r === served[0] || r !== served[served.length - 1]);
+}
+
+/** Every destination text used in the open route, for the editor's suggestions. */
+function projectDestTexts() {
+  /** @type {Set<string>} */
+  const out = new Set();
+  /** @param {any} d */
+  const add = (d) => { if (d) { out.add(d.text); for (const v of d.vias) out.add(v); } };
+  const grids = [grid, ...Object.values(app.routeState?.grids ?? {})];
+  for (const g of grids) for (const col of /** @type {any} */ (g).cols ?? []) { add(col.dest); for (const d of col.dests ?? []) add(d); }
+  return [...out].filter(Boolean).sort((a, b) => a.localeCompare(b));
+}
+
+/** Run a destination action with one step of undo, then show it. @param {() => void} fn */
+function destAction(fn) {
+  if (grid.readOnly) return;
+  destUndo = snapshotDests(grid.cols);
+  fn();
+  render();
+}
+
+/** The editing box for the destination starting at a cell. @param {number} r @param {number} ci @param {string} [initial] typed first character */
+function openDestEditorAt(r, ci, initial) {
+  if (grid.readOnly || !canSetDestAt(r, ci)) return;
+  const rc = document.querySelector(`.cw-dest[data-dr="${r}"][data-dc="${ci}"]`)?.getBoundingClientRect();
+  openDestEditor({
+    x: rc?.left ?? 200, y: (rc?.bottom ?? 160) + 4, dest: destStartingAt(r, ci) ?? null, initial, suggestions: projectDestTexts(),
+    onApply: (dest) => destAction(() => { setDestAt(grid, grid.cols[ci], r, dest); }),
+  });
+}
+
+/** Remove the destinations starting in the selected cells. */
+function removeSelectedDests() {
+  const { r0, r1, c0, c1 } = destRect();
+  destAction(() => {
+    for (let c = c0; c <= c1; c++) {
+      const col = grid.cols[c];
+      if (!col) continue;
+      const first = servedRows(grid, col)[0];
+      for (let r = r0; r <= r1; r++) {
+        if (r === first) col.dest = null;
+        else if (col.dests[r]) col.dests[r] = null;
+      }
+    }
+  });
+}
+
+/** Copy the selected rows of the first selected destination column. */
+function copyDestSelection() {
+  const { r0, r1, c0 } = destRect();
+  if (!grid.cols[c0]) return;
+  destClip = copyDests(grid, grid.cols[c0], r0, r1);
+  const shown = destStartingAt(destR, destC);
+  if (shown) { const l = destLabel(shown); void navigator.clipboard?.writeText([l.text, l.vias].filter(Boolean).join(' ')).catch(() => {}); }
+}
+
+/** Paste the copied destinations into every selected column, from the top selected row. */
+function pasteDestSelection() {
+  const clip = destClip;
+  if (!clip) return;
+  const { r0, c0, c1 } = destRect();
+  destAction(() => { for (let c = c0; c <= c1; c++) if (grid.cols[c]) pasteDests(grid, grid.cols[c], clip, r0); });
+}
+
+/** Keys in the destination cells. @param {KeyboardEvent} e */
+function keyDest(e) {
+  if (e.ctrlKey || e.metaKey) {
+    const k = e.key.toLowerCase();
+    if (k === 'c') { e.preventDefault(); copyDestSelection(); }
+    else if (k === 'v' && !grid.readOnly) { e.preventDefault(); pasteDestSelection(); }
+    else if (k === 'z' && destUndo && !grid.readOnly) { e.preventDefault(); restoreDests(grid.cols, destUndo); destUndo = ''; render(); }
+    return;
+  }
+  /** @type {Record<string, [number, number]>} */
+  const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+  const m = moves[e.key];
+  if (m) {
+    e.preventDefault();
+    if (e.shiftKey) { destR2 = clampR(destR2 + m[0]); destC2 = clampC(destC2 + m[1]); }
+    else { destR = clampR(destR + m[0]); destC = clampC(destC + m[1]); destR2 = destR; destC2 = destC; }
+    render();
+    return;
+  }
+  if (e.key === 'Escape') { e.preventDefault(); inDest = false; render(); return; }
+  if (grid.readOnly) return;
+  if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); openDestEditorAt(destR, destC); return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelectedDests(); return; }
+  if (e.key.length === 1 && !e.altKey) { e.preventDefault(); openDestEditorAt(destR, destC, e.key); }
+}
+
+/** The destination cells' menu. @param {number} x @param {number} y */
+function showDestCtx(x, y) {
+  for (const id of ['gctx-time', 'gctx-stop', 'gctx-dc']) $(id).style.display = 'none';
+  $('gctx-dest').style.display = '';
+  $('gc-dest-remove').className = 'gci red' + (destStartingAt(ctxDestR, ctxDestC) ? '' : ' dis');
+  const m = $('grid-ctx');
+  m.style.display = 'block';
+  placeMenu(m, x, y);
 }
 
 /** Show or hide the destination columns: they slide open, and slide shut before they go. */
@@ -783,6 +911,7 @@ function onKeyDown(e) {
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if (ixMode) { if (e.key === 'Escape') { e.preventDefault(); exitIx(); } return; }
   if ($('grid-ctx').style.display === 'block') { if (e.key === 'Escape') hideCtx(); return; }
+  if (inDest) { keyDest(e); return; }
   if ((e.ctrlKey || e.metaKey) && e.key === 'c' && inStopCol && !inStopEdit) {
     const stop = grid.stops[ancR];
     if (stop?.stopId) {
@@ -1048,6 +1177,7 @@ function showCtx(x, y, isDC = false) {
   $('gctx-time').style.display = !isStop && !isDC ? '' : 'none';
   $('gctx-stop').style.display = isStop ? '' : 'none';
   $('gctx-dc').style.display = isDC ? '' : 'none';
+  $('gctx-dest').style.display = 'none';
   if (isDC) $('gc-tripno').textContent = t(grid.tripRow ? 'ctxTripHide' : 'ctxTripShow');
   if (!isStop && !isDC && ctxC >= 0 && ctxC < grid.cols.length) {
     const cell = grid.cols[ctxC].cells[ctxR];
@@ -1214,6 +1344,18 @@ export function initGrid() {
     }, true);
   }
   $('gc-clear').addEventListener('click', () => { clearSelection(); hideCtx(); render(); });
+  // Destinations: a suggestion for the clicked column, or for each selected column when several are
+  $('gc-dest-suggest').addEventListener('click', () => {
+    hideCtx();
+    const { c0, c1 } = destRect();
+    const cols = c1 > c0 && ctxDestC >= c0 && ctxDestC <= c1 ? grid.cols.slice(c0, c1 + 1) : [grid.cols[ctxDestC]];
+    destAction(() => { for (const col of cols) if (col) applySuggestion(grid, col); });
+  });
+  $('gc-dest-remove').addEventListener('click', () => {
+    hideCtx();
+    if (!destStartingAt(ctxDestR, ctxDestC)) return;
+    destAction(() => { setDestAt(grid, grid.cols[ctxDestC], ctxDestR, null); });
+  });
   $('gc-offset').addEventListener('click', () => {
     hideCtx();
     const cell = grid.cols[ctxC]?.cells[ctxR];
