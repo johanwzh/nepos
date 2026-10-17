@@ -38,7 +38,18 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     const operOut = firstOper ? data.orgFor(firstOper, 'Operator') : null;
     const authOut = firstAuth ? data.orgFor(firstAuth, 'Authority') : null;
     const operRef = operOut ? `\n        <OperatorRef ref="${xe(operOut.id)}"/>` : '';
-    const komRef  = rs.kom?.trim() ? `\n      <noticeAssignments>\n        <NoticeAssignment id="${cs}:NoticeAssignment:${routeCode}-kom" version="1">\n          <NoticeRef ref="${cs}:Notice:${routeCode}-kom" version="1"/>\n          <NoticedObjectRef ref="${lineId}" version="1"/>\n        </NoticeAssignment>\n      </noticeAssignments>` : '';
+    // Notes (Notices): one per distinct text; assignments to the Line (ServiceFrame) and to ServiceJourneys
+    // and TimetabledPassingTimes (TimetableFrame)
+    /** @type {Map<string, string>} text → Notice ID */ const notices = new Map();
+    /** @param {string} text */
+    const noticeId = (text) => {
+        if (!notices.has(text)) notices.set(text, text === rs.kom?.trim() ? `${cs}:Notice:${routeCode}-kom` : `${cs}:Notice:${uuid5(`${routeCode}|notice|${text}`)}`);
+        return /** @type {string} */ (notices.get(text));
+    };
+    /** @type {string[]} */ const lineAssigns = [], ttAssigns = [];
+    /** @param {string[]} list @param {string} text @param {string} objRef @param {string} [id] */
+    const assign = (list, text, objRef, id) => list.push(`      <NoticeAssignment id="${id ?? `${cs}:NoticeAssignment:${uuid5(`${objRef}|${text}`)}`}" version="1" order="${list.length + 1}">\n        <NoticeRef ref="${noticeId(text)}" version="1"/>\n        <NoticedObjectRef ref="${objRef}" version="1"/>\n      </NoticeAssignment>`);
+    if (rs.kom?.trim()) assign(lineAssigns, rs.kom.trim(), lineId, `${cs}:NoticeAssignment:${routeCode}-kom`);
 
     // Element order per the NeTEx XSD (line header spec §7): BrandingRef → Name → TransportMode →
     // TransportSubmode → PublicCode → PrivateCode → OperatorRef → RepresentedByGroupRef
@@ -130,6 +141,12 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                 });
 
                 sjIds.add(sjId);
+                // The trip's note, and each time's note (on its passing time; a dwell stop's arrival note too)
+                if (col.note?.trim()) assign(ttAssigns, col.note.trim(), sjId);
+                stopList.forEach((/** @type {any} */ s, /** @type {number} */ idx) => {
+                    const tpt = `${cs}:TimetabledPassingTime:${sjId.split(':').pop()}-${idx+1}`;
+                    for (const c of [s.arrCell, s.depCell]) if (c?.note?.trim()) assign(ttAssigns, c.note.trim(), tpt);
+                });
                 // The trip number (the grid's trip-number row): for rail a TrainNumber (NeTEx's own element,
                 // in the TimetableFrame, referred to here); for other modes the ServiceJourney's PrivateCode
                 const isTrain = !!col.tripNo && lineMode === 'rail';
@@ -226,9 +243,9 @@ ${spijpList}
         </projections>
       </RoutePoint>`).join('\n');
 
-    // Notice for KOM
-    const komNotice = rs.kom?.trim()
-        ? `      <notices>\n        <Notice id="${cs}:Notice:${routeCode}-kom" version="1">\n          <Text>${xe(rs.kom)}</Text>\n        </Notice>\n      </notices>` : '';
+    const noticesXml = notices.size ? `\n      <notices>\n${[...notices].map(([text, id]) => `        <Notice id="${id}" version="1">\n          <Text>${xe(text)}</Text>\n        </Notice>`).join('\n')}\n      </notices>` : '';
+    const lineAssignXml = lineAssigns.length ? `\n      <noticeAssignments>\n${lineAssigns.join('\n')}\n      </noticeAssignments>` : '';
+    const ttAssignXml = ttAssigns.length ? `\n      <noticeAssignments>\n${ttAssigns.join('\n')}\n      </noticeAssignments>` : '';
 
     const svcFrame = `    <ServiceFrame id="${cs}:ServiceFrame:Line_${routeCode}" version="1">
       <routePoints>
@@ -238,12 +255,11 @@ ${rpXml}
 ${routesXml.join('\n')}
       </routes>
       <lines>
-${lineXml}${komRef}
+${lineXml}
       </lines>
-${komNotice}
       <journeyPatterns>
 ${jpsXml.join('\n')}
-      </journeyPatterns>
+      </journeyPatterns>${noticesXml}${lineAssignXml}
     </ServiceFrame>`;
 
     // Interchanges only between journeys that were written (no dangling FromJourneyRef/ToJourneyRef)
@@ -253,7 +269,7 @@ ${jpsXml.join('\n')}
     const ttFrame = `    <TimetableFrame id="${cs}:TimetableFrame:Line_${routeCode}" version="1">
       <vehicleJourneys>
 ${[...sjOnly, ...dsjs].join('\n')}
-      </vehicleJourneys>${trainNumbers.length ? `\n      <trainNumbers>\n${trainNumbers.join('\n')}\n      </trainNumbers>` : ''}${ixOnly.length?`\n      <journeyInterchanges>\n${ixOnly.join('\n')}\n      </journeyInterchanges>`:''}
+      </vehicleJourneys>${trainNumbers.length ? `\n      <trainNumbers>\n${trainNumbers.join('\n')}\n      </trainNumbers>` : ''}${ixOnly.length?`\n      <journeyInterchanges>\n${ixOnly.join('\n')}\n      </journeyInterchanges>`:''}${ttAssignXml}
     </TimetableFrame>`;
 
     const cf = compositeFrame(cs,`Line_${routeCode}`,lineFrom,lineTo,false,svcFrame,ttFrame);
