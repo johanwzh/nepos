@@ -176,3 +176,31 @@ describe('boarding restrictions from the right-click menu (user test 2026-10-17)
     expect(grid.cols[0].cells.map((c) => c.suffix)).toEqual(['', '']);
   });
 });
+
+describe('the day-code helper (user test 2026-10-17)', () => {
+  beforeEach(() => { initGrid(); });
+
+  it('right-click a day code → Velg dager…: click days, see the code, Apply', () => {
+    /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById('gc-dc-days')).click();
+    const box = /** @type {HTMLElement} */ (document.querySelector('.float-box'));
+    expect(box.querySelector('.dch-code')?.textContent).toContain('DX67'); // the column's code, as days
+    /** @type {HTMLElement} */ (box.querySelector('[data-day="6"]')).click();
+    expect(box.querySelector('.dch-code')?.textContent).toContain('DX7');
+    /** @type {HTMLElement} */ (box.querySelector('[data-day="H"]')).click(); // not on holidays
+    expect(box.querySelector('.dch-code')?.textContent).toContain('DX7H');
+    /** @type {HTMLElement} */ (box.querySelector('.fb-apply')).click();
+    expect(grid.cols[0].dayCode).toBe('DX7H');
+    expect(document.querySelector('.float-box')).toBeNull();
+  });
+
+  it('refuses a combination the day codes cannot say', () => {
+    /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById('gc-dc-days')).click();
+    const box = /** @type {HTMLElement} */ (document.querySelector('.float-box'));
+    for (const d of ['2', '4', 'H']) /** @type {HTMLElement} */ (box.querySelector(`[data-day="${d}"]`)).click(); // 1,3,5 without holidays
+    expect(/** @type {HTMLButtonElement} */ (box.querySelector('.fb-apply')).disabled).toBe(true);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    expect(grid.cols[0].dayCode).toBe('DX67');
+  });
+});

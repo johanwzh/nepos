@@ -726,3 +726,17 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 /* The line name: blank, outlined in red once the line is saved without one */
 #route-hdr .rh-name.missing { border: 1px solid var(--g-dec-c); border-radius: 4px; }
 .map-viewbar[hidden] { display: none; }
+/* Floating helper boxes over the grid (day codes, copy at an interval, notes, dates) */
+.float-box { position: fixed; z-index: 1100; background: var(--bg-panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.22); min-width: 280px; font-size: 13px; }
+.fb-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 6px; }
+.fb-x { border: none; background: transparent; color: var(--text-m); cursor: pointer; font-size: 13px; }
+.fb-body { padding: 4px 12px 10px; }
+.fb-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border-lt); }
+.float-box button:disabled { opacity: .45; cursor: default; }
+.dch-days { display: flex; gap: 4px; margin-bottom: 8px; }
+.dch-day { min-width: 34px; height: 30px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-raised); color: var(--text-m); cursor: pointer; font: inherit; font-size: 12px; }
+.dch-day.on { background: var(--text); color: var(--bg-panel); border-color: var(--text); }
+.dch-hol { padding: 0 10px; }
+.dch-code { margin-top: 10px; height: 18px; font-weight: 600; }
+.dch-code.bad { color: var(--g-dec-c); font-weight: 400; }
