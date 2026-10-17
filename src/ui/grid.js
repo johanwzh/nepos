@@ -11,7 +11,7 @@ import { parseCellInput } from '../core/grid-input.js';
 import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
-import { fnById, footnoteSummary, openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
+import { openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
 import { interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan } from '../core/interpolate.js';
 import { openDayCodeHelper } from './day-code-helper.js';
 import { sortColumns } from '../core/column-sort.js';
@@ -392,12 +392,21 @@ function renderFootRow(tbl) {
   grid.cols.forEach((col, ci) => {
     const td = tr.insertCell();
     td.className = 'cw-time';
-    if (col.footnoteId != null) {
+    // The column's note and dates, as small marks over the day code
+    if (col.note) {
       const dot = document.createElement('span');
       dot.className = 'fn-col-dot';
-      dot.title = footnoteSummary(fnById(col.footnoteId));
+      dot.title = col.note;
       dot.addEventListener('click', () => openFnEditor('col', 0, ci));
       td.appendChild(dot);
+    }
+    if (col.dates?.length) {
+      const mark = document.createElement('span');
+      mark.className = 'dt-col-mark';
+      mark.textContent = '📅';
+      mark.title = datesSummary(col.dates);
+      mark.addEventListener('click', () => openDates('col', 0, ci));
+      td.appendChild(mark);
     }
   });
   tr.insertCell().className = 'cw-ins g-add';
@@ -508,7 +517,8 @@ function renderStopRow(tbl, stop, ri, linked) {
       else td.classList.add('g-ix-dim');
     }
     if (cell && cell.time === '|') td.classList.add('is-pipe');
-    if (cell?.footnoteId != null) { td.classList.add('has-fn'); td.title = footnoteSummary(fnById(cell.footnoteId)); }
+    if (cell?.note) { td.classList.add('has-fn'); td.title = cell.note; }
+    if (cell?.dates?.length) { td.classList.add('has-dates'); td.title = [td.title, datesSummary(cell.dates)].filter(Boolean).join(' · '); }
     if (isDecreasing(ri, ci) && !ixMode) td.classList.add('is-dec');
     if (isRange && !ixMode) td.classList.add('in-range');
     if (isSel && editing) { td.classList.add('is-edit'); td.innerHTML = cellHTML(cell, true, editBuf); }
@@ -589,7 +599,8 @@ function commitEdit() {
       const prev = grid.cols[ancC].cells[ancR];
       if (prev && p.time !== '|') p.dayOffset = prev.dayOffset || 0;
       p.interchange = prev && p.time !== '|' ? prev.interchange : null;
-      p.footnoteId = prev && p.time !== '|' ? prev.footnoteId ?? null : null;
+      // A new time keeps the cell's note and dates
+      if (prev && p.time !== '|') { if (prev.note) p.note = prev.note; if (prev.dates?.length) p.dates = prev.dates; }
       grid.cols[ancC].cells[ancR] = p;
     }
   }
@@ -617,7 +628,8 @@ function scrollTo(r, c) {
 /** @param {KeyboardEvent} e */
 function onKeyDown(e) {
   if (!grid.active || currentPage() !== 'edit') return;
-  if ($('fn-editor').classList.contains('open') || document.querySelector('dialog[open]')) return;
+  // A floating box (note, dates, helpers) or a dialog has the keyboard
+  if (document.querySelector('.float-box, .nudge-box, dialog[open]')) return;
   if (inStopEdit) return; // the name input handles its own keys
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -691,7 +703,7 @@ function keyNav(e) {
     case 'F7': e.preventDefault(); openFnEditor('cell', ancR, ancC); break;
     case 'Enter': e.preventDefault(); startEdit(''); break;
     case 'Delete': case 'Backspace': e.preventDefault(); clearSelection(); render(); break;
-    case '|': e.preventDefault(); grid.cols[ancC].cells[ancR] = { time: '|', dayOffset: 0, suffix: '', interchange: null, footnoteId: null }; render(); break;
+    case '|': e.preventDefault(); grid.cols[ancC].cells[ancR] = { time: '|', dayOffset: 0, suffix: '', interchange: null }; render(); break;
     default:
       if (e.key.length === 1 && /\d/.test(e.key) && !e.ctrlKey && !e.metaKey) { e.preventDefault(); startEdit(e.key); }
   }
@@ -783,12 +795,22 @@ function onPaste(e) {
       const prev = grid.cols[c].cells[r];
       if (prev && p.time !== '|') p.dayOffset = prev.dayOffset || 0;
       p.interchange = null;
-      p.footnoteId = null;
       grid.cols[c].cells[r] = p;
     });
   });
   render();
 }
+
+/** Dates as a tooltip: how many days added and removed. @param {{ from: string, to: string, on: boolean }[]} dates */
+function datesSummary(dates) {
+  const on = dates.filter((d) => d.on).length, off = dates.length - on;
+  return t('datesSummary', on, off);
+}
+
+/** Open the date picker for a column or a cell (set by initGrid; date-picker.js). */
+let openDates = (/** @type {'col' | 'cell'} */ _type, /** @type {number} */ _ri, /** @type {number} */ _ci) => {};
+/** @param {(type: 'col' | 'cell', ri: number, ci: number) => void} fn */
+export function setDatesOpener(fn) { openDates = fn; }
 
 // ─── Context menu ───────────────────────────────────────────────────────────
 /** The selected rectangle of time cells. */
@@ -864,7 +886,7 @@ function hideCtx() {
 // ─── Insert / delete ────────────────────────────────────────────────────────
 /** @param {number} at */
 function insertCol(at) {
-  grid.cols.splice(at, 0, { dayCode: '', uid: crypto.randomUUID(), footnote: '', footnoteId: null, cells: grid.stops.map(() => null) });
+  grid.cols.splice(at, 0, { dayCode: '', uid: crypto.randomUUID(), note: '', dates: [], cells: grid.stops.map(() => null) });
   for (const col of grid.cols) for (const cell of col.cells) if (cell && cell.interchange && cell.interchange.targetC >= at) cell.interchange.targetC++;
   if (!inDC) { if (ancC >= at && grid.cols.length > 1) ancC++; if (endC >= at && grid.cols.length > 1) endC++; } else if (dcCol >= at) dcCol++;
   ancC = clampC(ancC); endC = clampC(endC);

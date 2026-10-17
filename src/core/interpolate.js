@@ -4,7 +4,7 @@
 import { haversineM } from './netex/geo.js';
 import { ERN_MODES } from './ern/modes.js';
 
-/** @typedef {{ time: string, dayOffset: number, suffix: string, interchange: any, footnoteId: number | null }} Cell */
+/** @typedef {{ time: string, dayOffset: number, suffix: string, interchange: any }} Cell */
 /** @typedef {(stop: any) => [number, number] | null} PosOf  [lon, lat] or null when unknown */
 
 /** @param {any} cell @returns {number | null} */
@@ -19,7 +19,7 @@ export function minsToCell(totalMins) {
   const rem = Math.round(totalMins - dayOffset * 1440);
   return {
     time: String(Math.floor(rem / 60)).padStart(2, '0') + String(rem % 60).padStart(2, '0'),
-    dayOffset, suffix: '', interchange: null, footnoteId: null,
+    dayOffset, suffix: '', interchange: null,
   };
 }
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { cellToMins, minsToCell, interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan } from '../../src/core/interpolate.js';
 
 const stop = (/** @type {string} */ id, extra = {}) => ({ name: id, stopId: id, bold: false, sep: false, isDwellArr: false, price: null, ...extra });
-const cell = (/** @type {string} */ time, dayOffset = 0) => ({ time, dayOffset, suffix: '', interchange: null, footnoteId: null });
+const cell = (/** @type {string} */ time, dayOffset = 0) => ({ time, dayOffset, suffix: '', interchange: null });
 // Stops on a north-south line; 0.09° latitude ≈ 10 km.
 const POS = { A: [10, 60], B: [10, 60.09], C: [10, 60.27], D: [10, 60.36] };
 const posOf = (/** @type {any} */ s) => /** @type {any} */ (POS)[s.stopId] ?? null;
