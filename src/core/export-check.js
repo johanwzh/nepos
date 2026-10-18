@@ -15,7 +15,7 @@ export const CHECK_CODES = [
   'col-one-stop', 'no-name', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'no-mode', 'branding-missing', 'brandings-unreadable', 'table-set-name', 'no-calendar',
   'calendar-missing', 'calendar-empty', 'day-code', 'no-operating-days', 'calendars-unreadable', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'cell-dates-also', 'cell-dates-short', 'route-no-trips',
-  'route-changed-on-disk', 'dest-missing', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
+  'route-changed-on-disk', 'org-alias-missing', 'dest-missing', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
 ];
 
 /**
@@ -68,7 +68,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     const used = orgs.map((c) => ({ ...c,
       authority: c.authority && usedOrgIds.has(c.authority.id) ? c.authority : null,
       operator: c.operator && usedOrgIds.has(c.operator.id) ? c.operator : null }));
-    for (const i of aliasIssues(used, codespace)) add('error', i.code, { detail: i.alias });
+    for (const i of aliasIssues(used, codespace)) add(i.code === 'org-alias-missing' ? 'warning' : 'error', i.code, { detail: i.alias });
   }
   if (!trips && !damaged) add('error', 'no-trips');
 

@@ -135,8 +135,12 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     let ptXml = '';
                     stopList.forEach((s,idx) => {
                         const spijpId = `${cs}:StopPointInJourneyPattern:${jpId.split(':').pop()}-${idx+1}`;
-                        const arrTime = s.arrCell ? `\n            <ArrivalTime>${hhmm2t(s.arrCell.time)}</ArrivalTime>${s.arrCell.dayOffset?`\n            <ArrivalDayOffset>${s.arrCell.dayOffset}</ArrivalDayOffset>`:''}` : '';
-                        const depTime = `\n            <DepartureTime>${hhmm2t(s.depCell.time)}</DepartureTime>${s.depCell.dayOffset?`\n            <DepartureDayOffset>${s.depCell.dayOffset}</DepartureDayOffset>`:''}`;
+                        // The first call only departs and the last only arrives (Entur's import, user 2026-10-18);
+                        // a waiting stop in between has both
+                        const last = idx === stopList.length - 1;
+                        const arr = last ? (s.arrCell ?? s.depCell) : idx === 0 ? null : s.arrCell;
+                        const arrTime = arr ? `\n            <ArrivalTime>${hhmm2t(arr.time)}</ArrivalTime>${arr.dayOffset?`\n            <ArrivalDayOffset>${arr.dayOffset}</ArrivalDayOffset>`:''}` : '';
+                        const depTime = last ? '' : `\n            <DepartureTime>${hhmm2t(s.depCell.time)}</DepartureTime>${s.depCell.dayOffset?`\n            <DepartureDayOffset>${s.depCell.dayOffset}</DepartureDayOffset>`:''}`;
                         ptXml += `
           <TimetabledPassingTime id="${cs}:TimetabledPassingTime:${sjId.split(':').pop()}-${idx+1}" version="1">
             <StopPointInJourneyPatternRef ref="${spijpId}" version="1"/>${arrTime}${depTime}
@@ -158,7 +162,6 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     if (isTrain) trainNumbers.push(`      <TrainNumber id="${tnId}" version="1">\n        <ForAdvertisement>${xe(col.tripNo)}</ForAdvertisement>\n      </TrainNumber>`);
                     const sjTrain = isTrain ? `\n        <trainNumbers>\n          <TrainNumberRef ref="${tnId}" version="1"/>\n        </trainNumbers>` : '';
                     sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>${sjPriv}
-        <TransportMode>${lineMode}</TransportMode>
         <JourneyPatternRef ref="${jpId}" version="1"/>${sjTrain}
         <passingTimes>${ptXml}
         </passingTimes>
@@ -224,8 +227,9 @@ ${porXml}
             const spijpList = stopList.map((/** @type {any} */ s, /** @type {number} */ i)=>{
                 const spijpId = `${cs}:StopPointInJourneyPattern:${jpId.split(':').pop()}-${i+1}`;
                 const dd  = s.dd ? `\n            <DestinationDisplayRef ref="${xe(data.destDispId(s.dd))}"/>` : '';
-                const brd = s.forBoarding  ? '' : '\n            <ForBoarding>false</ForBoarding>';
-                const alt = s.forAlighting ? '' : '\n            <ForAlighting>false</ForAlighting>';
+                // No getting off at the first stop, nor on at the last (Entur's import, user 2026-10-18)
+                const brd = s.forBoarding && i < stopList.length - 1 ? '' : '\n            <ForBoarding>false</ForBoarding>';
+                const alt = s.forAlighting && i > 0 ? '' : '\n            <ForAlighting>false</ForAlighting>';
                 const req = s.requestStop  ? '\n            <RequestStop>true</RequestStop>' : '';
                 return `          <StopPointInJourneyPattern id="${spijpId}" version="1" order="${i+1}">
             <ScheduledStopPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(s.stopId)}"/>${alt}${brd}${dd}${req}

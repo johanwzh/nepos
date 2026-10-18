@@ -33,7 +33,7 @@ describe('notices', () => {
     const [ref] = assigned(xml, 'Tidsmerknad');
     expect(ref).toMatch(/^TST:TimetabledPassingTime:/);
     expect(xml).toContain(`<TimetabledPassingTime id="${ref}"`);
-    expect(xml.slice(xml.indexOf(`<TimetabledPassingTime id="${ref}"`)).slice(0, 400)).toContain('<DepartureTime>07:10:00</DepartureTime>');
+    expect(xml.slice(xml.indexOf(`<TimetabledPassingTime id="${ref}"`)).slice(0, 400)).toContain('<ArrivalTime>07:10:00</ArrivalTime>'); // the last stop: arrival only
   });
 
   it('gives every assignment an order, and keeps them out of <lines>', () => {

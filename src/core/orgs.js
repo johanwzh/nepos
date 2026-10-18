@@ -110,7 +110,7 @@ export function exportOrgId(entry, role, mode, codespace) {
  * @param {string} codespace
  */
 export function aliasIssues(companies, codespace) {
-  /** @type {{ nogId: string, code: 'org-alias-format' | 'org-alias-duplicate', alias: string }[]} */
+  /** @type {{ nogId: string, code: 'org-alias-format' | 'org-alias-duplicate' | 'org-alias-missing', alias: string }[]} */
   const issues = [];
   /** @type {Map<string, string[]>} alias → NOG IDs */
   const seen = new Map();
@@ -120,6 +120,7 @@ export function aliasIssues(companies, codespace) {
       if (!entry) continue;
       const typed = entry.alias?.trim() ?? '';
       if (typed && orgRole(typed) !== role) issues.push({ nogId: entry.id, code: 'org-alias-format', alias: typed });
+      if (!typed) issues.push({ nogId: entry.id, code: 'org-alias-missing', alias: company.name });
       const alias = exportOrgId(entry, role, 'codespace', codespace);
       seen.set(alias, [...(seen.get(alias) ?? []), entry.id]);
     }

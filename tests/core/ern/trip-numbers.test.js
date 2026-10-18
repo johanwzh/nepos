@@ -41,12 +41,12 @@ describe('trip numbers', () => {
     expect(serializeERN(parseERN(ERN('bus')), 'r', OPTS)).not.toContain('#TTL');
   });
 
-  it('exports the number as the ServiceJourney\'s PrivateCode, before TransportMode', () => {
+  it('exports the number as the ServiceJourney\'s PrivateCode, before JourneyPatternRef', () => {
     const rs = parseERN(ERN('bus', ['#TTL;-1;0;;10;Turnummer;0', '#TTC;0;;10;101;128']));
     const line = buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs }], orgs: [], brandings: [],
       calendars: [{ id: 'h1', name: 'Vår', ranges: [['20260101', '20260630']] }], timestamp: '2026-10-14T00:00:00' })[1].xml;
     const sj = line.slice(line.indexOf(`<ServiceJourney id="TST:ServiceJourney:${U[0]}"`));
-    expect(sj.slice(0, sj.indexOf('</ServiceJourney>'))).toMatch(/<PrivateCode>101<\/PrivateCode>\s*<TransportMode>/);
+    expect(sj.slice(0, sj.indexOf('</ServiceJourney>'))).toMatch(/<PrivateCode>101<\/PrivateCode>\s*<JourneyPatternRef/);
     const other = line.slice(line.indexOf(`<ServiceJourney id="TST:ServiceJourney:${U[1]}"`));
     expect(other.slice(0, other.indexOf('</ServiceJourney>'))).not.toContain('<PrivateCode>');
   });

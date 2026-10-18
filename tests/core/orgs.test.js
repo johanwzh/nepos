@@ -85,7 +85,7 @@ describe('companies from the registry', () => {
     /** @type {any} */ (copy[0].authority).alias = 'ABC:Authority:bbbbbbbbbb2';
     /** @type {any} */ (copy[1]).authority = { id: 'NOG:Authority:bbbbbbbbbb2', version: '1', contact: { email: '', phone: '', url: '' }, alias: '' };
     const issues = aliasIssues(copy, 'ABC');
-    expect(issues.map((i) => i.code)).toEqual(['org-alias-duplicate', 'org-alias-duplicate']);
+    expect(issues.map((i) => i.code).filter((c) => c !== 'org-alias-missing')).toEqual(['org-alias-duplicate', 'org-alias-duplicate']);
   });
 
   it('searches companies that have the role, by name, legal name, number or organisationId', () => {
