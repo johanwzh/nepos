@@ -37,14 +37,22 @@ export function genSharedXml(data, { deliveryName = '', timestamp } = {}) {
     const orgsXml = orgMode === 'nog' ? '' : `\n      <organisations>\n${[...authOrgs, ...all.filter((o) => o.role === 'Operator')].map(orgXml).join('\n')}\n      </organisations>`;
     const resFrame = typesXml || orgsXml ? `    <ResourceFrame id="${cs}:ResourceFrame:shared" version="1">${typesXml}${orgsXml}\n    </ResourceFrame>` : '';
 
-    const addNetItems = authOrgs.map(o=>`      <Network id="${cs}:Network:${xe(authorityNetworkLocalId(o.networkKey))}" version="1">
+    // Entur's import needs an AuthorityRef on the Network itself (user 2026-10-18): the first authority sits
+    // there, the others on additional networks. Each line points to its own authority's network.
+    const addNetItems = authOrgs.slice(1).map(o=>`      <Network id="${cs}:Network:${xe(authorityNetworkLocalId(o.networkKey))}" version="1">
         <Name>${xe(o.name)}</Name>
         <AuthorityRef ref="${xe(o.id)}" version="1"/>
       </Network>`).join('\n');
 
-    const netXml = `    <Network id="${cs}:Network:${cs}" version="1">
+    const first = authOrgs[0];
+    const netXml = first
+        ? `    <Network id="${cs}:Network:${xe(authorityNetworkLocalId(first.networkKey))}" version="1">
+      <Name>${xe(first.name)}</Name>
+      <AuthorityRef ref="${xe(first.id)}" version="1"/>
+    </Network>${addNetItems ? `\n    <additionalNetworks>\n${addNetItems}\n    </additionalNetworks>` : ''}`
+        : `    <Network id="${cs}:Network:${cs}" version="1">
       <Name>${xe(deliveryName||cs)}</Name>
-    </Network>${authOrgs.length > 0 ? `\n    <additionalNetworks>\n${addNetItems}\n    </additionalNetworks>` : ''}`;
+    </Network>`;
 
     const sspXml = [...usedStops.values()].map(s=>`      <ScheduledStopPoint id="${cs}:ScheduledStopPoint:${stopLocalId(s.id)}" version="1">
         <Name>${xe(s.name)}</Name>

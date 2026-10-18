@@ -134,8 +134,8 @@ describe('export page', () => {
     await openProjectWith(route('NSR:Quay:11972'));
     await click('btn-netex');
     const [dir] = await fs.list('exports');
-    expect((await fs.list(`exports/${dir.name}`)).map((/** @type {any} */ e) => e.name)).toEqual(['TST.zip']);
-    expect(document.getElementById('export-status').textContent).toContain(`exports/${dir.name}/TST.zip`);
+    expect((await fs.list(`exports/${dir.name}`)).map((/** @type {any} */ e) => e.name)).toEqual([`TST_${dir.name}.zip`]);
+    expect(document.getElementById('export-status').textContent).toContain(`exports/${dir.name}/TST_${dir.name}.zip`);
   });
 
   it('writes loose files when ZIP is switched off, and remembers the choice', async () => {

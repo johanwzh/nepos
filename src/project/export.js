@@ -1,4 +1,4 @@
-// Writing a NeTEx delivery into the project folder: exports/<time>/ holds either <CS>.zip or the
+// Writing a NeTEx delivery into the project folder: exports/<time>/ holds either <CS>_<time>.zip or the
 // loose XML files. An export never overwrites an earlier one.
 import { EXPORTS_DIR, backupStamp } from './layout.js';
 import { buildZipCompressed } from '../core/zip.js';
@@ -26,7 +26,8 @@ async function newExportDir(fs, now) {
 export async function writeExport(fs, files, { codespace, asZip, now = new Date() }) {
   const dir = await newExportDir(fs, now);
   if (asZip) {
-    const path = `${dir}/${codespace.toUpperCase()}.zip`;
+    // Entur's import wants a new file name for every upload (user 2026-10-18): the folder's time goes in it
+    const path = `${dir}/${codespace.toUpperCase()}_${dir.split('/').pop()}.zip`;
     await fs.writeBytes(path, await buildZipCompressed(files.map((f) => ({ name: f.name, data: utf8.encode(f.xml) }))));
     return path;
   }
