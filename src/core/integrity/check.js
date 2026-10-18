@@ -3,7 +3,7 @@
 // opens it read-only. "outdated" = valid, but written with an older Nepos convention; saving
 // (or "update") rewrites it. Issues carry codes; the UI translates them.
 import { isValidDayCode, isValidCellTime, isValidDate } from '../ern/validate.js';
-import { findLostRecords } from './roundtrip.js';
+import { findLostRecords, dwellArrivalRows } from './roundtrip.js';
 import { isValidMode } from '../modes.js';
 
 /**
@@ -38,6 +38,8 @@ export function checkRouteFile(text) {
   let seenLEV = false, seenRUT = false, seenPER = false, inTAB = false, haveTUR = false, haveTRL = false;
   /** @type {Set<string>} */ const komLangs = new Set();
   let lastRec = ''; // #UID belongs to the record directly before it
+  const dwellRows = dwellArrivalRows(text);
+  let per = -1, tab = -1;
   /** @type {Set<string>} notes already given once */ const noted = new Set();
   /** @param {string} code @param {number} line */
   const noteOnce = (code, line) => { if (!noted.has(code)) issues.push({ code, severity: 'note', line }); noted.add(code); };
@@ -81,6 +83,7 @@ export function checkRouteFile(text) {
         outdated('old-record-name', n);
         break;
       case '#PER': // name and dates are not used (the period's days come from #KAL)
+        per++; tab = -1;
         seenPER = true; inTAB = false; haveTUR = false; haveTRL = false;
         break;
       case '#KAL': // belongs to the #PER above it
@@ -89,6 +92,7 @@ export function checkRouteFile(text) {
       case '#TAB':
         if (!seenPER) damaged('out-of-order', n, rec);
         inTAB = true; haveTUR = false; haveTRL = false;
+        tab++;
         break;
       case '#TUR':
         if (!inTAB) damaged('out-of-order', n, rec);
@@ -128,6 +132,9 @@ export function checkRouteFile(text) {
         break;
       case '#UID':
         if (lastRec !== '#TUR' && lastRec !== '#TRA') damaged('out-of-order', n, rec);
+        break;
+      case '#DSK': // on a waiting stop's arrival row: saved on the departure row (ERN 2.0 rule)
+        if (dwellRows.has(`P${per}T${tab}R${(f[2] ?? '').trim()}C${(f[1] ?? '').trim()}`)) outdated('dest-on-arrival-row', n);
         break;
       case '#DSS': // the vehicle's sign: Nepos makes data for journey planning only
         noteOnce('sign-not-kept', n);

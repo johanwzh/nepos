@@ -46,9 +46,11 @@ export function normalizeDests(grid) {
     if (col.dest === undefined) col.dest = null;
     const old = Array.isArray(col.dests) ? col.dests : [];
     col.dests = Array.from({ length: n }, (_, i) => old[i] ?? null);
-    // A waiting stop is one call: a destination on its arrival row belongs on its departure row
+    // A waiting stop is one call: a destination on its arrival row belongs on its departure row, when this
+    // trip has times on both (otherwise it is a change on a row the trip does not serve, and stays flagged)
+    const timed = (/** @type {any} */ c) => !!c?.time && c.time !== '|';
     for (let r = 0; r < n - 1; r++) {
-      if (!grid.stops[r]?.isDwellArr || !col.dests[r]) continue;
+      if (!grid.stops[r]?.isDwellArr || !col.dests[r] || !timed(col.cells?.[r]) || !timed(col.cells?.[r + 1])) continue;
       if (!col.dests[r + 1]) col.dests[r + 1] = col.dests[r];
       col.dests[r] = null;
     }

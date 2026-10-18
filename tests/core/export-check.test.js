@@ -320,3 +320,21 @@ describe('destinations', () => {
     }
   });
 });
+
+describe('check messages (user 2026-10-18)', () => {
+  it('says what is wrong with a damaged line', () => {
+    const issues = checkForExport({ routes: [{ code: '50', rs: null, status: 'damaged', problem: '#KOS would be lost' }], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], calendars: CALENDARS, orgsProblem: '', quayInfo: NSR });
+    expect(issues[0]).toMatchObject({ code: 'route-damaged', detail: '#KOS would be lost' });
+  });
+
+  it('warns once about a destination that appears twice on a trip', () => {
+    const rs = route();
+    const g = grid0(rs);
+    g.stops.push({ name: 'Jernbanetorget', stopId: 'NSR:Quay:7203', bold: false, sep: false, isDwellArr: false, price: null });
+    g.cols[0].cells.push({ time: '0720', dayOffset: 0, suffix: '', interchange: null });
+    g.cols[0].dests.push(null);
+    g.cols[0].dest = { text: 'Sentrum', vias: [] };
+    g.cols[0].dests[1] = { text: 'Sentrum', vias: ['Oslo'] };
+    expect(check(rs).filter((i) => i.code === 'dest-not-on-route' && i.detail === 'Sentrum')).toHaveLength(1);
+  });
+});
