@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dayCodeFor, dayCodePick, shiftDayCode } from '../../src/core/day-codes.js';
+import { dayCodeFor, dayCodePick, shiftDayCode, canonicalDayCode } from '../../src/core/day-codes.js';
 
 const days = (/** @type {string} */ s) => new Set([...s].map(Number));
 
@@ -38,5 +38,23 @@ describe('shiftDayCode: a copy that starts after midnight runs a day later', () 
     expect(shiftDayCode('D', 1)).toBe('D');
     expect(shiftDayCode('H', 1)).toBe('H');
     expect(shiftDayCode('7', 0)).toBe('7');
+  });
+});
+
+describe('canonicalDayCode (44)', () => {
+  it('writes every day code in one spelling', () => {
+    expect(canonicalDayCode('DX76')).toBe('DX67');
+    expect(canonicalDayCode('1234567')).toBe('D');
+    expect(canonicalDayCode('7654321')).toBe('D');
+    expect(canonicalDayCode('12345')).toBe('DX67');
+    expect(canonicalDayCode('21')).toBe('12');
+    expect(canonicalDayCode('dx67')).toBe('DX67');
+    expect(canonicalDayCode('DX76H')).toBe('DX67H');
+    expect(canonicalDayCode('D')).toBe('D');
+    expect(canonicalDayCode('H')).toBe('H');
+  });
+
+  it('leaves what it cannot read as it is', () => {
+    expect(canonicalDayCode('Q')).toBe('Q');
   });
 });

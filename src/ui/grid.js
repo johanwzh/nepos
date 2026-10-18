@@ -7,6 +7,7 @@
 // - a read-only mode for routes the integrity check marked damaged.
 import { t } from '../i18n/strings.js';
 import { isValidDayCode } from '../core/ern/validate.js';
+import { canonicalDayCode } from '../core/day-codes.js';
 import { parseCellInput } from '../core/grid-input.js';
 import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
@@ -933,7 +934,7 @@ function cancelEdit() { editing = false; editBuf = ''; render(); }
 function commitDayCode() {
   if (!dcEdit) return;
   dcEdit = false;
-  const v = dcBuf.trim().toUpperCase();
+  const v = canonicalDayCode(dcBuf); // one spelling: DX76 → DX67, 1234567 → D (user 2026-10-18)
   dcBuf = '';
   if (isValidDayCode(v)) { grid.cols[dcCol].dayCode = v; render(); return; }
   render();

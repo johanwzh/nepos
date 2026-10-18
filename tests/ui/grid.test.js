@@ -518,3 +518,13 @@ describe('day codes: copy and paste between columns (39)', () => {
     expect(grid.cols[1].dayCode).toBe('DX67');
   });
 });
+
+describe('day codes tidy themselves (44)', () => {
+  it('turns a typed DX76 into DX67', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')] }] });
+    /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    typeKeys('DX76');
+    press('Enter');
+    expect(grid.cols[0].dayCode).toBe('DX67');
+  });
+});
