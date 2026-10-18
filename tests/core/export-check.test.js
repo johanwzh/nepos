@@ -4,7 +4,10 @@ import { checkForExport, CHECK_CODES } from '../../src/core/export-check.js';
 import { STRINGS } from '../../src/i18n/strings.js';
 import { projectCopy, registerCompanies } from '../fixtures/orgs.js';
 
-const ORGS = projectCopy();
+/** The project copy, each role with an export ID (alias), as a ready project has */
+const ORGS = projectCopy().map((c, n) => ({ ...c,
+  authority: c.authority && { ...c.authority, alias: `TST:Authority:${n + 1}` },
+  operator: c.operator && { ...c.operator, alias: `TST:Operator:${n + 1}` } }));
 const bus = (/** @type {string} */ id, /** @type {string} */ name) => ({ quayId: id, publicCode: 'A', stopPlaceId: 'NSR:StopPlace:1', stopPlaceName: name, mode: 'bus', lat: 0, lon: 0 });
 const NSR = new Map([['NSR:Quay:7203', bus('NSR:Quay:7203', 'Jernbanetorget')], ['NSR:Quay:11972', bus('NSR:Quay:11972', 'Oslo bussterminal')]]);
 
@@ -118,15 +121,16 @@ describe('checkForExport', () => {
     it('blocks bad or duplicate aliases in codespace mode only', () => {
       const orgs = projectCopy();
       /** @type {any} */ (orgs[1].operator).alias = 'TST:Authority:1';
-      expect(codes(check(route(), { orgs }))).toEqual(['error:org-alias-format']);
+      const noMissing = (/** @type {string[]} */ c) => c.filter((x) => x !== 'warning:org-alias-missing');
+      expect(noMissing(codes(check(route(), { orgs })))).toEqual(['error:org-alias-format']);
       expect(codes(check(route(), { orgs, orgMode: 'nog' }))).toEqual([]);
       const dup = projectCopy();
       /** @type {any} */ (dup[1].operator).alias = 'TST:Authority:aaaaaaaaaa1'; // wrong role and a duplicate
-      expect(codes(check(route(), { orgs: dup }))).toEqual(['error:org-alias-format', 'error:org-alias-duplicate', 'error:org-alias-duplicate']);
+      expect(noMissing(codes(check(route(), { orgs: dup })))).toEqual(['error:org-alias-format', 'error:org-alias-duplicate', 'error:org-alias-duplicate']);
     });
 
     it('blocks, in codespace mode, an organisation that is in the register but not in the project copy', () => {
-      expect(codes(check(route(), { orgs: [projectCopy()[0]] }))).toEqual(['error:org-not-in-project']);
+      expect(codes(check(route(), { orgs: [ORGS[0]] }))).toEqual(['error:org-not-in-project']);
       expect(codes(check(route(), { orgs: [projectCopy()[0]], orgMode: 'nog' }))).toEqual([]);
     });
 
@@ -336,5 +340,14 @@ describe('check messages (user 2026-10-18)', () => {
     g.cols[0].dest = { text: 'Sentrum', vias: [] };
     g.cols[0].dests[1] = { text: 'Sentrum', vias: ['Oslo'] };
     expect(check(rs).filter((i) => i.code === 'dest-not-on-route' && i.detail === 'Sentrum')).toHaveLength(1);
+  });
+});
+
+describe('organisation aliases (user 2026-10-18)', () => {
+  it('warns about a used organisation without an export ID (alias): Entur cannot read NOG IDs yet', () => {
+    const issues = checkForExport({ routes: [{ code: '50', rs: route(), status: 'ok' }], orgs: projectCopy(), register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], calendars: CALENDARS, orgsProblem: '', quayInfo: NSR });
+    const missing = issues.filter((i) => i.code === 'org-alias-missing');
+    expect(missing.map((i) => i.level)).toEqual(['warning', 'warning']);
+    expect(missing[0].detail).toMatch(/Eksempel/);
   });
 });

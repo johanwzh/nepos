@@ -42,7 +42,7 @@ async function openProjectWith(text) {
   setQuayLookup(lookup);
   fs = createMemoryFs();
   await createProject(fs, { name: 'Test', codespace: 'TST' });
-  await writeOrgs(fs, projectCopy());
+  await writeOrgs(fs, projectCopy().map((c, n) => ({ ...c, authority: c.authority && { ...c.authority, alias: `TST:Authority:${n + 1}` }, operator: c.operator && { ...c.operator, alias: `TST:Operator:${n + 1}` } })));
   await writeCalendars(fs, [{ id: 'cal-vinter', name: 'Vinter', ranges: [['20260101', '20260630']] }]);
   await writeRoute(fs, '50', text);
   await openFs(fs);

@@ -18,7 +18,7 @@ describe('export (code review 2026-10-17)', () => {
   it('gives every trip its own passing times, also when trips share a journey pattern', () => {
     const xml = line(ern(['#TRL;0;NSR:Quay:1;A;34;0;-1;-1;34;-1', '#TRC;0;0800;0;0;0;0;0', '#TRC;1;0900;0;0;0;0;0',
       '#TRL;1;NSR:Quay:2;B;34;0;-1;-1;34;-1', '#TRC;0;0830;0;0;0;0;0', '#TRC;1;0930;0;0;0;0;0']));
-    expect([...sj(xml, 1).matchAll(/<DepartureTime>([^<]+)</g)].map((m) => m[1])).toEqual(['09:00:00', '09:30:00']);
+    expect([...sj(xml, 1).matchAll(/<(?:Departure|Arrival)Time>([^<]+)</g)].map((m) => m[1])).toEqual(['09:00:00', '09:30:00']); // the last stop: arrival only
   });
 
   it('gives trips with different boarding rules on the same stops their own journey pattern', () => {
