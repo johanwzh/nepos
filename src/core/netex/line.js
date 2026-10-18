@@ -204,8 +204,9 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
         if (!jpMap.size) continue;
 
         // Route: RoutePoints sequence (unique stops in JP order, first JP of this direction)
-        const firstJP = jpMap.values().next().value;
-        const routeStopList = firstJP ? firstJP.stopList : [];
+        // The Route's points: the stops of all its patterns, merged in order (shortest common supersequence)
+        const routeStopList = [...jpMap.values()].map((jp) => jp.stopList).sort((a, b) => b.length - a.length)
+            .reduce((acc, list) => mergeStops(acc, list), /** @type {any[]} */ ([]));
         const porXml = routeStopList.map((s,i)=>`          <PointOnRoute id="${cs}:PointOnRoute:${routeCode}-${di}-${i+1}" version="1" order="${i+1}">
             <RoutePointRef ref="${cs}:RoutePoint:${stopLocalId(s.stopId)}" version="1"/>
           </PointOnRoute>`).join('\n');
@@ -276,9 +277,32 @@ ${jpsXml.join('\n')}
     const ttFrame = `    <TimetableFrame id="${cs}:TimetableFrame:Line_${routeCode}" version="1">
       <vehicleJourneys>
 ${[...sjOnly, ...dsjs].join('\n')}
-      </vehicleJourneys>${trainNumbers.length ? `\n      <trainNumbers>\n${trainNumbers.join('\n')}\n      </trainNumbers>` : ''}${ixOnly.length?`\n      <journeyInterchanges>\n${ixOnly.join('\n')}\n      </journeyInterchanges>`:''}${ttAssignXml}
+      </vehicleJourneys>${trainNumbers.length ? `\n      <trainNumbers>\n${trainNumbers.join('\n')}\n      </trainNumbers>` : ''}${ttAssignXml}${ixOnly.length?`\n      <journeyInterchanges>\n${ixOnly.join('\n')}\n      </journeyInterchanges>`:''}
     </TimetableFrame>`;
 
     const cf = compositeFrame(cs,`Line_${routeCode}`,lineFrom,lineTo,false,svcFrame,ttFrame);
     return pubDelivery(cs, `${cs} Line ${routeCode}`, cf, timestamp);
+}
+
+/**
+ * The shortest sequence that holds both stop lists in order (by stop ID): a Route that every pattern runs
+ * along, also when trips run the other way round part of the time (Horn → Tangen → Horn and Tangen → Horn).
+ * @param {{ stopId: string }[]} a @param {{ stopId: string }[]} b
+ */
+function mergeStops(a, b) {
+    if (!a.length) return [...b];
+    const n = a.length, m = b.length;
+    /** @type {number[][]} lcs[i][j]: longest common subsequence of a[i..] and b[j..] */
+    const lcs = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) {
+        lcs[i][j] = a[i].stopId === b[j].stopId ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+    }
+    const out = [];
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+        if (a[i].stopId === b[j].stopId) { out.push(a[i]); i++; j++; }
+        else if (lcs[i + 1][j] >= lcs[i][j + 1]) out.push(a[i++]);
+        else out.push(b[j++]);
+    }
+    return [...out, ...a.slice(i), ...b.slice(j)];
 }

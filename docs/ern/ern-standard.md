@@ -537,6 +537,7 @@ Rules:
 - A trip has a `#DSK` on the first stop it serves, giving a sign, a destination or both.
 - A sign or destination holds until the next `#DSK` in the same column that changes it. The two change independently.
 - No `#DSK` on the last stop a trip serves.
+- On a stop shown as two rows (arrival and departure), the `#DSK` goes on the departure row; one found on the arrival row is read as being on the departure row.
 - A trip without a `#DSK` is incomplete: a file may hold such trips while it is being worked on, but every trip needs one before export.
 
 ### #DAG

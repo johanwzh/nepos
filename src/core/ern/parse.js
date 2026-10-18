@@ -317,6 +317,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                     else if (l.ri >= 0 && l.ri < col.dests.length) col.dests[l.ri] = dest;
                 }
             });
+            normalizeDests(grid); // a change on a waiting stop's arrival row moves to its departure row
         }
     }
 
