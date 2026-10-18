@@ -334,3 +334,17 @@ describe('the first stop sets the line\'s mode (user 2026-10-18)', () => {
     expect(app.routeState.mode).toBe(before);
   });
 });
+
+describe('small fixes 2026-10-18', () => {
+  it('has a "new line" button in the line navigator, after the lines (38)', async () => {
+    const list = /** @type {HTMLElement} */ (document.getElementById('route-list'));
+    const add = /** @type {HTMLElement} */ (list.querySelector('.rl-add'));
+    expect(add).not.toBeNull();
+    expect(list.lastElementChild).toBe(add);
+    const before = app.routes.length;
+    add.click();
+    await flush(); await flush();
+    expect(app.routes.length).toBe(before + 1);
+    expect(app.activeRoute).toMatch(/^[0-9a-f]{8}-/);
+  });
+});

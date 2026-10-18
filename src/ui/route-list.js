@@ -3,7 +3,7 @@
 // The order is the maxi view's last sort; F5 opens the maxi view.
 import { app } from './state.js';
 import { $, onRefresh, onLinesChanged } from './shell.js';
-import { selectRoute } from './route-editor.js';
+import { selectRoute, newRoute } from './route-editor.js';
 import { t } from '../i18n/strings.js';
 import { modeIconSvg } from './mode-icons.js';
 import { lineRows, sortLines, loadLineSort } from './line-rows.js';
@@ -31,10 +31,7 @@ export function renderRouteList() {
     el.innerHTML = `<div class="route-list-hint">${esc(t('noProjectOpen'))}</div>`;
     return;
   }
-  if (app.routes.length === 0) {
-    el.innerHTML = `<div class="route-list-hint">${esc(t('noRoutes'))}</div>`;
-    return;
-  }
+  if (app.routes.length === 0) el.innerHTML = `<div class="route-list-hint">${esc(t('noRoutes'))}</div>`;
   for (const r of navigatorRows()) {
     const div = document.createElement('div');
     div.className = `route-item${app.activeRoute === r.code ? ' active' : ''}${r.exported ? '' : ' rl-not-exported'}`;
@@ -47,6 +44,12 @@ export function renderRouteList() {
     div.addEventListener('click', () => { selectRoute(r.code); });
     el.appendChild(div);
   }
+  // A new line, after the lines (user 2026-10-18), as in the calendar navigator
+  const add = document.createElement('button');
+  add.className = 'rl-add';
+  add.textContent = t('rlNewLine');
+  add.addEventListener('click', () => { void newRoute(); });
+  el.appendChild(add);
 }
 
 export function initRouteList() {
