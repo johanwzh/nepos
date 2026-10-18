@@ -45,9 +45,11 @@ export function openFnEditor(type, ri, ci) {
   if (!at) return; // notes attach to columns and to cells with a time
   const body = document.createElement('div');
   body.className = 'note-box';
-  body.innerHTML = `<textarea class="note-text" rows="3"></textarea>
+  body.innerHTML = `<input type="text" class="note-text">
     <button class="note-remove"${at.note ? '' : ' hidden'}></button>`;
-  const text = /** @type {HTMLTextAreaElement} */ (body.querySelector('.note-text'));
+  // One line: a note becomes a NeTEx Notice text (user 2026-10-18)
+  const text = /** @type {HTMLInputElement} */ (body.querySelector('.note-text'));
+  const value = () => text.value.replace(/\s*[\r\n]+\s*/g, ' ').trim();
   text.value = at.note ?? '';
   text.placeholder = t('noteHint');
   const remove = /** @type {HTMLButtonElement} */ (body.querySelector('.note-remove'));
@@ -57,9 +59,10 @@ export function openFnEditor(type, ri, ci) {
   const set = (/** @type {string} */ v) => { at.note = v; markDirty(); render(); updateFnPreview({ type, ri, ci }); };
   const box = openFloatBox({
     x: r?.left ?? 200, y: (r?.bottom ?? 160) + 4, title: t(type === 'col' ? 'noteTitleCol' : 'noteTitleCell'), body, cls: 'note-float',
-    onApply: () => { if (text.value.trim() !== (at.note ?? '')) set(text.value.trim()); },
+    onApply: () => { if (value() !== (at.note ?? '')) set(value()); },
   });
   remove.addEventListener('click', () => { box.close(); set(''); });
+  text.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (value() !== (at.note ?? '')) set(value()); box.close(); } });
   text.focus();
 }
 

@@ -348,3 +348,16 @@ describe('small fixes 2026-10-18', () => {
     expect(app.activeRoute).toMatch(/^[0-9a-f]{8}-/);
   });
 });
+
+describe('notes are one line (45)', () => {
+  it('uses a one-line field, and Enter applies', async () => {
+    await selectRoute('20');
+    press('F7');
+    const text = /** @type {HTMLInputElement} */ (document.querySelector('.float-box .note-text'));
+    expect(text.tagName).toBe('INPUT');
+    text.value = 'Bytt buss';
+    text.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(document.querySelector('.float-box')).toBeNull();
+    expect(grid.cols[0].cells[0].note).toBe('Bytt buss');
+  });
+});

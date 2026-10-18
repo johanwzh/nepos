@@ -757,7 +757,7 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 body.scrubbing, body.scrubbing * { cursor: ns-resize !important; user-select: none; }
 /* The note box: text only */
 .note-box { display: flex; flex-direction: column; gap: 6px; width: 340px; }
-.note-text { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text); resize: vertical; }
+.note-text { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text); }
 .note-remove { align-self: flex-start; border: none; background: transparent; color: var(--g-dec-c); font: inherit; font-size: 12px; cursor: pointer; padding: 0; }
 .dt-col-mark { font-size: 10px; cursor: pointer; margin-left: 2px; }
 td.has-dates { box-shadow: inset -3px 0 0 #3a9b5b; }
