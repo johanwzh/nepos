@@ -71,7 +71,7 @@ Listen husker søk, filter, sortering og valg så lenge du har Nepos åpent.
   register (NOG). Finner du ikke organisasjonen, ta kontakt med kollektivdata@entur.org.
 - **Legg til merknad…** — en tekst som følger hele linjen.
 
-Linjeflaggene **Eksporter ikke** og **Ikke åpen rute** settes fra listen på **Linjer**.
+Linjeflaggene **Eksporteres / Eksporteres ikke** og **Åpen rute / Lukket rute** settes fra listen på **Linjer**. En lukket rute er merket **Lukket rute** i listen.
 
 ### Lagre
 
@@ -206,7 +206,7 @@ kommer fra Entur sitt register; det eneste du kan endre, er eksport-ID-en (bare 
 
 På **Eksport** kontrollerer Nepos hele prosjektet først. **Feil** må rettes før eksport; **advarsler**
 er ting du bør se på. **Eksporter NeTEx** skriver filene til `exports/` (som ZIP hvis du vil). Linjer
-merket **Eksporter ikke** kommer ikke med.
+merket **Eksporteres ikke** kommer ikke med.
 
 Hver tur blir en NeTEx ServiceJourney med én DatedServiceJourney for hver dag den kjører (kalender +
 dagkode + turens egne datoer). Tognummer eksporteres som TrainNumber, andre turnummer som PrivateCode.

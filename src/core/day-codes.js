@@ -68,3 +68,23 @@ export function shiftDayCode(code, days) {
   m = /^([1-7]+)$/.exec(code);
   return m ? move(m[1]) : code;
 }
+
+/**
+ * One spelling for every day code (user 2026-10-18): the digits in order and the shortest form, so DX76 is
+ * DX67, 1234567 is D and 12345 is DX67. A code it cannot read is left as it is (the grid then refuses it).
+ * @param {string} code
+ */
+export function canonicalDayCode(code) {
+  const c = code.trim().toUpperCase();
+  if (c === 'D' || c === 'H') return c;
+  /** @type {Set<number>} */ let weekdays;
+  let holidays = true;
+  let m = /^DX([1-7]*)(H?)$/.exec(c);
+  if (m) {
+    weekdays = new Set(ALL.filter((d) => !m?.[1].includes(String(d))));
+    holidays = !m[2];
+  } else if ((m = /^([1-7]+)$/.exec(c))) {
+    weekdays = new Set([...m[1]].map(Number));
+  } else return code;
+  return dayCodeFor(weekdays, holidays) ?? code;
+}

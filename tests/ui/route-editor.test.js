@@ -334,3 +334,30 @@ describe('the first stop sets the line\'s mode (user 2026-10-18)', () => {
     expect(app.routeState.mode).toBe(before);
   });
 });
+
+describe('small fixes 2026-10-18', () => {
+  it('has a "new line" button in the line navigator, after the lines (38)', async () => {
+    const list = /** @type {HTMLElement} */ (document.getElementById('route-list'));
+    const add = /** @type {HTMLElement} */ (list.querySelector('.rl-add'));
+    expect(add).not.toBeNull();
+    expect(list.lastElementChild).toBe(add);
+    const before = app.routes.length;
+    add.click();
+    await flush(); await flush();
+    expect(app.routes.length).toBe(before + 1);
+    expect(app.activeRoute).toMatch(/^[0-9a-f]{8}-/);
+  });
+});
+
+describe('notes are one line (45)', () => {
+  it('uses a one-line field, and Enter applies', async () => {
+    await selectRoute('20');
+    press('F7');
+    const text = /** @type {HTMLInputElement} */ (document.querySelector('.float-box .note-text'));
+    expect(text.tagName).toBe('INPUT');
+    text.value = 'Bytt buss';
+    text.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(document.querySelector('.float-box')).toBeNull();
+    expect(grid.cols[0].cells[0].note).toBe('Bytt buss');
+  });
+});

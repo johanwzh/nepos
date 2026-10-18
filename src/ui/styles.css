@@ -1022,7 +1022,8 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 .g-dc-cell.dc-err  { background: #fcc !important; color: #900; }
 
 .g-row-stop td { height: 22px; border: 1px solid var(--border-lt); vertical-align: middle; }
-.g-row-dwell td, .g-row-sep td { border-bottom: 2px solid var(--border) !important; }
+/* Only the user draws a divider (underline); a waiting stop's two rows get none (user 2026-10-18) */
+.g-row-sep td { border-bottom: 2px solid var(--border) !important; }
 
 .g-td-name {
     padding: 0 6px; background: var(--bg-raised);

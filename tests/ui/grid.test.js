@@ -506,3 +506,25 @@ describe('code review 2026-10-17', () => {
     expect(grid.stops[1].isDwellArr).toBe(false);
   });
 });
+
+describe('day codes: copy and paste between columns (39)', () => {
+  it('copies a column\'s day code and pastes it on another', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'DX67', cells: [cell('0700'), cell('0710')] }, { dayCode: '6', cells: [cell('0800'), cell('0810')] }] });
+    const dc = (/** @type {number} */ ci) => /** @type {HTMLElement} */ (document.querySelector(`.g-dc-cell[data-ci="${ci}"]`));
+    dc(0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    press('c', { ctrlKey: true });
+    dc(1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    press('v', { ctrlKey: true });
+    expect(grid.cols[1].dayCode).toBe('DX67');
+  });
+});
+
+describe('day codes tidy themselves (44)', () => {
+  it('turns a typed DX76 into DX67', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')] }] });
+    /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    typeKeys('DX76');
+    press('Enter');
+    expect(grid.cols[0].dayCode).toBe('DX67');
+  });
+});

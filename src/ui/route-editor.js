@@ -15,6 +15,7 @@ import { createOrgPicker } from './org-picker.js';
 import { openModeMenu } from './mode-menu.js';
 import { modeIconSvg } from './mode-icons.js';
 import { ernCodeFor, TRANSMODEL_MODES } from '../core/modes.js';
+import { byDate } from '../core/calendars.js';
 import { modeLabel, submodeLabel } from '../i18n/modes.js';
 import { writeOrgs } from '../project/orgs-store.js';
 import { pruneProjectCopy } from './org-register.js';
@@ -326,7 +327,9 @@ function renderCalendarBar() {
   const ro = isReadOnly();
   const per = rs.periods.find((/** @type {any} */ p) => p.id === rs.activePer);
   const periods = periodsOf(rs, rs.activeSet);
-  const ids = /** @type {string[]} */ (per?.calendarIds ?? []);
+  // The chips in date order; ones whose calendar is missing at the end
+  const known = byDate(/** @type {any[]} */ ((per?.calendarIds ?? []).map((/** @type {string} */ id) => app.calendars.find((c) => c.id === id)).filter(Boolean)));
+  const ids = /** @type {string[]} */ ([...known.map((c) => c.id), ...(per?.calendarIds ?? []).filter((/** @type {string} */ id) => !known.some((c) => c.id === id))]);
   const chips = ids.map((id) => {
     const cal = app.calendars.find((c) => c.id === id);
     return `<span class="cal-chip${cal ? '' : ' n2-missing'}" data-cal="${esc(id)}">${esc(cal?.name ?? '⚠ ' + id)}${ro ? '' : `<button class="cal-chip-x" title="${esc(t('removeCalendar'))}">×</button>`}</span>`;
@@ -365,7 +368,7 @@ function openCalendarPop(per) {
   calPop = document.createElement('div');
   calPop.id = 'cal-pop';
   calPop.className = 'cal-pop';
-  const cals = [...app.calendars].sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+  const cals = byDate(app.calendars);
   calPop.innerHTML = cals.length
     ? cals.map((c) => `<label class="cal-pop-row"><input type="checkbox" value="${esc(c.id)}"${per.calendarIds.includes(c.id) ? ' checked' : ''}> ${esc(c.name || '—')}</label>`).join('')
     : `<div class="cal-pop-none">${esc(t('noCalendarsYet'))}</div>`;

@@ -47,6 +47,7 @@ function status(r) {
     : v === 'none' ? t('calNoDates') : t('lvEndsIn', daysBetween(now, r.days[r.days.length - 1]));
   const parts = [`<span class="lv-tag ${v}">${esc(text)}</span>`];
   if (!r.exported) parts.push(`<span class="lv-tag draft">${esc(t('lvDraft'))}</span>`);
+  if (!r.isPublic) parts.push(`<span class="lv-tag closed">${esc(t('pubClosed'))}</span>`);
   if (r.unsaved) parts.push('<span class="lv-unsaved">●</span>');
   if (r.damaged) parts.push(`<span class="lv-problems bad">⚠ ${esc(t('statusDamaged'))}</span>`);
   else if (r.errors || r.warnings) parts.push(`<span class="lv-problems${r.errors ? ' bad' : ''}">⚠ ${r.errors + r.warnings}</span>`);
@@ -83,8 +84,8 @@ function renderFinders(box, state, changed) {
     <select id="lt-f-org"></select>
     <select id="lt-f-status"><option value="">${esc(t('ltAllStatus'))}</option><option value="valid">${esc(t('lvValid'))}</option><option value="future">${esc(t('lvFuture'))}</option>
       <option value="ending">${esc(t('lvEnding'))}</option><option value="expired">${esc(t('lineExpired'))}</option><option value="problems">${esc(t('ltProblems'))}</option><option value="unsaved">${esc(t('unsavedDot'))}</option></select>
-    <select id="lt-f-exp"><option value="">${esc(t('flagExported'))}: ${esc(t('ltAll'))}</option><option value="1">${esc(t('flagExported'))}: ${esc(t('yes'))}</option><option value="0">${esc(t('flagExported'))}: ${esc(t('no'))}</option></select>
-    <select id="lt-f-pub"><option value="">${esc(t('flagPublic'))}: ${esc(t('ltAll'))}</option><option value="1">${esc(t('flagPublic'))}: ${esc(t('yes'))}</option><option value="0">${esc(t('flagPublic'))}: ${esc(t('no'))}</option></select>`;
+    <select id="lt-f-exp"><option value="">${esc(t('ltExpAll'))}</option><option value="0">${esc(t('exportIn'))}</option><option value="1">${esc(t('exportOut'))}</option></select>
+    <select id="lt-f-pub"><option value="">${esc(t('ltPubAll'))}</option><option value="0">${esc(t('pubOpen'))}</option><option value="1">${esc(t('pubClosed'))}</option></select>`;
   const field = (/** @type {string} */ id) => /** @type {HTMLInputElement & HTMLSelectElement} */ (box.querySelector('#' + id));
   const all = rows();
   fillSelect(field('lt-f-mode'), [['', t('ltAllModes')], ...[...new Set(all.map((r) => r.mode).filter(Boolean))].sort().map((m) => /** @type {[string, string]} */ ([m, modeLabel(m, lang())]))]);
@@ -108,7 +109,7 @@ function matches(r, st) {
   if (stat === 'problems' && !(r.errors || r.warnings || r.damaged)) return false;
   if (stat === 'unsaved' && !r.unsaved) return false;
   if (['valid', 'future', 'ending', 'expired'].includes(stat) && v !== stat) return false;
-  if (exp && !r.exported !== (exp === '1')) return false; // '1' = Eksporter ikke is set
+  if (exp && !r.exported !== (exp === '1')) return false; // '1' = Eksporteres ikke
   if (pub && !r.isPublic !== (pub === '1')) return false;
   return true;
 }
@@ -118,8 +119,8 @@ function renderBatch(box, sel) {
   const none = !sel.length;
   box.innerHTML = `<div class="lv-h lv-h-sub">${esc(t('lvBatch'))}</div><div id="lt-orgs" class="lt-orgs"></div>
     <select id="lt-brand"${none ? ' disabled' : ''}></select>
-    <select id="lt-exp"${none ? ' disabled' : ''}><option value="">${esc(t('flagExported'))}…</option><option value="1">${esc(t('yes'))}</option><option value="0">${esc(t('no'))}</option></select>
-    <select id="lt-pub"${none ? ' disabled' : ''}><option value="">${esc(t('flagPublic'))}…</option><option value="1">${esc(t('yes'))}</option><option value="0">${esc(t('no'))}</option></select>
+    <select id="lt-exp"${none ? ' disabled' : ''}><option value="">${esc(t('ltSetExport'))}</option><option value="0">${esc(t('exportIn'))}</option><option value="1">${esc(t('exportOut'))}</option></select>
+    <select id="lt-pub"${none ? ' disabled' : ''}><option value="">${esc(t('ltSetPublic'))}</option><option value="0">${esc(t('pubOpen'))}</option><option value="1">${esc(t('pubClosed'))}</option></select>
     <button class="lv-tool" id="lt-cal"${none ? ' disabled' : ''}>${esc(t('ltReplaceCalendar'))}</button>`;
   const field = (/** @type {string} */ id) => /** @type {HTMLInputElement & HTMLSelectElement} */ (box.querySelector('#' + id));
   fillSelect(field('lt-brand'), [['', t('ltSetBranding')], ['-', t('brandingNone')],

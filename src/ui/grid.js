@@ -7,6 +7,7 @@
 // - a read-only mode for routes the integrity check marked damaged.
 import { t } from '../i18n/strings.js';
 import { isValidDayCode } from '../core/ern/validate.js';
+import { canonicalDayCode } from '../core/day-codes.js';
 import { parseCellInput } from '../core/grid-input.js';
 import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
@@ -933,7 +934,7 @@ function cancelEdit() { editing = false; editBuf = ''; render(); }
 function commitDayCode() {
   if (!dcEdit) return;
   dcEdit = false;
-  const v = dcBuf.trim().toUpperCase();
+  const v = canonicalDayCode(dcBuf); // one spelling: DX76 → DX67, 1234567 → D (user 2026-10-18)
   dcBuf = '';
   if (isValidDayCode(v)) { grid.cols[dcCol].dayCode = v; render(); return; }
   render();
@@ -966,6 +967,12 @@ function onKeyDown(e) {
       void navigator.clipboard?.writeText(String(stop.stopId)).catch(() => {});
     }
     return;
+  }
+  // Day codes: Ctrl+C on a column's day code, Ctrl+V on another's (user 2026-10-18)
+  if ((e.ctrlKey || e.metaKey) && inDC && !dcEdit && grid.cols[dcCol]) {
+    const k = e.key.toLowerCase();
+    if (k === 'c') { e.preventDefault(); dcClip = grid.cols[dcCol].dayCode; void navigator.clipboard?.writeText(dcClip).catch(() => {}); return; }
+    if (k === 'v' && !grid.readOnly && dcClip && isValidDayCode(dcClip)) { e.preventDefault(); grid.cols[dcCol].dayCode = dcClip; render(); return; }
   }
   if ((e.ctrlKey || e.metaKey) && !editing && !dcEdit && !inStopCol && !inDC && !inTN && !tnEdit) {
     if (e.key === 'c') { e.preventDefault(); copySelection(); return; }
@@ -1111,6 +1118,9 @@ async function copySelection() {
   }
   try { await navigator.clipboard.writeText(lines.join('\n')); } catch { /* clipboard not available */ }
 }
+
+/** The day code copied last with Ctrl+C in the day-code row. */
+let dcClip = '';
 
 /** The stop copied last with Ctrl+C (its name comes along when the same Quay ID is pasted). */
 let stopClip = /** @type {{ quayId: string, name: string } | null} */ (null);

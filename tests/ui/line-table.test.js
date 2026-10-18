@@ -176,3 +176,24 @@ describe('the timetable\'s navigator follows Linjer', () => {
     expect(nav).toEqual(['Drammen', 'Bergen']);
   });
 });
+
+describe('public and export flags in plain words (42)', () => {
+  const optionTexts = (/** @type {string} */ id) => [...field(id).options].map((o) => o.textContent);
+
+  it('offers "Åpen rute" / "Lukket rute" and "Eksporteres" / "Eksporteres ikke"', () => {
+    setPage('lines');
+    click(rows()[0]);
+    expect(optionTexts('lt-pub').slice(1)).toEqual(['Åpen rute', 'Lukket rute']);
+    expect(optionTexts('lt-exp').slice(1)).toEqual(['Eksporteres', 'Eksporteres ikke']);
+    expect(optionTexts('lt-f-pub').slice(1)).toEqual(['Åpen rute', 'Lukket rute']);
+    expect(optionTexts('lt-f-exp').slice(1)).toEqual(['Eksporteres', 'Eksporteres ikke']);
+  });
+
+  it('shows a closed line in the list', () => {
+    setPage('lines');
+    click(rows()[0]);
+    field('lt-pub').value = '1';
+    field('lt-pub').dispatchEvent(new Event('change'));
+    expect(rows()[0].textContent).toContain('Lukket rute');
+  });
+});
