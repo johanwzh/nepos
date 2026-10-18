@@ -837,3 +837,4 @@ td.has-dates { box-shadow: inset -3px 0 0 #3a9b5b; }
    no text ends up light on light or dark on dark (user 2026-10-18: the brand list) */
 [data-theme="dark"] select { color-scheme: dark; }
 select option { background: var(--bg-panel); color: var(--text); }
+.lv-tag.closed { background: var(--bg-hdr); color: var(--text-m); border: 1px solid var(--border); }
