@@ -1183,6 +1183,7 @@ function openDates(type, ri, ci) {
   const r = anchor?.getBoundingClientRect();
   openDatePicker({
     x: r?.left ?? 200, y: (r?.bottom ?? 160) + 4, title: t(type === 'col' ? 'dpTitleCol' : 'dpTitleCell'), base, dates: at.dates ?? [],
+    removeOnly: type === 'cell', // a single time can only be switched off (user 2026-10-18)
     onApply: (dates) => { at.dates = dates; render(); },
   });
 }
