@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { VERSION } from '../src/version.js';
 
 describe('app shell', () => {
-  it('reports version 2.0.0', () => {
-    expect(VERSION).toBe('2.0.0');
+  it('reports the version in package.json (both are bumped on every push)', () => {
+    expect(VERSION).toBe(JSON.parse(readFileSync('package.json', 'utf8')).version);
   });
 });
