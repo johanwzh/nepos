@@ -495,6 +495,7 @@ function destAction(fn) {
 
 /** The editing box for the destination starting at a cell. @param {number} r @param {number} ci @param {string} [initial] typed first character */
 function openDestEditorAt(r, ci, initial) {
+  if (grid.stops[r]?.isDwellArr && grid.stops[r + 1]) r += 1; // a waiting stop's destination is on its departure row
   if (grid.readOnly || !canSetDestAt(r, ci)) return;
   const rc = document.querySelector(`.cw-dest[data-dr="${r}"][data-dc="${ci}"]`)?.getBoundingClientRect();
   openDestEditor({
