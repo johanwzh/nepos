@@ -832,3 +832,8 @@ td.has-dates { box-shadow: inset -3px 0 0 #3a9b5b; }
 .rl-add { margin: 6px 8px; align-self: flex-start; border: 1px dashed var(--border); border-radius: 999px; background: transparent;
   color: var(--text-m); font-size: 11px; padding: 2px 10px; cursor: pointer; white-space: nowrap; }
 .rl-add:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Drop-down lists: the browser's own list follows the theme, and every option has the page's colours, so
+   no text ends up light on light or dark on dark (user 2026-10-18: the brand list) */
+[data-theme="dark"] select { color-scheme: dark; }
+select option { background: var(--bg-panel); color: var(--text); }
