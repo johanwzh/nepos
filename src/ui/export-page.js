@@ -74,10 +74,13 @@ async function runCheck() {
     code: r.code,
     status: r.status,
     rs: r.status === 'damaged' ? null : parseERN(r.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) }),
+    // "Eksporteres: nei" (#EKS;0), read from the text too: a damaged line is not parsed (user 2026-10-18)
+    excluded: /^\s*#EKS;\s*0\s*$/m.test(r.text),
   }));
   const orgsProblem = app.orgsError ? 'unreadable' : '';
-  // Lines set to "Eksporteres: nei" are left out entirely (navigation spec §4); damaged ones are still checked.
-  const exported = routes.filter((r) => r.rs?.exported !== false);
+  // Lines set to "Eksporteres: nei" are left out entirely (navigation spec §4), damaged or not; other
+  // damaged lines are still checked (and block the export).
+  const exported = routes.filter((r) => (r.rs ? r.rs.exported !== false : !r.excluded));
   const issues = checkForExport({ routes: exported, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, brandings: app.brandings, brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars, calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, changedOnDisk });
   result = { fs, issues };
   refreshAll(); // the route list shows the files as they are now
