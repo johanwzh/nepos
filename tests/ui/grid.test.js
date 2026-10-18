@@ -332,12 +332,12 @@ describe('the date picker (user test 2026-10-17)', () => {
     expect(grid.cols[0].dates).toEqual([{ from: day(10), to: day(10), on: true }]);
   });
 
-  it('works for a single time too, from the right-click menu', () => {
+  it('works for a single time too, from the right-click menu, switching it off only', () => {
     /** @type {HTMLElement} */ (document.querySelector('[data-r="1"][data-c="0"]')).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
     /** @type {HTMLElement} */ (document.getElementById('gc-cell-dates')).click();
     click(day(12));
     /** @type {HTMLElement} */ (document.querySelector('.float-box .fb-apply')).click();
-    expect(grid.cols[0].cells[1].dates).toEqual([{ from: day(12), to: day(12), on: true }]);
+    expect(grid.cols[0].cells[1].dates).toEqual([{ from: day(12), to: day(12), on: false }]);
   });
 });
 

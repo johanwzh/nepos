@@ -41,20 +41,21 @@ export function toRanges(days, on) {
 }
 
 /**
- * @param {{ x: number, y: number, title: string, base: string[], dates: DateRange[], onApply: (dates: DateRange[]) => void }} opts
- *   base: the days it runs by its calendars and day code, before its own dates
+ * @param {{ x: number, y: number, title: string, base: string[], dates: DateRange[], onApply: (dates: DateRange[]) => void, removeOnly?: boolean }} opts
+ *   base: the days it runs by its calendars and day code, before its own dates; removeOnly: a single time,
+ *   which can only be switched off on some of the trip's days (user 2026-10-18): no "runs also"
  */
-export function openDatePicker({ x, y, title, base, dates, onApply }) {
-  const added = daysOf(dates, true);
+export function openDatePicker({ x, y, title, base, dates, onApply, removeOnly = false }) {
+  const added = removeOnly ? new Set() : daysOf(dates, true);
   const removed = daysOf(dates, false);
   const baseSet = new Set(base);
-  let mode = /** @type {'add' | 'remove'} */ ('add');
+  let mode = /** @type {'add' | 'remove'} */ (removeOnly ? 'remove' : 'add');
   let start = todayYmd().slice(0, 6);
 
   const body = document.createElement('div');
   body.className = 'dp';
   body.innerHTML = `<div class="dp-bar">
-      <span class="dp-modes"><button class="dp-mode" data-mode="add">${t('dpAdd')}</button><button class="dp-mode" data-mode="remove">${t('dpRemove')}</button></span>
+      <span class="dp-modes">${removeOnly ? '' : `<button class="dp-mode" data-mode="add">${t('dpAdd')}</button>`}<button class="dp-mode" data-mode="remove">${t('dpRemove')}</button></span>
       <span class="dp-nav"><button class="dp-prev" title="${t('calPrevMonth')}">↑</button><button class="dp-today">${t('calToday')}</button><button class="dp-next" title="${t('calNextMonth')}">↓</button></span>
     </div>
     <div class="dp-months cal-year-view"></div>

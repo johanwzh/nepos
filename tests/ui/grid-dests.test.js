@@ -297,3 +297,23 @@ describe('editing an existing destination (user test)', () => {
     expect(document.querySelectorAll('.dest-box .de-via-text')).toHaveLength(1);
   });
 });
+
+describe('dates on a single time (user 2026-10-18)', () => {
+  it('can only switch the time off: no "runs also" choice, and old ones are dropped on apply', () => {
+    loadGrid({ stops: [stop('Alfa'), stop('Beta')], cols: [{ dayCode: 'D', cells: [cell('0700'), { ...cell('0710'), dates: [{ from: '20261118', to: '20261118', on: true }] }] }] });
+    const td = /** @type {HTMLElement} */ (document.querySelector('[data-r="1"][data-c="0"]'));
+    td.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 5, clientY: 5 }));
+    document.getElementById('gc-cell-dates')?.click();
+    const box = /** @type {HTMLElement} */ (document.querySelector('.dp-box'));
+    expect(box.querySelector('.dp-mode[data-mode="add"]')).toBeNull();
+    /** @type {HTMLElement} */ (box.querySelector('.fb-apply')).click();
+    expect(grid.cols[0].cells[1].dates).toEqual([]);
+  });
+
+  it('keeps both choices for a whole trip', () => {
+    const dc = /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]'));
+    dc.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 5, clientY: 5 }));
+    document.getElementById('gc-dc-dates')?.click();
+    expect(document.querySelector('.dp-box .dp-mode[data-mode="add"]')).not.toBeNull();
+  });
+});
