@@ -73,6 +73,7 @@ async function runCheck() {
   const routes = fresh.map((r) => ({
     code: r.code,
     status: r.status,
+    problem: r.status === 'damaged' ? (({ code, line, detail }) => `${t(`issue:${code}`, detail ?? '')}${line ? ` (${t('lineNo', line)})` : ''}`)(/** @type {any} */ (r.issues.find((i) => i.severity === 'damaged') ?? {})) : '',
     rs: r.status === 'damaged' ? null : parseERN(r.text, { lang: /** @type {'no' | 'en'} */ (app.settings.lang) }),
     // "Eksporteres: nei" (#EKS;0), read from the text too: a damaged line is not parsed (user 2026-10-18)
     excluded: /^\s*#EKS;\s*0\s*$/m.test(r.text),

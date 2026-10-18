@@ -76,6 +76,35 @@ function normalize(line, dst) {
 }
 
 /**
+ * The arrival rows of waiting stops, per column, as "P<period>T<table>R<row>C<column>": a row whose stop is
+ * also the next row's, in a column with a time in both. A destination there belongs on the next row.
+ * @param {string} text
+ * @returns {Set<string>}
+ */
+export function dwellArrivalRows(text) {
+  /** @type {Set<string>} */ const out = new Set();
+  let per = -1, tab = -1;
+  /** @type {{ stop: string, cols: Set<string> }[]} */ let rows = [];
+  const flush = () => {
+    rows.forEach((r, i) => {
+      const next = rows[i + 1];
+      if (next && r.stop && r.stop === next.stop) for (const c of r.cols) if (next.cols.has(c)) out.add(`P${per}T${tab}R${i}C${c}`);
+    });
+    rows = [];
+  };
+  for (const raw of text.split(/\r?\n/)) {
+    const f = raw.trim().split(';');
+    if (f[0] === '#PER') { flush(); per++; tab = -1; }
+    else if (f[0] === '#TAB') { flush(); tab++; }
+    else if (f[0] === '#TRA') flush();
+    else if (f[0] === '#TRL') { const id = (f[2] ?? '').trim(); rows.push({ stop: id === '' || /^-?\d+$/.test(id) && Number(id) <= 0 ? '' : id, cols: new Set() }); }
+    else if (f[0] === '#TRC' && rows.length && (f[2] ?? '') && f[2] !== '|') rows[rows.length - 1].cols.add(f[1]);
+  }
+  flush();
+  return out;
+}
+
+/**
  * Key each record by where it sits in the file. Route-level records have no position.
  * @param {string} text
  * @returns {{ line: number, key: string, record: string }[]}
@@ -95,11 +124,14 @@ function keyRecords(text) {
   /** A via that leads back to the record is left out, as the parser does. @param {string} from @param {string} target @param {Set<string>} seen @returns {boolean} */
   const leadsTo = (from, target, seen) => from === target || (!seen.has(from) && (seen.add(from), (recs.get(from)?.vias ?? []).some((v) => leadsTo(v, target, seen))));
   for (const [id, r] of recs) dst.set(id, [r.text, ...r.vias.filter((v) => recs.has(v) && !leadsTo(v, id, new Set())).map((v) => recs.get(v)?.text)].join('|'));
+  const dwellRows = dwellArrivalRows(text);
   text.split(/\r?\n/).forEach((raw, i) => {
     const line = raw.trim();
     if (!line) return;
     const record = line.split(';')[0];
-    const norm = normalize(line, dst);
+    let norm = normalize(line, dst);
+    // A destination on a waiting stop's arrival row is saved on its departure row (ERN 2.0 rule)
+    if (norm && record === '#DSK') { const g = norm.split(';'); if (dwellRows.has(`P${per}T${tab}R${g[2]}C${g[1]}`)) { g[2] = String(Number(g[2]) + 1); norm = g.join(';'); } }
     if (norm === null) return; // left out on purpose
     let where = '';
     if (['#KOM', '#KON', '#KOE', '#KOT'].includes(record)) where = 'P0T0'; // the line note goes into the first table

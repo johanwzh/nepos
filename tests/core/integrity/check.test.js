@@ -122,3 +122,24 @@ describe('destination via loop (review)', () => {
     expect(r.issues.filter((i) => i.severity === 'damaged')).toEqual([]);
   });
 });
+
+describe('a destination on a waiting stop\'s arrival row (user 2026-10-18)', () => {
+  // Rows A, B (arrival), B (departure), C; the change written on B's arrival row, as older Nepos did
+  const file = [
+    '#LEV;T;TST', '#RUT;-1;1;Linje;;6;', '#SEK;-1;;0;0;0;0', '#DST;1;C;', '#DST;2;X;', '#TRA;Fram', '#UID;5f0c2e1a-1111-4aaa-8bbb-0000000000a1', '#PER;;;;;;', '#TAB;0;;;;',
+    '#TUR;0;D;0;0;0;0', '#UID;5f0c2e1a-1111-4aaa-8bbb-0000000000b1',
+    '#TRL;0;NSR:Quay:1;A;0;-1;-1;-1;0;-1', '#TRC;0;0700;0;0;0;0;0', '#TRL;1;NSR:Quay:2;B;0;-1;-1;-1;0;-1', '#TRC;0;0710;0;0;0;0;0',
+    '#TRL;2;NSR:Quay:2;B;0;-1;-1;-1;0;-1', '#TRC;0;0715;0;0;0;0;0', '#TRL;3;NSR:Quay:3;C;0;-1;-1;-1;0;-1', '#TRC;0;0720;0;0;0;0;0',
+    '#DSK;0;0;;2', '#DSK;0;1;;1',
+  ].join('\r\n') + '\r\n';
+
+  it('is an update (moved to the departure row), not damage', () => {
+    const r = checkRouteFile(file);
+    expect(r.status).toBe('outdated');
+    expect(r.issues.map((i) => i.code)).toContain('dest-on-arrival-row');
+  });
+
+  it('is fine once saved', () => {
+    expect(checkRouteFile(serializeERN(parseERN(file), '1', { delivery: { name: 'T', codespace: 'TST' }, orgs: [] })).status).toBe('ok');
+  });
+});

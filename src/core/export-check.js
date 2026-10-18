@@ -31,7 +31,7 @@ const list = (names) => names.slice(0, 3).join(', ') + (names.length > 3 ? ` (+$
 const minutes = (cell) => (cell.dayOffset || 0) * 1440 + Number(cell.time.slice(0, 2)) * 60 + Number(cell.time.slice(2, 4));
 
 /**
- * @param {{ routes: { code: string, rs: any | null, status: string }[],
+ * @param {{ routes: { code: string, rs: any | null, status: string, problem?: string }[],
  *           orgs: import('./orgs.js').Company[], register: import('./orgs.js').Company[] | null,
  *           orgMode: 'codespace' | 'nog', codespace: string, orgsProblem: '' | 'unreadable',
  *           brandings: { id: string }[], brandingsProblem?: '' | 'unreadable',
@@ -56,8 +56,8 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
   const localIds = new Map();
   let trips = 0, damaged = 0;
   for (const code of changedOnDisk) add('warning', 'route-changed-on-disk', { route: code });
-  for (const { code, rs, status } of routes) {
-    if (status === 'damaged' || !rs) { add('error', 'route-damaged', { route: code }); damaged++; continue; }
+  for (const { code, rs, status, problem } of routes) {
+    if (status === 'damaged' || !rs) { add('error', 'route-damaged', { route: code, detail: problem || undefined }); damaged++; continue; }
     // The route code becomes part of NeTEx IDs and the line file name.
     if (!ROUTE_CODE_PATTERN.test(code)) add('error', 'route-code', { route: code });
     const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, brandings, calendars, quayInfo, add, localIds, usedOrgIds });
@@ -179,14 +179,16 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
  */
 function checkDestinations(grid, col, add) {
   if (!col.dest) { add('error', 'dest-missing'); return; }
+  /** @type {Set<string>} */ const said = new Set();
+  /** @type {typeof add} */ const once = (level, code, extra) => { const k = `${code}|${extra?.detail ?? ''}`; if (!said.has(k)) { said.add(k); add(level, code, extra); } };
   const calls = journeyStops(grid, col);
   const word = (/** @type {string} */ s) => firstWord(s).toLowerCase();
   for (const seg of destSegments(grid, col)) {
-    if (hasViaWord(seg.dest.text)) add('error', 'dest-via-text', { detail: seg.dest.text });
-    if (seg.state === 'unserved') { add('warning', 'dest-unserved', { detail: grid.stops[seg.row]?.name ?? '' }); continue; }
+    if (hasViaWord(seg.dest.text)) once('error', 'dest-via-text', { detail: seg.dest.text });
+    if (seg.state === 'unserved') { once('warning', 'dest-unserved', { detail: grid.stops[seg.row]?.name ?? '' }); continue; }
     if (seg.state !== 'ok') continue;
     const ahead = new Set(calls.filter((c) => c.ri > seg.row).map((c) => word(c.name)));
-    for (const text of [seg.dest.text, ...seg.dest.vias]) if (!ahead.has(word(text))) add('warning', 'dest-not-on-route', { detail: text });
+    for (const text of [seg.dest.text, ...seg.dest.vias]) if (!ahead.has(word(text))) once('warning', 'dest-not-on-route', { detail: text });
   }
 }
 
