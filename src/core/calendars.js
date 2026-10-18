@@ -46,6 +46,15 @@ export function calendarDays(cal) {
   return days;
 }
 
+/**
+ * Calendars in date order (user 2026-10-18): by their first day, then by name; those without days last.
+ * @template {Calendar} T @param {T[]} cals @returns {T[]}
+ */
+export function byDate(cals) {
+  const first = (/** @type {Calendar} */ c) => normalizeRanges(c.ranges)[0]?.[0] ?? '99999999';
+  return [...cals].sort((a, b) => first(a).localeCompare(first(b)) || a.name.localeCompare(b.name, 'nb'));
+}
+
 /** @param {Calendar[]} cals */
 export function unionDays(cals) {
   return [...new Set(cals.flatMap(calendarDays))].sort();

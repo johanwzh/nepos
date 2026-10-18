@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { easterSunday, norwegianHolidays } from '../../src/core/holidays.js';
 import { parseDayCode, isAllowedDayCode } from '../../src/core/day-codes.js';
 import { addDays, weekdayOf, isoDate, normalizeRanges, calendarDays, unionDays, columnDays } from '../../src/core/calendars.js';
+import { byDate } from '../../src/core/calendars.js';
 import { uuid5, NEPOS_NAMESPACE } from '../../src/core/uuid5.js';
 import { isValidDayCode } from '../../src/core/ern/validate.js';
 import { isoWeek, daysToRanges, setDays, shiftRanges } from '../../src/core/calendars.js';
@@ -129,5 +130,17 @@ describe('tripDays with "no date" values (code review 2026-10-17)', () => {
     expect(tripDays([], { dayCode: 'D', dates: [{ from: '0', to: '20261005', on: true }] })).toEqual(['20261005']);
     expect(tripDays([], { dayCode: 'D', dates: [{ from: '20261003', to: '0', on: true }] })).toEqual(['20261003']);
     expect(tripDays([], { dayCode: 'D', dates: [{ from: '0', to: '0', on: true }] })).toEqual([]);
+  });
+});
+
+describe('byDate (43)', () => {
+  it('sorts calendars by their first day, then by name; calendars without days last', () => {
+    const cals = [
+      { id: 'c', name: 'Vår', ranges: /** @type {[string, string][]} */ ([['20270101', '20270331']]) },
+      { id: 'e', name: 'Tom', ranges: [] },
+      { id: 'a', name: 'Høst', ranges: /** @type {[string, string][]} */ ([['20261001', '20261231']]) },
+      { id: 'b', name: 'Helligdager', ranges: /** @type {[string, string][]} */ ([['20261001', '20261001']]) },
+    ];
+    expect(byDate(cals).map((c) => c.id)).toEqual(['b', 'a', 'c', 'e']);
   });
 });
