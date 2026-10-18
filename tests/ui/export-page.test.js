@@ -118,6 +118,18 @@ describe('export page', () => {
     expect(await fs.list(`exports/${dir.name}`)).toHaveLength(2); // shared + line 50 only
   });
 
+  it('leaves out a damaged line that is not exported (user 2026-10-18)', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    // #KOS is not a record Nepos knows: the line is damaged, and set to "Eksporteres: nei"
+    await writeRoute(fs, '51', route('NSR:Quay:11972').replace('#RUT;-1;50;', '#RUT;-1;51;').replace('#CUR;', '#EKS;0\r\n#KOS;4;x;0\r\n#CUR;'));
+    /** @type {HTMLInputElement} */ (document.getElementById('chk-zip')).checked = false;
+    document.getElementById('chk-zip')?.dispatchEvent(new Event('change'));
+    await click('btn-netex');
+    expect(document.getElementById('export-status').textContent).not.toContain('feilene');
+    const [dir] = await fs.list('exports');
+    expect(await fs.list(`exports/${dir.name}`)).toHaveLength(2); // shared + line 50 only
+  });
+
   it('writes a ZIP into the project folder', async () => {
     await openProjectWith(route('NSR:Quay:11972'));
     await click('btn-netex');
