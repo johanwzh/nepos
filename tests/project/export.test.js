@@ -10,7 +10,7 @@ describe('writeExport', () => {
   it('writes a ZIP named after the codespace into exports/<time>/', async () => {
     const fs = createMemoryFs();
     const path = await writeExport(fs, files, { codespace: 'tst', asZip: true, now });
-    expect(path).toBe('exports/2026-10-14T093000/TST.zip');
+    expect(path).toBe('exports/2026-10-14T093000/TST_2026-10-14T093000.zip');
     const bytes = /** @type {Uint8Array} */ (await fs.readBytes(path));
     expect(latin1(bytes.slice(0, 2))).toBe('PK');
     expect(latin1(bytes)).toContain('_TST-shared.xml');
@@ -28,7 +28,7 @@ describe('writeExport', () => {
   it('never overwrites an earlier export from the same second', async () => {
     const fs = createMemoryFs();
     await writeExport(fs, files, { codespace: 'TST', asZip: true, now });
-    expect(await writeExport(fs, files, { codespace: 'TST', asZip: true, now })).toBe('exports/2026-10-14T093000-2/TST.zip');
+    expect(await writeExport(fs, files, { codespace: 'TST', asZip: true, now })).toBe('exports/2026-10-14T093000-2/TST_2026-10-14T093000-2.zip');
     expect(await writeExport(fs, files, { codespace: 'TST', asZip: false, now })).toBe('exports/2026-10-14T093000-3');
   });
 });

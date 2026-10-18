@@ -68,7 +68,11 @@ export function compositeFrame(cs, id, fromDate, toDate, codespaceExtra, ...fram
     <Codespace id="${cs.toLowerCase()}">
       <Xmlns>${cs}</Xmlns>
       <XmlnsUrl>http://www.rutebanken.org/ns/${cs.toLowerCase()}</XmlnsUrl>
-    </Codespace>${codeExtra}
+    </Codespace>${cs.toUpperCase() === 'NSR' ? '' : `
+    <Codespace id="nsr">
+      <Xmlns>NSR</Xmlns>
+      <XmlnsUrl>http://www.rutebanken.org/ns/nsr</XmlnsUrl>
+    </Codespace>`}${codeExtra}
   </codespaces>
   <frames>
 ${frames.filter(Boolean).join('\n')}
