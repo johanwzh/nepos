@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { speedProfile, SPEED_LIMITS } from '../../src/core/speed-profile.js';
+import { speedProfile, SPEED_LIMITS, speedLimit, HIGH_LIMIT } from '../../src/core/speed-profile.js';
 
 const stop = (/** @type {string} */ name, /** @type {string | null} */ stopId, extra = {}) => ({ name, stopId, bold: false, sep: false, isDwellArr: false, price: null, ...extra });
 const cell = (/** @type {string} */ time, dayOffset = 0) => ({ time, dayOffset, suffix: '', interchange: null, footnoteId: null });
@@ -59,5 +59,16 @@ describe('speedProfile', () => {
     expect([SPEED_LIMITS.bus, SPEED_LIMITS.coach, SPEED_LIMITS.tram, SPEED_LIMITS.rail, SPEED_LIMITS.water, SPEED_LIMITS.air]).toEqual([80, 100, 60, 200, 60, 900]);
     const grid = { stops: [stop('A', 'A'), stop('B', 'B')], cols: [{ cells: [cell('1000'), cell('1002')] }] };
     expect(speedProfile(grid, grid.cols[0], info, 'unknownmode').limit).toBe(100);
+  });
+});
+
+describe("the project's own speed limits (customer 2026-10-19)", () => {
+  it("uses the project's level for a mode, else the default; nonsense is ignored", () => {
+    expect(speedLimit('bus')).toBe(SPEED_LIMITS.bus);
+    expect(speedLimit('bus', { bus: 120 })).toBe(120);
+    expect(speedLimit('bus', { bus: 0 })).toBe(SPEED_LIMITS.bus);
+    expect(speedLimit('bus', { bus: /** @type {any} */ ('fast') })).toBe(SPEED_LIMITS.bus);
+    expect(speedLimit('tram', { bus: 120 })).toBe(SPEED_LIMITS.tram);
+    expect(HIGH_LIMIT).toBe(1.5);
   });
 });

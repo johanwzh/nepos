@@ -6,7 +6,9 @@ import { app } from './state.js';
 import { t, setLang } from '../i18n/strings.js';
 import { writeSettings } from '../project/settings.js';
 import { renderEnturSettings } from './entur-settings.js';
-import { writeProjectName } from '../project/meta.js';
+import { writeProjectName, writeSpeedLimits } from '../project/meta.js';
+import { SPEED_LIMITS } from '../core/speed-profile.js';
+import { modeLabel } from '../i18n/modes.js';
 import { VERSION } from '../version.js';
 import { applyColourTheme } from './theme.js';
 
@@ -122,11 +124,34 @@ function updateProjectButton() {
   el.title = app.meta ? `${app.meta.name} · ${app.meta.codespace}` : '';
 }
 
+/** Prosjektinnstillinger → speed limits per mode (customer 2026-10-19): empty is the default. */
+function renderSpeedSettings() {
+  const box = $('settings-speed');
+  if (!box) return;
+  /** @type {Record<string, number>} */
+  const own = app.meta?.speedLimits ?? {};
+  const lang = app.settings.lang === 'en' ? 'en' : 'no';
+  box.innerHTML = `<div class="set-h">${t('settingsSpeed')}</div><div class="set-speed">${Object.entries(SPEED_LIMITS).map(([m, v]) =>
+    `<label>${modeLabel(m, lang)}<input type="number" min="1" step="1" data-mode="${m}" placeholder="${v}" value="${own[m] ?? ''}"></label>`).join('')}</div><p class="org-missing-note">${t('settingsSpeedNote')}</p>`;
+}
+
+/** The levels typed in the dialog. @returns {Record<string, number>} */
+function typedSpeedLimits() {
+  /** @type {Record<string, number>} */
+  const out = {};
+  document.querySelectorAll('#settings-speed input[data-mode]').forEach((el) => {
+    const input = /** @type {HTMLInputElement} */ (el);
+    if (input.value.trim()) out[/** @type {string} */ (input.dataset.mode)] = Number(input.value);
+  });
+  return out;
+}
+
 /** "Prosjektinnstillinger…" in the Prosjekt menu: the project's name and codespace. */
 export function openProjectSettings() {
   if (!app.meta) return;
   $('pop-name').value = app.meta.name ?? '';
   $('pop-codespace').textContent = app.meta.codespace ?? '';
+  renderSpeedSettings();
   renderEnturSettings();
   $('settings-dlg').showModal();
   $('pop-name').focus();
@@ -261,7 +286,10 @@ export function initShell() {
   $('pop-save').addEventListener('click', async () => {
     if (!app.fs || !app.meta) return;
     const fs = app.fs, meta = app.meta;
-    const ok = await runAction(async () => { app.meta = await writeProjectName(fs, meta, $('pop-name').value); }, $('pop-save'));
+    const ok = await runAction(async () => {
+      const named = await writeProjectName(fs, meta, $('pop-name').value);
+      app.meta = await writeSpeedLimits(fs, named, typedSpeedLimits());
+    }, $('pop-save'));
     if (!ok) return;
     closePop();
     refreshAll();

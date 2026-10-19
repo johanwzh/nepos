@@ -8,7 +8,7 @@ export const app = {
   handle: null,
   /** @type {any} remembered handle from last session, offered as "Reopen" */
   lastHandle: null,
-  /** @type {{ formatVersion: number, name: string, codespace: string, orgExportMode?: string } | null} */
+  /** @type {{ formatVersion: number, name: string, codespace: string, orgExportMode?: string, speedLimits?: Record<string, number> } | null} */
   meta: null,
   /** @type {Record<string, any>} */
   settings: { ...DEFAULT_SETTINGS },

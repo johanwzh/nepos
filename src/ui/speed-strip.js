@@ -32,7 +32,7 @@ function render() {
   box.hidden = currentPage() !== 'edit' || !grid.active;
   if (box.hidden) return;
   const col = grid.cols[selectedColumn()];
-  const p = col ? speedProfile(grid, col, quayInfo, lineMode()) : null;
+  const p = col ? speedProfile(grid, col, quayInfo, lineMode(), app.meta?.speedLimits) : null;
   if (!p || p.points.length < 2) { box.innerHTML = `<div class="sp-none">${esc(t(p ? 'spdNoPositions' : 'spdNone'))}</div>`; return; }
 
   const W = Math.max(200, box.clientWidth || 1000);

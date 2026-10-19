@@ -178,6 +178,22 @@ describe('project settings and title', () => {
     expect(document.getElementById('project-title')?.textContent).toBe('Test (TST)');
   });
 
+  it("sets the project's speed limits in Prosjektinnstillinger (customer 2026-10-19)", async () => {
+    openMenu(0);
+    item('Prosjektinnstillinger…').click();
+    const bus = /** @type {HTMLInputElement} */ (document.querySelector('#settings-speed input[data-mode="bus"]'));
+    expect(bus.value).toBe('');
+    expect(bus.placeholder).toBe('80');
+    bus.value = '120';
+    document.getElementById('pop-save')?.click();
+    await flush(); await flush();
+    expect(app.meta?.speedLimits).toEqual({ bus: 120 });
+    openMenu(0);
+    item('Prosjektinnstillinger…').click();
+    expect(/** @type {HTMLInputElement} */ (document.querySelector('#settings-speed input[data-mode="bus"]')).value).toBe('120');
+    /** @type {any} */ (document.getElementById('settings-dlg')).close();
+  });
+
   it('has "Prosjektinnstillinger…" in the Prosjekt menu, where the name is changed', async () => {
     openMenu(0);
     item('Prosjektinnstillinger…').click();

@@ -12,6 +12,17 @@ export const SPEED_LIMITS = /** @type {Record<string, number>} */ ({
   bus: 80, coach: 100, tram: 60, metro: 80, rail: 200, water: 60, air: 900, funicular: 30, cableway: 40, taxi: 100,
 });
 const DEFAULT_LIMIT = 100;
+/** A project's own level above this many times the default: Entur may not accept it (customer 2026-10-19). */
+export const HIGH_LIMIT = 1.5;
+
+/**
+ * The red level for a mode: the project's own (Prosjektinnstillinger), else the default.
+ * @param {string} mode @param {Record<string, number> | null} [limits] the project's levels
+ */
+export function speedLimit(mode, limits) {
+  const own = limits?.[mode];
+  return typeof own === 'number' && Number.isFinite(own) && own > 0 ? own : SPEED_LIMITS[mode] ?? DEFAULT_LIMIT;
+}
 /** Near the limit: from this share of it. */
 const NEAR = 0.8;
 /** Closer than this (km) counts as the same place. */
@@ -39,10 +50,11 @@ function km(a, b) {
  * @param {{ cells: any[] }} col
  * @param {Map<string, { lat: number | null, lon: number | null } | null>} quayInfo
  * @param {string} mode the line's NeTEx mode
+ * @param {Record<string, number> | null} [limits] the project's own levels
  * @returns {{ points: ProfilePoint[], legs: ProfileLeg[], limit: number }}
  */
-export function speedProfile(grid, col, quayInfo, mode) {
-  const limit = SPEED_LIMITS[mode] ?? DEFAULT_LIMIT;
+export function speedProfile(grid, col, quayInfo, mode, limits) {
+  const limit = speedLimit(mode, limits);
   const calls = journeyStops(grid, col).flatMap((c) => {
     const pos = quayInfo.get(c.stopId);
     return pos?.lat != null && pos.lon != null ? [{ ...c, lat: pos.lat, lon: pos.lon, arr: clock(c.arrCell ?? c.depCell), dep: clock(c.depCell) }] : [];

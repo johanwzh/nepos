@@ -45,7 +45,7 @@ function check(routes) {
     routes, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(app.meta),
     codespace: app.meta?.codespace ?? '', orgsProblem: app.orgsError ? 'unreadable' : '', brandings: app.brandings,
     brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars,
-    calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo,
+    calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, speedLimits: app.meta?.speedLimits ?? null,
   });
 }
 
