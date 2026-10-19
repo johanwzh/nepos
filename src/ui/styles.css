@@ -941,12 +941,13 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 /* The stop column sits right after the 20px insert column (Nepos 2 has no price column). The header rows'
    top offsets are set by the grid from their real heights (grid.js layoutFrozen). */
 .g-sticky1     { position: sticky; left: 20px; z-index: 2; }
-.g-row-ins, .g-row-vehicle, .g-row-foot, .g-row-dc, .g-row-tn { position: sticky; top: 0; z-index: 5; }
+.g-row-ins, .g-row-vehicle, .g-row-foot, .g-row-dc, .g-row-lb, .g-row-tn { position: sticky; top: 0; z-index: 5; }
 .g-row-ins     .g-sticky0, .g-row-ins     .g-sticky-price, .g-row-ins     .g-sticky1,
 .g-row-vehicle .g-sticky0, .g-row-vehicle .g-sticky-price, .g-row-vehicle .g-sticky1,
 .g-row-foot    .g-sticky0, .g-row-foot    .g-sticky-price, .g-row-foot    .g-sticky1,
 .g-row-dc      .g-sticky0, .g-row-dc      .g-sticky-price, .g-row-dc      .g-sticky1,
-.g-row-tn      .g-sticky0, .g-row-tn      .g-sticky1 { z-index: 7; }
+.g-row-tn      .g-sticky0, .g-row-tn      .g-sticky1,
+.g-row-lb      .g-sticky0, .g-row-lb      .g-sticky1 { z-index: 7; }
 
 .g-td-price {
     text-align: right; padding-right: 6px;

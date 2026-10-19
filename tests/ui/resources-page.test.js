@@ -238,3 +238,30 @@ describe('Ressurser: labels (62)', () => {
     expect(app.labels).toEqual([]);
   });
 });
+
+describe('Ressurser: labels, review fixes', () => {
+  it('does not save two new labels with the same name', async () => {
+    app.labels = [];
+    setPage('edit'); setPage('assets');
+    for (let i = 0; i < 2; i++) {
+      app.resourceSelected = null; setPage('edit'); setPage('assets'); // back to the list
+      click(/** @type {HTMLElement} */ (document.getElementById('rs-new-label')));
+      const name = /** @type {HTMLInputElement} */ (q('#re-name'));
+      name.value = 'Rush';
+      name.dispatchEvent(new Event('input'));
+    }
+    const { saveAllResources } = await import('../../src/ui/resources-page.js');
+    await saveAllResources();
+    expect(app.labels.filter((l) => l.name === 'Rush')).toHaveLength(1);
+  });
+
+  it('refuses ; in a label name (ERN fields are separated by ;)', () => {
+    app.labels = [];
+    setPage('edit'); setPage('assets');
+    click(/** @type {HTMLElement} */ (document.getElementById('rs-new-label')));
+    const name = /** @type {HTMLInputElement} */ (q('#re-name'));
+    name.value = 'A;B';
+    name.dispatchEvent(new Event('input'));
+    expect(name.classList.contains('invalid')).toBe(true);
+  });
+});

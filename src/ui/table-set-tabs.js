@@ -68,10 +68,10 @@ function deleteSet(setId) {
   const rs = app.routeState;
   if (!rs) return;
   if (rs.tableSets.length <= 1) { showMessage(t('lastTableSet')); return; }
-  if (rs.activeSet !== setId) switchTableSet(setId);
   storeGrid(); // the grid on screen counts as data too
   const set = rs.tableSets.find((/** @type {any} */ x) => x.id === setId);
   if (tableSetHasData(rs, setId) && !confirm(t('deleteTableSetConfirm', set?.name || t('tableSetUnnamed')))) return;
+  if (rs.activeSet !== setId) switchTableSet(setId);
   if (!deleteTableSet(rs)) { showMessage(t('lastTableSet')); return; }
   markDirty();
   switchTableSet(rs.activeSet, { store: false });

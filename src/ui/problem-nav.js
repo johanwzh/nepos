@@ -1,9 +1,9 @@
 // "There are problems" on the editor page (user 2026-10-19): a small marker by the save button with the open
 // line's counts ("⚠ 2 feil · 1 advarsel"). It does not list them: a click goes to the first problem, the next
-// click to the next, round the list (errors first), and the place is marked for a moment ("Fyll inn!").
+// click to the next, round the list (errors first), and the place is marked for a moment ("Må fylles inn").
 import { app } from './state.js';
 import { t } from '../i18n/strings.js';
-import { $ } from './shell.js';
+import { $, onLinesChanged } from './shell.js';
 import { lineIssues } from './line-info.js';
 import { grid, onGridRender, selectDayCode, selectStopCell, selectDestCell } from './grid.js';
 import { switchTableSet, switchPeriod } from './route-editor.js';
@@ -120,7 +120,9 @@ export function goToProblem(issue) {
 
 /** Keep the marker current while the line is edited (a little after the last change). */
 export function initProblemNav() {
-  onGridRender(() => { clearTimeout(timer); timer = setTimeout(() => updateProblemMarker(), 300); });
+  const later = () => { clearTimeout(timer); timer = setTimeout(() => updateProblemMarker(index >= 0), 300); };
+  onGridRender(later);
+  onLinesChanged(later); // edits outside the grid: the name, the organisations, a table set's name
 }
 
 /** Wire the marker's button (called when the footer is built). */

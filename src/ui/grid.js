@@ -288,7 +288,7 @@ function updateStopMarks() {
 /** Select a row, keeping the column (the speed profile's dots and legs). @param {number} ri */
 export function selectRow(ri) {
   if (!grid.active || !grid.stops[ri]) return;
-  inDC = false; inStopEdit = false;
+  inDC = false; inStopEdit = false; inLB = false;
   ancR = ri; endR = ri; endC = ancC;
   render();
 }
@@ -297,7 +297,7 @@ export function selectRow(ri) {
 export function selectDayCode(ci) {
   if (!grid.active || !grid.cols[ci]) return;
   commitPending();
-  inStopCol = false; inTN = false; inDest = false; inDC = true; dcEdit = false; dcCol = ci;
+  inStopCol = false; inTN = false; inDest = false; inLB = false; inDC = true; dcEdit = false; dcCol = ci;
   render();
 }
 
@@ -305,7 +305,7 @@ export function selectDayCode(ci) {
 export function selectStopCell(ri) {
   if (!grid.active || !grid.stops[ri]) return;
   commitPending();
-  inDC = false; inTN = false; inDest = false; inStopCol = true; ancR = ri; endR = ri;
+  inDC = false; inTN = false; inDest = false; inLB = false; inStopCol = true; ancR = ri; endR = ri;
   render();
 }
 
@@ -314,7 +314,7 @@ export function selectDestCell(r, c) {
   if (!grid.active || !grid.cols[c]) return;
   commitPending();
   if (!destColumnsOpen()) toggleDestColumns();
-  inDC = false; inTN = false; inStopCol = false; inDest = true; destR = r; destC = c; destR2 = r; destC2 = c;
+  inDC = false; inTN = false; inStopCol = false; inLB = false; inDest = true; destR = r; destC = c; destR2 = r; destC2 = c;
   render();
 }
 
@@ -1357,11 +1357,22 @@ function growGrid(rows, cols) {
  */
 function pasteStopList(ids) {
   if (grid.readOnly || !grid.stops[ancR]) return;
-  if (!growGrid(Math.max(0, ancR + ids.length - grid.stops.length), 0)) return;
+  // The rows each Quay goes to: a waiting stop (arrival and departure row) is one stop, so both its rows get it
+  /** @type {number[][]} */
+  const targets = [];
+  let r = grid.stops[ancR - 1]?.isDwellArr ? ancR - 1 : ancR, extra = 0;
+  for (let i = 0; i < ids.length; i++) {
+    if (r >= grid.stops.length + extra) { targets.push([r]); r++; extra++; continue; }
+    if (grid.stops[r]?.isDwellArr && r + 1 < grid.stops.length) { targets.push([r, r + 1]); r += 2; } else { targets.push([r]); r++; }
+  }
+  if (!growGrid(extra, 0)) return;
   ids.forEach((id, i) => {
-    const stop = grid.stops[ancR + i];
-    stop.stopId = id;
-    stop.name = quayInfo.get(id)?.stopPlaceName ?? '';
+    for (const ri of targets[i]) {
+      const stop = grid.stops[ri];
+      stop.stopId = id;
+      const known = quayInfo.get(id)?.stopPlaceName;
+      if (known) stop.name = known; // not known yet: looked up below; one NSR does not know keeps the row's name
+    }
   });
   const first = quayInfo.get(ids[0]);
   if (first) for (const fn of stopInfoListeners) fn(first);
@@ -1371,7 +1382,10 @@ function pasteStopList(ids) {
   loadQuays(missing).then(() => {
     const info0 = quayInfo.get(ids[0]);
     if (info0 && !first) for (const fn of stopInfoListeners) fn(info0);
-    for (const stop of grid.stops) if (stop.stopId && !stop.name.trim()) stop.name = quayInfo.get(String(stop.stopId))?.stopPlaceName ?? '';
+    for (const id of missing) {
+      const name = quayInfo.get(id)?.stopPlaceName;
+      if (name) for (const stop of grid.stops) if (stop.stopId === id) stop.name = name;
+    }
     if (inStopEdit) { updateStopMarks(); return; }
     render();
   });

@@ -129,7 +129,7 @@ og fyller stoppene fra den valgte raden og nedover, som i Excel; rader legges ti
 **Merknad på flere tider:** velg tidene og trykk F7 (eller høyreklikk → merknad).
 
 **Problemer:** nede til venstre står «⚠ 2 feil · 1 advarsel» når linjen mangler noe. Klikk for å gå til
-det første problemet — feltet merkes («Fyll inn!») — og klikk igjen for det neste.
+det første problemet — feltet merkes («Må fylles inn») — og klikk igjen for det neste.
 
 ### Verktøy på høyreklikk
 

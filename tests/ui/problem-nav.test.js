@@ -87,3 +87,14 @@ describe('the problems marker', () => {
     expect(/** @type {any} */ (document.getElementById('tse-dlg')).open).toBe(true);
   });
 });
+
+describe('review fixes 2.2', () => {
+  it('updates the counts after an edit outside the grid (the line name)', async () => {
+    const before = lineIssues('50').filter((i) => i.level === 'error').length;
+    const name = /** @type {HTMLInputElement} */ (document.getElementById('rh-name'));
+    name.value = 'Ny linje';
+    name.dispatchEvent(new Event('change'));
+    await new Promise((r) => setTimeout(r, 400));
+    expect(marker().textContent).toContain(`${before - 1} feil`);
+  });
+});

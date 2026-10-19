@@ -62,3 +62,13 @@ describe('the label row', () => {
     expect(grid.cols[1].label).toBe('');
   });
 });
+
+describe('review fixes 2.2', () => {
+  it('a selection made from outside the table takes the keyboard from the label row', async () => {
+    const { selectDayCode } = await import('../../src/ui/grid.js');
+    down(lb(0));
+    selectDayCode(1);
+    press('Delete');
+    expect(grid.cols[0].label).toBe('Rush'); // the label row no longer has the keyboard
+  });
+});

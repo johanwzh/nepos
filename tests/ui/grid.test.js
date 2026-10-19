@@ -642,3 +642,25 @@ describe('pasting lists (57, and wider pastes)', () => {
     window.confirm = () => true;
   });
 });
+
+describe('review fixes 2.2', () => {
+  const paste = (/** @type {string} */ text) => {
+    const ev = new Event('paste', { bubbles: true, cancelable: true });
+    /** @type {any} */ (ev).clipboardData = { getData: () => text };
+    document.dispatchEvent(ev);
+  };
+  it('a stop list keeps a waiting stop\'s two rows as one stop', () => {
+    loadGrid({ stops: [{ ...stop('X', 'NSR:Quay:9'), isDwellArr: true }, stop('X', 'NSR:Quay:9'), stop('Y')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0705'), cell('0710')] }] });
+    /** @type {HTMLElement} */ (document.querySelector('.g-td-name[data-ri="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    paste('NSR:Quay:1\nNSR:Quay:2');
+    expect(grid.stops.map((s) => s.stopId)).toEqual(['NSR:Quay:1', 'NSR:Quay:1', 'NSR:Quay:2']);
+    expect(grid.stops[0].isDwellArr).toBe(true);
+  });
+
+  it('keeps the old name of a stop NSR does not know', () => {
+    loadGrid({ stops: [stop('Gammel'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')] }] });
+    /** @type {HTMLElement} */ (document.querySelector('.g-td-name[data-ri="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    paste('NSR:Quay:77\nNSR:Quay:78');
+    expect(grid.stops[0].name).toBe('Gammel');
+  });
+});

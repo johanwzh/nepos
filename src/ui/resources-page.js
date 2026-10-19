@@ -157,10 +157,12 @@ async function saveBrandings(ids) {
 }
 
 /** Is this label name missing or already used by another label? @param {string} id @param {string} name */
-function labelNameProblem(id, name) {
+function labelNameProblem(id, name, list = app.labels ?? [], withDrafts = true) {
   const n = name.trim();
-  if (!n) return true;
-  return (app.labels ?? []).some((l) => labelKey(l) !== id && l.name.trim().toLowerCase() === n.toLowerCase());
+  if (!n || n.includes(';')) return true; // ; separates ERN fields
+  const same = (/** @type {string} */ other) => other.trim().toLowerCase() === n.toLowerCase();
+  return list.some((l) => labelKey(l) !== id && same(l.name))
+    || withDrafts && [...drafts()].some(([k, d]) => k.startsWith('l:') && k !== id && !list.some((l) => labelKey(l) === k) && same(d.name));
 }
 
 /** Write labels with the given drafts applied; unnamed or doubled ones are not saved. @param {string[]} ids */
@@ -170,10 +172,10 @@ async function saveLabels(ids) {
   let list = [...(app.labels ?? [])];
   for (const id of ids) {
     const d = drafts().get(id);
-    if (!d || labelNameProblem(id, d.name)) continue;
+    if (!d || labelNameProblem(id, d.name, list, false)) continue;
+    drafts().delete(id); // checked against what is saved so far: a second new label with the same name is refused
     const at = list.findIndex((l) => labelKey(l) === id);
     if (at >= 0) list[at] = { ...d, name: d.name.trim() }; else list = [...list, { ...d, name: d.name.trim() }];
-    drafts().delete(id);
   }
   await runAction(() => writeLabels(fs, list));
   app.labels = list;
