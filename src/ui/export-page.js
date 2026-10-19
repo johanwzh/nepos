@@ -18,7 +18,7 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 
 /** The last check, for the project it was made for. */
 let result = /** @type {{ fs: any, issues: import('../core/export-check.js').CheckIssue[] } | null} */ (null);
-let status = /** @type {{ fs: any, text: string, bad: boolean } | null} */ (null);
+let status = /** @type {{ fs: any, text: string, bad: boolean, folder?: string } | null} */ (null);
 
 let busy = false;
 
@@ -100,7 +100,13 @@ async function runExport() {
   const asZip = app.settings.exportAsZip !== false;
   let written = '';
   const ok = await runAction(async () => { written = await writeExport(fs, files, { codespace: meta.codespace, asZip }); });
-  if (ok) setStatus(t('exportDone', written, files.length), false);
+  if (ok) {
+    // The folder that holds the export, as Explorer shows it: the project folder's name, then exports\<time>. A web
+    // page cannot open Explorer, so the planner copies this and pastes it there (user 2026-10-19).
+    const folder = asZip ? written.slice(0, written.lastIndexOf('/')) : written;
+    status = { fs: app.fs, text: t('exportDone', written, files.length), bad: false, folder: [app.handle?.name ?? app.meta?.name ?? '', ...folder.split('/')].filter(Boolean).join('\\') };
+    renderStatus();
+  }
 }
 
 /** @param {string} text @param {boolean} bad */
@@ -114,6 +120,17 @@ function renderStatus() {
   const current = status && status.fs === app.fs ? status : null;
   el.textContent = current?.text ?? '';
   el.classList.toggle('bad', !!current?.bad);
+  if (current?.folder) {
+    const copy = document.createElement('button');
+    copy.className = 'pop-btn export-copy-path';
+    copy.id = 'export-copy-path';
+    copy.textContent = t('exportCopyPath');
+    copy.title = current.folder;
+    copy.addEventListener('click', () => {
+      void navigator.clipboard?.writeText(current.folder).then(() => { copy.textContent = t('exportCopied'); }).catch(() => {});
+    });
+    el.append(' ', copy);
+  }
 }
 
 /** @param {import('../core/export-check.js').CheckIssue} i */

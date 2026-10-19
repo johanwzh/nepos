@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cellToMins, minsToCell, interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan } from '../../src/core/interpolate.js';
+import { cellToMins, minsToCell, interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan , fixDayOffsets } from '../../src/core/interpolate.js';
 
 const stop = (/** @type {string} */ id, extra = {}) => ({ name: id, stopId: id, bold: false, sep: false, isDwellArr: false, price: null, ...extra });
 const cell = (/** @type {string} */ time, dayOffset = 0) => ({ time, dayOffset, suffix: '', interchange: null });
@@ -130,5 +130,20 @@ describe('review fixes', () => {
     const grid = { stops: [stop('A'), stop('X', { isDwellArr: true }), stop('X'), stop('D')], cols: [{ cells: [cell('0800'), null, null, cell('0830')] }] };
     const fills = interpolateSpan(grid, 0, 0, 3, posOf); // X has no position: even split, the dwell pair counts once
     expect(fills.map((x) => `${x.ri}:${x.cell.time}`)).toEqual(['1:0815', '2:0815']);
+  });
+});
+
+describe('fixDayOffsets (user test: interpolating across midnight)', () => {
+  it('gives the times after midnight their +1 when they were typed without it', () => {
+    const cell = (/** @type {string} */ time, dayOffset = 0) => ({ time, dayOffset, suffix: '', interchange: null });
+    const col = { cells: [cell('2350'), cell('0000', 1), cell('0010'), null, cell('0020'), { time: '|', dayOffset: 0, suffix: '', interchange: null }] };
+    fixDayOffsets(col);
+    expect(col.cells.map((x) => x && [x.time, x.dayOffset])).toEqual([['2350', 0], ['0000', 1], ['0010', 1], null, ['0020', 1], ['|', 0]]);
+  });
+
+  it('changes nothing in a trip that does not pass midnight', () => {
+    const col = { cells: [{ time: '0700', dayOffset: 0, suffix: '', interchange: null }, { time: '0650', dayOffset: 0, suffix: '', interchange: null }] };
+    fixDayOffsets(col);
+    expect(col.cells.map((x) => x.dayOffset)).toEqual([0, 0]); // a small step back is a typing error, not midnight
   });
 });

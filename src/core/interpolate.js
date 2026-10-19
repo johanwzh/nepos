@@ -162,3 +162,20 @@ export function interpolateSpan(grid, ci, rFrom, rTo, posOf) {
   }
   return fills;
 }
+
+/**
+ * Give times after midnight their day offset (user test: interpolating across midnight left the typed later times
+ * without +1). Going down a column, a time more than 12 hours earlier than the one before it is on the next day.
+ * @param {{ cells: any[] }} col
+ * @returns {number} how many cells changed
+ */
+export function fixDayOffsets(col) {
+  let prev = /** @type {number | null} */ (null), changed = 0;
+  for (const cell of col.cells) {
+    if (!cell || !cell.time || cell.time === '|') continue;
+    let m = /** @type {number} */ (cellToMins(cell));
+    while (prev !== null && m < prev - 720) { cell.dayOffset = (cell.dayOffset || 0) + 1; m += 1440; changed++; }
+    prev = m;
+  }
+  return changed;
+}

@@ -31,6 +31,15 @@ export async function writeExport(fs, files, { codespace, asZip, now = new Date(
     await fs.writeBytes(path, await buildZipCompressed(files.map((f) => ({ name: f.name, data: utf8.encode(f.xml) }))));
     return path;
   }
-  for (const f of files) await fs.writeBytes(`${dir}/${f.name}`, utf8.encode(f.xml));
+  /** @type {string[]} */
+  const written = [];
+  try {
+    for (const f of files) { await fs.writeBytes(`${dir}/${f.name}`, utf8.encode(f.xml)); written.push(`${dir}/${f.name}`); }
+  } catch (e) {
+    // Never leave a half-written delivery: what was written goes again (user test)
+    for (const p of written) await fs.remove(p).catch(() => {});
+    await fs.remove(dir).catch(() => {});
+    throw e;
+  }
   return dir;
 }

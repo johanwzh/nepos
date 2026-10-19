@@ -32,3 +32,14 @@ describe('writeExport', () => {
     expect(await writeExport(fs, files, { codespace: 'TST', asZip: false, now })).toBe('exports/2026-10-14T093000-3');
   });
 });
+
+describe('a failed export (user test)', () => {
+  it('removes what it wrote when a loose-file export fails halfway', async () => {
+    const mem = createMemoryFs();
+    let n = 0;
+    const broken = { ...mem, writeBytes: async (/** @type {string} */ p, /** @type {Uint8Array} */ d) => { if (++n === 2) throw new Error('disk full'); return mem.writeBytes(p, d); } };
+    await expect(writeExport(/** @type {any} */ (broken), [{ name: 'a.xml', xml: '<a/>' }, { name: 'b.xml', xml: '<b/>' }], { codespace: 'TST', asZip: false, now: new Date(2026, 9, 19, 12, 0, 0) })).rejects.toThrow('disk full');
+    const [dir] = await mem.list('exports');
+    expect(dir ? await mem.list(`exports/${dir.name}`) : []).toEqual([]);
+  });
+});

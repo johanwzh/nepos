@@ -15,7 +15,7 @@ export const CHECK_CODES = [
   'col-one-stop', 'no-name', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'no-mode', 'branding-missing', 'brandings-unreadable', 'table-set-name', 'no-calendar',
   'calendar-missing', 'calendar-empty', 'day-code', 'no-operating-days', 'calendars-unreadable', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'cell-dates-also', 'cell-dates-short', 'route-no-trips',
-  'route-changed-on-disk', 'org-alias-missing', 'dest-missing', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
+  'route-changed-on-disk', 'org-alias-missing', 'dest-missing', 'dest-last-dropped', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
 ];
 
 /**
@@ -186,6 +186,7 @@ function checkDestinations(grid, col, add) {
   for (const seg of destSegments(grid, col)) {
     if (hasViaWord(seg.dest.text)) once('error', 'dest-via-text', { detail: seg.dest.text });
     if (seg.state === 'unserved') { once('warning', 'dest-unserved', { detail: grid.stops[seg.row]?.name ?? '' }); continue; }
+    if (seg.state === 'last') { once('warning', 'dest-last-dropped', { detail: grid.stops[seg.row]?.name ?? '' }); continue; }
     if (seg.state !== 'ok') continue;
     const ahead = new Set(calls.filter((c) => c.ri > seg.row).map((c) => word(c.name)));
     for (const text of [seg.dest.text, ...seg.dest.vias]) if (!ahead.has(word(text))) once('warning', 'dest-not-on-route', { detail: text });

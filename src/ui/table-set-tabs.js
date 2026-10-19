@@ -5,7 +5,7 @@
 import { app } from './state.js';
 import { $, onRefresh, markDirty, showMessage } from './shell.js';
 import { t } from '../i18n/strings.js';
-import { addTableSet, deleteTableSet, tableSetHasData, duplicateTableSet } from './route-state.js';
+import { addTableSet, deleteTableSet, tableSetHasData, duplicateTableSet, blankGrid } from './route-state.js';
 import { DIRECTION_TYPES } from '../core/directions.js';
 import { placeMenu } from './place-menu.js';
 import { switchTableSet, isRouteReadOnly, storeGrid } from './route-editor.js';
@@ -51,7 +51,7 @@ export function renderTableSetTabs() {
     add.className = 'ts-add';
     add.textContent = '+';
     add.title = t('newTableSet');
-    add.addEventListener('click', openNewTableSet);
+    add.addEventListener('click', () => openNewTableSet());
     el.appendChild(add);
   }
   // The destination columns' toggle, at the right end of the row (destination displays spec)
@@ -118,8 +118,9 @@ function applyEditDialog() {
   renderTableSetTabs();
 }
 
-/** The new-table-set dialog (timetable structure spec §2): name, and the stops to start with. */
-function openNewTableSet() {
+/** The new-table-set dialog (timetable structure spec §2): name, and the stops to start with (copied from `from`). @param {number} [from] */
+function openNewTableSet(from) {
+  $('ts-dlg').dataset.from = from != null ? String(from) : '';
   const name = /** @type {HTMLInputElement} */ ($('ts-dlg-name'));
   name.value = '';
   name.classList.remove('invalid');
@@ -135,8 +136,9 @@ function createFromDialog() {
   if (!name.value.trim()) { name.classList.add('invalid'); return; }
   const stops = /** @type {HTMLInputElement | null} */ (document.querySelector('input[name="ts-stops"]:checked'))?.value ?? 'same';
   storeGrid();
-  const id = addTableSet(rs, name.value.trim(), { reversed: stops === 'reversed' });
-  if (stops === 'empty') for (const per of rs.periods.filter((/** @type {any} */ p) => p.setId === id)) rs.grids[`${per.id}:${id}`] = { stops: [], cols: [] };
+  const from = Number($('ts-dlg').dataset.from) || rs.activeSet; // "Ny…" from a tab's menu copies that tab
+  const id = addTableSet(rs, name.value.trim(), { reversed: stops === 'reversed', from });
+  if (stops === 'empty') for (const per of rs.periods.filter((/** @type {any} */ p) => p.setId === id)) rs.grids[`${per.id}:${id}`] = blankGrid();
   $('ts-dlg').close();
   markDirty();
   switchTableSet(id, { store: false });
@@ -160,7 +162,7 @@ export function initTableSetTabs() {
       hideTabMenu();
       if (!rs) return;
       const item = /** @type {HTMLElement} */ (target.closest('.gci')).id;
-      if (item === 'tsm-new') openNewTableSet();
+      if (item === 'tsm-new') openNewTableSet(id);
       else if (item === 'tsm-edit') openEditDialog(id);
       else if (item === 'tsm-del') deleteSet(id);
       else if (item === 'tsm-dup') {

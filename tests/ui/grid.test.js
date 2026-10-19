@@ -664,3 +664,20 @@ describe('review fixes 2.2', () => {
     expect(grid.stops[0].name).toBe('Gammel');
   });
 });
+
+describe('small wave 2', () => {
+  it('a paste with nothing that reads as a time adds no rows or columns', () => {
+    loadGrid({ stops: [stop('A')], cols: [{ dayCode: 'D', cells: [cell('0700')] }] });
+    /** @type {HTMLElement} */ (document.querySelector('[data-r="0"][data-c="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    const ev = new Event('paste', { bubbles: true, cancelable: true });
+    /** @type {any} */ (ev).clipboardData = { getData: () => 'hei\tpå\tdeg\nhallo\tigjen' };
+    document.dispatchEvent(ev);
+    expect(grid.cols).toHaveLength(1);
+    expect(grid.stops).toHaveLength(1);
+  });
+
+  it('the note bar sits above the speed profile', () => {
+    const preview = document.getElementById('fn-preview'), strip = document.getElementById('speed-strip');
+    expect(preview && strip && (preview.compareDocumentPosition(strip) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy();
+  });
+});
