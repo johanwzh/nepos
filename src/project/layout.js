@@ -3,6 +3,7 @@
 export const PROJECT_FILE = 'data/nepos-project.json';
 export const ORGS_FILE = 'data/orgs.json';
 export const BRANDINGS_FILE = 'data/brandings.json';
+export const LABELS_FILE = 'data/labels.json';
 export const CALENDARS_FILE = 'data/calendars.json';
 export const ROUTES_DIR = 'data/routes';
 export const BACKUPS_DIR = 'data/backups';

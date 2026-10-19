@@ -25,6 +25,8 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
     let _pendingNotes = [];
     // The trip-number row (#TTL) of the current table; numbers (#TTC) go on the columns
     let _tripRow = false, _ttlRow = NaN;
+    // The label row (#TTL with field 5 bit 0, user 2026-10-19): labels (#TTC) go on the columns
+    let _labelRow = false, _ttlIsLabel = false;
     // Destinations (#DST, Bokmål only: id → text and via IDs) and where they start (#DSK), resolved
     // once the whole file is read
     /** @type {Map<string, { text: string, viaIds: string[] }>} */
@@ -41,7 +43,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         const colXtoIdx = {};
         cols.forEach((c,i) => { colXtoIdx[c.x] = i; });
         const gCols2 = cols.map(c => ({
-            dayCode: c.dayCode, uid: c.uid ?? null, note: '', dates: [], tripNo: c.tripNo ?? '',
+            dayCode: c.dayCode, uid: c.uid ?? null, note: '', dates: [], tripNo: c.tripNo ?? '', label: c.label ?? '',
             cells: rows.map((_,ri) => {
                 const cell = cellMap[`${c.x}:${ri}`];
                 return cell || null;
@@ -61,7 +63,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 if (trueDwell) stopsCopy[i].isDwellArr = true;
             }
         }
-        const grid = { stops: stopsCopy, cols: gCols2, tripRow: _tripRow };
+        const grid = { stops: stopsCopy, cols: gCols2, tripRow: _tripRow, labelRow: _labelRow };
         // Notes and dates from #FOT/#UNT: on the column (row -1) or on a cell that has a time
         _pendingNotes.forEach(({ ci, ri, note, date }) => {
             if (ci < 0 || ci >= grid.cols.length) return;
@@ -75,7 +77,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         cols=[]; rows=[]; cellMap={};
         _pendingNotes = [];
         _pendingDsk = [];
-        _tripRow = false; _ttlRow = NaN;
+        _tripRow = false; _ttlRow = NaN; _labelRow = false; _ttlIsLabel = false;
     }
 
     for (const rawLine of text.split(/\r?\n/)) {
@@ -217,12 +219,14 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
             }
             case '#TTL':
                 _ttlRow = parseInt(f[1]);
-                if (_ttlRow === -1) _tripRow = true;
+                _ttlIsLabel = ((parseInt(f[6]) || 0) & 1) === 1; // field 5 bit 0: a row of column labels
+                if (_ttlRow === -1 && _ttlIsLabel) _labelRow = true;
+                else if (_ttlRow === -1) _tripRow = true;
                 break;
             case '#TTC': {
                 if (_ttlRow !== -1) break; // a cell of another info row
                 const col = cols.find((c) => c.x === parseInt(f[1]));
-                if (col && f[4]) col.tripNo = f[4];
+                if (col && f[4]) { if (_ttlIsLabel) col.label = f[4]; else col.tripNo = f[4]; }
                 break;
             }
             case '#FOT': {

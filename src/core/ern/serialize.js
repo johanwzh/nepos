@@ -109,6 +109,11 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
                 lines.push(`#TTL;-1;0;;10;${rail ? 'Tognummer' : 'Turnummer'};0`);
                 grid.cols.forEach((col, ci) => { if (col.tripNo) lines.push(`#TTC;${ci};;10;${esc(col.tripNo)};${rail ? 64 : 128}`); });
             }
+            // The label row (user 2026-10-19): field 5 bit 0 marks it; a column's label as #TTC with flags 256
+            if (grid.labelRow) {
+                lines.push('#TTL;-1;0;;10;Etikett;1');
+                grid.cols.forEach((col, ci) => { if (col.label) lines.push(`#TTC;${ci};;10;${esc(col.label)};256`); });
+            }
 
             grid.stops.forEach((stop, ri) => {
                 const sid = (stop.stopId != null) ? stop.stopId : -1;
