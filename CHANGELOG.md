@@ -6,7 +6,9 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 - **Direction of a table set:** an optional "Retning" (outbound, inbound, clockwise, anticlockwise) beside the
   calendars; saved in `#TRA` field 1 and exported as the Route's DirectionType.
-- **Platform codes:** the NSR platform code (e.g. "A", "2") is shown beside the stop name.
+- **Platform codes:** the NSR platform code (e.g. "A", "2") is shown beside the stop name; View → "Show stops'
+  private codes" adds the NSR private code in a grey chip.
+- **A missing submode** is an export error (modes without submodes excepted).
 - **A note on several times at once:** select times and press F7 (or right-click → note).
 - **The grid follows the cursor:** the header rows (day codes, trip numbers) and the stop column stay frozen, and the
   selected cell never hides under them.
@@ -23,8 +25,8 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   above 50).
 - **Small fixes:** a blank table set starts as 3×3 like a new line; "New…" in a tab's menu copies that tab's stops;
   Ctrl+S never opens the browser's Save dialog; interpolating across midnight gives the later times their +1; a paste of
-  non-times adds no rows or columns; a failed loose-file export leaves nothing behind; the export offers to copy the
-  folder's place (to paste into Explorer); a destination change on the last stop is warned about; pasting only a start
+  non-times adds no rows or columns; a failed loose-file export leaves nothing behind; the export says where it is, from the project
+  folder; a destination change on the last stop is warned about; pasting only a start
   keeps the changes below; a flagged destination change no longer cuts the line before it; the note bar sits above the
   speed profile.
 - **Problems on the editor page:** "⚠ 2 feil · 1 advarsel"; a click goes to the next problem and marks the field.

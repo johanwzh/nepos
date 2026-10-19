@@ -5,6 +5,7 @@ import { t } from '../i18n/strings.js';
 import { createMenuBar } from './menubar.js';
 import { pickAndOpen, openNewDialog, openRecent, closeProject, copyProject, setOnRecentChanged, openCodespaceDialog } from './project-ui.js';
 import { newRoute, saveRoute, saveAllRoutes, discardAllChanges } from './route-editor.js';
+import { grid, render as renderGrid } from './grid.js';
 import { newDraft as newCalendarDraft, saveOpenCalendar } from './calendars-page.js';
 import { unsavedCalendarCount, saveAllCalendars } from './calendar-drafts.js';
 import { unsavedResourceCount, saveAllResources } from './resources-page.js';
@@ -16,6 +17,9 @@ import { showShortcuts, showUserGuide, showVersionHistory, showContact, showGitH
 /** @type {{ name: string, handle: any }[]} */
 let recent = [];
 export async function reloadRecent() { recent = await loadRecentFolders(); }
+
+/** Redraw the timetable (a view setting changed). */
+function renderGridIfOpen() { if (grid.active) renderGrid(); }
 
 /** @param {string} lang */
 function setLanguage(lang) {
@@ -75,6 +79,7 @@ const MENUS = [
       { label: 'Nepos', checked: !loadColourTheme(), action: () => { saveColourTheme(null); applyColourTheme(); } },
       { label: t('themeCustom'), checked: !!loadColourTheme(), action: openThemeDialog },
     ] },
+    { label: t('showPrivateCodes'), checked: !!app.settings.showPrivateCode, action: () => { app.settings.showPrivateCode = !app.settings.showPrivateCode; refreshAll(); renderGridIfOpen(); runAction(persistSettings); } },
   ] },
   { label: () => t('menuHelp'), items: () => [
     { label: t('helpShortcuts'), action: showShortcuts },

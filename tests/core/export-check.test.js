@@ -359,3 +359,17 @@ describe('small wave 2: a change on the last stop', () => {
     expect(codes(check(rs))).toContain('warning:dest-last-dropped');
   });
 });
+
+describe('a missing submode (user 2026-10-19)', () => {
+  it('is an error when the mode has submodes', () => {
+    const rs = route();
+    rs.mode = 'bus'; rs.submode = '';
+    expect(codes(check(rs))).toContain('error:no-submode');
+  });
+
+  it('is not needed for a mode without submodes', () => {
+    const rs = route();
+    rs.mode = 'ferry'; rs.submode = '';
+    expect(codes(check(rs))).not.toContain('error:no-submode');
+  });
+});

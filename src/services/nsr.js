@@ -7,7 +7,7 @@ import { NSR_QUAY_PATTERN } from '../core/quays.js';
 const BATCH = 50;
 
 /**
- * @typedef {{ quayId: string, publicCode: string, stopPlaceId: string, stopPlaceName: string,
+ * @typedef {{ quayId: string, publicCode: string, privateCode?: string, stopPlaceId: string, stopPlaceName: string,
  *             mode: string, lat: number | null, lon: number | null }} QuayInfo
  */
 
@@ -41,6 +41,7 @@ export async function lookupQuays(ids, { baseUrl, clientName, fetch: doFetch = (
           mode: String(place.transportMode ?? '').toLowerCase(),
           lat: loc?.latitude ?? null,
           lon: loc?.longitude ?? null,
+          privateCode: quay.privateCode?.value ?? '',
         });
       }
     }

@@ -110,7 +110,8 @@ turen kjører.
   eksporteres ikke.
 - Dagkoder ryddes selv: DX76 blir DX67, 1234567 blir D. Ctrl+C / Ctrl+V kopierer en dagkode til en annen kolonne.
 - Stoppkolonnen og radene øverst står fast når du blar, og cellen du står i holdes alltid synlig.
-  Plattformkoden fra NSR (A, B, 2 …) står bak stoppnavnet.
+  Plattformkoden fra NSR (A, B, 2 …) står bak stoppnavnet. **Visning → Vis stoppenes privatkode** viser også
+  NSR-privatkoden, i en grå brikke.
 
 ### Skrive tider
 
@@ -230,8 +231,8 @@ etikett-raden i rutetabellen.
 
 På **Eksport** kontrollerer Nepos hele prosjektet først. **Feil** må rettes før eksport; **advarsler**
 er ting du bør se på. **Eksporter NeTEx** skriver filene til `exports/` (som ZIP hvis du vil). Linjer
-merket **Eksporteres ikke** kommer ikke med. Etter eksporten kopierer **Kopier mappens plassering** hvor
-eksporten ligger (prosjektmappen\exports\tidspunkt); lim den inn i adressefeltet i Utforsker.
+merket **Eksporteres ikke** kommer ikke med. Etter eksporten står det hvor den ligger, fra prosjektmappen
+(prosjektmappen\exports\tidspunkt).
 
 Hver tur blir en NeTEx ServiceJourney med én DatedServiceJourney for hver dag den kjører (kalender +
 dagkode + turens egne datoer). Tognummer eksporteres som TrainNumber, andre turnummer som PrivateCode.

@@ -7,6 +7,7 @@ import { ROUTE_CODE_PATTERN } from './route-names.js';
 import { journeyStops, tripVariants } from './netex/journeys.js';
 import { calendarDays, unionDays, tripDays } from './calendars.js';
 import { isAllowedDayCode } from './day-codes.js';
+import { TRANSMODEL_MODES } from './modes.js';
 import { destSegments, hasViaWord, firstWord } from './destinations.js';
 
 /** Every code the check can give; each has a text 'chk:<code>' in both languages. */
@@ -15,7 +16,7 @@ export const CHECK_CODES = [
   'col-one-stop', 'no-name', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'no-mode', 'branding-missing', 'brandings-unreadable', 'table-set-name', 'no-calendar',
   'calendar-missing', 'calendar-empty', 'day-code', 'no-operating-days', 'calendars-unreadable', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'cell-dates-also', 'cell-dates-short', 'route-no-trips',
-  'route-changed-on-disk', 'org-alias-missing', 'dest-missing', 'dest-last-dropped', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
+  'route-changed-on-disk', 'org-alias-missing', 'no-submode', 'dest-missing', 'dest-last-dropped', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
 ];
 
 /**
@@ -87,6 +88,8 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
   // Line details (line header spec §7)
   if (!rs.routeName?.trim()) add('error', 'no-name', r);
   if (!rs.mode || rs.mode === 'other') add('error', 'no-mode', r); // 'other' is what a new line starts as
+  // A mode with submodes needs one (user 2026-10-19); lift, trolleyBus, ferry and other have none
+  else if (!rs.submode && (TRANSMODEL_MODES.find((m) => m.mode === rs.mode)?.submodes.length ?? 0) > 0) add('error', 'no-submode', r);
   if (rs.brandingId && !brandings.some((b) => b.id === rs.brandingId)) add('error', 'branding-missing', { ...r, detail: rs.brandingId });
 
   const sek = rs.sek ?? [];

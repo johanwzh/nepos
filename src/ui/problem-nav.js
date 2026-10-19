@@ -91,7 +91,7 @@ export function goToProblem(issue) {
   const col = (issue.where?.column ?? 1) - 1;
   const focus = (/** @type {string} */ id, /** @type {string} */ text) => { const el = /** @type {HTMLElement | null} */ (document.getElementById(id)); el?.focus(); markHere(el, text); };
   if (c === 'no-name') { focus('rh-name', fill); return; }
-  if (c === 'no-mode') { focus('rh-mode-tile', fill); return; }
+  if (c === 'no-mode' || c === 'no-submode') { focus('rh-mode-tile', fill); return; }
   if (c === 'no-authority') { focus('ef-pick-authority', fill); markHere(document.querySelector('#ef-pick-authority .org-pick-btn'), fill); return; }
   if (c === 'no-operator') { focus('ef-pick-operator', fill); markHere(document.querySelector('#ef-pick-operator .org-pick-btn'), fill); return; }
   if (c.startsWith('org-')) { markHere(document.getElementById('ef-pick-authority') ?? document.getElementById('ef-pick-operator'), fix); return; }

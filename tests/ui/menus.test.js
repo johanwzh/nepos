@@ -49,9 +49,18 @@ describe('menu bar', () => {
     expect(document.querySelector('.mb-menu[data-menu="1"]')?.textContent).toBe('Rediger');
     expect(items()).toEqual(['Ny linje', 'Ny kalender', 'Lagre', 'Lagre alle endringer', 'Forkast alle endringer']);
     openMenu(2);
-    expect(items()).toEqual(['Språk', 'Lys/mørk', 'Fargetema']);
+    expect(items()).toEqual(['Språk', 'Lys/mørk', 'Fargetema', 'Vis stoppenes privatkode']);
     openMenu(3);
     expect(items()).toEqual(['Hurtigtaster', 'Brukerveiledning', 'Versjonshistorikk', 'Kontakt', 'GitHub']);
+  });
+
+  it('switches the stops\' private codes on and off from Visning, and remembers it', () => {
+    openMenu(0);
+    openMenu(2);
+    const was = !!app.settings.showPrivateCode;
+    item('Vis stoppenes privatkode').click();
+    expect(app.settings.showPrivateCode).toBe(!was);
+    app.settings.showPrivateCode = was;
   });
 
   it('shows the keyboard shortcuts and the Entur contact from the Hjelp menu', () => {
