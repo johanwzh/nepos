@@ -597,8 +597,10 @@ export function initRouteEditor() {
   listenersWired = true;
   // Ctrl+S saves the open line, also from text fields (navigation spec §2); not behind a window.
   document.addEventListener('keydown', (e) => {
-    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 's' || document.querySelector('dialog[open]')) return;
-    e.preventDefault();
+    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 's') return;
+    e.preventDefault(); // never the browser's own Save dialog, also in a window or on another page
+    if (document.querySelector('dialog[open]')) return;
+    if (currentPage() !== 'edit') return; // the calendar page and Ctrl+Shift+S handle their own
     e.stopPropagation();
     if (currentPage() === 'edit' && app.activeRoute) { commitFocusedField(); void saveRoute(); }
   }, true);

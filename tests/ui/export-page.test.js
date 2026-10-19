@@ -227,3 +227,18 @@ describe('export page', () => {
     expect(app.meta.orgExportMode).toBe('nog');
   });
 });
+
+describe('finding the export (user 2026-10-19)', () => {
+  it('offers to copy the place of the export folder, to paste into Explorer', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    /** @type {string[]} */ const wrote = [];
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (/** @type {string} */ s) => { wrote.push(s); } }, configurable: true });
+    await click('btn-netex');
+    const [dir] = await fs.list('exports');
+    const btn = /** @type {HTMLElement} */ (document.getElementById('export-copy-path'));
+    expect(btn).not.toBeNull();
+    btn.click();
+    await flush();
+    expect(wrote[0].endsWith(`exports\\${dir.name}`)).toBe(true);
+  });
+});

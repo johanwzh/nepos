@@ -64,12 +64,22 @@ describe('table-set tabs', () => {
     expect(app.routeState.tableSets).toHaveLength(2);
   });
 
-  it('can start a table set without stops', () => {
+  it('starts a blank table set as 3 empty stops by 3 empty trips, like a new line (user 2026-10-19)', () => {
     /** @type {HTMLElement} */ (document.querySelector('.ts-add')).click();
     /** @type {HTMLInputElement} */ (document.getElementById('ts-dlg-name')).value = 'Rundtur';
     /** @type {HTMLInputElement} */ (document.querySelector('input[name="ts-stops"][value="empty"]')).checked = true;
     /** @type {HTMLElement} */ (document.getElementById('ts-dlg-ok')).click();
-    expect(grid.stops).toEqual([]);
+    expect(grid.stops).toHaveLength(3);
+    expect(grid.cols).toHaveLength(3);
+    expect(grid.stops.every((/** @type {any} */ s) => !s.name && !s.stopId)).toBe(true);
+  });
+
+  it('"New…" in a tab\'s menu copies the stops of that tab, not the active one', () => {
+    tabs()[1].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
+    /** @type {HTMLElement} */ (document.getElementById('tsm-new')).click();
+    /** @type {HTMLInputElement} */ (document.getElementById('ts-dlg-name')).value = 'Kopi av retur';
+    /** @type {HTMLElement} */ (document.getElementById('ts-dlg-ok')).click();
+    expect(grid.stops.map((/** @type {any} */ s) => s.name)).toEqual(['Florø', 'Ukjent brygge', 'Bergen']);
   });
 
   it('renames a table set on double-click (in the edit dialog)', () => {
@@ -160,5 +170,14 @@ describe('the tab menu and edit dialog (2026-10-19)', () => {
     rightClick(0);
     menuItem('tsm-new').click();
     expect(/** @type {any} */ (document.getElementById('ts-dlg')).open).toBe(true);
+  });
+});
+
+describe('Ctrl+S (user test)', () => {
+  it('never opens the browser\'s own Save dialog, also with a window open', () => {
+    /** @type {any} */ (document.getElementById('tse-dlg')).showModal();
+    const ev = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true });
+    document.getElementById('tse-name')?.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
   });
 });

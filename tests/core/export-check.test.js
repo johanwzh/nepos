@@ -351,3 +351,11 @@ describe('organisation aliases (user 2026-10-18)', () => {
     expect(missing[0].detail).toMatch(/Eksempel/);
   });
 });
+
+describe('small wave 2: a change on the last stop', () => {
+  it('says that it is dropped on save (a warning)', () => {
+    const rs = route();
+    grid0(rs).cols[0].dests[1] = { text: 'X', vias: [] };
+    expect(codes(check(rs))).toContain('warning:dest-last-dropped');
+  });
+});

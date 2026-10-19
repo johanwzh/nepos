@@ -7,6 +7,9 @@ const starterGrid = () => ({
   cols: [0, 1, 2].map(() => ({ dayCode: '', uid: crypto.randomUUID(), note: '', dates: [], cells: [null, null, null], dest: null, dests: [null, null, null] })),
 });
 
+/** A blank table set's grid: 3 empty stops by 3 empty trips, as a new line starts (user 2026-10-19). */
+export const blankGrid = () => starterGrid();
+
 /** @param {'no' | 'en' | string} _lang */
 export function newRouteState(_lang) {
   return {
@@ -75,8 +78,7 @@ function reverseStops(stops) {
   return stops.slice().reverse().map((s, k) => ({ ...s, sep: k < n - 1 ? !!stops[n - 2 - k].sep : false, isDwellArr: k < n - 1 ? !!stops[n - 2 - k].isDwellArr : false }));
 }
 
-export function addTableSet(rs, name, { reversed }) {
-  const from = rs.activeSet;
+export function addTableSet(rs, name, { reversed, from = rs.activeSet }) {
   const setId = rs.nextId++;
   rs.tableSets.push({ id: setId, name, uid: crypto.randomUUID() });
   for (const per of periodsOf(rs, from)) {
@@ -85,7 +87,7 @@ export function addTableSet(rs, name, { reversed }) {
     const stops = JSON.parse(JSON.stringify(rs.grids[`${per.id}:${from}`]?.stops ?? []));
     rs.grids[`${id}:${setId}`] = { stops: reversed ? reverseStops(stops) : stops, cols: [] };
   }
-  if (!periodsOf(rs, setId).length) { const id = rs.nextId++; rs.periods.push({ id, setId, calendarIds: [] }); rs.grids[`${id}:${setId}`] = emptyGrid(); }
+  if (!periodsOf(rs, setId).length) { const id = rs.nextId++; rs.periods.push({ id, setId, calendarIds: [] }); rs.grids[`${id}:${setId}`] = starterGrid(); }
   rs.activeSet = setId;
   rs.activePer = periodsOf(rs, setId)[0].id;
   return setId;

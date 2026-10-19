@@ -78,8 +78,10 @@ export function destSegments(grid, col) {
   });
   marks.sort((a, b) => a.row - b.row || (a.start ? -1 : 1));
   const endRow = last ?? grid.stops.length - 1;
+  // A change on a row the trip does not serve draws no line: it does not end the destination before it
+  const counts = (/** @type {{ row: number, start: boolean }} */ m) => m.start || (served.includes(m.row) && m.row > first);
   return marks.map((m, i) => {
-    const next = marks[i + 1];
+    const next = marks.slice(i + 1).find(counts);
     const end = next ? Math.max(m.row, next.row - 1) : Math.max(m.row, endRow);
     /** @type {'ok' | 'unserved' | 'last'} */
     let state = 'ok';
@@ -222,7 +224,8 @@ export function copyDests(grid, col, r0, r1) {
  * @param {{ start: Dest | null, changes: { offset: number, dest: Dest }[] }} clip @param {number} r0
  */
 export function pasteDests(grid, col, clip, r0) {
-  const span = Math.max(0, ...clip.changes.map((c) => c.offset));
+  // Only the rows the copied changes cover are cleared (pasting just a start clears nothing)
+  const span = clip.changes.length ? Math.max(...clip.changes.map((c) => c.offset)) : -1;
   for (let r = r0; r <= r0 + span && r < col.dests.length; r++) col.dests[r] = null;
   if (clip.start) col.dest = clone(clip.start);
   const first = servedRows(grid, col)[0];

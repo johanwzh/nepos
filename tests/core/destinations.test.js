@@ -100,3 +100,13 @@ describe('destination segments', () => {
     expect(effectiveDestAt(grid, col, 2)).toEqual(d('C'));
   });
 });
+
+describe('small wave 2', () => {
+  it('a change on a row the trip does not serve does not cut the line of the destination before it', () => {
+    const { grid, col } = gridOf(['A', 'B', 'C', 'D'], [0, 2, 3]);
+    col.dest = d('D');
+    col.dests[1] = d('X'); // unserved
+    const start = destSegments(grid, col).find((s) => s.start);
+    expect(start?.end).toBe(3);
+  });
+});

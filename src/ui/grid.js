@@ -13,7 +13,7 @@ import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
 import { openFnEditor, closeFnEditor, updateFnPreview } from './footnote-editor.js';
-import { interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan } from '../core/interpolate.js';
+import { interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan, fixDayOffsets } from '../core/interpolate.js';
 import { openDayCodeHelper } from './day-code-helper.js';
 import { sortColumns } from '../core/column-sort.js';
 import { openCopyInterval } from './copy-interval.js';
@@ -1311,9 +1311,10 @@ function onPaste(e) {
     return;
   }
   // A block wider or taller than the table adds the columns and rows it needs (user 2026-10-19), as in Excel
-  const block = text.replace(/\r?\n$/, '').split(/\r?\n/);
-  const width = Math.max(...block.map((l) => l.split('\t').length));
-  const addCols = Math.max(0, ancC + width - grid.cols.length), addRows = Math.max(0, ancR + block.length - grid.stops.length);
+  // ... as far as the block holds times (or |): pasted junk adds nothing
+  let lastR = -1, lastC = -1;
+  text.replace(/\r?\n$/, '').split(/\r?\n/).forEach((line, dr) => line.split('\t').forEach((v, dc) => { if (v.trim() && parseCellInput(v.trim())) { lastR = Math.max(lastR, dr); lastC = Math.max(lastC, dc); } }));
+  const addCols = Math.max(0, ancC + lastC + 1 - grid.cols.length), addRows = Math.max(0, ancR + lastR + 1 - grid.stops.length);
   if (!growGrid(addRows, addCols)) return;
   text.split(/\r?\n/).forEach((line, dr) => {
     if (!line) return;
@@ -1746,7 +1747,9 @@ export function initGrid() {
   $('gc-interp').addEventListener('click', () => {
     hideCtx();
     if (grid.readOnly) return;
-    for (const f of interpolationFills()) grid.cols[f.ci].cells[f.ri] = f.cell;
+    const fills = interpolationFills();
+    for (const f of fills) grid.cols[f.ci].cells[f.ri] = f.cell;
+    for (const ci of new Set(fills.map((f) => f.ci))) fixDayOffsets(grid.cols[ci]); // the times after midnight get their +1
     render();
   });
   $('gc-extrap-fwd').addEventListener('click', () => extrapolate('fwd'));

@@ -193,3 +193,14 @@ describe('copy and paste', () => {
     expect(col.dests[1]).toBe(null);
   });
 });
+
+describe('small wave 2', () => {
+  it('pasting only a start keeps a change further down at the paste row', () => {
+    const g = gridOf(['A', 'B', 'C', 'D']);
+    const col = g.cols[0];
+    col.dests[1] = d('X');
+    pasteDests(g, col, { start: d('Delta'), changes: [] }, 1);
+    expect(col.dest).toEqual(d('Delta'));
+    expect(col.dests[1]).toEqual(d('X'));
+  });
+});
