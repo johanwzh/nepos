@@ -81,6 +81,13 @@ describe('the problems marker', () => {
     expect(grid.cols[0].dayCode).toBe('');
   });
 
+  it('a leg that is too fast: selects and marks the time it arrives at (user 2026-10-19)', () => {
+    goToProblem({ level: 'error', code: 'speed-over', route: '50', where: { tableSet: 'Fram', period: '', column: 1, row: 1, setId: app.routeState.tableSets[0].id } });
+    const cell = document.querySelector('#tbl td[data-r="1"][data-c="0"]');
+    expect(cell?.classList.contains('go-here')).toBe(true);
+    expect(cell?.classList.contains('is-anchor')).toBe(true);
+  });
+
   it('a table set without a name: opens its edit dialog', () => {
     const issue = lineIssues('50').find((i) => i.code === 'table-set-name');
     goToProblem(/** @type {any} */ (issue));

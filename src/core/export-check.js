@@ -9,6 +9,8 @@ import { calendarDays, unionDays, tripDays } from './calendars.js';
 import { isAllowedDayCode } from './day-codes.js';
 import { TRANSMODEL_MODES } from './modes.js';
 import { destSegments, hasViaWord, firstWord } from './destinations.js';
+import { speedProfile, SPEED_LIMITS, HIGH_LIMIT } from './speed-profile.js';
+import { ERN_MODES } from './ern/modes.js';
 
 /** Every code the check can give; each has a text 'chk:<code>' in both languages. */
 export const CHECK_CODES = [
@@ -16,12 +18,12 @@ export const CHECK_CODES = [
   'col-one-stop', 'no-name', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'no-mode', 'branding-missing', 'brandings-unreadable', 'table-set-name', 'no-calendar',
   'calendar-missing', 'calendar-empty', 'day-code', 'no-operating-days', 'calendars-unreadable', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'cell-dates-also', 'cell-dates-short', 'route-no-trips',
-  'route-changed-on-disk', 'org-alias-missing', 'no-submode', 'dest-missing', 'dest-last-dropped', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
+  'route-changed-on-disk', 'org-alias-missing', 'no-submode', 'speed-over', 'speed-limit-high', 'dest-missing', 'dest-last-dropped', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
 ];
 
 /**
  * @typedef {{ level: 'error' | 'warning', code: string, route?: string,
- *             where?: { tableSet: string, period: string, column?: number, setId?: number, periodId?: number }, detail?: string }} CheckIssue
+ *             where?: { tableSet: string, period: string, column?: number, row?: number, setId?: number, periodId?: number }, detail?: string }} CheckIssue
  */
 
 /** @param {any} cell */
@@ -37,10 +39,10 @@ const minutes = (cell) => (cell.dayOffset || 0) * 1440 + Number(cell.time.slice(
  *           orgMode: 'codespace' | 'nog', codespace: string, orgsProblem: '' | 'unreadable',
  *           brandings: { id: string }[], brandingsProblem?: '' | 'unreadable',
  *           calendars: import('./calendars.js').Calendar[], calendarsProblem?: '' | 'unreadable',
- *           quayInfo: Map<string, any>, changedOnDisk?: string[] }} input
+ *           quayInfo: Map<string, any>, changedOnDisk?: string[], speedLimits?: Record<string, number> | null }} input
  * @returns {CheckIssue[]} errors first, then warnings
  */
-export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', calendars = [], calendarsProblem = '', quayInfo, changedOnDisk = [] }) {
+export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', calendars = [], calendarsProblem = '', quayInfo, changedOnDisk = [], speedLimits = null }) {
   /** @type {CheckIssue[]} */
   const issues = [];
   /** @param {'error' | 'warning'} level @param {string} code @param {Partial<CheckIssue>} [extra] */
@@ -55,13 +57,15 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
 
   /** @type {Map<string, string>} NeTEx local ID → the first stop ID that produced it */
   const localIds = new Map();
+  /** @type {Set<string>} the modes of the exported lines */
+  const modesUsed = new Set();
   let trips = 0, damaged = 0;
   for (const code of changedOnDisk) add('warning', 'route-changed-on-disk', { route: code });
   for (const { code, rs, status, problem } of routes) {
     if (status === 'damaged' || !rs) { add('error', 'route-damaged', { route: code, detail: problem || undefined }); damaged++; continue; }
     // The route code becomes part of NeTEx IDs and the line file name.
     if (!ROUTE_CODE_PATTERN.test(code)) add('error', 'route-code', { route: code });
-    const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, brandings, calendars, quayInfo, add, localIds, usedOrgIds });
+    const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, brandings, calendars, quayInfo, add, localIds, usedOrgIds, speedLimits, modesUsed });
     if (!routeTrips) add('warning', 'route-no-trips', { route: code });
     trips += routeTrips;
   }
@@ -72,6 +76,11 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     for (const i of aliasIssues(used, codespace)) add(i.code === 'org-alias-missing' ? 'warning' : 'error', i.code, { detail: i.alias });
   }
   if (!trips && !damaged) add('error', 'no-trips');
+  // The project's own speed level far above the default: Entur may not accept such speeds (customer 2026-10-19)
+  for (const [m, v] of Object.entries(speedLimits ?? {})) {
+    const normal = SPEED_LIMITS[m];
+    if (modesUsed.has(m) && normal && v > normal * HIGH_LIMIT) add('warning', 'speed-limit-high', { detail: `${m}: ${v} km/h` });
+  }
 
   return [...issues.filter((i) => i.level === 'error'), ...issues.filter((i) => i.level === 'warning')];
 }
@@ -80,10 +89,12 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
  * @param {string} code
  * @param {any} rs
  * @param {{ orgs: import('./orgs.js').Company[], quayInfo: Map<string, any>, localIds: Map<string, string>, usedOrgIds: Set<string>, copy: import('./orgs.js').Company[] | null, brandings: { id: string }[], calendars: import('./calendars.js').Calendar[],
- *           add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void }} ctx
+ *           add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void, speedLimits: Record<string, number> | null, modesUsed: Set<string> }} ctx
  * @returns {number} trips (columns with times) in the route
  */
-function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add, localIds, usedOrgIds }) {
+function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add, localIds, usedOrgIds, speedLimits, modesUsed }) {
+  const mode = rs.mode || /** @type {any} */ (ERN_MODES)[rs.transportMode ?? 0]?.mode || '';
+  modesUsed.add(mode);
   const r = { route: code };
   // Line details (line header spec §7)
   if (!rs.routeName?.trim()) add('error', 'no-name', r);
@@ -154,6 +165,13 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
         if (journeyStops(grid, col).length + unnamed >= 2) trips++;
         else add('error', 'col-one-stop', { ...r, where: at });
         checkCellDates(grid, col, periodDays, at, (level, c, extra) => add(level, c, { ...r, ...extra }));
+        // A red arc in the speed strip: faster than the mode's level, even in a straight line (user 2026-10-19)
+        const profile = speedProfile(grid, col, quayInfo, mode, speedLimits);
+        const over = profile.legs.filter((l) => l.kind === 'over');
+        if (over.length) {
+          const worst = over.reduce((a, b) => (/** @type {number} */ (b.kmh) > /** @type {number} */ (a.kmh) ? b : a));
+          add('error', 'speed-over', { ...r, where: { ...at, row: worst.to }, detail: `${worst.fromName} → ${worst.toName}: ${Math.round(/** @type {number} */ (worst.kmh))} km/h (${profile.limit})` });
+        }
         if (journeyStops(grid, col).length >= 2) checkDestinations(grid, col, (level, c, extra) => add(level, c, { ...r, where: at, ...extra }));
         // An empty day code would be exported as "every day" — never what the user meant.
         if (!col.dayCode) add('error', 'col-no-daycode', { ...r, where: at });

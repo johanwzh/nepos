@@ -373,3 +373,34 @@ describe('a missing submode (user 2026-10-19)', () => {
     expect(codes(check(rs))).not.toContain('error:no-submode');
   });
 });
+
+describe('speeds (user and customer 2026-10-19)', () => {
+  // Jernbanetorget at 59.9, Oslo bussterminal 0.2° further north: about 22 km in 10 minutes = 133 km/h
+  const placed = (/** @type {number} */ north) => new Map([['NSR:Quay:7203', { ...bus('NSR:Quay:7203', 'Jernbanetorget'), lat: 59.9, lon: 10.75 }], ['NSR:Quay:11972', { ...bus('NSR:Quay:11972', 'Oslo bussterminal'), lat: 59.9 + north, lon: 10.75 }]]);
+
+  it("blocks a leg faster than the mode's limit (a red arc), naming the stops, the speed and the limit", () => {
+    const issues = check(route(), { quayInfo: placed(0.2) });
+    expect(codes(issues)).toEqual(['error:speed-over']);
+    expect(issues[0]).toMatchObject({ route: '50', where: { column: 1, row: 1 } });
+    expect(issues[0].detail).toContain('Jernbanetorget');
+    expect(issues[0].detail).toContain('Oslo bussterminal');
+    expect(issues[0].detail).toContain('133');
+    expect(issues[0].detail).toContain('80');
+  });
+
+  it('lets a normal speed through', () => {
+    expect(check(route(), { quayInfo: placed(0.1) })).toEqual([]); // 67 km/h
+  });
+
+  it("uses the project's own limit, and warns when it is far above the default", () => {
+    expect(check(route(), { quayInfo: placed(0.2), speedLimits: { bus: 100 } }).map((i) => i.code)).toEqual(['speed-over']);
+    const issues = check(route(), { quayInfo: placed(0.2), speedLimits: { bus: 150 } });
+    expect(codes(issues)).toEqual(['warning:speed-limit-high']);
+    expect(issues[0].detail).toContain('150');
+    expect(codes(check(route(), { quayInfo: placed(0.1), speedLimits: { bus: 120 } }))).toEqual([]); // 1.5 × 80: not above
+  });
+
+  it('warns about a raised limit only for a mode the exported lines use', () => {
+    expect(codes(check(route(), { quayInfo: placed(0.1), speedLimits: { tram: 200 } }))).toEqual([]);
+  });
+});

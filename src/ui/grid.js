@@ -304,6 +304,15 @@ export function selectRow(ri) {
   render();
 }
 
+/** Select a time cell (the problems marker goes there). @param {number} ri @param {number} ci */
+export function selectCell(ri, ci) {
+  if (!grid.active || !grid.stops[ri] || !grid.cols[ci]) return;
+  commitPending();
+  inStopCol = false; inTN = false; inDest = false; inLB = false; inDC = false; inStopEdit = false;
+  ancR = ri; endR = ri; ancC = ci; endC = ci;
+  render();
+}
+
 /** Select a column's day code (the problems marker goes there). @param {number} ci */
 export function selectDayCode(ci) {
   if (!grid.active || !grid.cols[ci]) return;

@@ -5,7 +5,7 @@ import { app } from './state.js';
 import { t } from '../i18n/strings.js';
 import { $, onLinesChanged } from './shell.js';
 import { lineIssues } from './line-info.js';
-import { grid, onGridRender, selectDayCode, selectStopCell, selectDestCell } from './grid.js';
+import { grid, onGridRender, selectDayCode, selectStopCell, selectDestCell, selectCell } from './grid.js';
 import { switchTableSet, switchPeriod } from './route-editor.js';
 import { openEditDialog } from './table-set-tabs.js';
 import { quayStatus } from '../core/quays.js';
@@ -108,6 +108,11 @@ export function goToProblem(issue) {
   if (c.startsWith('stop-')) {
     const ri = stopRowFor(c);
     if (ri >= 0) { selectStopCell(ri); markHere(document.querySelector(`.g-td-name[data-ri="${ri}"]`), c === 'stop-missing' ? fill : fix); }
+    return;
+  }
+  if (c === 'speed-over' && issue.where?.row != null) {
+    selectCell(issue.where.row, col);
+    markHere(document.querySelector(`#tbl td[data-r="${issue.where.row}"][data-c="${col}"]`), fix);
     return;
   }
   if (issue.where?.column != null) {
