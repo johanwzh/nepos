@@ -1,6 +1,6 @@
 import './ui/styles.css';
 import './ui/nepos2.css';
-import 'leaflet/dist/leaflet.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { initShell, refreshAll } from './ui/shell.js';
 import { initRouteList } from './ui/route-list.js';
 import { initLineTable } from './ui/line-table.js';

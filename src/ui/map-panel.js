@@ -1,27 +1,27 @@
-// The map panel (F6, spec §7.3): the selected trip's stops joined by straight lines on a raster
-// basemap (OpenStreetMap by default; CARTO's free basemaps now need an API key). Positions come
-// from the NSR lookups; stops without one are listed under the map. Created only when the panel
-// is first opened.
-import L from 'leaflet';
+// The map panel (F6, spec §7.3): the selected trip's stops on a MapLibre map (2.3: OpenFreeMap vector tiles,
+// Positron in light mode and Dark in dark mode). Positions come from the NSR lookups; stops without one are listed
+// under the map. Created only when the panel is first opened.
 import { app } from './state.js';
 import { $, onRefresh, currentPage, panelOpen, onPanelToggle } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { grid, selectedColumn, selectedRowIndex, onGridRender } from './grid.js';
 import { quayInfo, onQuaysLoaded } from './quays.js';
 import { tripOnMap } from '../core/map-model.js';
-import { DEFAULT_SETTINGS } from '../project/settings.js';
+import { styleUrlFor } from '../core/map-style.js';
 import { pickerState, setPickerMap } from './stop-picker.js';
 import { pickerMapModel } from '../core/picker-map-model.js';
 import { modeIconSvg } from './mode-icons.js';
 import { placeMenu } from './place-menu.js';
+import { createMapView } from './map-view.js';
 
-
-/** @type {any} */ let map = null;
-/** @type {any} */ let tiles = null;
-let tileTheme = '';
-/** @type {any[]} */ let layers = [];
+/** @type {import('./map-view.js').MapView | null} */ let view = null;
+let styleKey = '';
 let lastKey = '';
 let scheduled = false;
+/** @type {((view: import('./map-view.js').MapView) => void)[]} */
+const readyListeners = [];
+/** @type {(() => void)[]} */
+const drawListeners = [];
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -31,28 +31,30 @@ function theme() {
 }
 
 function ensureMap() {
-  if (map) return;
-  map = L.map($('leaflet-map'), {
-    zoomControl: true, attributionControl: true,
-    keyboard: false, // arrow keys, digits and +/- belong to the grid, never to the map
-  }).setView([62.5, 13], 5);
-  map.on('moveend', () => { for (const fn of viewListeners) fn(); }); // browsing (stop picking spec §4)
+  const style = styleUrlFor(app.settings, theme());
+  const key = `${JSON.stringify(style)}|${theme()}`;
+  if (!view) {
+    view = createMapView($('map-gl'), { style, dark: theme() === 'dark' });
+    styleKey = key;
+    view.onMoveEnd(() => { for (const fn of viewListeners) fn(); }); // browsing (stop picking spec §4)
+    const v = view;
+    for (const fn of readyListeners) fn(v);
+    return;
+  }
+  if (key !== styleKey) { view.setStyle(style, theme() === 'dark'); styleKey = key; }
 }
 
-function ensureTiles() {
-  // The basemap comes from the settings (private/settings.json), default OpenStreetMap; it is
-  // muted in light mode and inverted in dark mode by CSS (.n2-map-dark), so one source serves both.
-  const url = app.settings.tileUrl || DEFAULT_SETTINGS.tileUrl;
-  const want = `${url}|${theme()}`;
-  $('leaflet-map').classList.toggle('n2-map-dark', theme() === 'dark');
-  if (tiles && tileTheme === want) return;
-  if (tiles) tiles.remove();
-  tiles = L.tileLayer(url, {
-    attribution: app.settings.tileAttribution || DEFAULT_SETTINGS.tileAttribution, maxZoom: 19,
-  }).addTo(map);
-  tiles.bringToBack();
-  tileTheme = want;
+/** The map, once it exists (the link router draws on it and reads its tile source). @param {(view: import('./map-view.js').MapView) => void} fn */
+export function onMapCreated(fn) {
+  readyListeners.push(fn);
+  if (view) fn(view);
 }
+
+/** Called after the map has drawn the trip (the link router adds the trip's links). @param {() => void} fn */
+export function onMapDraw(fn) { drawListeners.push(fn); }
+
+/** Draw again (new links arrived). */
+export function redrawMap() { schedule(); }
 
 /** @type {(kind: 'place' | 'quay', id: string, action?: 'use' | 'above' | 'below') => void} */
 let onPick = () => {};
@@ -81,42 +83,44 @@ function closeQuayMenu() { document.querySelector('.map-ctx')?.remove(); }
 const viewListeners = [];
 let pickKey = '';
 
-/** @param {string} cls @param {string} html @param {number} size */
-const icon = (cls, html, size) => L.divIcon({ className: `pm ${cls}`, html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
-
 /** While a stop row is being picked (stop picking spec §5): the picker's symbols. */
 function drawPicker() {
+  const v = /** @type {import('./map-view.js').MapView} */ (view);
   const s = pickerState();
   const lineStops = grid.stops.map((st, i) => ({ n: i + 1, stopId: st.stopId == null ? null : String(st.stopId), name: st.name,
     info: st.stopId ? quayInfo.get(String(st.stopId)) ?? null : null }));
   const model = pickerMapModel({ ...s, lineStops });
   $('map-missing').hidden = true;
   /** @type {HTMLElement | null} */ (document.querySelector('#map-inner .map-hint-overlay')).style.display = 'none';
-  if (model.line.length > 1) layers.push(L.polyline(model.line, { color: '#888', weight: 2, opacity: 0.5, dashArray: '4 4' }).addTo(map));
-  for (const m of model.markers) {
-    /** @type {any} */ let marker;
-    if (m.kind === 'line') marker = L.marker([m.lat, m.lon], { icon: icon('pm-line', String(m.n), 18), keyboard: false });
-    else if (m.kind === 'current') marker = L.marker([m.lat, m.lon], { icon: icon('pm-current', '', 18), keyboard: false, zIndexOffset: 800 });
-    else if (m.kind === 'candidate') marker = L.marker([m.lat, m.lon], { icon: icon('pm-candidate', '', 26), keyboard: false, zIndexOffset: 1000 });
-    else if (m.kind === 'quay') marker = L.marker([m.lat, m.lon], { icon: icon(`pm-quay${m.state ? ` pm-quay-${m.state}` : ''}`, esc(m.label || '·'), 22), keyboard: false, zIndexOffset: m.state ? 900 : 500 });
-    else marker = L.marker([m.lat, m.lon], { icon: icon(m.kind === 'place' ? 'pm-place' : 'pm-place pm-browse', modeIconSvg(m.mode ?? '', ''), 26), keyboard: false });
+  v.setTrip({ line: [], dots: [], ring: null });
+  v.setLinks([]);
+  v.setDashed(model.line.map(([lat, lon]) => [lon, lat]));
+  v.setMarkers(model.markers.map((m) => {
+    const base = { lon: m.lon, lat: m.lat };
     // Quays carry their platform on the icon: no hover label for them (user test 2026-10-16)
-    if (m.kind !== 'quay') marker.bindTooltip(esc(m.label), { direction: 'top', offset: [0, -10] });
-    if (m.kind === 'place' || m.kind === 'browsePlace') marker.on('click', () => onPick('place', m.id));
-    if (m.kind === 'quay') {
-      marker.on('click', () => onPick('quay', m.id));
-      marker.on('contextmenu', (/** @type {any} */ e) => { e.originalEvent?.preventDefault(); quayMenu(m.id, e.originalEvent); });
-    }
-    layers.push(marker.addTo(map));
-  }
+    if (m.kind === 'line') return { ...base, cls: 'pm-line', html: String(m.n), size: 18, tooltip: esc(m.label) };
+    if (m.kind === 'current') return { ...base, cls: 'pm-current', html: '', size: 18, z: 800, tooltip: esc(m.label) };
+    if (m.kind === 'candidate') return { ...base, cls: 'pm-candidate', html: '', size: 26, z: 1000, tooltip: esc(m.label) };
+    if (m.kind === 'quay') return { ...base, cls: `pm-quay${m.state ? ` pm-quay-${m.state}` : ''}`, html: esc(m.label || '·'), size: 22, z: m.state ? 900 : 500,
+      onClick: () => onPick('quay', m.id), onContext: (/** @type {MouseEvent} */ ev) => quayMenu(m.id, ev) };
+    return { ...base, cls: m.kind === 'place' ? 'pm-place' : 'pm-place pm-browse', html: modeIconSvg(m.mode ?? '', ''), size: 26, tooltip: esc(m.label),
+      onClick: () => onPick('place', m.id) };
+  }));
   // Fit when what is being looked at changes (a new row, new hits, another stop place) — never
   // while the user pans and zooms to browse.
   const key = `${s.row}|${s.place?.id ?? ''}|${s.hits.map((h) => h.id).join(',')}|${s.current?.quayId ?? ''}`;
   if (key !== pickKey && model.fit && !s.recording) {
     pickKey = key;
-    if (model.fit.length === 1) map.setView(model.fit[0], Math.max(map.getZoom(), 17));
-    else map.fitBounds(L.latLngBounds(model.fit), { padding: [30, 30], maxZoom: 17 });
+    const pts = model.fit.map(([lat, lon]) => /** @type {[number, number]} */ ([lon, lat]));
+    if (pts.length === 1) v.setView(pts[0][0], pts[0][1], Math.max(v.getZoom(), 17));
+    else v.fit(pts, { padding: 30, maxZoom: 17 });
   }
+}
+
+/** The trip shown now: the selected column of the open line (the link router draws its links). */
+export function shownTrip() {
+  if (!grid.active || pickerState().row != null || pickerState().recording) return null;
+  return grid.cols[selectedColumn()] ?? null;
 }
 
 /** Draw the selected trip, or the picker. Never touches the grid. */
@@ -124,13 +128,13 @@ function update() {
   scheduled = false;
   if (!panelOpen('right') || currentPage() !== 'edit') return;
   ensureMap();
-  ensureTiles();
-  map.invalidateSize();
+  const v = /** @type {import('./map-view.js').MapView} */ (view);
+  v.resize();
 
-  for (const layer of layers) layer.remove();
-  layers = [];
   if (pickerState().row != null || pickerState().recording) { lastKey = ''; drawPicker(); return; }
   pickKey = '';
+  v.setMarkers([]);
+  v.setDashed([]);
   const ci = selectedColumn();
   const col = grid.active ? grid.cols[ci] : null;
   const trip = col ? tripOnMap(grid, col, quayInfo) : { points: [], missing: [] };
@@ -138,30 +142,24 @@ function update() {
   $('map-missing').hidden = !trip.missing.length;
   $('map-missing').textContent = trip.missing.length ? t('mapMissing', trip.missing.join(', ')) : '';
   /** @type {HTMLElement | null} */ (document.querySelector('#map-inner .map-hint-overlay')).style.display = trip.points.length ? 'none' : '';
-  if (!trip.points.length) { lastKey = ''; return; }
+  if (!trip.points.length) { lastKey = ''; v.setTrip({ line: [], dots: [], ring: null }); v.setLinks([]); return; }
 
-  const dark = theme() === 'dark';
-  const latlngs = trip.points.map((p) => [p.lat, p.lon]);
-  if (latlngs.length > 1) layers.push(L.polyline(latlngs, { color: '#0078d4', weight: 3, opacity: 0.85 }).addTo(map));
-  trip.points.forEach((p) => {
-    // Bold stops (the main stops in the timetable) are the larger dots
-    layers.push(L.circleMarker([p.lat, p.lon], {
-      radius: p.bold ? 7 : 5, fillColor: '#0078d4', color: dark ? '#2a2620' : '#ffffff', weight: 2, fillOpacity: 1,
-    }).bindTooltip(`<b>${esc(p.name)}</b> ${esc(p.time.slice(0, 2))}:${esc(p.time.slice(2))}`, { sticky: true }).addTo(map));
-  });
-
+  const line = trip.points.map((p) => /** @type {[number, number]} */ ([p.lon, p.lat]));
   // The selected row's stop, when it is a call of this trip: a ring on top, in the text colour
   const ri = selectedRowIndex();
   const here = trip.points.find((p) => p.ri === ri || (grid.stops[/** @type {number} */ (ri)]?.isDwellArr && p.ri === /** @type {number} */ (ri) + 1));
-  if (here) {
-    const ink = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#000';
-    layers.push(L.circleMarker([here.lat, here.lon], { radius: 12, color: ink, weight: 3, fill: false, interactive: false }).addTo(map));
-  }
+  const ink = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#000';
+  v.setTrip({
+    // Bold stops (the main stops in the timetable) are the larger dots
+    line, ink, ring: here ? [here.lon, here.lat] : null,
+    dots: trip.points.map((p) => ({ lon: p.lon, lat: p.lat, r: p.bold ? 7 : 5, tooltip: `<b>${esc(p.name)}</b> ${esc(p.time.slice(0, 2))}:${esc(p.time.slice(2))}` })),
+  });
+  for (const fn of drawListeners) fn();
 
   // Fit only when another trip is shown, so the user's own zoom/pan survives edits.
   const key = `${app.activeRoute}|${app.routeState?.activePer}|${app.routeState?.activeSet}|${ci}|${trip.points.map((p) => p.stopId).join(',')}`;
   if (key !== lastKey) {
-    map.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24], maxZoom: 14 });
+    v.fit(line, { padding: 24, maxZoom: 14 });
     lastKey = key;
   }
 }
@@ -183,21 +181,16 @@ export function initMapPanel() {
   setPickerMap({
     show: () => schedule(),
     onPick: (fn) => { onPick = fn; },
-    view: () => {
-      if (!map || !panelOpen('right')) return null;
-      const c = map.getCenter();
-      const b = map.getBounds();
-      return { lat: c.lat, lon: c.lng, zoom: map.getZoom(), radiusKm: b.getNorthEast().distanceTo(b.getSouthWest()) / 2000 };
-    },
+    view: () => (view && panelOpen('right') ? view.view() : null),
     onViewChange: (fn) => { viewListeners.push(fn); },
-    zoomTo: (lat, lon, zoom) => { ensureMap(); map.setView([lat, lon], zoom); },
+    zoomTo: (lat, lon, zoom) => { ensureMap(); view?.setView(lon, lat, zoom); },
   });
   onGridRender(schedule);
   onPanelToggle(refitAfterSlide);
-  // Light/dark switch (the theme button changes data-theme without a full refresh).
+  // Light/dark switch (the theme button changes data-theme without a full refresh): another style.
   new MutationObserver(schedule).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-  // Dragging the panel edge or resizing the window: let Leaflet re-measure.
-  new ResizeObserver(() => { if (map) map.invalidateSize(); }).observe($('map-inner'));
+  // Dragging the panel edge or resizing the window: let the map re-measure.
+  new ResizeObserver(() => { view?.resize(); }).observe($('map-inner'));
   onQuaysLoaded(schedule);
   onRefresh(schedule); // page changes, theme, language, another route
 }

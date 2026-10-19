@@ -11,7 +11,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   exportAsZip: true,
   /** show the Quays' private codes beside the stop names (View menu) */
   showPrivateCode: false,
-  // Map background: any raster tile URL with {z}/{x}/{y}. CARTO's free basemaps need an API key now.
+  // The map (2.3): a MapLibre style URL; empty = OpenFreeMap Positron / Dark (core/map-style.js).
+  mapStyleUrl: '',
+  // Before 2.3: a raster tile URL with {z}/{x}/{y}. A custom one still works, as a raster style.
   tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   tileAttribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 });
