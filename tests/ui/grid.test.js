@@ -557,3 +557,15 @@ describe('a note on several cells at once (47)', () => {
     expect(grid.cols[0].cells[2]).toBe(null); // an empty cell gets no note
   });
 });
+
+describe('times aligned, with room for marks (35)', () => {
+  it('puts the time and its marks (a/p/x, +1) in two parts, so every time starts at the same place', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), { ...cell('0010'), suffix: 'p', dayOffset: 1 }] }] });
+    const td = (/** @type {number} */ r) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="0"]`));
+    expect(td(0).querySelector('.g-t')?.textContent).toBe('0700');
+    expect(td(0).querySelector('.g-m')?.textContent).toBe('');
+    expect(td(1).querySelector('.g-t')?.textContent).toBe('0010');
+    expect(td(1).querySelector('.g-m')?.textContent).toBe('p+1');
+    expect(td(1).textContent).toBe('0010p+1');
+  });
+});

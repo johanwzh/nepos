@@ -175,13 +175,16 @@ function isDecreasing(r, c) {
 }
 /** @param {any} cell @param {boolean} isEdit @param {string} buf */
 function cellHTML(cell, isEdit, buf) {
-  if (isEdit) return esc(buf) + '▌';
+  // The time in its own fixed slot and its marks (a/p/x, day offset) in a slot to the right, so every time
+  // in a column starts at the same place (user 2026-10-17, as in Reggi)
+  const slots = (/** @type {string} */ time, /** @type {string} */ marks) => `<span class="g-t">${time}</span><span class="g-m">${marks}</span>`;
+  if (isEdit) return slots(esc(buf) + '▌', '');
   if (!cell || !cell.time) return '';
-  if (cell.time === '|') return '|';
-  let h = esc(cell.time);
-  if (cell.suffix) h += `<span class="g-sfx-${cell.suffix}">${cell.suffix}</span>`;
-  if (cell.dayOffset > 0) h += `<span class="g-day-off"> +${cell.dayOffset}</span>`;
-  return h;
+  if (cell.time === '|') return slots('|', '');
+  let m = '';
+  if (cell.suffix) m += `<span class="g-sfx-${cell.suffix}">${cell.suffix}</span>`;
+  if (cell.dayOffset > 0) m += `<span class="g-day-off">+${cell.dayOffset}</span>`;
+  return slots(esc(cell.time), m);
 }
 /** @param {number} r @param {number} c */
 const hasTime = (r, c) => { const cell = grid.cols[c].cells[r]; return !!(cell && cell.time && cell.time !== '|'); };
