@@ -15,7 +15,7 @@ import { writeShapes } from '../project/shapes-store.js';
 import { profileFor } from '../shapes/profiles.js';
 import { decodePolyline, haversineM } from '../shapes/geometry.js';
 
-/** @typedef {import('../core/link-pairs.js').LinkPair} LinkPair */
+/** @typedef {import('../core/link-pairs.js').LinkPair & { fs?: any, readOnly?: boolean }} LinkPair  fs, readOnly: the project and rule when queued */
 /** @typedef {import('../core/link-state.js').SavedShape} SavedShape */
 /** @typedef {{ shapeLink: (from: any, to: any, profile: any, opts?: any) => Promise<import('../shapes/engine.js').LinkResult>, tilesUsed: () => number }} EngineLike */
 
@@ -40,6 +40,10 @@ const staleQueue = new Map();
 /** @type {Set<string>} in flight */
 const inFlight = new Set();
 let running = false;
+/** The project the queues and this page load's results belong to. @type {any} */
+let forFs = null;
+/** The engine could not be made: 'raster' (no vector tiles, for good) or '' (try again on next need). */
+let noEngine = '';
 /** @type {(() => void)[]} */
 const listeners = [];
 /** @type {any} */ let saveTimer = null;
@@ -56,7 +60,7 @@ export function initLinkRouter(opts = {}) {
   if (opts.idle) idle = opts.idle;
   if (opts.restMs != null) restMs = opts.restMs;
   if (opts.staleCap != null) staleCap = opts.staleCap;
-  staleDone = 0; budgetLeft = true; lastRoute = null;
+  staleDone = 0; budgetLeft = true; lastRoute = null; forFs = null; noEngine = '';
   session.clear(); queue.clear(); staleQueue.clear(); inFlight.clear();
   onGridRender(onRender);
   onRefresh(onRefreshed);
@@ -96,8 +100,11 @@ function pairsOf(code) {
  * @param {string} code @param {{ only?: 'missing' | 'stale' | 'all' }} [opts]
  */
 export function routeLine(code, { only = 'all' } = {}) {
+  sameProject();
   let added = false;
-  for (const p of pairsOf(code)) {
+  const readOnly = code === app.activeRoute && grid.active && grid.readOnly;
+  for (const p0 of pairsOf(code)) {
+    const p = { ...p0, fs: app.fs, readOnly };
     const s = linkFor(p.key);
     if (!s || s.status === 'ERROR') {
       if (only !== 'stale' && !queue.has(p.key) && !inFlight.has(p.key) && !(s && session.has(p.key))) { queue.set(p.key, p); added = true; }
@@ -107,6 +114,13 @@ export function routeLine(code, { only = 'all' } = {}) {
   }
   if (added) void run();
   if (staleQueue.size) idle(() => { void run(); });
+}
+
+/** Another project is open: its queues and this page load's results are not for it (final review I2). */
+function sameProject() {
+  if (app.fs === forFs) return;
+  forFs = app.fs;
+  queue.clear(); staleQueue.clear(); session.clear();
 }
 
 /** Route what is queued, one link at a time (the worker does the work), the planner's own links first. */
@@ -124,16 +138,16 @@ async function run() {
         if (p) { staleQueue.delete(p.key); stale = true; staleDone++; }
       }
       if (!p) break;
+      if (p.fs !== app.fs || !p.fs) continue; // queued for another project
       const e = await ensureEngine();
-      if (!e) break;
-      const fs = app.fs;
+      if (!e) { if (!stale) store(p.key, toSaved(unrouted(p), now()), { readOnly: true }); continue; }
       inFlight.add(p.key);
       const r = await e.shapeLink(p.from, p.to, p.profile);
       inFlight.delete(p.key);
       if (r.warnings.includes('cancelled')) continue;
       if (r.warnings.includes('tile budget used')) { budgetLeft = false; staleQueue.clear(); }
-      if (app.fs !== fs || !fs) continue; // another project was opened meanwhile: not for this one
-      store(p.key, toSaved(r, now()));
+      if (app.fs !== p.fs) continue; // another project was opened meanwhile: not for this one
+      store(p.key, toSaved(r, now()), { readOnly: !!p.readOnly });
       if (stale && !budgetLeft) break;
     }
   } finally {
@@ -141,17 +155,36 @@ async function run() {
   }
 }
 
-/** @returns {Promise<EngineLike | null>} */
+/**
+ * The engine, made on first need. A raster map has no vector tiles: no engine, for good. A failure (offline) is
+ * tried again on the next need (final review I3).
+ * @returns {Promise<EngineLike | null>}
+ */
 async function ensureEngine() {
   if (engine) return engine;
-  if (!makeEngine) return null;
-  if (!making) making = makeEngine().then((e) => { engine = e; return e; }, () => null);
+  if (!makeEngine || noEngine === 'raster') return null;
+  if (!making) {
+    making = makeEngine().then((e) => { engine = e; noEngine = e ? '' : 'raster'; return e; }, () => { noEngine = ''; return null; });
+    const m = making;
+    void m.then((e) => { if (!e) making = null; });
+  }
   return making;
 }
 
-/** Keep a result: saved for the project, or for this page load only (errors, read-only lines). @param {string} key @param {SavedShape} s */
-function store(key, s) {
-  if (s.status === 'ERROR' || grid.readOnly) { session.set(key, s); changed(); return; }
+/** What a link is when there is no engine: NOT_SHAPED on a raster map, else ERROR (tried again later). @param {LinkPair} p */
+function unrouted(p) {
+  const raster = noEngine === 'raster' || !makeEngine;
+  return /** @type {import('../shapes/engine.js').LinkResult} */ ({ key: p.key, status: raster ? 'NOT_SHAPED' : 'ERROR', from: p.from, to: p.to, profile: p.profile,
+    coordinates: [[p.from.lon, p.from.lat], [p.to.lon, p.to.lat]], distanceM: haversineM([p.from.lon, p.from.lat], [p.to.lon, p.to.lat]), arriveBearing: null,
+    warnings: [raster ? 'no vector tiles' : 'offline'], source: '', engine: 0 });
+}
+
+/**
+ * Keep a result: saved for the project, or for this page load only (errors, no engine, read-only lines).
+ * @param {string} key @param {SavedShape} s @param {{ readOnly?: boolean }} [opts] readOnly: the line it was queued for
+ */
+function store(key, s, { readOnly = false } = {}) {
+  if (s.status === 'ERROR' || readOnly || s.warnings.includes('no vector tiles')) { session.set(key, s); changed(); return; }
   session.delete(key);
   app.shapes.set(key, s);
   changed();
@@ -203,7 +236,8 @@ export function routeAgain(key) {
   if (!p) return;
   app.shapes.delete(key);
   session.delete(key);
-  queue.set(key, p);
+  sameProject();
+  queue.set(key, { ...p, fs: app.fs, readOnly: grid.active && grid.readOnly });
   changed();
   void run();
 }
@@ -236,8 +270,8 @@ export async function routeMissingForExport(codes) {
     if (!e || app.fs !== fs) break;
     const r = await e.shapeLink(p.from, p.to, p.profile);
     if (r.warnings.includes('tile budget used')) { budgetLeft = false; break; }
-    if (r.warnings.includes('cancelled')) continue;
-    store(p.key, toSaved(r, now()));
+    if (r.warnings.includes('cancelled') || app.fs !== fs) continue;
+    store(p.key, toSaved(r, now())); // for the export: saved, whatever line is open (final review I5)
     done++;
   }
   await saveNow();

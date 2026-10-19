@@ -166,13 +166,14 @@ describe('routing links as the timetable is edited', () => {
   it('a read-only line routes and draws, but saves nothing', async () => {
     await openProject({ '50': ern('50', ['0700', '0710']) });
     await selectRoute('50');
+    await settle(); await wait(50); // the writable line's own routing is done first
     grid.readOnly = true;
     app.shapes.clear();
     routeAgain(K12);
     await settle(); await wait(500);
     expect(linkFor(K12)?.status).toBe('OK');
     expect(app.shapes.has(K12)).toBe(false);
-    expect(await readText(fs, 'data/shapes.json')).toBeNull();
+    expect(JSON.parse(/** @type {string} */ (await readText(fs, 'data/shapes.json'))).shapes[K12]).toBeUndefined(); // the read-only result is not saved
     grid.readOnly = false;
   });
 
@@ -187,5 +188,60 @@ describe('routing links as the timetable is edited', () => {
     await settle();
     expect(linkBudgetLeft()).toBe(false);
     expect(calls).toHaveLength(1);
+  });
+});
+
+describe('the final review\'s fixes (router)', () => {
+  it('I2: opening another project drops the old project\'s queued links', async () => {
+    await openProject({ '50': ern('50', ['0700', '0710', '0720']) });
+    /** @type {(() => void)[]} */
+    const releases = [];
+    let asked = 0;
+    const slow = { ...engine, shapeLink: (/** @type {any} */ f, /** @type {any} */ t, /** @type {any} */ p) => new Promise((res) => { asked++; releases.push(() => res(engine.shapeLink(f, t, p))); }) };
+    initLinkRouter({ engine: slow, now: () => NOW, idle: (fn) => idleQueue.push(fn), restMs: 20 });
+    await selectRoute('50');
+    await settle();
+    expect(asked).toBe(1); // one in flight, one queued
+    await openProject({ '60': ern('60', ['0700']) });
+    for (const r of releases.splice(0)) r();
+    await settle(); await wait(50); await settle();
+    for (const r of releases.splice(0)) r();
+    await settle(); await wait(500);
+    expect(asked).toBe(1); // the queued pair of the old project was never routed
+    expect(app.shapes.size).toBe(0);
+  });
+
+  it('I3: an engine that cannot start (offline) leaves ERROR links, and routing works once it can', async () => {
+    let online = false;
+    initLinkRouter({ makeEngine: async () => { if (!online) throw new Error('offline'); return engine; }, now: () => NOW, idle: (fn) => idleQueue.push(fn), restMs: 20 });
+    await openProject({ '50': ern('50', ['0700', '0710']) });
+    await selectRoute('50');
+    await settle();
+    expect(linkFor(K12)?.status).toBe('ERROR');
+    online = true;
+    routeAgain(K12);
+    await settle();
+    expect(linkFor(K12)?.status).toBe('OK');
+  });
+
+  it('I4: with a raster map (no vector tiles) links are NOT_SHAPED, "no vector tiles"', async () => {
+    initLinkRouter({ makeEngine: async () => null, now: () => NOW, idle: (fn) => idleQueue.push(fn), restMs: 20 });
+    await openProject({ '50': ern('50', ['0700', '0710']) });
+    await selectRoute('50');
+    await settle();
+    expect(linkFor(K12)?.status).toBe('NOT_SHAPED');
+    expect(linkFor(K12)?.warnings).toContain('no vector tiles');
+  });
+
+  it('I5: "Route missing links" saves links even while a read-only line is open', async () => {
+    const { routeMissingForExport } = await import('../../src/ui/link-router.js');
+    await openProject({ '50': ern('50', ['0700', '0710']), '51': ern('51', ['0800', '0810']) });
+    await selectRoute('50');
+    await settle();
+    app.shapes.clear();
+    grid.readOnly = true;
+    await routeMissingForExport(['51']);
+    grid.readOnly = false;
+    expect(app.shapes.get(K12)?.status).toBe('OK');
   });
 });

@@ -42,6 +42,7 @@ export function createMapView(el, { style, dark = false }) {
   /** What each source holds, so a new style can be filled again. @type {Record<string, any>} */
   const data = { links: collection([]), 'trip-line': collection([]), dashed: collection([]), dots: collection([]), ring: collection([]) };
   let isDark = dark;
+  const size = { w: el.clientWidth, h: el.clientHeight };
   let ready = false;
   /** @type {maplibregl.Marker[]} */
   let markers = [];
@@ -153,7 +154,12 @@ export function createMapView(el, { style, dark = false }) {
     onLinkContext(fn) { linkContext.push(fn); },
     /** @param {() => void} fn called once the style is loaded, now or later */
     whenReady(fn) { if (ready && map.isStyleLoaded()) fn(); else map.once('idle', fn); },
-    resize() { map.resize(); },
+    /** Re-measure, only when the container's size changed (a real resize repaints and fires move events). */
+    resize() {
+      if (el.clientWidth === size.w && el.clientHeight === size.h) return;
+      size.w = el.clientWidth; size.h = el.clientHeight;
+      map.resize();
+    },
     /** The vector source the style draws roads from: what the router fetches. Null for a raster style. */
     styleSource() {
       const style = map.getStyle();

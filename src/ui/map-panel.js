@@ -154,7 +154,7 @@ function update() {
   if (!panelOpen('right') || currentPage() !== 'edit') return;
   ensureMap();
   const v = /** @type {import('./map-view.js').MapView} */ (view);
-  v.resize();
+  v.resize(); // only when the size changed (map-view): a real resize repaints and fires move events (final review I6)
 
   if (pickerState().row != null || pickerState().recording) { lastKey = ''; drawPicker(); return; }
   pickKey = '';

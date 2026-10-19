@@ -94,3 +94,31 @@ describe('shaping one link (Lasse\'s spec + the design\'s limits)', () => {
     expect(r.status).toBe('NO_NETWORK_NEAR');
   });
 });
+
+describe('the final review\'s fixes (engine)', () => {
+  it('C1: one failed tile in the corridor is ERROR, never a route through a hole, and it is fetched again next time', async () => {
+    const { fetchTile: real } = fixtures();
+    let fail = true;
+    const fetchTile = async (/** @type {number} */ z, /** @type {number} */ x, /** @type {number} */ y) => {
+      if (fail && x === 8680 && y === 4766) throw new Error('blip'); // not a Quay's own tile
+      return real(z, x, y);
+    };
+    const core = createEngineCore({ fetchTile, source: 'test' });
+    const first = await core.shapeLink(JBT, OBT, 'bus');
+    expect(first.status).toBe('ERROR');
+    expect(first.warnings).toContain('tiles not loaded');
+    fail = false;
+    expect((await core.shapeLink(JBT, OBT, 'bus')).status).toBe('OK');
+  });
+
+  it('I1: keeps every tile of the largest corridor it accepts (no fetching twice, no holes)', async () => {
+    let fetched = 0;
+    const core = createEngineCore({ fetchTile: async () => { fetched++; return new Uint8Array(1); }, decode: () => [], source: 'test' });
+    const from = { quayId: 'NSR:Quay:A', lon: 10.0, lat: 60.0 }, to = { quayId: 'NSR:Quay:B', lon: 14.9, lat: 60.0 };
+    await core.shapeLink(from, to, 'rail');
+    const first = fetched;
+    expect(first).toBeGreaterThan(300); // more than the old cache held
+    await core.shapeLink(from, to, 'rail');
+    expect(fetched).toBe(first);
+  });
+});

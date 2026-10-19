@@ -37,6 +37,8 @@ export function createEngineCore({ fetchTile, source, maxTiles = 400, budget = S
   /** @type {Map<string, import('./graph.js').Graph>} */
   const graphs = new Map();
   let used = 0;
+  // The cache holds at least two of the largest corridors, so a link never loses its own tiles before the graph is built
+  const lruSize = Math.max(LRU_TILES, 2 * maxTiles);
 
   /** Fetch what is missing, at most `concurrency` at a time. Failed tiles are remembered as failed. @param {string[]} keys */
   async function load(keys) {
@@ -57,7 +59,7 @@ export function createEngineCore({ fetchTile, source, maxTiles = 400, budget = S
     };
     await Promise.all(Array.from({ length: Math.min(concurrency, missing.length) }, worker));
     for (const k of keys) { const v = tiles.get(k); if (v !== undefined) { tiles.delete(k); tiles.set(k, v); } }
-    while (tiles.size > LRU_TILES) tiles.delete(/** @type {string} */ (tiles.keys().next().value));
+    while (tiles.size > lruSize) tiles.delete(/** @type {string} */ (tiles.keys().next().value));
   }
 
   /** @param {Profile} profile @param {number} z @param {string[]} keys */
@@ -96,7 +98,12 @@ export function createEngineCore({ fetchTile, source, maxTiles = 400, budget = S
       const missing = corridor.filter((k) => !tiles.has(k)).length;
       if (used + missing > budget) return plain('ERROR', ['tile budget used']);
       await load(corridor);
-      if (own.some((k) => tiles.get(k) === 'failed')) { for (const k of own) if (tiles.get(k) === 'failed') tiles.delete(k); return plain('ERROR', ['tiles not loaded']); }
+      // Any tile that did not load: no route through the hole. Forget the failures so they are fetched next time
+      // (final review C1: a route around a missing tile would be saved and exported).
+      if (own.some((k) => tiles.get(k) === 'failed') || corridor.some((k) => tiles.get(k) === 'failed')) {
+        for (const k of corridor) if (tiles.get(k) === 'failed') tiles.delete(k);
+        return plain('ERROR', ['tiles not loaded']);
+      }
       const g = graphFor(profile, z, corridor);
       const fromC = snap(g, a, profile), toC = snap(g, b, profile);
       if (!fromC.length || !toC.length) return plain('NO_NETWORK_NEAR');
