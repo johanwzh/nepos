@@ -63,8 +63,6 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 /* The 1.5.7 grid had a price column (72px) and a vehicle row (22px); both are hidden in Nepos 2,
    so the sticky name column and header rows move up/left by those amounts. */
 .g-sticky1 { left: 20px; }
-.g-row-foot { top: 22px; }
-.g-row-dc { top: 40px; }
 
 #grid-status.n2-readonly { cursor: pointer; }
 #edit-footer .n2-readonly-note { color: var(--g-dec-c); font-size: 11px; }
@@ -838,3 +836,8 @@ td.has-dates { box-shadow: inset -3px 0 0 #3a9b5b; }
 [data-theme="dark"] select { color-scheme: dark; }
 select option { background: var(--bg-panel); color: var(--text); }
 .lv-tag.closed { background: var(--bg-hdr); color: var(--text-m); border: 1px solid var(--border); }
+
+/* Frozen header rows (grid.js layoutFrozen) need solid cells: the trip-number row and the destination columns'
+   header cells too, so the rows scrolling under them do not show through */
+.g-row-tn td { background: var(--bg-raised); border: 1px solid var(--border-lt); }
+#tbl tr.g-row-ins td.cw-dest, #tbl tr.g-row-foot td.cw-dest, #tbl tr.g-row-dc td.cw-dest, #tbl tr.g-row-tn td.cw-dest { background: var(--bg-hdr); }

@@ -393,6 +393,7 @@ export function render() {
     addDestColumns(tbl);
     if (!destOpening) tbl.classList.add('dest-shown');
   } else tbl.classList.remove('dest-shown');
+  layoutFrozen(tbl);
   updateFnPreview(inDC ? { type: 'col', ri: 0, ci: dcCol } : inStopCol ? null : { type: 'cell', ri: ancR, ci: ancC });
   if (snapshot() !== baseline) onChange();
   for (const fn of renderListeners) fn();
@@ -613,6 +614,26 @@ function onDestColumnsToggled() {
     tbl.classList.remove('dest-shown');
     setTimeout(render, 160);
   }
+}
+
+/**
+ * Frozen panes, as in Reggi and Excel (user 2026-10-18): the header rows (insert, notes, day codes, trip numbers)
+ * stay at the top and the stop column at the left. Each header row is placed under the one above it, by the
+ * heights it really has, and the scroll area is told how much is frozen, so a selected cell scrolled into view
+ * is never hidden under them.
+ * @param {HTMLTableElement} tbl
+ */
+function layoutFrozen(tbl) {
+  let top = 0;
+  for (const tr of [...tbl.rows]) {
+    if (!/\bg-row-(ins|foot|dc|tn)\b/.test(tr.className)) break;
+    tr.style.top = `${top}px`;
+    top += tr.offsetHeight;
+  }
+  const name = /** @type {HTMLElement | null} */ (tbl.querySelector('.g-row-dc .g-sticky1'));
+  const wrap = $('tbl-wrap');
+  wrap.style.scrollPaddingTop = `${top}px`;
+  wrap.style.scrollPaddingLeft = `${name ? name.offsetLeft + name.offsetWidth : 0}px`;
 }
 
 /** @param {string} label @param {string} cls @param {string} title @param {() => void} fn */
