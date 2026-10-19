@@ -1062,7 +1062,7 @@ function keyNav(e) {
       render(); scrollTo(ancR, ancC); break;
     case 'ArrowRight': e.preventDefault(); if (sh) extend(endR, endC + 1); else setAnchor(ancR, ancC + 1); render(); scrollTo(ancR, ancC); break;
     case 'F2': e.preventDefault(); enterStopEdit(ancR); break;
-    case 'F7': e.preventDefault(); openFnEditor('cell', ancR, ancC); break;
+    case 'F7': e.preventDefault(); openNoteOnSelection(ancR, ancC); break;
     case 'Enter': e.preventDefault(); startEdit(''); break;
     case 'Delete': case 'Backspace': e.preventDefault(); clearSelection(); render(); break;
     case '|': e.preventDefault(); grid.cols[ancC].cells[ancR] = { time: '|', dayOffset: 0, suffix: '', interchange: null }; render(); break;
@@ -1234,6 +1234,23 @@ function timedInSelection() {
     if (cell && cell.time && cell.time !== '|') out.push(cell);
   }
   return out;
+}
+
+/**
+ * The note box for the selected times (user 2026-10-18): one note on every time in the selection, or on the one
+ * cell when only one is selected.
+ * @param {number} r @param {number} c the cell the box opens at
+ */
+function openNoteOnSelection(r, c) {
+  const { r0, r1, c0, c1 } = selRect();
+  /** @type {{ ri: number, ci: number }[]} */
+  const cells = [];
+  for (let ci = c0; ci <= c1; ci++) for (let ri = r0; ri <= r1; ri++) {
+    const cell = grid.cols[ci]?.cells[ri];
+    if (cell && cell.time && cell.time !== '|') cells.push({ ri, ci });
+  }
+  if (cells.length > 1) openFnEditor('cell', cells[0].ri, cells[0].ci, cells);
+  else openFnEditor('cell', r, c);
 }
 
 /** What "Interpoler tider" would fill: per column of the selection (a single cell: the whole column). */
@@ -1544,7 +1561,7 @@ export function initGrid() {
     grid.stops[ctxStopRow].sep = !grid.stops[ctxStopRow].sep;
     hideCtx(); render();
   });
-  $('gc-add-note').addEventListener('click', () => { hideCtx(); openFnEditor('cell', ctxR, ctxC); });
+  $('gc-add-note').addEventListener('click', () => { hideCtx(); openNoteOnSelection(ctxR, ctxC); });
   $('gc-tripno').addEventListener('click', () => {
     hideCtx();
     if (grid.readOnly) return;

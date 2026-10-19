@@ -539,3 +539,21 @@ describe('frozen rows and stop column (49)', () => {
     expect(wrap.style.scrollPaddingLeft).toMatch(/^\d+px$/);
   });
 });
+
+describe('a note on several cells at once (47)', () => {
+  it('puts the note on every time in the selection', () => {
+    loadGrid({ stops: [stop('A'), stop('B'), stop('C')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710'), null] }, { dayCode: 'D', cells: [cell('0800'), cell('0810'), cell('0820')] }] });
+    const td = (/** @type {number} */ r, /** @type {number} */ c) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="${c}"]`));
+    td(0, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    td(2, 1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    press('F7');
+    const input = /** @type {HTMLInputElement} */ (document.querySelector('.float-box .note-text'));
+    expect(document.querySelector('.float-box')?.textContent).toContain('5');
+    input.value = 'Bytt buss';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect([grid.cols[0].cells[0].note, grid.cols[0].cells[1].note, grid.cols[1].cells[0].note, grid.cols[1].cells[1].note, grid.cols[1].cells[2].note]).toEqual(Array(5).fill('Bytt buss'));
+    expect(grid.cols[0].cells[2]).toBe(null); // an empty cell gets no note
+  });
+});
