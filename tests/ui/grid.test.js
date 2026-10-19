@@ -528,3 +528,44 @@ describe('day codes tidy themselves (44)', () => {
     expect(grid.cols[0].dayCode).toBe('DX67');
   });
 });
+
+describe('frozen rows and stop column (49)', () => {
+  it('stacks the header rows from the measured heights and tells the scroll area how much is frozen', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')] }] });
+    const rows = [...document.querySelectorAll('#tbl tr')].slice(0, 3);
+    for (const tr of rows) expect(/** @type {HTMLElement} */ (tr).style.top).toMatch(/^\d+px$/);
+    const wrap = /** @type {HTMLElement} */ (document.getElementById('tbl-wrap'));
+    expect(wrap.style.scrollPaddingTop).toMatch(/^\d+px$/);
+    expect(wrap.style.scrollPaddingLeft).toMatch(/^\d+px$/);
+  });
+});
+
+describe('a note on several cells at once (47)', () => {
+  it('puts the note on every time in the selection', () => {
+    loadGrid({ stops: [stop('A'), stop('B'), stop('C')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710'), null] }, { dayCode: 'D', cells: [cell('0800'), cell('0810'), cell('0820')] }] });
+    const td = (/** @type {number} */ r, /** @type {number} */ c) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="${c}"]`));
+    td(0, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    td(2, 1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    press('F7');
+    const input = /** @type {HTMLInputElement} */ (document.querySelector('.float-box .note-text'));
+    expect(document.querySelector('.float-box')?.textContent).toContain('5');
+    input.value = 'Bytt buss';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect([grid.cols[0].cells[0].note, grid.cols[0].cells[1].note, grid.cols[1].cells[0].note, grid.cols[1].cells[1].note, grid.cols[1].cells[2].note]).toEqual(Array(5).fill('Bytt buss'));
+    expect(grid.cols[0].cells[2]).toBe(null); // an empty cell gets no note
+  });
+});
+
+describe('times aligned, with room for marks (35)', () => {
+  it('puts the time and its marks (a/p/x, +1) in two parts, so every time starts at the same place', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), { ...cell('0010'), suffix: 'p', dayOffset: 1 }] }] });
+    const td = (/** @type {number} */ r) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="0"]`));
+    expect(td(0).querySelector('.g-t')?.textContent).toBe('0700');
+    expect(td(0).querySelector('.g-m')?.textContent).toBe('');
+    expect(td(1).querySelector('.g-t')?.textContent).toBe('0010');
+    expect(td(1).querySelector('.g-m')?.textContent).toBe('p+1');
+    expect(td(1).textContent).toBe('0010p+1');
+  });
+});

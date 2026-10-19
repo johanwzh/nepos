@@ -175,13 +175,16 @@ function isDecreasing(r, c) {
 }
 /** @param {any} cell @param {boolean} isEdit @param {string} buf */
 function cellHTML(cell, isEdit, buf) {
-  if (isEdit) return esc(buf) + '▌';
+  // The time in its own fixed slot and its marks (a/p/x, day offset) in a slot to the right, so every time
+  // in a column starts at the same place (user 2026-10-17, as in Reggi)
+  const slots = (/** @type {string} */ time, /** @type {string} */ marks) => `<span class="g-t">${time}</span><span class="g-m">${marks}</span>`;
+  if (isEdit) return slots(esc(buf) + '▌', '');
   if (!cell || !cell.time) return '';
-  if (cell.time === '|') return '|';
-  let h = esc(cell.time);
-  if (cell.suffix) h += `<span class="g-sfx-${cell.suffix}">${cell.suffix}</span>`;
-  if (cell.dayOffset > 0) h += `<span class="g-day-off"> +${cell.dayOffset}</span>`;
-  return h;
+  if (cell.time === '|') return slots('|', '');
+  let m = '';
+  if (cell.suffix) m += `<span class="g-sfx-${cell.suffix}">${cell.suffix}</span>`;
+  if (cell.dayOffset > 0) m += `<span class="g-day-off">+${cell.dayOffset}</span>`;
+  return slots(esc(cell.time), m);
 }
 /** @param {number} r @param {number} c */
 const hasTime = (r, c) => { const cell = grid.cols[c].cells[r]; return !!(cell && cell.time && cell.time !== '|'); };
@@ -393,6 +396,7 @@ export function render() {
     addDestColumns(tbl);
     if (!destOpening) tbl.classList.add('dest-shown');
   } else tbl.classList.remove('dest-shown');
+  layoutFrozen(tbl);
   updateFnPreview(inDC ? { type: 'col', ri: 0, ci: dcCol } : inStopCol ? null : { type: 'cell', ri: ancR, ci: ancC });
   if (snapshot() !== baseline) onChange();
   for (const fn of renderListeners) fn();
@@ -613,6 +617,26 @@ function onDestColumnsToggled() {
     tbl.classList.remove('dest-shown');
     setTimeout(render, 160);
   }
+}
+
+/**
+ * Frozen panes, as in Reggi and Excel (user 2026-10-18): the header rows (insert, notes, day codes, trip numbers)
+ * stay at the top and the stop column at the left. Each header row is placed under the one above it, by the
+ * heights it really has, and the scroll area is told how much is frozen, so a selected cell scrolled into view
+ * is never hidden under them.
+ * @param {HTMLTableElement} tbl
+ */
+function layoutFrozen(tbl) {
+  let top = 0;
+  for (const tr of [...tbl.rows]) {
+    if (!/\bg-row-(ins|foot|dc|tn)\b/.test(tr.className)) break;
+    tr.style.top = `${top}px`;
+    top += tr.offsetHeight;
+  }
+  const name = /** @type {HTMLElement | null} */ (tbl.querySelector('.g-row-dc .g-sticky1'));
+  const wrap = $('tbl-wrap');
+  wrap.style.scrollPaddingTop = `${top}px`;
+  wrap.style.scrollPaddingLeft = `${name ? name.offsetLeft + name.offsetWidth : 0}px`;
 }
 
 /** @param {string} label @param {string} cls @param {string} title @param {() => void} fn */
@@ -1041,7 +1065,7 @@ function keyNav(e) {
       render(); scrollTo(ancR, ancC); break;
     case 'ArrowRight': e.preventDefault(); if (sh) extend(endR, endC + 1); else setAnchor(ancR, ancC + 1); render(); scrollTo(ancR, ancC); break;
     case 'F2': e.preventDefault(); enterStopEdit(ancR); break;
-    case 'F7': e.preventDefault(); openFnEditor('cell', ancR, ancC); break;
+    case 'F7': e.preventDefault(); openNoteOnSelection(ancR, ancC); break;
     case 'Enter': e.preventDefault(); startEdit(''); break;
     case 'Delete': case 'Backspace': e.preventDefault(); clearSelection(); render(); break;
     case '|': e.preventDefault(); grid.cols[ancC].cells[ancR] = { time: '|', dayOffset: 0, suffix: '', interchange: null }; render(); break;
@@ -1213,6 +1237,23 @@ function timedInSelection() {
     if (cell && cell.time && cell.time !== '|') out.push(cell);
   }
   return out;
+}
+
+/**
+ * The note box for the selected times (user 2026-10-18): one note on every time in the selection, or on the one
+ * cell when only one is selected.
+ * @param {number} r @param {number} c the cell the box opens at
+ */
+function openNoteOnSelection(r, c) {
+  const { r0, r1, c0, c1 } = selRect();
+  /** @type {{ ri: number, ci: number }[]} */
+  const cells = [];
+  for (let ci = c0; ci <= c1; ci++) for (let ri = r0; ri <= r1; ri++) {
+    const cell = grid.cols[ci]?.cells[ri];
+    if (cell && cell.time && cell.time !== '|') cells.push({ ri, ci });
+  }
+  if (cells.length > 1) openFnEditor('cell', cells[0].ri, cells[0].ci, cells);
+  else openFnEditor('cell', r, c);
 }
 
 /** What "Interpoler tider" would fill: per column of the selection (a single cell: the whole column). */
@@ -1523,7 +1564,7 @@ export function initGrid() {
     grid.stops[ctxStopRow].sep = !grid.stops[ctxStopRow].sep;
     hideCtx(); render();
   });
-  $('gc-add-note').addEventListener('click', () => { hideCtx(); openFnEditor('cell', ctxR, ctxC); });
+  $('gc-add-note').addEventListener('click', () => { hideCtx(); openNoteOnSelection(ctxR, ctxC); });
   $('gc-tripno').addEventListener('click', () => {
     hideCtx();
     if (grid.readOnly) return;

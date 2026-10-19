@@ -34,35 +34,41 @@ export function updateFnPreview(where = null) {
 }
 
 /**
- * The note box for a column or a cell with a time.
+ * The note box for a column or a cell with a time; with `cells`, one note for all those cells at once (user
+ * 2026-10-18: a note on the selected cells).
  * @param {'col' | 'cell'} type
  * @param {number} ri
  * @param {number} ci
+ * @param {{ ri: number, ci: number }[]} [cells] every cell the note goes on (the first is ri, ci)
  */
-export function openFnEditor(type, ri, ci) {
+export function openFnEditor(type, ri, ci, cells) {
   if (!app.routeState || grid.readOnly) return;
-  const at = holder(type, ri, ci);
+  const ats = (cells?.length ? cells : [{ ri, ci }]).map((c) => holder(type, c.ri, c.ci)).filter(Boolean);
+  const at = ats[0];
   if (!at) return; // notes attach to columns and to cells with a time
+  // Several cells: their note when they all have the same one, else empty
+  // Unchanged text changes nothing, so mixed notes on several cells are only replaced when something is typed
+  const shared = ats.every((/** @type {any} */ x) => (x.note ?? '') === (at.note ?? '')) ? at.note ?? '' : '';
   const body = document.createElement('div');
   body.className = 'note-box';
   body.innerHTML = `<input type="text" class="note-text">
-    <button class="note-remove"${at.note ? '' : ' hidden'}></button>`;
+    <button class="note-remove"${ats.some((/** @type {any} */ x) => x.note) ? '' : ' hidden'}></button>`;
   // One line: a note becomes a NeTEx Notice text (user 2026-10-18)
   const text = /** @type {HTMLInputElement} */ (body.querySelector('.note-text'));
   const value = () => text.value.replace(/\s*[\r\n]+\s*/g, ' ').trim();
-  text.value = at.note ?? '';
+  text.value = shared;
   text.placeholder = t('noteHint');
   const remove = /** @type {HTMLButtonElement} */ (body.querySelector('.note-remove'));
   remove.textContent = t('noteRemove');
   const anchor = /** @type {HTMLElement | null} */ (document.querySelector(type === 'col' ? `.g-dc-cell[data-ci="${ci}"]` : `[data-r="${ri}"][data-c="${ci}"]`));
   const r = anchor?.getBoundingClientRect();
-  const set = (/** @type {string} */ v) => { at.note = v; markDirty(); render(); updateFnPreview({ type, ri, ci }); };
+  const set = (/** @type {string} */ v) => { for (const x of ats) x.note = v; markDirty(); render(); updateFnPreview({ type, ri, ci }); };
   const box = openFloatBox({
-    x: r?.left ?? 200, y: (r?.bottom ?? 160) + 4, title: t(type === 'col' ? 'noteTitleCol' : 'noteTitleCell'), body, cls: 'note-float',
-    onApply: () => { if (value() !== (at.note ?? '')) set(value()); },
+    x: r?.left ?? 200, y: (r?.bottom ?? 160) + 4, title: ats.length > 1 ? t('noteTitleCells', ats.length) : t(type === 'col' ? 'noteTitleCol' : 'noteTitleCell'), body, cls: 'note-float',
+    onApply: () => { if (value() !== shared) set(value()); },
   });
   remove.addEventListener('click', () => { box.close(); set(''); });
-  text.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (value() !== (at.note ?? '')) set(value()); box.close(); } });
+  text.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (value() !== shared) set(value()); box.close(); } });
   text.focus();
 }
 

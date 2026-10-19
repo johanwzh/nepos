@@ -48,7 +48,7 @@ describe('route state', () => {
     expect(rs.tableSets[1].uid).toMatch(/^[0-9a-f-]{36}$/);
     const [per] = periodsOf(rs, setId);
     expect(per.calendarIds).toEqual(['c1']);
-    expect(gridOf(rs, per)).toEqual({ stops: [{ name: 'B' }, { name: 'A' }], cols: [] });
+    expect(gridOf(rs, per)).toEqual({ stops: [{ name: 'B', sep: false, isDwellArr: false }, { name: 'A', sep: false, isDwellArr: false }], cols: [] });
     expect([rs.activeSet, rs.activePer]).toEqual([setId, per.id]);
   });
 
@@ -74,5 +74,26 @@ describe('route state', () => {
     expect(empty.tableSets).toHaveLength(1);
     expect(empty.periods).toHaveLength(1);
     expect(empty.grids[gridKey(empty)]).toEqual({ stops: [], cols: [] });
+  });
+});
+
+describe('reversing keeps the divider between the same two stops (48)', () => {
+  it('Oslo / Lillestrøm --- Lillestrøm / Fetsund reversed: Fetsund / Lillestrøm --- Lillestrøm / Oslo', () => {
+    const rs = newRouteState('no');
+    const st = (/** @type {string} */ name, sep = false, isDwellArr = false) => ({ name, stopId: null, bold: false, sep, isDwellArr, price: null });
+    const g = rs.grids[`${rs.activePer}:${rs.activeSet}`];
+    g.stops = [st('Oslo'), st('Lillestrøm', true), st('Lillestrøm'), st('Fetsund')];
+    const setId = addTableSet(rs, 'Retur', { reversed: true });
+    const back = rs.grids[`${rs.activePer}:${setId}`].stops;
+    expect(back.map((/** @type {any} */ s) => s.name)).toEqual(['Fetsund', 'Lillestrøm', 'Lillestrøm', 'Oslo']);
+    expect(back.map((/** @type {any} */ s) => s.sep)).toEqual([false, true, false, false]);
+  });
+
+  it('keeps a waiting stop\'s two rows together: the arrival mark moves to the new first row of the pair', () => {
+    const rs = newRouteState('no');
+    const st = (/** @type {string} */ name, isDwellArr = false) => ({ name, stopId: null, bold: false, sep: false, isDwellArr, price: null });
+    rs.grids[`${rs.activePer}:${rs.activeSet}`].stops = [st('A'), st('B', true), st('B'), st('C')];
+    const setId = addTableSet(rs, 'Retur', { reversed: true });
+    expect(rs.grids[`${rs.activePer}:${setId}`].stops.map((/** @type {any} */ s) => s.isDwellArr)).toEqual([false, true, false, false]);
   });
 });
