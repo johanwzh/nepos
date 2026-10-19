@@ -24,6 +24,10 @@ export const app = {
   labels: [],
   /** @type {null | 'unreadable'} */
   labelsError: null,
+  /** @type {Map<string, import('../core/link-state.js').SavedShape>} routed links, by fromQuay|toQuay|profile (2.3) */
+  shapes: new Map(),
+  /** @type {'' | 'unreadable'} */
+  shapesError: '',
   /** @type {import('../core/calendars.js').Calendar[]} the project's calendars */
   calendars: [],
   /** @type {null | 'unreadable'} */

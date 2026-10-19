@@ -404,3 +404,33 @@ describe('speeds (user and customer 2026-10-19)', () => {
     expect(codes(check(route(), { quayInfo: placed(0.1), speedLimits: { tram: 200 } }))).toEqual([]);
   });
 });
+
+describe('routed links (2.3): warnings only, never errors', () => {
+  const at = new Map([['NSR:Quay:7203', { ...bus('NSR:Quay:7203', 'Jernbanetorget'), lat: 59.9114, lon: 10.7497 }], ['NSR:Quay:11972', { ...bus('NSR:Quay:11972', 'Oslo bussterminal'), lat: 59.9118, lon: 10.7582 }]]);
+  const KEY = 'NSR:Quay:7203|NSR:Quay:11972|bus';
+  const saved = (/** @type {string} */ status, /** @type {string[]} */ warnings = []) => ({ polyline: '', precision: 6, distanceM: 600, status, warnings, from: [10.7497, 59.9114], to: [10.7582, 59.9118], source: 's', engine: 1, routedAt: '2026-10-19T00:00:00Z' });
+  const run = (/** @type {Map<string, any>} */ shapes) => check(route(), { quayInfo: at, shapes });
+
+  it('says nothing when every link is routed', () => {
+    expect(run(new Map([[KEY, saved('OK')]]))).toEqual([]);
+  });
+
+  it('warns about a link the planner blocked', () => {
+    const issues = run(new Map([[KEY, saved('BLOCKED')]]));
+    expect(codes(issues)).toEqual(['warning:link-blocked']);
+    expect(issues[0].detail).toContain('Jernbanetorget');
+  });
+
+  it('warns about patterns without links: no route found, or not routed yet', () => {
+    expect(codes(run(new Map([[KEY, saved('NO_PATH')]])))).toEqual(['warning:link-missing']);
+    expect(codes(run(new Map()))).toEqual(['warning:link-missing']);
+  });
+
+  it('warns about a long detour', () => {
+    expect(codes(run(new Map([[KEY, saved('OK', ['long detour'])]])))).toEqual(['warning:link-detour']);
+  });
+
+  it('checks no links at all when the caller has none to give (as before 2.3)', () => {
+    expect(check(route(), { quayInfo: at })).toEqual([]);
+  });
+});

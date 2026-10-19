@@ -5,6 +5,7 @@ export const ORGS_FILE = 'data/orgs.json';
 export const BRANDINGS_FILE = 'data/brandings.json';
 export const LABELS_FILE = 'data/labels.json';
 export const CALENDARS_FILE = 'data/calendars.json';
+export const SHAPES_FILE = 'data/shapes.json'; // routed links (2.3), shared by every line
 export const ROUTES_DIR = 'data/routes';
 export const BACKUPS_DIR = 'data/backups';
 export const EXPORTS_DIR = 'exports'; // generated NeTEx deliveries; can be deleted at any time

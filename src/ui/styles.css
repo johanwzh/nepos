@@ -580,7 +580,7 @@ button, select, input, textarea {
     overflow: hidden;
     min-height: 0;
 }
-#leaflet-map {
+#map-gl {
     position: absolute;
     inset: 0;
 }
