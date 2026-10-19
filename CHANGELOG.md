@@ -2,7 +2,7 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
-## 2.2.0 — not released yet
+## 2.2.0 — 2026-10-19
 
 - **Direction of a table set:** an optional "Retning" (outbound, inbound, clockwise, anticlockwise) beside the
   calendars; saved in `#TRA` field 1 and exported as the Route's DirectionType.
