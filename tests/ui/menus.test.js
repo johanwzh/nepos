@@ -6,9 +6,10 @@ import { initShell, setPage, currentPage } from '../../src/ui/shell.js';
 import { initCalendarsPage } from '../../src/ui/calendars-page.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs, openRecent } from '../../src/ui/project-ui.js';
-import { initGrid } from '../../src/ui/grid.js';
+import { initGrid, grid } from '../../src/ui/grid.js';
+import { quayInfo } from '../../src/ui/quays.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
-import { initRouteEditor } from '../../src/ui/route-editor.js';
+import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
 import { initMenus, reloadRecent } from '../../src/ui/menus.js';
 import { setRecentStore, rememberFolder, loadRecentFolders } from '../../src/ui/recent-folders.js';
 import { createMemoryFs } from '../../src/project/fs.js';
@@ -61,6 +62,19 @@ describe('menu bar', () => {
     item('Vis stoppenes privatkode').click();
     expect(app.settings.showPrivateCode).toBe(!was);
     app.settings.showPrivateCode = was;
+  });
+
+  it('shows the private codes in the open timetable at once, with no reload (user 2026-10-19)', async () => {
+    await selectRoute('20');
+    for (const st of grid.stops) if (st.stopId != null) quayInfo.set(String(st.stopId), /** @type {any} */ ({ quayId: String(st.stopId), publicCode: '', privateCode: '06', stopPlaceId: '', stopPlaceName: '', mode: 'bus', lat: 0, lon: 0 }));
+    app.settings.showPrivateCode = false;
+    openMenu(0);
+    openMenu(2);
+    item('Vis stoppenes privatkode').click();
+    await flush();
+    expect(document.querySelector('#tbl .g-priv')?.textContent).toBe('06');
+    app.settings.showPrivateCode = false;
+    quayInfo.clear();
   });
 
   it('shows the keyboard shortcuts and the Entur contact from the Hjelp menu', () => {

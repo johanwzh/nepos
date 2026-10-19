@@ -26,8 +26,9 @@ export function renderTableSetTabs() {
     const name = document.createElement('span');
     name.className = 'ts-name';
     name.textContent = set.name || t('tableSetUnnamed');
-    name.addEventListener('click', () => { if (set.id !== rs.activeSet) switchTableSet(set.id); });
-    name.addEventListener('dblclick', () => { if (!ro) openEditDialog(set.id); });
+    // The whole tab is the surface, the direction part too (user 2026-10-19)
+    tab.addEventListener('click', () => { if (set.id !== rs.activeSet) switchTableSet(set.id); });
+    tab.addEventListener('dblclick', (e) => { if (!ro && !/** @type {Element} */ (e.target).closest('.ts-del')) openEditDialog(set.id); });
     tab.addEventListener('contextmenu', (e) => { e.preventDefault(); if (!ro) openTabMenu(set.id, e.clientX, e.clientY); });
     tab.appendChild(name);
     if (set.direction) {

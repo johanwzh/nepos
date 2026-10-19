@@ -189,7 +189,7 @@ async function search() {
 }
 
 /** @param {StopPlace} place @param {any} quay @returns {QuayInfo} */
-const quayInfoOf = (place, quay) => ({ quayId: quay.quayId, publicCode: quay.publicCode, stopPlaceId: place.id, stopPlaceName: place.name, mode: place.mode, lat: quay.lat, lon: quay.lon });
+export const quayInfoOf = (place, quay) => ({ quayId: quay.quayId, publicCode: quay.publicCode, privateCode: quay.privateCode ?? '', stopPlaceId: place.id, stopPlaceName: place.name, mode: place.mode, lat: quay.lat, lon: quay.lon });
 
 /** A stop place with one Quay: that Quay is the candidate; with several: list them. @param {StopPlace} place */
 function showPlace(place) {
