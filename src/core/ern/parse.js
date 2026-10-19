@@ -3,6 +3,7 @@ import { orgRole } from '../orgs.js';
 import { modeFromErn } from '../modes.js';
 import { UUID_PATTERN } from './serialize.js';
 import { normalizeDests, servedRows } from '../destinations.js';
+import { readDirection } from '../directions.js';
 
 /**
  * Parse an ERN route file into a route state.
@@ -105,7 +106,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
             case '#TRA':
                 // A table set: a master pattern the user navigates between (spec §2).
                 finalizeTAB();
-                curSet = { id: rs.nextId++, name: f[1]||'', uid: null };
+                curSet = { id: rs.nextId++, name: f[1]||'', uid: null, direction: readDirection(f[2]) }; // field 1: NeTEx DirectionType
                 rs.tableSets.push(curSet);
                 if (rs.activeSet == null) rs.activeSet = curSet.id;
                 curPer = null;
@@ -148,7 +149,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
             case '#PER': {
                 // A period: its days come from its calendars (#KAL); name and dates are not used.
                 finalizeTAB();
-                if (!curSet) { curSet = { id: rs.nextId++, name: '', uid: null }; rs.tableSets.push(curSet); if (rs.activeSet == null) rs.activeSet = curSet.id; }
+                if (!curSet) { curSet = { id: rs.nextId++, name: '', uid: null, direction: '' }; rs.tableSets.push(curSet); if (rs.activeSet == null) rs.activeSet = curSet.id; }
                 curPer = { id: rs.nextId++, setId: curSet.id, calendarIds: [] };
                 rs.periods.push(curPer);
                 if (rs.activePer == null) rs.activePer = curPer.id;

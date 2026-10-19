@@ -215,7 +215,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
           </PointOnRoute>`).join('\n');
         routesXml.push(`      <Route id="${routeId}" version="1">
         <Name>${xe(set.name)}</Name>
-        <LineRef ref="${lineId}" version="1"/>
+        <LineRef ref="${lineId}" version="1"/>${set.direction ? `\n        <DirectionType>${set.direction}</DirectionType>` : ''}
         <pointsInSequence>
 ${porXml}
         </pointsInSequence>

@@ -569,3 +569,17 @@ describe('times aligned, with room for marks (35)', () => {
     expect(td(1).textContent).toBe('0010p+1');
   });
 });
+
+describe('platform code beside the stop name (63)', () => {
+  it('shows the Quay\'s platform code when NSR has one, and nothing when it has none', async () => {
+    const { quayInfo } = await import('../../src/ui/quays.js');
+    quayInfo.set('NSR:Quay:7203', { quayId: 'NSR:Quay:7203', publicCode: 'B', stopPlaceId: 'NSR:StopPlace:1', stopPlaceName: 'Sentrum', mode: 'bus', lat: 0, lon: 0 });
+    quayInfo.set('NSR:Quay:9', { quayId: 'NSR:Quay:9', publicCode: '', stopPlaceId: 'NSR:StopPlace:2', stopPlaceName: 'Flyplass', mode: 'bus', lat: 0, lon: 0 });
+    loadGrid({ stops: [stop('Sentrum', 'NSR:Quay:7203'), stop('Flyplass', 'NSR:Quay:9'), stop('Uten ID')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0745'), null] }] });
+    const names = [...document.querySelectorAll('.g-td-name')];
+    expect(names[0].querySelector('.g-plat')?.textContent).toBe('B');
+    expect(names[0].textContent).toBe('SentrumB');
+    expect(names[1].querySelector('.g-plat')).toBeNull();
+    expect(names[2].querySelector('.g-plat')).toBeNull();
+  });
+});

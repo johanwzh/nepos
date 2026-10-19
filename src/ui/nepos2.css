@@ -841,3 +841,12 @@ select option { background: var(--bg-panel); color: var(--text); }
    header cells too, so the rows scrolling under them do not show through */
 .g-row-tn td { background: var(--bg-raised); border: 1px solid var(--border-lt); }
 #tbl tr.g-row-ins td.cw-dest, #tbl tr.g-row-foot td.cw-dest, #tbl tr.g-row-dc td.cw-dest, #tbl tr.g-row-tn td.cw-dest { background: var(--bg-hdr); }
+
+/* The table set's direction, at the end of the calendar row (61) */
+.cal-dir-label { margin-left: 16px; }
+.cal-dir { height: 24px; font-size: 12px; }
+.cal-dir.empty { color: var(--text-f); }
+
+/* A stop's platform code after its name, tinted in the Nepos colour (63) */
+.g-td-name .g-plat { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 3px; font-size: 10px; font-weight: 600;
+  line-height: 15px; background: var(--accent-bg); color: var(--accent); vertical-align: 1px; }
