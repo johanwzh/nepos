@@ -12,6 +12,7 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   selected cell never hides under them.
 - **Reversing a table set** keeps the divider between the same two stops.
 - **Times are aligned** in their column, with room for marks (a/p/x and the +1 day offset) to the right.
+- **Help → Version history** shows this changelog; Help → GitHub links to the code.
 
 ## 2.1.0 — 2026-10-18
 
