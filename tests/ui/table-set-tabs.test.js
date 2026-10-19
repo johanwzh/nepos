@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell } from '../../src/ui/shell.js';
+import { initShell, refreshAll } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid, grid } from '../../src/ui/grid.js';
@@ -87,6 +87,19 @@ describe('table-set tabs', () => {
     /** @type {HTMLInputElement} */ (document.getElementById('tse-name')).value = 'Bergen – Florø (ny)';
     /** @type {HTMLElement} */ (document.getElementById('tse-ok')).click();
     expect(app.routeState.tableSets[0].name).toBe('Bergen – Florø (ny)');
+  });
+
+  it('opens the edit dialog on a double-click anywhere on the tab, the direction too (user 2026-10-19)', () => {
+    const dlg = /** @type {any} */ (document.getElementById('tse-dlg'));
+    app.routeState.tableSets[0].direction = 'inbound';
+    refreshAll();
+    const dir = /** @type {HTMLElement} */ (tabs()[0].querySelector('.ts-dir'));
+    dir.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(dlg.open).toBe(true);
+    dlg.close();
+    tabs()[0].dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); // the tab's own padding
+    expect(dlg.open).toBe(true);
+    dlg.close();
   });
 
   it('deletes the active table set after asking, and offers no delete for the only one', async () => {

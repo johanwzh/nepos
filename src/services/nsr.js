@@ -51,7 +51,7 @@ export async function lookupQuays(ids, { baseUrl, clientName, fetch: doFetch = (
 
 /**
  * @typedef {'yes' | 'no' | 'partial' | ''} Access
- * @typedef {{ quayId: string, publicCode: string, description: string, lat: number | null, lon: number | null,
+ * @typedef {{ quayId: string, publicCode: string, privateCode?: string, description: string, lat: number | null, lon: number | null,
  *             bearing?: number | null, shelter?: 'enclosed' | 'open' | null, sign?: boolean, wheelchair?: Access, stepFree?: Access }} StopQuay
  * @typedef {{ id: string, name: string, description: string, mode: string, type?: string,
  *             waitingRoom?: { seats: number, heated: boolean } | null, quays: StopQuay[] }} StopPlace
@@ -116,6 +116,7 @@ function toStopPlace(place) {
       return {
         quayId: q.id,
         publicCode: q.publicCode ?? '',
+        privateCode: q.privateCode?.value ?? '',
         description: q.description?.value ?? '',
         lat: q.centroid?.location?.latitude ?? null,
         lon: q.centroid?.location?.longitude ?? null,

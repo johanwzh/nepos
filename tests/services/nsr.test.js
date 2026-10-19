@@ -121,3 +121,12 @@ describe('lookupQuays: the Quay\'s private code (user 2026-10-19)', () => {
     expect((await lookupQuays(['NSR:Quay:1'], { ...opts, fetch: fn })).get('NSR:Quay:1')?.privateCode).toBe('06');
   });
 });
+
+describe('getStopPlace: the Quay\'s private code (user 2026-10-19)', () => {
+  it('reads privateCode.value for each Quay, so a stop picked in the picker has it too', async () => {
+    const body = { id: 'NSR:StopPlace:1', name: { value: 'X' }, transportMode: 'bus', quays: { quayRefOrQuay: [{ id: 'NSR:Quay:1', publicCode: 'A', privateCode: { value: '06' } }, { id: 'NSR:Quay:2', publicCode: 'B' }] } };
+    const { fn } = fakeFetch(body);
+    const place = await getStopPlace('NSR:StopPlace:1', { ...opts, fetch: fn });
+    expect(place?.quays.map((q) => q.privateCode)).toEqual(['06', '']);
+  });
+});
