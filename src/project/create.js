@@ -10,11 +10,11 @@ const SYSTEM_FILES = new Set(['desktop.ini', 'thumbs.db', '.ds_store']);
 /**
  * Create a new, empty project in an empty folder.
  * @param {import('./fs.js').ProjectFs} fs
- * @param {{ name: string, codespace: string }} input
+ * @param {{ name: string, codespace: string, settings?: { lang?: string, theme?: string } }} input the settings: chosen in the dialog
  * @returns {Promise<{ ok: true, meta: { formatVersion: number, name: string, codespace: string, orgExportMode: string } }
  *   | { ok: false, error: 'codespace-required' | 'codespace-format' | 'folder-not-empty', found?: string[] }>}
  */
-export async function createProject(fs, { name, codespace }) {
+export async function createProject(fs, { name, codespace, settings = {} }) {
   const cs = normalizeCodespace(codespace);
   if (cs.ok === false) return { ok: false, error: cs.error === 'required' ? 'codespace-required' : 'codespace-format' };
   const found = (await fs.list(''))
@@ -29,7 +29,7 @@ export async function createProject(fs, { name, codespace }) {
   await writeJson(fs, CALENDARS_FILE, []);
   await fs.mkdir(ROUTES_DIR);
   await fs.mkdir(BACKUPS_DIR);
-  await writeSettings(fs, { ...DEFAULT_SETTINGS });
+  await writeSettings(fs, { ...DEFAULT_SETTINGS, ...(settings.lang ? { lang: settings.lang } : {}), ...(settings.theme ? { theme: settings.theme } : {}) });
   await writeSecrets(fs, {});
   return { ok: true, meta };
 }

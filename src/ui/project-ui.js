@@ -1,6 +1,6 @@
 // Opening, creating and reopening projects, and the empty-state placeholder.
 import { app } from './state.js';
-import { $, onRefresh, refreshAll, showMessage, runAction, beforeLeave } from './shell.js';
+import { $, onRefresh, refreshAll, showMessage, runAction, beforeLeave, applyTheme } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { createHandleFs } from '../project/fs.js';
 import { openProject, updateOutdatedRoutes } from '../project/open.js';
@@ -222,11 +222,18 @@ export async function copyProject() {
 }
 
 // ─── New project dialog ─────────────────────────────────────────────────────
+/** The language and theme when the dialog opened: Cancel goes back to them. */
+let before = { lang: 'no', theme: 'system' };
+
 export async function openNewDialog() {
   if (!(await beforeLeave())) return;
   $('new-name').value = '';
   $('new-cs').value = '';
   $('new-error').textContent = '';
+  // Language and light/dark from the start (user 2026-10-19): a new project's settings start from these
+  before = { lang: app.settings.lang, theme: app.settings.theme };
+  for (const lang of ['no', 'en']) $(`new-lang-${lang}`).checked = app.settings.lang === lang;
+  for (const theme of ['light', 'dark', 'system']) $(`new-theme-${theme}`).checked = app.settings.theme === theme;
   $('new-dlg').showModal();
   $('new-name').focus();
 }
@@ -247,7 +254,7 @@ async function createFromDialog() {
   const fs = createHandleFs(handle);
   /** @type {any} */
   let result;
-  const ok = await runAction(async () => { result = await createProject(fs, { name: $('new-name').value, codespace: cs.value }); }, $('new-create'));
+  const ok = await runAction(async () => { result = await createProject(fs, { name: $('new-name').value, codespace: cs.value, settings: { lang: app.settings.lang, theme: app.settings.theme } }); }, $('new-create'));
   if (!ok) return;
   if (result.ok === false) {
     $('new-error').textContent = createFailureMessage(result);
@@ -343,7 +350,17 @@ export async function initProjectUi({ restoreLast = true } = {}) {
   $('cs-ok').addEventListener('click', () => { void applyCodespace(); });
   $('cs-cancel').addEventListener('click', () => $('cs-dlg').close());
   $('cs-new').addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => { if (e.key === 'Enter') { e.preventDefault(); void applyCodespace(); } });
-  $('new-cancel').addEventListener('click', () => $('new-dlg').close());
+  // Cancel (or Esc) keeps the open project's language and theme; they are the new project's only once it is made
+  const revert = () => {
+    if (app.settings.lang === before.lang && app.settings.theme === before.theme) return;
+    app.settings.lang = before.lang; app.settings.theme = before.theme;
+    applyTheme(); refreshAll();
+  };
+  $('new-cancel').addEventListener('click', () => { revert(); $('new-dlg').close(); });
+  $('new-dlg').addEventListener('cancel', revert);
+  // The choices apply at once, so the dialog itself shows them
+  for (const lang of ['no', 'en']) $(`new-lang-${lang}`).addEventListener('change', () => { app.settings.lang = lang; refreshAll(); });
+  for (const theme of ['light', 'dark', 'system']) $(`new-theme-${theme}`).addEventListener('change', () => { app.settings.theme = theme; applyTheme(); });
   $('new-create').addEventListener('click', createFromDialog);
   onRefresh(renderPlaceholder);
   if (!restoreLast) return;

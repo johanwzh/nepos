@@ -23,7 +23,7 @@ Alt Nepos lagrer, ligger i én mappe du velger selv:
 ### Nytt prosjekt eller åpne et som finnes
 
 - **Prosjekt → Nytt prosjekt…**: gi prosjektet et navn og et *codespace* (tre store bokstaver, for
-  eksempel `TST`; codespacet får du av Entur). Velg så en tom mappe.
+  eksempel `TST`; codespacet får du av Entur), og velg språk og lys/mørk. Velg så en tom mappe.
 - **Prosjekt → Åpne prosjekt…**: velg prosjektmappen. Nylig brukte prosjekter står også i
   Prosjekt-menyen.
 - Første gang en mappe åpnes, spør nettleseren om tilgang. Svar ja.
