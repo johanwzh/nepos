@@ -846,3 +846,7 @@ select option { background: var(--bg-panel); color: var(--text); }
 .cal-dir-label { margin-left: 16px; }
 .cal-dir { height: 24px; font-size: 12px; }
 .cal-dir.empty { color: var(--text-f); }
+
+/* A stop's platform code after its name, tinted in the Nepos colour (63) */
+.g-td-name .g-plat { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 3px; font-size: 10px; font-weight: 600;
+  line-height: 15px; background: var(--accent-bg); color: var(--accent); vertical-align: 1px; }

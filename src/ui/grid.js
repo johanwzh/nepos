@@ -254,12 +254,30 @@ function applyStopMark(td, stop) {
   td.title = mark.title;
 }
 
-/** New NSR results: update the marks in place, so nothing is rebuilt under the cursor. */
+/**
+ * A stop's name, and its platform code (the Quay's public code from NSR, e.g. "B") when it has one, so two
+ * platforms of the same stop are told apart at a glance (customer request 2026-10-19).
+ * @param {HTMLElement} td @param {any} stop
+ */
+function fillStopName(td, stop) {
+  td.textContent = stop.name;
+  const code = stop.stopId == null ? '' : quayInfo.get(String(stop.stopId))?.publicCode?.trim() ?? '';
+  if (!code) return;
+  const chip = document.createElement('span');
+  chip.className = 'g-plat';
+  chip.textContent = code;
+  chip.title = t('platformCode', code);
+  td.appendChild(chip);
+}
+
+/** New NSR results: update the marks and platform codes in place, so nothing is rebuilt under the cursor. */
 function updateStopMarks() {
   if (!grid.active) return;
   document.querySelectorAll('#tbl .g-td-name[data-ri]').forEach((td) => {
     const stop = grid.stops[Number(/** @type {HTMLElement} */ (td).dataset.ri)];
-    if (stop) applyStopMark(/** @type {HTMLElement} */ (td), stop);
+    if (!stop) return;
+    applyStopMark(/** @type {HTMLElement} */ (td), stop);
+    fillStopName(/** @type {HTMLElement} */ (td), stop);
   });
 }
 
@@ -825,7 +843,7 @@ function renderStopRow(tbl, stop, ri, linked) {
     tdn.className = 'cw-name g-sticky1 g-td-name' + (stop.bold ? ' stop-bold' : '') + (isSel ? ' stop-sel' : '');
     tdn.dataset.ri = String(ri);
     applyStopMark(tdn, stop);
-    tdn.textContent = stop.name;
+    fillStopName(tdn, stop);
     tdn.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
