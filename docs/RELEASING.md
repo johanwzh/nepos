@@ -18,7 +18,9 @@ Pick the level from the biggest change since the last push.
 - [ ] `package.json` → `"version"`
 - [ ] `package-lock.json` → `"version"` (twice: the top and `packages[""]`)
 - [ ] `src/version.js` → `VERSION` (shown in the app next to the logo)
-- [ ] `CHANGELOG.md` → a section for the new version: what changed, in plain words, newest first.
+- [ ] `CHANGELOG.md` → a section for the new version: what changed, in plain words, newest first, with the release
+      date in its heading (`## 2.2.0 — 2026-10-19`, not "not released yet"). Help → Version history shows only dated
+      sections up to the running version.
 
 ## 3. What users read
 

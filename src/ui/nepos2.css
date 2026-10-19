@@ -850,3 +850,12 @@ select option { background: var(--bg-panel); color: var(--text); }
 /* A stop's platform code after its name, tinted in the Nepos colour (63) */
 .g-td-name .g-plat { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 3px; font-size: 10px; font-weight: 600;
   line-height: 15px; background: var(--accent-bg); color: var(--accent); vertical-align: 1px; }
+
+/* Help → Version history: the changelog */
+.help-versions { max-height: 60vh; overflow-y: auto; }
+.help-versions h3 { margin: 14px 0 4px; font-size: 14px; }
+.help-versions h3:first-child { margin-top: 0; }
+.help-versions h3 small { font-weight: 400; color: var(--text-m); margin-left: 6px; }
+.help-versions ul { margin: 4px 0 8px 18px; padding: 0; }
+.help-versions li { margin: 3px 0; line-height: 1.4; }
+.help-versions p { margin: 4px 0; }
