@@ -12,12 +12,15 @@ import { createListView } from './list-view.js';
 import { generatedAlias, aliasIssues } from '../core/orgs.js';
 import { writeOrgs } from '../project/orgs-store.js';
 import { writeBrandings, newBranding } from '../project/brandings-store.js';
+import { writeLabels, newLabel, LABEL_COLOURS } from '../project/labels-store.js';
 import { refreshRegister } from './org-register.js';
 
 /**
  * @typedef {import('../project/brandings-store.js').Branding} Branding
  * @typedef {import('../core/orgs.js').Company} Company
+ * @typedef {import('../project/labels-store.js').Label} Label
  * @typedef {{ id: string, kind: 'branding', name: string, branding: Branding, used: number, unsaved: boolean, isNew: boolean }
+ *   | { id: string, kind: 'label', name: string, label: Label, used: number, unsaved: boolean, isNew: boolean }
  *   | { id: string, kind: 'org', role: 'authority' | 'operator', name: string, company: Company, entry: any, used: number, unsaved: boolean, changed: boolean, gone: boolean }} Resource
  */
 
@@ -32,8 +35,21 @@ const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 const roleKey = (entry) => `o:${entry.id}`;
 /** @param {Branding} b */
 const brandKey = (b) => `b:${b.id}`;
+/** @param {Label} l */
+const labelKey = (l) => `l:${l.id}`;
 /** @returns {Map<string, any>} */
 const drafts = () => app.resourceDrafts;
+
+/** How many route files use each label name (the label row's #TTC cells, flags 256). */
+function labelUsage() {
+  /** @type {Map<string, number>} */
+  const count = new Map();
+  for (const r of app.routes) {
+    const names = new Set([...r.text.matchAll(/^[ \t]*#TTC;[^;\r\n]*;[^;\r\n]*;[^;\r\n]*;([^;\r\n]*);256\s*$/gm)].map((m) => m[1]));
+    for (const n of names) count.set(n, (count.get(n) ?? 0) + 1);
+  }
+  return count;
+}
 
 // ─── Use ────────────────────────────────────────────────────────────────────
 /** How many route files name each ID, in #SEK (organisations) or #MRK (brands; #BRA in older files). */
@@ -62,6 +78,17 @@ function allResources() {
   for (const [id, d] of drafts()) {
     if (id.startsWith('b:') && !saved.has(id)) rows.push({ id, kind: 'branding', name: d.name, branding: d, used: 0, unsaved: true, isNew: true });
   }
+  // Column labels (62): the project's own, like merkevarer
+  const lused = labelUsage();
+  const savedL = new Set((app.labels ?? []).map(labelKey));
+  for (const l of app.labels ?? []) {
+    const draft = drafts().get(labelKey(l));
+    const shown = draft ?? l;
+    rows.push({ id: labelKey(l), kind: 'label', name: shown.name, label: shown, used: lused.get(l.name) ?? 0, unsaved: !!draft, isNew: false });
+  }
+  for (const [id, d] of drafts()) {
+    if (id.startsWith('l:') && !savedL.has(id)) rows.push({ id, kind: 'label', name: d.name, label: d, used: 0, unsaved: true, isNew: true });
+  }
   if (!app.orgsError) {
     for (const c of app.orgs) {
       const changed = app.orgChanges.changed.includes(c.organisationId || c.name);
@@ -82,6 +109,7 @@ const resource = (id) => allResources().find((r) => r.id === id) ?? null;
 /** @param {Resource} r */
 function detail(r) {
   if (r.kind === 'branding') return r.branding.url;
+  if (r.kind === 'label') return r.label.colour;
   return r.company.companyNumber ? `${t('orgCompanyNumber')} ${r.company.companyNumber}` : '';
 }
 
@@ -91,6 +119,7 @@ const aliasPrefix = (role) => `${app.meta?.codespace ?? ''}:${role === 'authorit
 /** @param {Resource} r */
 function exportIds(r) {
   if (r.kind === 'branding') return r.branding.id;
+  if (r.kind === 'label') return '';
   return r.entry.alias || generatedAlias(r.entry.id, app.meta?.codespace ?? '');
 }
 
@@ -104,9 +133,9 @@ function statusCell(r) {
 }
 
 /** @param {Resource} r */
-const typeKey = (r) => (r.kind === 'branding' ? 'branding' : r.role);
+const typeKey = (r) => (r.kind === 'org' ? r.role : r.kind);
 /** @param {Resource} r */
-const typeText = (r) => t(r.kind === 'branding' ? 'rsTypeBranding' : r.role === 'authority' ? 'roleAuthority' : 'roleOperator');
+const typeText = (r) => t(r.kind === 'branding' ? 'rsTypeBranding' : r.kind === 'label' ? 'rsTypeLabel' : r.role === 'authority' ? 'roleAuthority' : 'roleOperator');
 /** The name, with the role when the company has both (the navigator). @param {Resource} r */
 const navName = (r) => (r.kind === 'org' && r.company.authority && r.company.operator ? `${r.name} · ${typeText(r)}` : r.name || t('tableSetUnnamed'));
 
@@ -125,6 +154,52 @@ async function saveBrandings(ids) {
   await runAction(() => writeBrandings(fs, list.filter((b) => b.name.trim())));
   app.brandings = list;
   for (const id of ids) drafts().delete(id);
+}
+
+/** Is this label name missing or already used by another label? @param {string} id @param {string} name */
+function labelNameProblem(id, name) {
+  const n = name.trim();
+  if (!n) return true;
+  return (app.labels ?? []).some((l) => labelKey(l) !== id && l.name.trim().toLowerCase() === n.toLowerCase());
+}
+
+/** Write labels with the given drafts applied; unnamed or doubled ones are not saved. @param {string[]} ids */
+async function saveLabels(ids) {
+  const fs = app.fs;
+  if (!fs || app.labelsError) return;
+  let list = [...(app.labels ?? [])];
+  for (const id of ids) {
+    const d = drafts().get(id);
+    if (!d || labelNameProblem(id, d.name)) continue;
+    const at = list.findIndex((l) => labelKey(l) === id);
+    if (at >= 0) list[at] = { ...d, name: d.name.trim() }; else list = [...list, { ...d, name: d.name.trim() }];
+    drafts().delete(id);
+  }
+  await runAction(() => writeLabels(fs, list));
+  app.labels = list;
+}
+
+/** Delete labels (lines that use them keep the name, shown grey). @param {string[]} ids */
+async function deleteLabels(ids) {
+  const picked = /** @type {Resource[]} */ (ids.map(resource).filter((r) => r && r.kind === 'label'));
+  if (!picked.length || app.labelsError) return;
+  const users = picked.reduce((n, r) => n + r.used, 0);
+  if (users && !confirm(t('labelDeleteConfirm', picked.length, users))) return;
+  const gone = new Set(picked.map((r) => r.id));
+  for (const id of gone) drafts().delete(id);
+  const keep = (app.labels ?? []).filter((l) => !gone.has(labelKey(l)));
+  const fs = app.fs;
+  if (fs) await runAction(() => writeLabels(fs, keep));
+  app.labels = keep;
+  if (app.resourceSelected && gone.has(app.resourceSelected)) app.resourceSelected = null;
+  renderResourcesPage();
+}
+
+function newLabelDraft() {
+  const l = newLabel((app.labels ?? []).length);
+  drafts().set(labelKey(l), l);
+  open(labelKey(l));
+  /** @type {HTMLInputElement | null} */ (document.querySelector('#re-name'))?.focus();
 }
 
 /** Write the organisations with this role's alias draft applied (not when the alias is wrong). @param {string} id */
@@ -147,13 +222,14 @@ export const unsavedResourceCount = () => app.resourceDrafts.size;
 export async function saveAllResources() {
   const ids = [...drafts().keys()];
   await saveBrandings(ids.filter((id) => id.startsWith('b:')));
-  for (const id of ids.filter((id) => !id.startsWith('b:'))) await saveOrg(id);
+  await saveLabels(ids.filter((id) => id.startsWith('l:')));
+  for (const id of ids.filter((id) => id.startsWith('o:'))) await saveOrg(id);
   renderResourcesPage();
 }
 
 /** @param {string} id */
 async function save(id) {
-  if (id.startsWith('b:')) await saveBrandings([id]); else await saveOrg(id);
+  if (id.startsWith('b:')) await saveBrandings([id]); else if (id.startsWith('l:')) await saveLabels([id]); else await saveOrg(id);
   renderResourcesPage();
 }
 
@@ -210,7 +286,7 @@ function makeView(host) {
     renderFinders: (box, state, changed) => {
       box.innerHTML = `<input id="rs-search" type="search" autocomplete="off" placeholder="${esc(t('rsSearch'))}">
         <select id="rs-f-type"><option value="">${esc(t('rsAllTypes'))}</option><option value="branding">${esc(t('rsTypeBranding'))}</option>
-          <option value="authority">${esc(t('roleAuthority'))}</option><option value="operator">${esc(t('roleOperator'))}</option></select>`;
+          <option value="authority">${esc(t('roleAuthority'))}</option><option value="operator">${esc(t('roleOperator'))}</option><option value="label">${esc(t('rsTypeLabel'))}</option></select>`;
       for (const id of ['rs-search', 'rs-f-type']) {
         const f = /** @type {HTMLInputElement} */ (box.querySelector('#' + id));
         if (state[id] != null) f.value = state[id];
@@ -224,13 +300,14 @@ function makeView(host) {
     },
     tools: [
       { id: 'rs-new', label: () => t('brandAdd'), enabled: () => !app.brandingsError, run: newBrandingDraft },
+      { id: 'rs-new-label', label: () => t('labelAdd'), enabled: () => !app.labelsError, run: newLabelDraft },
       { id: 'rs-edit', label: () => t('lvEdit'), enabled: (sel) => sel.length === 1, run: (sel) => open(sel[0]) },
-      { id: 'rs-del', label: () => t('ltDelete'), danger: true, enabled: (sel) => sel.length > 0 && sel.every((id) => id.startsWith('b:')),
-        run: (sel) => { void deleteBrandings(sel); } },
+      { id: 'rs-del', label: () => t('ltDelete'), danger: true, enabled: (sel) => sel.length > 0 && (sel.every((id) => id.startsWith('b:')) || sel.every((id) => id.startsWith('l:'))),
+        run: (sel) => { void (sel[0]?.startsWith('l:') ? deleteLabels(sel) : deleteBrandings(sel)); } },
       { id: 'rs-refresh', label: () => t('rsRefresh'), enabled: () => app.orgRegisterStatus !== 'loading', run: () => { void refreshRegister(); } },
     ],
     onEdit: (id) => open(id),
-    onDelete: (ids) => { if (ids.every((id) => id.startsWith('b:'))) void deleteBrandings(ids); },
+    onDelete: (ids) => { if (ids.every((id) => id.startsWith('b:'))) void deleteBrandings(ids); else if (ids.every((id) => id.startsWith('l:'))) void deleteLabels(ids); },
     empty: () => t(allResources().length ? 'noMatches' : 'rsNone'),
   });
 }
@@ -271,7 +348,7 @@ function footer(r, valid) {
   discard.disabled = !r.unsaved;
   discard.addEventListener('click', () => {
     drafts().delete(r.id);
-    if (r.kind === 'branding' && r.isNew) open(null); else renderResourcesPage();
+    if (r.kind !== 'org' && r.isNew) open(null); else renderResourcesPage();
   });
   const saveBtn = /** @type {HTMLButtonElement} */ (el('button', `re-save ef-save-btn${r.unsaved ? ' dirty' : ''}`, t(r.unsaved ? 'save' : 'savedBtn')));
   saveBtn.disabled = !r.unsaved || !valid;
@@ -323,6 +400,50 @@ function brandingForm(main, r) {
   if (!r.isNew) {
     const del = el('button', 're-del danger', t('ltDelete'));
     del.addEventListener('click', () => { void deleteBrandings([r.id]); });
+    /** @type {HTMLElement} */ (main.querySelector('.ce-foot')).prepend(del);
+  }
+}
+
+/** @param {HTMLElement} main @param {Resource & { kind: 'label' }} r */
+function labelForm(main, r) {
+  main.appendChild(el('div', 're-title', `${t('rsTypeLabel')} · ${r.name || t('tableSetUnnamed')}`));
+  if (app.labelsError) main.appendChild(el('p', 'assets-status bad', t('labelsUnreadable')));
+  const cur = () => drafts().get(r.id) ?? r.label;
+  const valid = () => !labelNameProblem(r.id, cur().name) && !app.labelsError;
+  const name = /** @type {HTMLInputElement} */ (el('input', 're-in'));
+  name.id = 're-name';
+  name.value = r.label.name;
+  name.autocomplete = 'off';
+  name.classList.toggle('invalid', labelNameProblem(r.id, r.label.name));
+  name.addEventListener('keydown', (e) => e.stopPropagation());
+  name.addEventListener('input', () => {
+    drafts().set(r.id, { ...cur(), name: name.value });
+    name.classList.toggle('invalid', labelNameProblem(r.id, name.value));
+    touched(main, valid());
+  });
+  row(main, t('labelName'), name);
+  // The colour: a picker and a few ready ones
+  const colour = /** @type {HTMLInputElement} */ (el('input', 're-colour'));
+  colour.type = 'color';
+  colour.id = 're-colour';
+  colour.value = r.label.colour;
+  const setColour = (/** @type {string} */ c) => { colour.value = c; drafts().set(r.id, { ...cur(), colour: c }); touched(main, valid()); };
+  colour.addEventListener('input', () => setColour(colour.value));
+  const field = el('span', 're-colours');
+  field.appendChild(colour);
+  for (const c of LABEL_COLOURS) {
+    const sw = el('button', 're-swatch');
+    sw.style.background = c;
+    sw.title = c;
+    sw.addEventListener('click', (e) => { e.preventDefault(); setColour(c); });
+    field.appendChild(sw);
+  }
+  row(main, t('labelColour'), field);
+  main.appendChild(el('div', 're-note', `${t('orgUsedBy', r.used)} · ${t('labelRenameNote')}`));
+  main.appendChild(footer(r, valid()));
+  if (!r.isNew) {
+    const del = el('button', 're-del danger', t('ltDelete'));
+    del.addEventListener('click', () => { void deleteLabels([r.id]); });
     /** @type {HTMLElement} */ (main.querySelector('.ce-foot')).prepend(del);
   }
 }
@@ -389,7 +510,7 @@ function orgForm(main, r) {
 function renderEditor(body, r) {
   const wrap = el('div', 're-editor');
   const main = el('div', 're-main');
-  if (r.kind === 'branding') brandingForm(main, r); else orgForm(main, r);
+  if (r.kind === 'branding') brandingForm(main, r); else if (r.kind === 'label') labelForm(main, r); else orgForm(main, r);
   wrap.append(main, navigator(r));
   body.appendChild(wrap);
 }

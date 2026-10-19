@@ -889,3 +889,8 @@ select option { background: var(--bg-panel); color: var(--text); }
 .lb-pick .lb-item:hover { background: var(--accent-bg); }
 .lb-pick .lb-swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
 .lb-pick .lb-hint { padding: 4px 12px; font-size: 11px; color: var(--text-m); max-width: 220px; }
+
+/* Ressurser: a label's colour */
+.re-colours { display: inline-flex; gap: 6px; align-items: center; }
+.re-colours input[type="color"] { width: 36px; height: 26px; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: none; }
+.re-swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; padding: 0; }

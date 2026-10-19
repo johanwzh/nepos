@@ -189,3 +189,52 @@ describe('the organisation register in Prosjektinnstillinger', () => {
     expect(page().textContent).toContain('kan ikke leses');
   });
 });
+
+describe('Ressurser: labels (62)', () => {
+  it('makes a label with a name and a colour, and saves it to data/labels.json', async () => {
+    app.labels = [];
+    setPage('edit'); setPage('assets');
+    click(/** @type {HTMLElement} */ (document.getElementById('rs-new-label')));
+    const name = /** @type {HTMLInputElement} */ (q('#re-name'));
+    name.value = 'Rush';
+    name.dispatchEvent(new Event('input'));
+    const colour = /** @type {HTMLInputElement} */ (q('#re-colour'));
+    colour.value = '#123456';
+    colour.dispatchEvent(new Event('input'));
+    click(q('.re-save'));
+    await flush(); await flush();
+    expect(app.labels).toEqual([expect.objectContaining({ name: 'Rush', colour: '#123456' })]);
+    expect(JSON.parse(/** @type {string} */ (await readText(fs, 'data/labels.json')))[0].name).toBe('Rush');
+  });
+
+  it('lists labels with their type, colour and how many lines use them', () => {
+    app.labels = [{ id: 'l1', name: 'Normal', colour: '#2e8b57' }];
+    app.routes = [{ code: '1', text: '#TTL;-1;0;;10;Etikett;1\r\n#TTC;0;;10;Normal;256\r\n', status: 'ok', issues: [] }];
+    setPage('edit'); setPage('assets');
+    const row = rows().find((r) => r.querySelector('.lv-c-name')?.textContent === 'Normal');
+    expect(row?.querySelector('.lv-c-type')?.textContent).toBe('Etikett');
+    expect(row?.querySelector('.lv-c-detail')?.textContent).toBe('#2e8b57');
+    expect(row?.querySelector('.lv-c-used')?.textContent).toContain('1');
+  });
+
+  it('refuses a second label with the same name', () => {
+    app.labels = [{ id: 'l1', name: 'Normal', colour: '#2e8b57' }];
+    setPage('edit'); setPage('assets');
+    click(/** @type {HTMLElement} */ (document.getElementById('rs-new-label')));
+    const name = /** @type {HTMLInputElement} */ (q('#re-name'));
+    name.value = 'Normal';
+    name.dispatchEvent(new Event('input'));
+    expect(name.classList.contains('invalid')).toBe(true);
+    expect(/** @type {HTMLButtonElement} */ (q('.re-save')).disabled).toBe(true);
+  });
+
+  it('deletes a label', async () => {
+    app.labels = [{ id: 'l1', name: 'Normal', colour: '#2e8b57' }];
+    setPage('edit'); setPage('assets');
+    const row = /** @type {HTMLElement} */ (rows().find((r) => r.querySelector('.lv-c-name')?.textContent === 'Normal'));
+    dbl(row);
+    click(q('.re-del'));
+    await flush(); await flush();
+    expect(app.labels).toEqual([]);
+  });
+});
