@@ -64,7 +64,11 @@ function search(g, fromCands, toCands, profile, arriveBearing, opts) {
   const heap = createHeap(256);
   const maxSettled = opts.maxSettled ?? 500000;
   const turnOk = (/** @type {number} */ inB, /** @type {number} */ outB) => turnAngle(inB, outB) <= rules.hardTurn;
-  const turnCost = (/** @type {number} */ inB, /** @type {number} */ outB) => (turnAngle(inB, outB) > rules.softTurn ? rules.softCost : 0);
+  const signed = (/** @type {number} */ inB, /** @type {number} */ outB) => ((outB - inB + 540) % 360) - 180;
+  /** @param {number} inB @param {number} outB @param {number} node */
+  const turnCost = (inB, outB, node) => (rules.turnCost ? rules.turnCost(signed(inB, outB), (g.degree?.[node] ?? 0) > 2)
+    : turnAngle(inB, outB) > rules.softTurn ? rules.softCost : 0);
+  const accessPerM = rules.accessPerM ?? SNAP_WEIGHT;
   /** A start or a goal may begin heading `b` only within the hard limit of the arrival bearing. @param {number} b */
   const startOk = (b) => arriveBearing == null || turnOk(arriveBearing, b);
 
@@ -88,7 +92,7 @@ function search(g, fromCands, toCands, profile, arriveBearing, opts) {
   // Start states: from each candidate, along its edge both ways (where allowed)
   fromCands.forEach((c, ci) => {
     const e = g.edges[c.edge];
-    const access = c.distM * SNAP_WEIGHT;
+    const access = c.distM * accessPerM;
     for (const rev of [false, true]) {
       const d = dirs[c.edge * 2 + (rev ? 1 : 0)];
       if (d < 0 || !startOk(segBearing(e.geom, c.seg, rev))) continue;
@@ -101,7 +105,7 @@ function search(g, fromCands, toCands, profile, arriveBearing, opts) {
         if (rev ? t.alongM > c.alongM : t.alongM < c.alongM) return;
         const part = e.lengthM ? (Math.abs(t.alongM - c.alongM) / e.lengthM) * e.cost : 0;
         const mid = rev ? e.geom.slice(t.seg, c.seg).reverse() : e.geom.slice(c.seg, t.seg);
-        pushGoal({ total: access + part + t.distM * SNAP_WEIGHT, from: -1, tc: ti, rev, coords: [c.point, ...mid, t.point] });
+        pushGoal({ total: access + part + t.distM * accessPerM, from: -1, tc: ti, rev, coords: [c.point, ...mid, t.point] });
       });
     }
   });
@@ -117,7 +121,7 @@ function search(g, fromCands, toCands, profile, arriveBearing, opts) {
     for (const d2 of g.out[n]) {
       const outB = g.dBOut[d2];
       if (!turnOk(inB, outB)) continue;
-      const nc = base + g.dCost[d2] + turnCost(inB, outB);
+      const nc = base + g.dCost[d2] + turnCost(inB, outB, n);
       if (nc < cost[d2]) { cost[d2] = nc; prev[d2] = p; startOf[d2] = -1; heap.push(d2, nc + h(g.dTo[d2])); }
     }
     // A target on an edge leaving this node
@@ -130,7 +134,7 @@ function search(g, fromCands, toCands, profile, arriveBearing, opts) {
         const outB = g.dBOut[d];
         if (!turnOk(inB, outB)) continue;
         const share = f.lengthM ? (rev ? f.lengthM - t.alongM : t.alongM) / f.lengthM : 0;
-        pushGoal({ total: base + f.cost * share + turnCost(inB, outB) + t.distM * SNAP_WEIGHT, from: p, tc: ti, rev });
+        pushGoal({ total: base + f.cost * share + turnCost(inB, outB, n) + t.distM * accessPerM, from: p, tc: ti, rev });
       }
     });
   }
