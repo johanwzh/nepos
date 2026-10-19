@@ -58,6 +58,11 @@ describe('the routing graph (Lasse\'s spec: graph construction)', () => {
     expect(reaches(g, [100, 2500], [500, 2300])).toBe(true);
   });
 
+  it('two line ends one tile unit apart (a road cut at a tile edge) join: Trondheimsveien at Bjerke, user 2026-10-19', () => {
+    const g = buildGraph([line('trunk', [[3000, 3300], [4095, 3300]], { oneway: 1 }), line('trunk', [[4096, 3300], [4300, 3300]], { oneway: 1 })], 'bus', 14);
+    expect(reaches(g, [3000, 3300], [4300, 3300])).toBe(true);
+  });
+
   it('a road ending a few metres short of another does not join it', () => {
     const g = buildGraph([line('primary', [[100, 2800], [900, 2800]]), line('minor', [[500, 2600], [500, 2780]])], 'bus', 14);
     expect(reaches(g, [500, 2600], [900, 2800])).toBe(false);

@@ -5,7 +5,7 @@
 
 /** @typedef {'bus' | 'tram' | 'rail' | 'metro' | 'ferry'} Profile */
 
-export const ENGINE_VERSION = 1;
+export const ENGINE_VERSION = 2; // 2: road ends cut at tile edges are stitched (Bjerke, 2026-10-19)
 
 /**
  * @typedef {{ penalty: (cls: string, subclass: string, props: Record<string, any>) => number | null,
