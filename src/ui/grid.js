@@ -1186,7 +1186,17 @@ function onPaste(e) {
   const text = e.clipboardData?.getData('text');
   if (!text) return;
   e.preventDefault();
-  if (inStopCol) { pasteStop(text.trim()); return; }
+  if (inStopCol) {
+    // A list of stops (user 2026-10-18): every Quay ID in the text, in order, from any text, CSV or sloppy JSON
+    const ids = text.match(/NSR:Quay:\d+/g) ?? [];
+    if (ids.length > 1) pasteStopList(ids); else pasteStop(text.trim());
+    return;
+  }
+  // A block wider or taller than the table adds the columns and rows it needs (user 2026-10-19), as in Excel
+  const block = text.replace(/\r?\n$/, '').split(/\r?\n/);
+  const width = Math.max(...block.map((l) => l.split('\t').length));
+  const addCols = Math.max(0, ancC + width - grid.cols.length), addRows = Math.max(0, ancR + block.length - grid.stops.length);
+  if (!growGrid(addRows, addCols)) return;
   text.split(/\r?\n/).forEach((line, dr) => {
     if (!line) return;
     line.split('\t').forEach((val, dc) => {
@@ -1205,6 +1215,48 @@ function onPaste(e) {
     });
   });
   render();
+}
+
+/**
+ * Add rows at the bottom and columns at the right, asking first when a paste would add more than 50 of either.
+ * @param {number} rows @param {number} cols
+ * @returns {boolean} false when the user said no
+ */
+function growGrid(rows, cols) {
+  if ((rows > 50 || cols > 50) && !confirm(t('pasteGrowConfirm', rows, cols))) return false;
+  for (let i = 0; i < rows; i++) {
+    grid.stops.push({ name: '', stopId: null, bold: false, sep: false, isDwellArr: false, price: null });
+    for (const col of grid.cols) { col.cells.push(null); col.dests.push(null); }
+  }
+  for (let i = 0; i < cols; i++) grid.cols.push({ dayCode: grid.cols[grid.cols.length - 1]?.dayCode ?? '', uid: crypto.randomUUID(), note: '', dates: [], cells: grid.stops.map(() => null), dest: null, dests: grid.stops.map(() => null) });
+  return true;
+}
+
+/**
+ * Pasted stops, from the selected stop row down (Excel logic, user 2026-10-18): each row gets the next Quay; rows
+ * are added as needed; the times stay where they are. Names come from NSR (looked up when not known yet).
+ * @param {string[]} ids
+ */
+function pasteStopList(ids) {
+  if (grid.readOnly || !grid.stops[ancR]) return;
+  if (!growGrid(Math.max(0, ancR + ids.length - grid.stops.length), 0)) return;
+  ids.forEach((id, i) => {
+    const stop = grid.stops[ancR + i];
+    stop.stopId = id;
+    stop.name = quayInfo.get(id)?.stopPlaceName ?? '';
+  });
+  const first = quayInfo.get(ids[0]);
+  if (first) for (const fn of stopInfoListeners) fn(first);
+  render();
+  const missing = ids.filter((id) => !quayInfo.has(id));
+  if (!missing.length) return;
+  loadQuays(missing).then(() => {
+    const info0 = quayInfo.get(ids[0]);
+    if (info0 && !first) for (const fn of stopInfoListeners) fn(info0);
+    for (const stop of grid.stops) if (stop.stopId && !stop.name.trim()) stop.name = quayInfo.get(String(stop.stopId))?.stopPlaceName ?? '';
+    if (inStopEdit) { updateStopMarks(); return; }
+    render();
+  });
 }
 
 /** Dates as a tooltip: how many days added and removed. @param {{ from: string, to: string, on: boolean }[]} dates */

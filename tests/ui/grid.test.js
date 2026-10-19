@@ -583,3 +583,62 @@ describe('platform code beside the stop name (63)', () => {
     expect(names[2].querySelector('.g-plat')).toBeNull();
   });
 });
+
+describe('pasting lists (57, and wider pastes)', () => {
+  const paste = (/** @type {string} */ text) => {
+    const ev = new Event('paste', { bubbles: true, cancelable: true });
+    /** @type {any} */ (ev).clipboardData = { getData: () => text };
+    document.dispatchEvent(ev);
+  };
+  const nameCell = (/** @type {number} */ ri) => /** @type {HTMLElement} */ (document.querySelector(`.g-td-name[data-ri="${ri}"]`));
+  const JSON_PASTE = '{"data":{"lines":[{"id":"VIL:Line:1","journeyPatterns":[{"quays":[{"id":"NSR:Quay:459"},{"id":"NSR:Quay:21652"},{"id":"NSR:Quay:21647"}]}]}';
+
+  it('puts every Quay ID in the pasted text into the stop rows from the selected one down, adding rows', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')] }] });
+    nameCell(1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    paste(JSON_PASTE); // sloppy: not even valid JSON
+    expect(grid.stops.map((s) => s.stopId)).toEqual([null, 'NSR:Quay:459', 'NSR:Quay:21652', 'NSR:Quay:21647']);
+    expect(grid.cols[0].cells.map((c) => c?.time ?? null)).toEqual(['0700', '0710', null, null]); // times stay
+    expect(grid.cols[0].dests).toHaveLength(4);
+  });
+
+  it('takes IDs from lines, commas and semicolons alike', () => {
+    loadGrid({ stops: [stop('A')], cols: [{ dayCode: 'D', cells: [cell('0700')] }] });
+    nameCell(0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    paste('NSR:Quay:1;NSR:Quay:2, NSR:Quay:3\nNSR:Quay:4');
+    expect(grid.stops.map((s) => s.stopId)).toEqual(['NSR:Quay:1', 'NSR:Quay:2', 'NSR:Quay:3', 'NSR:Quay:4']);
+  });
+
+  it('asks before adding more than 50 rows, and adds nothing on no', () => {
+    loadGrid({ stops: [stop('A')], cols: [{ dayCode: 'D', cells: [cell('0700')] }] });
+    nameCell(0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    const asked = [];
+    window.confirm = (/** @type {string} */ m) => { asked.push(m); return false; };
+    paste(Array.from({ length: 60 }, (_, i) => `NSR:Quay:${i + 1}`).join('\n'));
+    expect(asked[0]).toContain('59');
+    expect(grid.stops).toHaveLength(1);
+    window.confirm = () => true;
+  });
+
+  it('adds the columns and rows a pasted block of times needs', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')] }] });
+    /** @type {HTMLElement} */ (document.querySelector('[data-r="0"][data-c="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    paste('0800\t0900\t1000\n0810\t0910\t1010\n0820\t0920\t1020');
+    expect(grid.cols).toHaveLength(3);
+    expect(grid.stops).toHaveLength(3);
+    expect(grid.cols.map((c) => c.cells.map((x) => x?.time))).toEqual([['0800', '0810', '0820'], ['0900', '0910', '0920'], ['1000', '1010', '1020']]);
+    expect(grid.cols[2].dests).toHaveLength(3);
+    expect(grid.cols[2].uid).toBeTruthy();
+  });
+
+  it('asks before adding more than 50 columns', () => {
+    loadGrid({ stops: [stop('A')], cols: [{ dayCode: 'D', cells: [cell('0700')] }] });
+    /** @type {HTMLElement} */ (document.querySelector('[data-r="0"][data-c="0"]')).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    const asked = [];
+    window.confirm = (/** @type {string} */ m) => { asked.push(m); return false; };
+    paste(Array.from({ length: 60 }, () => '0800').join('\t'));
+    expect(asked[0]).toContain('59');
+    expect(grid.cols).toHaveLength(1);
+    window.confirm = () => true;
+  });
+});
