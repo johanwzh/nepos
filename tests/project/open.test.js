@@ -104,3 +104,17 @@ describe('openProject with odd route files', () => {
     expect(opened.routes.map((r) => r.code)).toEqual(['20']);
   });
 });
+
+describe('openProject: routed links (2.3)', () => {
+  it('reads data/shapes.json, and a 2.2 project without it has none', async () => {
+    const fs = createMemoryFs();
+    await createProject(fs, { name: 'T', codespace: 'TST' });
+    const none = /** @type {any} */ (await openProject(fs));
+    expect(none.shapes.size).toBe(0);
+    await fs.writeBytes('data/shapes.json', new TextEncoder().encode(JSON.stringify({ version: 1, shapes: { 'NSR:Quay:1|NSR:Quay:2|bus': {
+      polyline: '', precision: 6, distanceM: 1, status: 'OK', warnings: [], from: [10, 60], to: [10, 60.001], source: 's', engine: 1, routedAt: '2026-10-19T00:00:00Z' } } })));
+    const opened = /** @type {any} */ (await openProject(fs));
+    expect(opened.shapes.get('NSR:Quay:1|NSR:Quay:2|bus').status).toBe('OK');
+    expect(opened.shapesError).toBe('');
+  });
+});
