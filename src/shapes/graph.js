@@ -9,7 +9,7 @@ import { tileToLonLat, haversineM, bearing } from './geometry.js';
 /** @typedef {import('./tiles.js').DecodedLine} DecodedLine */
 /** @typedef {[number, number]} LonLat */
 /**
- * @typedef {{ from: number, to: number, lengthM: number, cost: number, geom: LonLat[] }} Edge
+ * @typedef {{ from: number, to: number, lengthM: number, cost: number, geom: LonLat[], cls: string, oneway: number }} Edge
  * @typedef {{ nodeLon: number[], nodeLat: number[], edges: Edge[],
  *             dEdge: number[], dRev: boolean[], dFrom: number[], dTo: number[], dCost: number[], dBOut: number[], dBIn: number[],
  *             out: number[][], nodeAt: (gx: number, gy: number) => number, profile: import('./profiles.js').Profile }} Graph
@@ -54,6 +54,36 @@ function joinTJunctions(lines) {
   /** @type {Map<string, number>} how many line vertices sit on each point */
   const at = new Map();
   for (const l of lines) for (const [x, y] of l.points) at.set(`${x},${y}`, (at.get(`${x},${y}`) ?? 0) + 1);
+
+  // Near-miss line ends (Lasse's spec, stitching fallback; found at Bjerke, 2026-10-19): a road cut at a tile edge can
+  // end one unit short of where its next piece starts. A loose end within T_JOIN_UNITS of another loose end moves
+  // onto it, so the two share a vertex.
+  /** @type {Map<string, [number, number][]>} grid cell → loose line ends */
+  const ends = new Map();
+  const loose = (/** @type {[number, number]} */ p) => (at.get(`${p[0]},${p[1]}`) ?? 0) === 1;
+  for (const l of lines) for (const p of [l.points[0], l.points[l.points.length - 1]]) {
+    if (!loose(p)) continue;
+    const k = `${Math.floor(p[0] / CELL)},${Math.floor(p[1] / CELL)}`;
+    let list = ends.get(k);
+    if (!list) { list = []; ends.set(k, list); }
+    list.push(p);
+  }
+  for (const l of lines) for (const i of [0, l.points.length - 1]) {
+    const p = l.points[i];
+    if (!loose(p)) continue;
+    const [cx, cy] = [Math.floor(p[0] / CELL), Math.floor(p[1] / CELL)];
+    let hit = /** @type {[number, number] | null} */ (null);
+    for (let dx = -1; dx <= 1 && !hit; dx++) for (let dy = -1; dy <= 1 && !hit; dy++) {
+      for (const q of ends.get(`${cx + dx},${cy + dy}`) ?? []) {
+        if (q === p || (q[0] === p[0] && q[1] === p[1])) continue;
+        if (Math.abs(q[0] - p[0]) <= T_JOIN_UNITS && Math.abs(q[1] - p[1]) <= T_JOIN_UNITS) { hit = q; break; }
+      }
+    }
+    if (!hit) continue;
+    at.set(`${p[0]},${p[1]}`, 0);
+    l.points[i] = [hit[0], hit[1]];
+    at.set(`${hit[0]},${hit[1]}`, 2);
+  }
   /** @type {Map<string, [number, number][]>} grid cell → [line, segment] */
   const cells = new Map();
   lines.forEach((l, li) => {
@@ -173,8 +203,8 @@ export function buildGraph(lines, profile, z) {
       const sig = `${Math.min(from, to)}|${Math.max(from, to)}|${Math.round(lengthM * 2)}`;
       if (seen.has(sig)) continue;
       seen.add(sig);
-      edges.push({ from, to, lengthM, cost: lengthM * /** @type {number} */ (pen), geom });
       const ow = rules.oneway ? Number(l.props.oneway ?? 0) : 0;
+      edges.push({ from, to, lengthM, cost: lengthM * /** @type {number} */ (pen), geom, cls: l.cls, oneway: ow === 1 || ow === -1 ? ow : 0 });
       meta.push({ e: edges.length - 1, oneway: ow === 1 || ow === -1 ? ow : 0 });
     }
   });
