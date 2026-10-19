@@ -47,6 +47,7 @@ export function openFnEditor(type, ri, ci, cells) {
   const at = ats[0];
   if (!at) return; // notes attach to columns and to cells with a time
   // Several cells: their note when they all have the same one, else empty
+  // Unchanged text changes nothing, so mixed notes on several cells are only replaced when something is typed
   const shared = ats.every((/** @type {any} */ x) => (x.note ?? '') === (at.note ?? '')) ? at.note ?? '' : '';
   const body = document.createElement('div');
   body.className = 'note-box';
@@ -64,10 +65,10 @@ export function openFnEditor(type, ri, ci, cells) {
   const set = (/** @type {string} */ v) => { for (const x of ats) x.note = v; markDirty(); render(); updateFnPreview({ type, ri, ci }); };
   const box = openFloatBox({
     x: r?.left ?? 200, y: (r?.bottom ?? 160) + 4, title: ats.length > 1 ? t('noteTitleCells', ats.length) : t(type === 'col' ? 'noteTitleCol' : 'noteTitleCell'), body, cls: 'note-float',
-    onApply: () => { if (value() !== shared) set(value()); // unchanged: nothing happens (mixed notes stay as they are) },
+    onApply: () => { if (value() !== shared) set(value()); },
   });
   remove.addEventListener('click', () => { box.close(); set(''); });
-  text.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (value() !== shared) set(value()); // unchanged: nothing happens (mixed notes stay as they are) box.close(); } });
+  text.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); if (value() !== shared) set(value()); box.close(); } });
   text.focus();
 }
 
