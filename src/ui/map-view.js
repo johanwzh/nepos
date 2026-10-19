@@ -57,6 +57,8 @@ export function createMapView(el, { style, dark = false }) {
       paint: { 'line-color': WARN, 'line-width': 3, 'line-opacity': 0.9, 'line-dasharray': [2, 1.5] } });
     map.addLayer({ id: 'links-ok', type: 'line', source: 'links', filter: ['==', ['get', 'status'], 'OK'],
       layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': BLUE, 'line-width': 3.5, 'line-opacity': 0.9 } });
+    // An invisible wide line over the links: easy to point at (hover text, right-click menu)
+    map.addLayer({ id: 'links-hit', type: 'line', source: 'links', paint: { 'line-color': '#000', 'line-width': 14, 'line-opacity': 0 } });
     map.addLayer({ id: 'dots', type: 'circle', source: 'dots', paint: { 'circle-radius': ['get', 'r'], 'circle-color': BLUE,
       'circle-stroke-color': isDark ? '#2a2620' : '#ffffff', 'circle-stroke-width': 2 } });
     map.addLayer({ id: 'ring', type: 'circle', source: 'ring', paint: { 'circle-radius': 12, 'circle-opacity': 0,
@@ -72,7 +74,7 @@ export function createMapView(el, { style, dark = false }) {
   }
 
   // Hover texts: the trip's stops, and why a link is not routed
-  for (const layer of ['dots', 'links-other', 'links-pending']) {
+  for (const layer of ['dots', 'links-hit']) {
     map.on('mousemove', layer, (e) => {
       const tip = e.features?.[0]?.properties?.tooltip;
       if (!tip) return;
@@ -84,7 +86,7 @@ export function createMapView(el, { style, dark = false }) {
 
   /** @type {((key: string, ev: MouseEvent) => void)[]} */
   const linkContext = [];
-  for (const layer of ['links-ok', 'links-other']) {
+  for (const layer of ['links-hit']) {
     map.on('contextmenu', layer, (e) => {
       const key = e.features?.[0]?.properties?.key;
       if (key) for (const fn of linkContext) fn(String(key), /** @type {MouseEvent} */ (e.originalEvent));

@@ -13,6 +13,7 @@ import { pickerMapModel } from '../core/picker-map-model.js';
 import { modeIconSvg } from './mode-icons.js';
 import { placeMenu } from './place-menu.js';
 import { createMapView } from './map-view.js';
+import { linkFeatures, onLinksChanged, blockLink, routeAgain, linesUsing, linkFor, linkBudgetLeft } from './link-router.js';
 
 /** @type {import('./map-view.js').MapView | null} */ let view = null;
 let styleKey = '';
@@ -37,6 +38,7 @@ function ensureMap() {
     view = createMapView($('map-gl'), { style, dark: theme() === 'dark' });
     styleKey = key;
     view.onMoveEnd(() => { for (const fn of viewListeners) fn(); }); // browsing (stop picking spec §4)
+    view.onLinkContext(linkMenu);
     const v = view;
     for (const fn of readyListeners) fn(v);
     return;
@@ -79,6 +81,29 @@ function quayMenu(id, ev) {
   setTimeout(() => document.addEventListener('mousedown', closeQuayMenu, { once: true }), 0);
 }
 function closeQuayMenu() { document.querySelector('.map-ctx')?.remove(); }
+
+/** The right-click menu on a link (design §4): don't route it, or route it again. @param {string} key @param {MouseEvent} ev */
+function linkMenu(key, ev) {
+  closeQuayMenu();
+  if (grid.readOnly) return;
+  ev.preventDefault();
+  const s = linkFor(key);
+  const menu = document.createElement('div');
+  menu.className = 'map-ctx';
+  /** @type {[string, () => void][]} */
+  const items = [];
+  if (s?.status !== 'BLOCKED') items.push([t('linkBlock', linesUsing(key)), () => blockLink(key)]);
+  if (s && s.status !== 'OK') items.push([t('linkRouteAgain'), () => routeAgain(key)]);
+  for (const [label, fn] of items) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); closeQuayMenu(); fn(); });
+    menu.appendChild(b);
+  }
+  document.body.appendChild(menu);
+  placeMenu(menu, ev.clientX, ev.clientY);
+  setTimeout(() => document.addEventListener('mousedown', closeQuayMenu, { once: true }), 0);
+}
 /** @type {(() => void)[]} */
 const viewListeners = [];
 let pickKey = '';
@@ -139,8 +164,9 @@ function update() {
   const col = grid.active ? grid.cols[ci] : null;
   const trip = col ? tripOnMap(grid, col, quayInfo) : { points: [], missing: [] };
 
-  $('map-missing').hidden = !trip.missing.length;
-  $('map-missing').textContent = trip.missing.length ? t('mapMissing', trip.missing.join(', ')) : '';
+  const notes = [trip.missing.length ? t('mapMissing', trip.missing.join(', ')) : '', linkBudgetLeft() ? '' : t('linkBudgetUsed')].filter(Boolean);
+  $('map-missing').hidden = !notes.length;
+  $('map-missing').textContent = notes.join(' ');
   /** @type {HTMLElement | null} */ (document.querySelector('#map-inner .map-hint-overlay')).style.display = trip.points.length ? 'none' : '';
   if (!trip.points.length) { lastKey = ''; v.setTrip({ line: [], dots: [], ring: null }); v.setLinks([]); return; }
 
@@ -149,9 +175,12 @@ function update() {
   const ri = selectedRowIndex();
   const here = trip.points.find((p) => p.ri === ri || (grid.stops[/** @type {number} */ (ri)]?.isDwellArr && p.ri === /** @type {number} */ (ri) + 1));
   const ink = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#000';
+  // Routed links replace the straight trip line when the line's mode is routed (2.3)
+  const links = col ? linkFeatures(col) : null;
+  v.setLinks(links ?? []);
   v.setTrip({
     // Bold stops (the main stops in the timetable) are the larger dots
-    line, ink, ring: here ? [here.lon, here.lat] : null,
+    line: links ? [] : line, ink, ring: here ? [here.lon, here.lat] : null,
     dots: trip.points.map((p) => ({ lon: p.lon, lat: p.lat, r: p.bold ? 7 : 5, tooltip: `<b>${esc(p.name)}</b> ${esc(p.time.slice(0, 2))}:${esc(p.time.slice(2))}` })),
   });
   for (const fn of drawListeners) fn();
@@ -192,5 +221,6 @@ export function initMapPanel() {
   // Dragging the panel edge or resizing the window: let the map re-measure.
   new ResizeObserver(() => { view?.resize(); }).observe($('map-inner'));
   onQuaysLoaded(schedule);
+  onLinksChanged(schedule);
   onRefresh(schedule); // page changes, theme, language, another route
 }
