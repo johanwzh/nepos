@@ -1,0 +1,37 @@
+# Changelog
+
+Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
+
+## 2.2.0 — not released yet
+
+- **Direction of a table set:** an optional "Retning" (outbound, inbound, clockwise, anticlockwise) beside the
+  calendars; saved in `#TRA` field 1 and exported as the Route's DirectionType.
+- **Platform codes:** the NSR platform code (e.g. "A", "2") is shown beside the stop name.
+- **A note on several times at once:** select times and press F7 (or right-click → note).
+- **The grid follows the cursor:** the header rows (day codes, trip numbers) and the stop column stay frozen, and the
+  selected cell never hides under them.
+- **Reversing a table set** keeps the divider between the same two stops.
+- **Times are aligned** in their column, with room for marks (a/p/x and the +1 day offset) to the right.
+
+## 2.1.0 — 2026-10-18
+
+The first version tested against Entur's import (dev): it passes both the old and the new import.
+
+- **Destinations** (destination displays): destination columns in the grid (Alt+D) with vias, changes along the trip,
+  suggestions from bold and underlined stops, copy and paste, drag and shift+drag; `#DST`/`#DSK` in ERN, and
+  DestinationDisplays with vias in NeTEx.
+- **NeTEx for Entur's import:** notes on lines, trips and times as Notices; first stop departure only, last stop arrival
+  only; no getting off at the first stop or on at the last; the Network carries an authority; NSR codespace declared;
+  Routes cover all their patterns; no TransportMode on ServiceJourney; the ZIP named `<codespace>_<time>.zip`,
+  compressed, with dates.
+- **Dates on a single time:** a time can be switched off on some of the trip's days; the export splits the trip.
+- **The line note** is saved as a note on the whole table (`#FOT -1;-1`); older `#KOM` files can be updated.
+- **A new line takes its mode from its first stop.** Stop search: arrows/Tab and Enter pick a result.
+- **Small fixes:** "+ New line" in the line navigator, copy and paste of day codes, day codes tidy themselves (DX76 →
+  DX67), one-line notes, plain public/export flags ("Åpen rute / Lukket rute", "Eksporteres / Eksporteres ikke"),
+  calendar chips by date, readable drop-down lists, bigger text in the export check, a warning for organisations
+  without an export ID.
+
+## 2.0.0 — 2026-10-17
+
+Nepos 2: the web version of the ERN timetable editor, with ERN 2.0 files and NeTEx export.
