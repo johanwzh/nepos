@@ -265,13 +265,24 @@ function applyStopMark(td, stop) {
  */
 function fillStopName(td, stop) {
   td.textContent = stop.name;
-  const code = stop.stopId == null ? '' : quayInfo.get(String(stop.stopId))?.publicCode?.trim() ?? '';
-  if (!code) return;
-  const chip = document.createElement('span');
-  chip.className = 'g-plat';
-  chip.textContent = code;
-  chip.title = t('platformCode', code);
-  td.appendChild(chip);
+  const info = stop.stopId == null ? null : quayInfo.get(String(stop.stopId));
+  const code = info?.publicCode?.trim() ?? '';
+  if (code) {
+    const chip = document.createElement('span');
+    chip.className = 'g-plat';
+    chip.textContent = code;
+    chip.title = t('platformCode', code);
+    td.appendChild(chip);
+  }
+  // The private code (a view setting, user 2026-10-19): a grey chip in inverted colours, unlike the public code
+  const priv = app.settings?.showPrivateCode ? info?.privateCode?.trim() ?? '' : '';
+  if (priv) {
+    const chip = document.createElement('span');
+    chip.className = 'g-priv';
+    chip.textContent = priv;
+    chip.title = t('privateCodeTitle', priv);
+    td.appendChild(chip);
+  }
 }
 
 /** New NSR results: update the marks and platform codes in place, so nothing is rebuilt under the cursor. */

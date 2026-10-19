@@ -681,3 +681,19 @@ describe('small wave 2', () => {
     expect(preview && strip && (preview.compareDocumentPosition(strip) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy();
   });
 });
+
+describe('the private code beside the stop name (a view setting)', () => {
+  it('shows the Quay\'s private code in its own grey chip only when the setting is on', async () => {
+    const { quayInfo } = await import('../../src/ui/quays.js');
+    quayInfo.set('NSR:Quay:7203', { quayId: 'NSR:Quay:7203', publicCode: 'B', privateCode: '06', stopPlaceId: 'NSR:StopPlace:1', stopPlaceName: 'Sentrum', mode: 'bus', lat: 0, lon: 0 });
+    app.settings.showPrivateCode = false;
+    loadGrid({ stops: [stop('Sentrum', 'NSR:Quay:7203')], cols: [{ dayCode: 'D', cells: [cell('0700')] }] });
+    expect(document.querySelector('.g-td-name .g-priv')).toBeNull();
+    app.settings.showPrivateCode = true;
+    render();
+    const name = /** @type {HTMLElement} */ (document.querySelector('.g-td-name'));
+    expect(name.querySelector('.g-plat')?.textContent).toBe('B');
+    expect(name.querySelector('.g-priv')?.textContent).toBe('06');
+    app.settings.showPrivateCode = false;
+  });
+});

@@ -30,7 +30,7 @@ describe('lookupQuays', () => {
     const result = await lookupQuays(['NSR:Quay:7203', 'NSR:Quay:563', 'NSR:Quay:999999999'], { ...opts, fetch: fn });
     expect(result.get('NSR:Quay:7203')).toEqual({
       quayId: 'NSR:Quay:7203', publicCode: 'A', stopPlaceId: 'NSR:StopPlace:4000', stopPlaceName: 'Jernbanetorget',
-      mode: 'bus', lat: 59.911425, lon: 10.749736,
+      mode: 'bus', lat: 59.911425, lon: 10.749736, privateCode: '',
     });
     expect(result.get('NSR:Quay:563')?.mode).toBe('rail');
     expect(result.get('NSR:Quay:999999999')).toBe(null);
@@ -111,5 +111,13 @@ describe('getStopPlaces', () => {
   it('fails loudly on an error response', async () => {
     const { fn } = fakeFetch({}, { ok: false, status: 500 });
     await expect(getStopPlaces(['NSR:StopPlace:1'], { ...opts, fetch: fn })).rejects.toThrow('500');
+  });
+});
+
+describe('lookupQuays: the Quay\'s private code (user 2026-10-19)', () => {
+  it('reads privateCode.value', async () => {
+    const body = [{ id: 'NSR:StopPlace:1', name: { value: 'X' }, transportMode: 'bus', quays: { quayRefOrQuay: [{ id: 'NSR:Quay:1', publicCode: 'A', privateCode: { value: '06' } }] } }];
+    const { fn } = fakeFetch(body);
+    expect((await lookupQuays(['NSR:Quay:1'], { ...opts, fetch: fn })).get('NSR:Quay:1')?.privateCode).toBe('06');
   });
 });

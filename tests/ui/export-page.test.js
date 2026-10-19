@@ -135,7 +135,7 @@ describe('export page', () => {
     await click('btn-netex');
     const [dir] = await fs.list('exports');
     expect((await fs.list(`exports/${dir.name}`)).map((/** @type {any} */ e) => e.name)).toEqual([`TST_${dir.name}.zip`]);
-    expect(document.getElementById('export-status').textContent).toContain(`exports/${dir.name}/TST_${dir.name}.zip`);
+    expect(document.getElementById('export-status').textContent).toContain(`exports\\${dir.name}\\TST_${dir.name}.zip`);
   });
 
   it('writes loose files when ZIP is switched off, and remembers the choice', async () => {
@@ -229,16 +229,11 @@ describe('export page', () => {
 });
 
 describe('finding the export (user 2026-10-19)', () => {
-  it('offers to copy the place of the export folder, to paste into Explorer', async () => {
+  it('says where the export is, starting from the project folder, with no copy button', async () => {
     await openProjectWith(route('NSR:Quay:11972'));
-    /** @type {string[]} */ const wrote = [];
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (/** @type {string} */ s) => { wrote.push(s); } }, configurable: true });
     await click('btn-netex');
     const [dir] = await fs.list('exports');
-    const btn = /** @type {HTMLElement} */ (document.getElementById('export-copy-path'));
-    expect(btn).not.toBeNull();
-    btn.click();
-    await flush();
-    expect(wrote[0].endsWith(`exports\\${dir.name}`)).toBe(true);
+    expect(document.getElementById('export-copy-path')).toBeNull();
+    expect(document.getElementById('export-status')?.textContent).toContain(`\\exports\\${dir.name}\\TST_${dir.name}.zip`);
   });
 });
