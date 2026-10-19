@@ -64,6 +64,17 @@ export function deletePeriod(rs) {
  * A new table set copying the active set's periods (with their calendars) and stops, without trips.
  * @param {any} rs @param {string} name @param {{ reversed: boolean }} opts @returns {number}
  */
+/**
+ * Stops in the other direction. A divider (sep) and a waiting stop's arrival mark (isDwellArr) belong to the gap
+ * below their row, not to the stop: reversed, they go on the row that is now above the same gap, so the divider
+ * stays between the same two stops (user 2026-10-18: the old Reggi problem).
+ * @param {any[]} stops
+ */
+function reverseStops(stops) {
+  const n = stops.length;
+  return stops.slice().reverse().map((s, k) => ({ ...s, sep: k < n - 1 ? !!stops[n - 2 - k].sep : false, isDwellArr: k < n - 1 ? !!stops[n - 2 - k].isDwellArr : false }));
+}
+
 export function addTableSet(rs, name, { reversed }) {
   const from = rs.activeSet;
   const setId = rs.nextId++;
@@ -72,7 +83,7 @@ export function addTableSet(rs, name, { reversed }) {
     const id = rs.nextId++;
     rs.periods.push({ id, setId, calendarIds: [...per.calendarIds] });
     const stops = JSON.parse(JSON.stringify(rs.grids[`${per.id}:${from}`]?.stops ?? []));
-    rs.grids[`${id}:${setId}`] = { stops: reversed ? stops.reverse() : stops, cols: [] };
+    rs.grids[`${id}:${setId}`] = { stops: reversed ? reverseStops(stops) : stops, cols: [] };
   }
   if (!periodsOf(rs, setId).length) { const id = rs.nextId++; rs.periods.push({ id, setId, calendarIds: [] }); rs.grids[`${id}:${setId}`] = emptyGrid(); }
   rs.activeSet = setId;
