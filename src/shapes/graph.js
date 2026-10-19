@@ -12,7 +12,8 @@ import { tileToLonLat, haversineM, bearing } from './geometry.js';
  * @typedef {{ from: number, to: number, lengthM: number, cost: number, geom: LonLat[], cls: string, oneway: number }} Edge
  * @typedef {{ nodeLon: number[], nodeLat: number[], edges: Edge[],
  *             dEdge: number[], dRev: boolean[], dFrom: number[], dTo: number[], dCost: number[], dBOut: number[], dBIn: number[],
- *             out: number[][], nodeAt: (gx: number, gy: number) => number, profile: import('./profiles.js').Profile }} Graph
+ *             out: number[][], degree: number[], nodeAt: (gx: number, gy: number) => number, profile: import('./profiles.js').Profile }} Graph
+ *   degree[node]: how many edges meet there (3 or more: a junction)
  *   d*: directed edges (dRev: against the edge's geometry); out[node]: the directed edges leaving it
  */
 
@@ -228,8 +229,10 @@ export function buildGraph(lines, profile, z) {
     if (oneway !== 1) add(true);
   }
 
+  const nodeDegree = nodeLon.map(() => 0);
+  for (const e of edges) { nodeDegree[e.from]++; nodeDegree[e.to]++; }
   return {
-    nodeLon, nodeLat, edges, dEdge, dRev, dFrom, dTo, dCost, dBOut, dBIn, out, profile,
+    nodeLon, nodeLat, edges, degree: nodeDegree, dEdge, dRev, dFrom, dTo, dCost, dBOut, dBIn, out, profile,
     nodeAt: (gx, gy) => nodeOf.get(find(`${gx},${gy}`)) ?? -1,
   };
 }

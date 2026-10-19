@@ -122,3 +122,13 @@ describe('the final review\'s fixes (engine)', () => {
     expect(fetched).toBe(first);
   });
 });
+
+describe('the corridor for a bus link (FB1, Olavsgaard → Oslo lufthavn, 2026-10-19)', () => {
+  it('reaches far enough to the side to find a motorway: the E6 runs ~6 km east of the straight line near Jessheim', async () => {
+    /** @type {string[]} */
+    const asked = [];
+    const core = createEngineCore({ fetchTile: async (z, x, y) => { asked.push(`${z}/${x}/${y}`); return new Uint8Array(1); }, decode: () => [], source: 'test' });
+    await core.shapeLink({ quayId: 'NSR:Quay:10099', lon: 11.0012, lat: 59.9794 }, { quayId: 'NSR:Quay:9775', lon: 11.0992, lat: 60.1934 }, 'bus');
+    expect(asked).toContain('12/2175/1186'); // where the E6 continues north of the old corridor's edge
+  });
+});

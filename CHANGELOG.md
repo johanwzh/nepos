@@ -10,6 +10,10 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   rails, tram tracks or ferry routes for the line's mode, in the background, from the same tiles as the map. A link is
   routed once and shared by every line and trip with the same two stops; links older than half a year, or whose stop
   NSR has moved, are routed again quietly when their line is opened.
+- **Buses take the fast roads:** links are routed by travel time, with the road speeds and turn costs of Entur's own
+  bus router (motorways 88 km/h, main roads 65, residential 25 …), in a corridor wide enough to reach a motorway.
+  A stop belongs to the road it stands beside, so the links arriving and leaving meet there; roads cut at a tile
+  edge are joined.
 - **Right-click a link:** "Don't route this link" (a straight line, not exported, for wrong map data) and "Route
   again". Extreme links (e.g. a bus over 150 km in a straight line) are never routed.
 - **Export:** routed links are exported as ServiceLinks, and each JourneyPattern gets its links when all of them are

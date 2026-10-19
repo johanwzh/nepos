@@ -29,11 +29,11 @@ describe('the heap', () => {
 });
 
 describe('snapping a Quay to the network', () => {
-  it('finds up to K nearby edges, nearest first, one per edge, within the radius', () => {
+  it('finds the nearest edge within the radius; one 12 m further is another road (2026-10-19)', () => {
     const g = buildGraph([line('minor', [[0, 0], [1000, 0]]), line('minor', [[0, 60], [1000, 60]]), line('minor', [[0, 2000], [1000, 2000]])], 'bus', 14);
     const c = snap(g, at(500, 20), 'bus');
-    expect(c.length).toBe(2); // the third road is far beyond 40 m
-    expect(c[0].distM).toBeLessThan(c[1].distM);
+    expect(c.length).toBe(1); // the second road is 12 m further, the third far beyond 40 m
+    expect(c[0].distM).toBeLessThan(8);
   });
 });
 
@@ -54,11 +54,37 @@ describe('the turn-aware search (Lasse\'s spec: snapping and search)', () => {
     expect(go(roads, 'bus', [300, 1000], [300, 562])).not.toBeNull(); // a bus may turn there
   });
 
-  it('a sharp bus turn costs the profile\'s turn cost', () => {
-    const hairpin = [line('minor', [[0, 1600], [1000, 1600]]), line('minor', [[1000, 1600], [100, 1900]])];
-    const r = /** @type {any} */ (go(hairpin, 'bus', [300, 1600], [300, 1833]));
-    expect(r).not.toBeNull();
-    expect(r.cost).toBeGreaterThan(r.distanceM + 450);
+  it('a bus takes the faster main road over a shorter back road (travel time, as Entur\'s OSRM bus profile)', () => {
+    // A back road straight across (about 300 m at 25 km/h) against a trunk road round three sides (about 480 m at 65 km/h)
+    const lines = [line('minor', [[0, 4000], [1000, 4000]]), line('trunk', [[0, 4000], [0, 4300], [1000, 4300], [1000, 4000]])];
+    const r = /** @type {any} */ (go(lines, 'bus', [0, 4000], [1000, 4000]));
+    expect(r.distanceM).toBeGreaterThan(400); // went round on the trunk road
+    const back = /** @type {any} */ (go([lines[0]], 'bus', [0, 4000], [1000, 4000]));
+    expect(back.cost).toBeGreaterThan(r.cost);
+  });
+
+  it('a bus costs seconds: road class speeds, and a slip road is slower than its road', () => {
+    const one = (/** @type {string} */ cls, props = {}) => /** @type {any} */ (go([line(cls, [[0, 4500], [1000, 4500]], props)], 'bus', [0, 4500], [1000, 4500]));
+    const trunk = one('trunk'), minor = one('minor'), ramp = one('trunk', { ramp: 1 }), service = one('service'), aisle = one('service', { service: 'parking_aisle' });
+    expect(trunk.cost).toBeCloseTo(trunk.distanceM / (65 / 3.6), 0);
+    expect(minor.cost).toBeCloseTo(minor.distanceM / (25 / 3.6), 0);
+    expect(ramp.cost).toBeCloseTo(ramp.distanceM / (40 / 3.6), 0);
+    expect(service.cost).toBeCloseTo(service.distanceM / (15 / 3.6), 0);
+    expect(aisle.cost).toBeCloseTo(aisle.distanceM / (7.5 / 3.6), 0);
+  });
+
+  it('a bus turn at a junction costs a few seconds, a left turn more than a right; a bend without a junction costs nothing', () => {
+    // A junction at (1000, 5000): from the west, turn left (north, y smaller) or right (south)
+    const cross = [line('minor', [[0, 5000], [1000, 5000]]), line('minor', [[1000, 5000], [1000, 4400]]), line('minor', [[1000, 5000], [1000, 5600]])];
+    const left = /** @type {any} */ (go(cross, 'bus', [0, 5000], [1000, 4400]));
+    const right = /** @type {any} */ (go(cross, 'bus', [0, 5000], [1000, 5600]));
+    const travel = (/** @type {any} */ r) => r.distanceM / (25 / 3.6);
+    expect(left.cost - travel(left)).toBeGreaterThan(right.cost - travel(right));
+    expect(left.cost - travel(left)).toBeLessThan(7.6);
+    expect(right.cost - travel(right)).toBeGreaterThan(1);
+    const bend = [line('minor', [[0, 6000], [1000, 6000]]), line('minor', [[1000, 6000], [1000, 6600]])];
+    const b = /** @type {any} */ (go(bend, 'bus', [0, 6000], [1000, 6600]));
+    expect(b.cost - travel(b)).toBeLessThan(0.5);
   });
 
   it('lets a tram take a 90° street corner but not a hairpin', () => {
@@ -78,11 +104,28 @@ describe('the turn-aware search (Lasse\'s spec: snapping and search)', () => {
     expect(Math.abs(back.arriveBearing - 270)).toBeLessThan(5);
   });
 
-  it('reaches the far lane of a dual carriageway when the near lane runs the wrong way', () => {
+  it('a stop belongs to the lane it stands beside, not the far carriageway 10 m away (Bjerke, user 2026-10-19)', () => {
     const lanes = [line('primary', [[0, 3500], [1000, 3500]], { oneway: 1 }), line('primary', [[1000, 3530], [0, 3530]], { oneway: 1 })];
-    // The Quay is beside the eastbound lane, the next stop to the west
-    const r = /** @type {any} */ (go(lanes, 'bus', [900, 3495], [100, 3495]));
+    const g = buildGraph(lanes, 'bus', 14);
+    const c = snap(g, at(500, 3495), 'bus');
+    expect(c).toHaveLength(1);
+    expect(g.edges[c[0].edge].geom[0][0]).toBeLessThan(g.edges[c[0].edge].geom.at(-1)[0]); // the eastbound lane
+  });
+
+  it('a stop between two roads (on an island) keeps both', () => {
+    const lanes = [line('primary', [[0, 3700], [1000, 3700]], { oneway: 1 }), line('primary', [[1000, 3730], [0, 3730]], { oneway: 1 })];
+    const g = buildGraph(lanes, 'bus', 14);
+    expect(snap(g, at(500, 3715), 'bus')).toHaveLength(2);
+    const r = /** @type {any} */ (go(lanes, 'bus', [900, 3715], [100, 3715]));
     expect(r).not.toBeNull();
+  });
+
+  it('a service road a little nearer does not win over the main road the stop stands beside', () => {
+    const g = buildGraph([line('trunk', [[0, 3900], [1000, 3900]]), line('service', [[0, 3880], [1000, 3880]])], 'bus', 14);
+    const c = snap(g, at(500, 3887), 'bus'); // 13 units from the trunk road, 7 from the service road: doubled, 14
+    expect(g.edges[c[0].edge].cls).toBe('trunk');
+    const near = snap(g, at(500, 3884), 'bus'); // 16 from the trunk, 4 from the service road: doubled, 8, still nearer
+    expect(g.edges[near[0].edge].cls).toBe('service');
   });
 
   it('gives null when there is no path', () => {

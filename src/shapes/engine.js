@@ -93,7 +93,8 @@ export function createEngineCore({ fetchTile, source, maxTiles = 400, budget = S
     const own = [a, b].map((p) => { const t = lonLatToTile(p[0], p[1], z); return `${z}/${Math.floor(t.x)}/${Math.floor(t.y)}`; });
 
     for (const factor of [1, 2]) { // a link along a fjord may leave the corridor: once more, twice as wide
-      const corridor = corridorTiles(a, b, z, Math.max(1000, 0.15 * straight) * factor).map((t) => `${z}/${t.x}/${t.y}`);
+      const cr = PROFILES[profile].corridor ?? { share: 0.15, maxM: Infinity };
+      const corridor = corridorTiles(a, b, z, Math.max(1000, Math.min(cr.share * straight, cr.maxM)) * factor).map((t) => `${z}/${t.x}/${t.y}`);
       if (corridor.length > maxTiles) return plain('TOO_FAR');
       const missing = corridor.filter((k) => !tiles.has(k)).length;
       if (used + missing > budget) return plain('ERROR', ['tile budget used']);
