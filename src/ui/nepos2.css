@@ -859,3 +859,8 @@ select option { background: var(--bg-panel); color: var(--text); }
 .help-versions ul { margin: 4px 0 8px 18px; padding: 0; }
 .help-versions li { margin: 3px 0; line-height: 1.4; }
 .help-versions p { margin: 4px 0; }
+
+/* Table-set tabs: the direction after the name, tinted; the tab's right-click menu */
+.ts-tab .ts-dir { color: var(--accent); font-size: 11px; font-weight: 500; }
+.ts-menu { position: fixed; z-index: 1000; min-width: 150px; background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, .3); padding: 4px 0; }
