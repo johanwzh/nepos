@@ -3,6 +3,12 @@ import { createMemoryFs, readText } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 
 describe('createProject', () => {
+  it('writes the language and light/dark chosen in the new project dialog (user 2026-10-19)', async () => {
+    const fs = createMemoryFs();
+    await createProject(fs, { name: 'X', codespace: 'abc', settings: { lang: 'en', theme: 'dark' } });
+    expect(JSON.parse(await readText(fs, 'private/settings.json'))).toMatchObject({ lang: 'en', theme: 'dark' });
+  });
+
   it('creates the data/ and private/ structure with format version 1', async () => {
     const fs = createMemoryFs();
     const result = await createProject(fs, { name: 'Kystruter', codespace: 'abc' });

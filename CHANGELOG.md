@@ -9,6 +9,7 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Platform codes:** the NSR platform code (e.g. "A", "2") is shown beside the stop name; View → "Show stops'
   private codes" adds the NSR private code in a grey chip.
 - **A missing submode** is an export error (modes without submodes excepted).
+- **New project** asks for the language and light/dark from the start.
 - **Too fast is an export error:** a leg faster than the mode's speed limit (a red arc in the speed strip) stops the
   export, and the problems marker goes to its time. The limits can be changed per mode in Prosjektinnstillinger; a
   limit more than 1.5 × the default gives a warning that Entur may not accept such speeds.
