@@ -24,7 +24,7 @@ import { placeMenu } from './place-menu.js';
 import { unionDays, tripDays } from '../core/calendars.js';
 import { app } from './state.js';
 import { normalizeDests, servedRows, setDestAt, moveChange, viaDrag, applySuggestion, copyDests, pasteDests, snapshotDests, restoreDests, destLabel } from '../core/destinations.js';
-import { destColumnsOpen, onDestToggle, destCellInfo, renderDestCell, openDestEditor } from './dest-columns.js';
+import { destColumnsOpen, onDestToggle, destCellInfo, renderDestCell, openDestEditor, toggleDestColumns } from './dest-columns.js';
 
 /** The grid being edited: one period × direction of the open route. */
 export const grid = {
@@ -286,6 +286,31 @@ export function selectRow(ri) {
   if (!grid.active || !grid.stops[ri]) return;
   inDC = false; inStopEdit = false;
   ancR = ri; endR = ri; endC = ancC;
+  render();
+}
+
+/** Select a column's day code (the problems marker goes there). @param {number} ci */
+export function selectDayCode(ci) {
+  if (!grid.active || !grid.cols[ci]) return;
+  commitPending();
+  inStopCol = false; inTN = false; inDest = false; inDC = true; dcEdit = false; dcCol = ci;
+  render();
+}
+
+/** Select a stop's name cell. @param {number} ri */
+export function selectStopCell(ri) {
+  if (!grid.active || !grid.stops[ri]) return;
+  commitPending();
+  inDC = false; inTN = false; inDest = false; inStopCol = true; ancR = ri; endR = ri;
+  render();
+}
+
+/** Select a destination cell, opening the destination columns when they are closed. @param {number} r @param {number} c */
+export function selectDestCell(r, c) {
+  if (!grid.active || !grid.cols[c]) return;
+  commitPending();
+  if (!destColumnsOpen()) toggleDestColumns();
+  inDC = false; inTN = false; inStopCol = false; inDest = true; destR = r; destC = c; destR2 = r; destC2 = c;
   render();
 }
 

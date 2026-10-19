@@ -86,7 +86,7 @@ describe('checkForExport', () => {
       grid0(rs).cols[0].dayCode = '';
       const issues = check(rs);
       expect(codes(issues)).toEqual(['error:col-no-daycode']);
-      expect(issues[0].where).toEqual({ tableSet: 'Tur', period: 'Vinter', column: 1 });
+      expect(issues[0].where).toEqual({ tableSet: 'Tur', period: 'Vinter', column: 1, setId: rs.periods[0].setId, periodId: rs.periods[0].id });
     });
 
     it('warns about a time earlier than the stop before it', () => {

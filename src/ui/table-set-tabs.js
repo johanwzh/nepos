@@ -87,7 +87,7 @@ function openTabMenu(setId, x, y) {
 function hideTabMenu() { const m = $('ts-menu'); if (m) m.style.display = 'none'; }
 
 /** The edit dialog: the set's name and direction. @param {number} setId */
-function openEditDialog(setId) {
+export function openEditDialog(setId) {
   const rs = app.routeState;
   const set = rs?.tableSets.find((/** @type {any} */ x) => x.id === setId);
   if (!set) return;

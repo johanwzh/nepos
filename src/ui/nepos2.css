@@ -864,3 +864,13 @@ select option { background: var(--bg-panel); color: var(--text); }
 .ts-tab .ts-dir { color: var(--accent); font-size: 11px; font-weight: 500; }
 .ts-menu { position: fixed; z-index: 1000; min-width: 150px; background: var(--bg-panel); border: 1px solid var(--border);
   border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, .3); padding: 4px 0; }
+
+/* The problems marker by the save button (55), and the mark on the place it goes to */
+.ef-problems { border: 1px solid #d06000; color: #d06000; background: transparent; border-radius: 999px; padding: 3px 12px;
+  font-size: 12px; cursor: pointer; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ef-problems.has-errors { border-color: var(--g-dec-c); color: var(--g-dec-c); }
+.ef-problems:hover { background: var(--accent-bg); }
+.go-here { outline: 3px solid var(--g-dec-c) !important; outline-offset: 1px; animation: go-here-pulse .8s ease-in-out 3; position: relative; }
+.go-here::after { content: attr(data-go-here); position: absolute; left: 0; top: calc(100% + 4px); z-index: 50; white-space: nowrap;
+  background: var(--g-dec-c); color: #fff; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; pointer-events: none; }
+@keyframes go-here-pulse { 50% { outline-color: transparent; } }

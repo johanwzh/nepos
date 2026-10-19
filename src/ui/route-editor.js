@@ -12,6 +12,7 @@ import { serializeERN } from '../core/ern/serialize.js';
 import { checkRouteFile } from '../core/integrity/check.js';
 import { orgNameList, findRole, addToCopy } from '../core/orgs.js';
 import { createOrgPicker } from './org-picker.js';
+import { wireProblemMarker, initProblemNav } from './problem-nav.js';
 import { openModeMenu } from './mode-menu.js';
 import { modeIconSvg } from './mode-icons.js';
 import { ernCodeFor, TRANSMODEL_MODES } from '../core/modes.js';
@@ -53,7 +54,7 @@ export function storeGrid() {
  * @param {{ store?: boolean }} [opts] store: false after deleting the shown period or table set —
  *   the grid on screen belongs to the deleted one and must not be stored under the new key
  */
-function switchPeriod(perId, { store = true } = {}) {
+export function switchPeriod(perId, { store = true } = {}) {
   if (store) {
     commitPending();
     saveGridToState();
@@ -446,6 +447,7 @@ function renderFooter() {
   const ro = isReadOnly();
 
   el.innerHTML = `
+    <button class="ef-problems" id="ef-problems" hidden></button>
     <div class="ef-spacer"></div>
     ${ro ? `<span class="n2-readonly-note">${esc(t('statusDamaged'))}</span>` : `
     <span class="ef-state" id="ef-state">${app.dirty ? `● ${esc(t('unsavedChanges'))}` : ''}</span>
@@ -454,6 +456,7 @@ function renderFooter() {
 
   $('ef-save')?.addEventListener('click', () => { if (app.dirty) void saveRoute($('ef-save')); });
   $('ef-discard')?.addEventListener('click', discardLine);
+  wireProblemMarker();
 }
 
 /** "Forkast endringer": the open line goes back to its saved file, after asking. */
@@ -583,6 +586,7 @@ function adoptModeFromStop(info) {
 }
 
 export function initRouteEditor() {
+  initProblemNav();
   onStopInfo(adoptModeFromStop);
   onGridRender(renderTimeline); // the column under the cursor shows on the timeline
   onRefresh(renderEditor);
