@@ -859,3 +859,38 @@ select option { background: var(--bg-panel); color: var(--text); }
 .help-versions ul { margin: 4px 0 8px 18px; padding: 0; }
 .help-versions li { margin: 3px 0; line-height: 1.4; }
 .help-versions p { margin: 4px 0; }
+
+/* Table-set tabs: the direction after the name, tinted; the tab's right-click menu */
+.ts-tab .ts-dir { color: var(--accent); font-size: 11px; font-weight: 500; }
+.ts-menu { position: fixed; z-index: 1000; min-width: 150px; background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, .3); padding: 4px 0; }
+
+/* The problems marker by the save button (55), and the mark on the place it goes to */
+.ef-problems { border: 1px solid #d06000; color: #d06000; background: transparent; border-radius: 999px; padding: 3px 12px;
+  font-size: 12px; cursor: pointer; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ef-problems.has-errors { border-color: var(--g-dec-c); color: var(--g-dec-c); }
+.ef-problems:hover { background: var(--accent-bg); }
+.go-here { outline: 3px solid var(--g-dec-c) !important; outline-offset: 1px; animation: go-here-pulse .8s ease-in-out 3; position: relative; }
+.go-here::after { content: attr(data-go-here); position: absolute; left: 0; top: calc(100% + 4px); z-index: 50; white-space: nowrap;
+  background: var(--g-dec-c); color: #fff; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; pointer-events: none; }
+@keyframes go-here-pulse { 50% { outline-color: transparent; } }
+
+/* The label row (62): a coloured chip per column; the list to pick from */
+.g-row-lb td { background: var(--bg-raised); border: 1px solid var(--border-lt); height: 20px; text-align: center; }
+.g-row-lb .g-lb-label { font-size: 11px; color: var(--text-m); font-style: italic; text-align: left; padding-left: 8px; }
+.g-lb-cell { cursor: cell; }
+.g-lb-cell.lb-sel { outline: 2px solid var(--accent); outline-offset: -2px; }
+.g-lb-chip { display: inline-block; max-width: 52px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff;
+  font-size: 10px; font-weight: 600; padding: 0 5px; border-radius: 3px; line-height: 15px; vertical-align: middle; }
+#tbl tr.g-row-lb td.cw-dest { background: var(--bg-hdr); }
+.lb-pick { position: fixed; z-index: 1000; min-width: 140px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .3); padding: 4px 0; }
+.lb-pick .lb-item { padding: 4px 12px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+.lb-pick .lb-item:hover { background: var(--accent-bg); }
+.lb-pick .lb-swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.lb-pick .lb-hint { padding: 4px 12px; font-size: 11px; color: var(--text-m); max-width: 220px; }
+
+/* Ressurser: a label's colour */
+.re-colours { display: inline-flex; gap: 6px; align-items: center; }
+.re-colours input[type="color"] { width: 36px; height: 26px; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: none; }
+.re-swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; padding: 0; }

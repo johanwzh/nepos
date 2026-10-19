@@ -72,9 +72,10 @@ describe('table-set tabs', () => {
     expect(grid.stops).toEqual([]);
   });
 
-  it('renames a table set on double-click', () => {
-    window.prompt = vi.fn(() => 'Bergen – Florø (ny)');
+  it('renames a table set on double-click (in the edit dialog)', () => {
     tabs()[0].querySelector('.ts-name')?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    /** @type {HTMLInputElement} */ (document.getElementById('tse-name')).value = 'Bergen – Florø (ny)';
+    /** @type {HTMLElement} */ (document.getElementById('tse-ok')).click();
     expect(app.routeState.tableSets[0].name).toBe('Bergen – Florø (ny)');
   });
 
@@ -103,8 +104,61 @@ describe('table-set tab safety', () => {
 
   it('shows a new name at once after renaming', () => {
     app.dirty = true; // a rename while there are other unsaved edits must still show
-    window.prompt = vi.fn(() => 'Nytt navn');
     tabs()[0].querySelector('.ts-name')?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    /** @type {HTMLInputElement} */ (document.getElementById('tse-name')).value = 'Nytt navn';
+    /** @type {HTMLElement} */ (document.getElementById('tse-ok')).click();
     expect(tabs()[0].querySelector('.ts-name')?.textContent).toBe('Nytt navn');
+  });
+});
+
+describe('the tab menu and edit dialog (2026-10-19)', () => {
+  const menuItem = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
+  const rightClick = (/** @type {number} */ i) => tabs()[i].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
+
+  it('edits the name and the direction in a dialog; the tab shows the direction', () => {
+    rightClick(0);
+    menuItem('tsm-edit').click();
+    const dlg = /** @type {any} */ (document.getElementById('tse-dlg'));
+    expect(dlg.open).toBe(true);
+    /** @type {HTMLInputElement} */ (document.getElementById('tse-name')).value = 'Bergen – Florø';
+    const dir = /** @type {HTMLSelectElement} */ (document.getElementById('tse-dir'));
+    expect([...dir.options].map((o) => o.textContent)).toEqual(['Ikke angitt', 'Tur', 'Retur', 'Med klokka', 'Mot klokka']);
+    dir.value = 'inbound';
+    /** @type {HTMLElement} */ (document.getElementById('tse-ok')).click();
+    expect(app.routeState.tableSets[0]).toMatchObject({ name: 'Bergen – Florø', direction: 'inbound' });
+    expect(tabs()[0].textContent).toContain('Bergen – Florø');
+    expect(tabs()[0].querySelector('.ts-dir')?.textContent).toBe('[Retur]');
+  });
+
+  it('opens the same dialog on a double click', () => {
+    /** @type {HTMLElement} */ (tabs()[1].querySelector('.ts-name')).dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(/** @type {any} */ (document.getElementById('tse-dlg')).open).toBe(true);
+    expect(/** @type {HTMLInputElement} */ (document.getElementById('tse-name')).value).toBe('Florø - Bergen');
+  });
+
+  it('duplicates a table set with its trips, under new IDs, right after it', () => {
+    const before = app.routeState.tableSets.length;
+    rightClick(0);
+    menuItem('tsm-dup').click();
+    const rs = app.routeState;
+    expect(rs.tableSets).toHaveLength(before + 1);
+    expect(rs.tableSets[1].name).toBe('Bergen - Florø (kopi)');
+    expect(rs.activeSet).toBe(rs.tableSets[1].id);
+    expect(grid.cols.length).toBeGreaterThan(0);
+    const orig = rs.periods.filter((/** @type {any} */ p) => p.setId === rs.tableSets[0].id).flatMap((/** @type {any} */ p) => rs.grids[`${p.id}:${p.setId}`].cols.map((/** @type {any} */ c) => c.uid));
+    expect(grid.cols.some((/** @type {any} */ c) => orig.includes(c.uid))).toBe(false);
+    expect(rs.tableSets[1].uid).not.toBe(rs.tableSets[0].uid);
+  });
+
+  it('deletes a table set from the menu', () => {
+    rightClick(1);
+    menuItem('tsm-del').click();
+    expect(app.routeState.tableSets.map((/** @type {any} */ s) => s.name)).toEqual(['Bergen - Florø']);
+  });
+
+  it('opens the new-table-set dialog from the menu', () => {
+    rightClick(0);
+    menuItem('tsm-new').click();
+    expect(/** @type {any} */ (document.getElementById('ts-dlg')).open).toBe(true);
   });
 });

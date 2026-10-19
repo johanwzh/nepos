@@ -13,6 +13,15 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Reversing a table set** keeps the divider between the same two stops.
 - **Times are aligned** in their column, with room for marks (a/p/x and the +1 day offset) to the right.
 - **Help → Version history** shows this changelog; Help → GitHub links to the code.
+- **Table-set tabs:** right-click for New / Duplicate / Edit / Delete; Edit (or double-click) sets the name and the
+  direction, and the tab shows it ("Oslo–Bergen [Retur]"). Directions in Norwegian: Tur, Retur, Med klokka, Mot klokka.
+- **Labels:** the planner's own labels for trips ("Normal", "Rush"), made on Resources with a colour, shown in a
+  label row in the timetable; copy and paste between columns. Not exported.
+- **Paste a list of stops:** every NSR Quay ID in pasted text, CSV or JSON fills the stop rows from the selected one
+  down, adding rows as needed.
+- **Pastes grow the table:** a block of times wider or taller than the table adds the columns and rows it needs (asks
+  above 50).
+- **Problems on the editor page:** "⚠ 2 feil · 1 advarsel"; a click goes to the next problem and marks the field.
 
 ## 2.1.0 — 2026-10-18
 

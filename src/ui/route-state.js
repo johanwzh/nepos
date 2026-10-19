@@ -91,6 +91,29 @@ export function addTableSet(rs, name, { reversed }) {
   return setId;
 }
 
+/**
+ * A copy of a table set right after it, with all its periods, calendars, stops and trips; the set and every
+ * column get new IDs. The copy becomes the active set.
+ * @param {any} rs @param {number} setId @param {string} name
+ * @returns {number} the new set's ID
+ */
+export function duplicateTableSet(rs, setId, name) {
+  const src = rs.tableSets.find((/** @type {any} */ s) => s.id === setId);
+  const newId = rs.nextId++;
+  rs.tableSets.splice(rs.tableSets.indexOf(src) + 1, 0, { ...src, id: newId, name, uid: crypto.randomUUID() });
+  for (const per of periodsOf(rs, setId)) {
+    const id = rs.nextId++;
+    rs.periods.push({ id, setId: newId, calendarIds: [...per.calendarIds] });
+    const copy = JSON.parse(JSON.stringify(rs.grids[`${per.id}:${setId}`] ?? emptyGrid()));
+    for (const col of copy.cols) col.uid = crypto.randomUUID();
+    rs.grids[`${id}:${newId}`] = copy;
+  }
+  if (!periodsOf(rs, newId).length) { const id = rs.nextId++; rs.periods.push({ id, setId: newId, calendarIds: [] }); rs.grids[`${id}:${newId}`] = emptyGrid(); }
+  rs.activeSet = newId;
+  rs.activePer = periodsOf(rs, newId)[0].id;
+  return newId;
+}
+
 /** @param {any} rs @returns {boolean} false for the last table set */
 export function deleteTableSet(rs) {
   if (rs.tableSets.length <= 1) return false;

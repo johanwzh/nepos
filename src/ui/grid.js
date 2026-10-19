@@ -24,7 +24,7 @@ import { placeMenu } from './place-menu.js';
 import { unionDays, tripDays } from '../core/calendars.js';
 import { app } from './state.js';
 import { normalizeDests, servedRows, setDestAt, moveChange, viaDrag, applySuggestion, copyDests, pasteDests, snapshotDests, restoreDests, destLabel } from '../core/destinations.js';
-import { destColumnsOpen, onDestToggle, destCellInfo, renderDestCell, openDestEditor } from './dest-columns.js';
+import { destColumnsOpen, onDestToggle, destCellInfo, renderDestCell, openDestEditor, toggleDestColumns } from './dest-columns.js';
 
 /** The grid being edited: one period × direction of the open route. */
 export const grid = {
@@ -32,6 +32,8 @@ export const grid = {
   /** @type {any[]} */ cols: [],
   /** the trip-number row is shown (a column's number is col.tripNo) */
   tripRow: false,
+  /** the label row is shown (a column's label is col.label, a name from the project's labels) */
+  labelRow: false,
   active: false,
   readOnly: false,
 };
@@ -88,7 +90,7 @@ const $ = (/** @type {string} */ id) => /** @type {any} */ (document.getElementB
 const clampR = (/** @type {number} */ r) => Math.max(0, Math.min(grid.stops.length - 1, r));
 const clampC = (/** @type {number} */ c) => Math.max(0, Math.min(grid.cols.length - 1, c));
 const esc = (/** @type {string} */ s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const snapshot = () => JSON.stringify([grid.stops, grid.cols, grid.tripRow]);
+const snapshot = () => JSON.stringify([grid.stops, grid.cols, grid.tripRow, grid.labelRow]);
 
 /** Index of the selected column (for the footnote preview and, in Plan 3, the map). */
 export function selectedColumn() {
@@ -97,13 +99,15 @@ export function selectedColumn() {
 
 /**
  * Show a period × direction.
- * @param {{ stops: any[], cols: any[], tripRow?: boolean }} data
+ * @param {{ stops: any[], cols: any[], tripRow?: boolean, labelRow?: boolean }} data
  * @param {{ readOnly?: boolean }} [opts]
  */
 export function loadGrid(data, { readOnly = false } = {}) {
   grid.stops = JSON.parse(JSON.stringify(data.stops));
   grid.cols = JSON.parse(JSON.stringify(data.cols));
   grid.tripRow = !!(/** @type {any} */ (data).tripRow);
+  grid.labelRow = !!(/** @type {any} */ (data).labelRow);
+  inLB = false;
   normalizeDests(grid); // a start and one change slot per stop for every column
   destUndo = ''; inDest = false;
   inTN = false; tnEdit = false; tnBuf = '';
@@ -131,7 +135,7 @@ export function commitPending() {
 
 /** A copy of the grid's data, for storing in the route state. */
 export function gridData() {
-  return { stops: JSON.parse(JSON.stringify(grid.stops)), cols: JSON.parse(JSON.stringify(grid.cols)), tripRow: grid.tripRow };
+  return { stops: JSON.parse(JSON.stringify(grid.stops)), cols: JSON.parse(JSON.stringify(grid.cols)), tripRow: grid.tripRow, labelRow: grid.labelRow };
 }
 
 /** The grid now matches what is saved. */
@@ -284,8 +288,33 @@ function updateStopMarks() {
 /** Select a row, keeping the column (the speed profile's dots and legs). @param {number} ri */
 export function selectRow(ri) {
   if (!grid.active || !grid.stops[ri]) return;
-  inDC = false; inStopEdit = false;
+  inDC = false; inStopEdit = false; inLB = false;
   ancR = ri; endR = ri; endC = ancC;
+  render();
+}
+
+/** Select a column's day code (the problems marker goes there). @param {number} ci */
+export function selectDayCode(ci) {
+  if (!grid.active || !grid.cols[ci]) return;
+  commitPending();
+  inStopCol = false; inTN = false; inDest = false; inLB = false; inDC = true; dcEdit = false; dcCol = ci;
+  render();
+}
+
+/** Select a stop's name cell. @param {number} ri */
+export function selectStopCell(ri) {
+  if (!grid.active || !grid.stops[ri]) return;
+  commitPending();
+  inDC = false; inTN = false; inDest = false; inLB = false; inStopCol = true; ancR = ri; endR = ri;
+  render();
+}
+
+/** Select a destination cell, opening the destination columns when they are closed. @param {number} r @param {number} c */
+export function selectDestCell(r, c) {
+  if (!grid.active || !grid.cols[c]) return;
+  commitPending();
+  if (!destColumnsOpen()) toggleDestColumns();
+  inDC = false; inTN = false; inStopCol = false; inLB = false; inDest = true; destR = r; destC = c; destR2 = r; destC2 = c;
   render();
 }
 
@@ -407,6 +436,7 @@ export function render() {
   renderInsertRow(tbl);
   renderFootRow(tbl);
   renderDayCodeRow(tbl);
+  if (grid.labelRow) renderLabelRow(tbl);
   if (grid.tripRow) renderTripRow(tbl);
   grid.stops.forEach((stop, ri) => renderStopRow(tbl, stop, ri, linked));
   renderBottomRow(tbl);
@@ -647,7 +677,7 @@ function onDestColumnsToggled() {
 function layoutFrozen(tbl) {
   let top = 0;
   for (const tr of [...tbl.rows]) {
-    if (!/\bg-row-(ins|foot|dc|tn)\b/.test(tr.className)) break;
+    if (!/\bg-row-(ins|foot|dc|lb|tn)\b/.test(tr.className)) break;
     tr.style.top = `${top}px`;
     top += tr.offsetHeight;
   }
@@ -711,6 +741,93 @@ function renderFootRow(tbl) {
     }
   });
   tr.insertCell().className = 'cw-ins g-add';
+}
+
+// ─── Labels (62) ─────────────────────────────────────────────────────────────
+/** The label row: selected (its column is lbCol) */
+let inLB = false, lbCol = 0;
+/** The label copied last with Ctrl+C in the label row */
+let lbClip = /** @type {string | null} */ (null);
+
+/** A label's colour, from the project's list (grey for a name not in it). @param {string} name */
+const labelColour = (name) => app.labels?.find((l) => l.name === name)?.colour ?? '#888888';
+
+/** The label row (user 2026-10-19): the planner's labels, such as "Normal" or "Rush", under the day codes. @param {HTMLTableElement} tbl */
+function renderLabelRow(tbl) {
+  const tr = tbl.insertRow();
+  tr.className = 'g-row-lb';
+  tr.insertCell().className = 'cw-ins g-sticky0';
+  const th = tr.insertCell();
+  th.className = 'cw-name g-sticky1 g-lb-label';
+  th.textContent = t('labelsRow');
+  grid.cols.forEach((col, ci) => {
+    const td = tr.insertCell();
+    td.className = 'cw-time g-lb-cell';
+    td.dataset.ci = String(ci);
+    if (inLB && ci === lbCol) td.classList.add('lb-sel');
+    if (col.label) {
+      const chip = document.createElement('span');
+      chip.className = 'g-lb-chip';
+      chip.textContent = col.label;
+      chip.style.background = labelColour(col.label);
+      td.appendChild(chip);
+    }
+    td.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      commitEdit(); commitDayCode(); commitTripNo();
+      if (inStopEdit) commitStopEdit();
+      inStopCol = false; inDC = false; inTN = false; inDest = false; inLB = true; lbCol = ci;
+      render();
+      if (e.detail >= 2 && !grid.readOnly) openLabelPicker(ci);
+    });
+  });
+  tr.insertCell().className = 'cw-ins g-add';
+}
+
+function closeLabelPicker() { document.querySelector('.lb-pick')?.remove(); }
+
+/** The project's labels to choose from, under a column's label cell. @param {number} ci */
+function openLabelPicker(ci) {
+  closeLabelPicker();
+  const anchor = document.querySelector(`.g-lb-cell[data-ci="${ci}"]`)?.getBoundingClientRect();
+  const box = document.createElement('div');
+  box.className = 'lb-pick';
+  const set = (/** @type {string} */ name) => { closeLabelPicker(); if (grid.cols[ci]) { grid.cols[ci].label = name; render(); } };
+  const names = [...(app.labels ?? [])].map((l) => l.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'nb'));
+  for (const name of [...names, '']) {
+    const item = document.createElement('div');
+    item.className = 'lb-item';
+    if (name) { const sw = document.createElement('span'); sw.className = 'lb-swatch'; sw.style.background = labelColour(name); item.appendChild(sw); }
+    item.append(name || t('labelNone'));
+    item.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); set(name); });
+    box.appendChild(item);
+  }
+  if (!names.length) { const hint = document.createElement('div'); hint.className = 'lb-hint'; hint.textContent = t('labelsNoneYet'); box.prepend(hint); }
+  box.style.left = `${anchor?.left ?? 200}px`;
+  box.style.top = `${(anchor?.bottom ?? 160) + 2}px`;
+  document.body.appendChild(box);
+  setTimeout(() => document.addEventListener('mousedown', function away(e) { if (!/** @type {HTMLElement} */ (e.target).closest?.('.lb-pick')) { closeLabelPicker(); } document.removeEventListener('mousedown', away, true); }, true), 0);
+}
+
+/** Keys in the label row. @param {KeyboardEvent} e */
+function keyLabel(e) {
+  const col = grid.cols[lbCol];
+  if (e.ctrlKey || e.metaKey) {
+    const k = e.key.toLowerCase();
+    if (k === 'c' && col) { e.preventDefault(); lbClip = col.label ?? ''; void navigator.clipboard?.writeText(lbClip).catch(() => {}); }
+    if (k === 'v' && col && lbClip != null && !grid.readOnly) { e.preventDefault(); col.label = lbClip; render(); }
+    return;
+  }
+  switch (e.key) {
+    case 'ArrowLeft': e.preventDefault(); lbCol = Math.max(0, lbCol - 1); render(); break;
+    case 'ArrowRight': e.preventDefault(); lbCol = Math.min(grid.cols.length - 1, lbCol + 1); render(); break;
+    case 'ArrowUp': e.preventDefault(); inLB = false; inDC = true; dcCol = lbCol; render(); break;
+    case 'ArrowDown': e.preventDefault(); inLB = false; dcCol = lbCol; downFromDayCodes(); break;
+    case 'Escape': e.preventDefault(); closeLabelPicker(); inLB = false; render(); break;
+    case 'Enter': case 'F2': e.preventDefault(); if (!grid.readOnly) openLabelPicker(lbCol); break;
+    case 'Delete': case 'Backspace': e.preventDefault(); if (col && !grid.readOnly) { col.label = ''; render(); } break;
+  }
 }
 
 /** The trip-number row, between the day codes and the first stop. @param {HTMLTableElement} tbl */
@@ -1016,11 +1133,12 @@ function onKeyDown(e) {
     if (k === 'c') { e.preventDefault(); dcClip = grid.cols[dcCol].dayCode; void navigator.clipboard?.writeText(dcClip).catch(() => {}); return; }
     if (k === 'v' && !grid.readOnly && dcClip && isValidDayCode(dcClip)) { e.preventDefault(); grid.cols[dcCol].dayCode = dcClip; render(); return; }
   }
-  if ((e.ctrlKey || e.metaKey) && !editing && !dcEdit && !inStopCol && !inDC && !inTN && !tnEdit) {
+  if ((e.ctrlKey || e.metaKey) && !editing && !dcEdit && !inStopCol && !inDC && !inTN && !tnEdit && !inLB) {
     if (e.key === 'c') { e.preventDefault(); copySelection(); return; }
     if (e.key === 'x' && !grid.readOnly) { e.preventDefault(); copySelection().then(() => { clearSelection(); render(); }); return; }
   }
   if (grid.readOnly) { keyReadOnly(e); return; }
+  if (inLB) { keyLabel(e); return; }
   if (tnEdit) { keyTripEdit(e); return; }
   if (inTN) { keyTripNav(e); return; }
   if (dcEdit) { keyDayCodeEdit(e); return; }
@@ -1180,13 +1298,23 @@ function pasteStop(id) {
 function onPaste(e) {
   if (!grid.active || grid.readOnly || currentPage() !== 'edit' || inStopEdit) return;
   // Only into the times: never while the day-code or trip-number row has the keyboard
-  if (inDC || dcEdit || inTN || tnEdit || document.querySelector('.float-box')) return;
+  if (inDC || dcEdit || inTN || tnEdit || inLB || inDest || document.querySelector('.float-box')) return;
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
   const text = e.clipboardData?.getData('text');
   if (!text) return;
   e.preventDefault();
-  if (inStopCol) { pasteStop(text.trim()); return; }
+  if (inStopCol) {
+    // A list of stops (user 2026-10-18): every Quay ID in the text, in order, from any text, CSV or sloppy JSON
+    const ids = text.match(/NSR:Quay:\d+/g) ?? [];
+    if (ids.length > 1) pasteStopList(ids); else pasteStop(text.trim());
+    return;
+  }
+  // A block wider or taller than the table adds the columns and rows it needs (user 2026-10-19), as in Excel
+  const block = text.replace(/\r?\n$/, '').split(/\r?\n/);
+  const width = Math.max(...block.map((l) => l.split('\t').length));
+  const addCols = Math.max(0, ancC + width - grid.cols.length), addRows = Math.max(0, ancR + block.length - grid.stops.length);
+  if (!growGrid(addRows, addCols)) return;
   text.split(/\r?\n/).forEach((line, dr) => {
     if (!line) return;
     line.split('\t').forEach((val, dc) => {
@@ -1205,6 +1333,62 @@ function onPaste(e) {
     });
   });
   render();
+}
+
+/**
+ * Add rows at the bottom and columns at the right, asking first when a paste would add more than 50 of either.
+ * @param {number} rows @param {number} cols
+ * @returns {boolean} false when the user said no
+ */
+function growGrid(rows, cols) {
+  if ((rows > 50 || cols > 50) && !confirm(t('pasteGrowConfirm', rows, cols))) return false;
+  for (let i = 0; i < rows; i++) {
+    grid.stops.push({ name: '', stopId: null, bold: false, sep: false, isDwellArr: false, price: null });
+    for (const col of grid.cols) { col.cells.push(null); col.dests.push(null); }
+  }
+  for (let i = 0; i < cols; i++) grid.cols.push({ dayCode: grid.cols[grid.cols.length - 1]?.dayCode ?? '', uid: crypto.randomUUID(), note: '', dates: [], cells: grid.stops.map(() => null), dest: null, dests: grid.stops.map(() => null) });
+  return true;
+}
+
+/**
+ * Pasted stops, from the selected stop row down (Excel logic, user 2026-10-18): each row gets the next Quay; rows
+ * are added as needed; the times stay where they are. Names come from NSR (looked up when not known yet).
+ * @param {string[]} ids
+ */
+function pasteStopList(ids) {
+  if (grid.readOnly || !grid.stops[ancR]) return;
+  // The rows each Quay goes to: a waiting stop (arrival and departure row) is one stop, so both its rows get it
+  /** @type {number[][]} */
+  const targets = [];
+  let r = grid.stops[ancR - 1]?.isDwellArr ? ancR - 1 : ancR, extra = 0;
+  for (let i = 0; i < ids.length; i++) {
+    if (r >= grid.stops.length + extra) { targets.push([r]); r++; extra++; continue; }
+    if (grid.stops[r]?.isDwellArr && r + 1 < grid.stops.length) { targets.push([r, r + 1]); r += 2; } else { targets.push([r]); r++; }
+  }
+  if (!growGrid(extra, 0)) return;
+  ids.forEach((id, i) => {
+    for (const ri of targets[i]) {
+      const stop = grid.stops[ri];
+      stop.stopId = id;
+      const known = quayInfo.get(id)?.stopPlaceName;
+      if (known) stop.name = known; // not known yet: looked up below; one NSR does not know keeps the row's name
+    }
+  });
+  const first = quayInfo.get(ids[0]);
+  if (first) for (const fn of stopInfoListeners) fn(first);
+  render();
+  const missing = ids.filter((id) => !quayInfo.has(id));
+  if (!missing.length) return;
+  loadQuays(missing).then(() => {
+    const info0 = quayInfo.get(ids[0]);
+    if (info0 && !first) for (const fn of stopInfoListeners) fn(info0);
+    for (const id of missing) {
+      const name = quayInfo.get(id)?.stopPlaceName;
+      if (name) for (const stop of grid.stops) if (stop.stopId === id) stop.name = name;
+    }
+    if (inStopEdit) { updateStopMarks(); return; }
+    render();
+  });
 }
 
 /** Dates as a tooltip: how many days added and removed. @param {{ from: string, to: string, on: boolean }[]} dates */
@@ -1295,6 +1479,7 @@ function showCtx(x, y, isDC = false) {
   $('gctx-dc').style.display = isDC ? '' : 'none';
   $('gctx-dest').style.display = 'none';
   if (isDC) $('gc-tripno').textContent = t(grid.tripRow ? 'ctxTripHide' : 'ctxTripShow');
+  if (isDC) $('gc-labels').textContent = t(grid.labelRow ? 'ctxLabelsHide' : 'ctxLabelsShow');
   if (!isStop && !isDC && ctxC >= 0 && ctxC < grid.cols.length) {
     const cell = grid.cols[ctxC].cells[ctxR];
     const timed = !!(cell && cell.time && cell.time !== '|'), withIx = timed && !!cell.interchange;
@@ -1435,6 +1620,7 @@ export function initGrid() {
     document.addEventListener('paste', onPaste);
     document.addEventListener('mousedown', (e) => {
       const el = /** @type {HTMLElement} */ (e.target);
+      if (inLB && el.closest?.('#tbl') && !el.closest('.g-lb-cell')) inLB = false;
       if (!inTN || !el.closest?.('#tbl') || el.closest('.g-tn-cell')) return;
       commitTripNo();
       inTN = false;
@@ -1583,6 +1769,17 @@ export function initGrid() {
     hideCtx(); render();
   });
   $('gc-add-note').addEventListener('click', () => { hideCtx(); openNoteOnSelection(ctxR, ctxC); });
+  $('gc-labels').addEventListener('click', () => {
+    hideCtx();
+    if (grid.readOnly) return;
+    if (grid.labelRow) {
+      if (grid.cols.some((/** @type {any} */ c) => c.label) && !confirm(t('confirmLabelsHide'))) return;
+      for (const c of grid.cols) c.label = '';
+      inLB = false;
+    }
+    grid.labelRow = !grid.labelRow;
+    render();
+  });
   $('gc-tripno').addEventListener('click', () => {
     hideCtx();
     if (grid.readOnly) return;

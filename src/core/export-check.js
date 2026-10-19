@@ -20,7 +20,7 @@ export const CHECK_CODES = [
 
 /**
  * @typedef {{ level: 'error' | 'warning', code: string, route?: string,
- *             where?: { tableSet: string, period: string, column?: number }, detail?: string }} CheckIssue
+ *             where?: { tableSet: string, period: string, column?: number, setId?: number, periodId?: number }, detail?: string }} CheckIssue
  */
 
 /** @param {any} cell */
@@ -104,12 +104,12 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
   // Table sets, their periods and calendars (timetable structure spec §8)
   let trips = 0;
   for (const set of rs.tableSets ?? []) {
-    if (!set.name?.trim()) add('error', 'table-set-name', r);
+    if (!set.name?.trim()) add('error', 'table-set-name', { ...r, where: { tableSet: '', period: '', setId: set.id } });
     const pers = (rs.periods ?? []).filter((/** @type {any} */ p) => p.setId === set.id);
-    if (!pers.length) add('error', 'no-period', { ...r, detail: set.name });
+    if (!pers.length) add('error', 'no-period', { ...r, detail: set.name, where: { tableSet: set.name, period: '', setId: set.id } });
     for (const per of pers) {
       const label = per.calendarIds.map((/** @type {string} */ id) => calendars.find((c) => c.id === id)?.name ?? id).join(' + ');
-      const where = { tableSet: set.name, period: label };
+      const where = { tableSet: set.name, period: label, setId: set.id, periodId: per.id };
       if (!per.calendarIds.length) add('error', 'no-calendar', { ...r, where });
       for (const id of per.calendarIds) {
         const cal = calendars.find((c) => c.id === id);

@@ -20,6 +20,10 @@ export const app = {
   brandings: [],
   /** @type {null | 'unreadable'} */
   brandingsError: null,
+  /** @type {import('../project/labels-store.js').Label[]} the project's column labels (62) */
+  labels: [],
+  /** @type {null | 'unreadable'} */
+  labelsError: null,
   /** @type {import('../core/calendars.js').Calendar[]} the project's calendars */
   calendars: [],
   /** @type {null | 'unreadable'} */

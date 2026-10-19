@@ -245,6 +245,7 @@
       <div id="gctx-dc">
         <div class="gci" id="gc-dc-days" data-lk="ctxDcDays"></div>
         <div class="gci" id="gc-tripno"></div>
+        <div class="gci" id="gc-labels"></div>
         <div class="gci" id="gc-dc-note" data-lk="ctxNote"></div>
         <div class="gci" id="gc-dc-dates" data-lk="ctxColDates"></div>
         <div class="gcs"></div>
@@ -286,6 +287,21 @@
       <label class="n2-check"><input type="radio" name="ts-stops" value="reversed"> <span data-lk="tsStopsReversed"></span></label>
       <label class="n2-check"><input type="radio" name="ts-stops" value="empty"> <span data-lk="tsStopsEmpty"></span></label>
       <div class="n2-actions"><button class="pop-btn" id="ts-dlg-cancel" data-lk="cancel"></button><button class="pop-btn primary" id="ts-dlg-ok" data-lk="ok"></button></div>
+    </dialog>
+
+    <div id="ts-menu" class="ts-menu" style="display:none">
+      <div class="gci" id="tsm-new" data-lk="tsmNew"></div>
+      <div class="gci" id="tsm-dup" data-lk="tsmDup"></div>
+      <div class="gci" id="tsm-edit" data-lk="tsmEdit"></div>
+      <div class="gcs"></div>
+      <div class="gci red" id="tsm-del" data-lk="tsmDel"></div>
+    </div>
+
+    <dialog class="n2-dialog" id="tse-dlg">
+      <p><strong data-lk="tseTitle"></strong></p>
+      <label class="n2-field"><span data-lk="tsDlgName"></span> <input id="tse-name" autocomplete="off"></label>
+      <label class="n2-field"><span data-lk="dirLabel"></span> <select id="tse-dir"></select></label>
+      <div class="n2-actions"><button class="pop-btn" id="tse-cancel" data-lk="cancel"></button><button class="pop-btn primary" id="tse-ok" data-lk="ok"></button></div>
     </dialog>
 
     <dialog class="n2-dialog" id="theme-dlg">

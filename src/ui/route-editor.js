@@ -12,11 +12,11 @@ import { serializeERN } from '../core/ern/serialize.js';
 import { checkRouteFile } from '../core/integrity/check.js';
 import { orgNameList, findRole, addToCopy } from '../core/orgs.js';
 import { createOrgPicker } from './org-picker.js';
+import { wireProblemMarker, initProblemNav } from './problem-nav.js';
 import { openModeMenu } from './mode-menu.js';
 import { modeIconSvg } from './mode-icons.js';
 import { ernCodeFor, TRANSMODEL_MODES } from '../core/modes.js';
 import { byDate } from '../core/calendars.js';
-import { DIRECTION_TYPES } from '../core/directions.js';
 import { modeLabel, submodeLabel } from '../i18n/modes.js';
 import { writeOrgs } from '../project/orgs-store.js';
 import { pruneProjectCopy } from './org-register.js';
@@ -54,7 +54,7 @@ export function storeGrid() {
  * @param {{ store?: boolean }} [opts] store: false after deleting the shown period or table set —
  *   the grid on screen belongs to the deleted one and must not be stored under the new key
  */
-function switchPeriod(perId, { store = true } = {}) {
+export function switchPeriod(perId, { store = true } = {}) {
   if (store) {
     commitPending();
     saveGridToState();
@@ -337,13 +337,7 @@ function renderCalendarBar() {
   }).join('');
   const legacy = periods.length > 1 ? `<select class="rh-select" id="sel-period" title="${esc(t('periodLabel'))}">${periods.map((/** @type {any} */ p) =>
     `<option value="${p.id}"${p.id === rs.activePer ? ' selected' : ''}>${esc(periodLabel(p))}</option>`).join('')}</select>` : '';
-  // The table set's direction (customer request 2026-10-19): an optional label, NeTEx's DirectionType
-  const set = rs.tableSets.find((/** @type {any} */ s) => s.id === rs.activeSet);
-  const dir = set?.direction ?? '';
-  const dirSel = `<span class="cal-bar-label cal-dir-label">${esc(t('dirLabel'))}</span><select class="rh-select cal-dir${dir ? '' : ' empty'}" id="sel-direction"${ro ? ' disabled' : ''}>${['', ...DIRECTION_TYPES].map((d) =>
-    `<option value="${d}"${d === dir ? ' selected' : ''}>${esc(t(d ? `dir_${d}` : 'dirNone'))}</option>`).join('')}</select>`;
-  bar.innerHTML = `<span class="cal-bar-label">${esc(t('calendarsLabel'))}</span>${ro ? '' : `<button class="cal-add" id="cal-add">${esc(t('addCalendar'))}</button>`}${legacy}${chips || `<span class="cal-bar-none">${esc(t('periodNoCalendar'))}</span>`}${dirSel}`;
-  $('sel-direction')?.addEventListener('change', () => { if (set) { set.direction = $('sel-direction').value; markDirty(); renderCalendarBar(); } });
+  bar.innerHTML = `<span class="cal-bar-label">${esc(t('calendarsLabel'))}</span>${ro ? '' : `<button class="cal-add" id="cal-add">${esc(t('addCalendar'))}</button>`}${legacy}${chips || `<span class="cal-bar-none">${esc(t('periodNoCalendar'))}</span>`}`;
   $('sel-period')?.addEventListener('change', () => switchPeriod(+$('sel-period').value));
   renderTimeline();
   if (ro || !per) return;
@@ -453,6 +447,7 @@ function renderFooter() {
   const ro = isReadOnly();
 
   el.innerHTML = `
+    <button class="ef-problems" id="ef-problems" hidden></button>
     <div class="ef-spacer"></div>
     ${ro ? `<span class="n2-readonly-note">${esc(t('statusDamaged'))}</span>` : `
     <span class="ef-state" id="ef-state">${app.dirty ? `● ${esc(t('unsavedChanges'))}` : ''}</span>
@@ -461,6 +456,7 @@ function renderFooter() {
 
   $('ef-save')?.addEventListener('click', () => { if (app.dirty) void saveRoute($('ef-save')); });
   $('ef-discard')?.addEventListener('click', discardLine);
+  wireProblemMarker();
 }
 
 /** "Forkast endringer": the open line goes back to its saved file, after asking. */
@@ -590,6 +586,7 @@ function adoptModeFromStop(info) {
 }
 
 export function initRouteEditor() {
+  initProblemNav();
   onStopInfo(adoptModeFromStop);
   onGridRender(renderTimeline); // the column under the cursor shows on the timeline
   onRefresh(renderEditor);
