@@ -10,7 +10,8 @@ let closeOpen = null;
  * @param {{ x: number, y: number, title: string, body: HTMLElement, cls?: string,
  *           onApply: () => boolean | void, onCancel?: () => void, applyLabel?: string }} opts
  *   onApply returns false to keep the box open
- * @returns {{ box: HTMLElement, setApplyEnabled: (on: boolean) => void, close: () => void }}
+ * @returns {{ box: HTMLElement, setApplyEnabled: (on: boolean) => void, close: () => void, place: () => void }}
+ *   place: put it inside the window again, by its size now (after drawing its content)
  */
 export function openFloatBox({ x, y, title, body, cls = '', onApply, onCancel, applyLabel }) {
   closeOpen?.();
@@ -25,7 +26,10 @@ export function openFloatBox({ x, y, title, body, cls = '', onApply, onCancel, a
   /** @type {HTMLElement} */ (box.querySelector('.fb-cancel')).textContent = t('cancel');
   document.body.appendChild(box);
 
+  /** @type {ResizeObserver | null} */
+  let watch = null;
   const close = () => {
+    watch?.disconnect();
     box.remove();
     document.removeEventListener('keydown', onKey, true);
     if (closeOpen === close) closeOpen = null;
@@ -45,11 +49,16 @@ export function openFloatBox({ x, y, title, body, cls = '', onApply, onCancel, a
   box.querySelector('.fb-x')?.addEventListener('click', cancel);
   closeOpen = close;
 
-  // Near the point, inside the window
-  const w = box.offsetWidth || 320, h = box.offsetHeight || 240;
-  box.style.left = `${Math.max(8, Math.min(x, window.innerWidth - w - 8))}px`;
-  box.style.top = `${Math.max(8, Math.min(y, window.innerHeight - h - 8))}px`;
-  return { box, setApplyEnabled: (on) => { apply.disabled = !on; }, close };
+  // Near the point, inside the window: again whenever its size changes (content drawn after it opened,
+  // user 2026-10-19), so it never runs off the bottom; a box taller than the window scrolls inside
+  const place = () => {
+    const w = box.offsetWidth || 320, h = box.offsetHeight || 240;
+    box.style.left = `${Math.max(8, Math.min(x, window.innerWidth - w - 8))}px`;
+    box.style.top = `${Math.max(8, Math.min(y, window.innerHeight - h - 8))}px`;
+  };
+  place();
+  if (typeof ResizeObserver !== 'undefined') { watch = new ResizeObserver(place); watch.observe(box); }
+  return { box, setApplyEnabled: (on) => { apply.disabled = !on; }, close, place };
 }
 
 /** Close the open box, if any (without applying). */

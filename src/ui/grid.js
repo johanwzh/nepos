@@ -39,6 +39,8 @@ export const grid = {
 };
 
 let baseline = '';
+/** The grid is known to differ from the baseline: no need to copy the whole grid again to find out (user 2026-10-19: speed). */
+let differs = false;
 /** @type {() => void} */
 let onChange = () => {};
 
@@ -115,7 +117,7 @@ export function loadGrid(data, { readOnly = false } = {}) {
   for (const col of grid.cols) if (!col.uid) col.uid = crypto.randomUUID();
   grid.readOnly = readOnly;
   grid.active = true;
-  baseline = snapshot();
+  baseline = snapshot(); differs = false;
   ancR = 0; ancC = 0; endR = 0; endC = 0;
   editing = false; editBuf = ''; inDC = false; dcEdit = false; inStopCol = false;
   ixMode = false; ixSource = null; inStopEdit = false;
@@ -140,7 +142,7 @@ export function gridData() {
 
 /** The grid now matches what is saved. */
 export function markGridClean() {
-  baseline = snapshot();
+  baseline = snapshot(); differs = false;
 }
 
 export function clearGrid() {
@@ -201,6 +203,50 @@ function ixTarget(r, c) {
   if (targetR < 0 || targetR >= grid.stops.length || targetC < 0 || targetC >= grid.cols.length) return null;
   return { r: targetR, c: targetC, type: cell.interchange.type };
 }
+/**
+ * Every cell an interchange points to, with the first one's type: found once per render. Asking
+ * ixSources for each cell searched the whole table per cell (rows × columns squared), the main
+ * slowness of big timetables (user 2026-10-19).
+ * @returns {Map<string, string>} "r,c" → type
+ */
+function ixTargets() {
+  /** @type {Map<string, string>} */
+  const out = new Map();
+  for (let sc = 0; sc < grid.cols.length; sc++) for (let sr = 0; sr < grid.stops.length; sr++) {
+    const ix = grid.cols[sc].cells?.[sr]?.interchange;
+    const key = ix ? `${ix.targetR},${ix.targetC}` : '';
+    if (ix && !out.has(key)) out.set(key, ix.type);
+  }
+  return out;
+}
+/** The jog's redraw, waiting for the jog to rest. @type {any} */
+let jogTimer = null;
+/** How long the jog rests before the full redraw (ms). */
+const JOG_REST = 400;
+
+/**
+ * While the jog turns, only the moved cells change (user 2026-10-19): a full redraw of a big timetable
+ * takes most of a second. Everything else (the marks, the strip, the map, the check) follows once the
+ * jog rests, as after typing a time.
+ * @param {number} r0 @param {number} r1 @param {number} c0 @param {number} c1
+ */
+function patchTimes(r0, r1, c0, c1) {
+  for (let c = c0; c <= c1; c++) {
+    if (!grid.cols[c]) continue;
+    for (let r = r0; r <= r1 + 1 && r < grid.stops.length; r++) { // the row after: its "earlier than above" mark
+      const td = document.querySelector(`#tbl td[data-r="${r}"][data-c="${c}"]`);
+      if (!td) continue;
+      if (r <= r1) td.innerHTML = cellHTML(grid.cols[c].cells[r], false, '');
+      td.classList.toggle('is-dec', isDecreasing(r, c));
+    }
+  }
+  clearTimeout(jogTimer);
+  jogTimer = setTimeout(render, JOG_REST);
+}
+
+/** @type {Map<string, string>} the targets for the render running now */
+let targetsNow = new Map();
+
 /** @param {number} r @param {number} c */
 function ixSources(r, c) {
   const out = [];
@@ -452,6 +498,8 @@ export function render() {
     for (const s of ixSources(ancR, ancC)) linked.add(`${s.r},${s.c}:${s.type}`);
   }
   const tbl = $('tbl');
+  clearTimeout(jogTimer); jogTimer = null;
+  targetsNow = ixTargets();
   tbl.innerHTML = '';
   renderInsertRow(tbl);
   renderFootRow(tbl);
@@ -466,7 +514,7 @@ export function render() {
   } else tbl.classList.remove('dest-shown');
   layoutFrozen(tbl);
   updateFnPreview(inDC ? { type: 'col', ri: 0, ci: dcCol } : inStopCol ? null : { type: 'cell', ri: ancR, ci: ancC });
-  if (snapshot() !== baseline) onChange();
+  if (differs || snapshot() !== baseline) { differs = true; onChange(); }
   for (const fn of renderListeners) fn();
 }
 
@@ -1009,8 +1057,8 @@ function renderStopRow(tbl, stop, ri, linked) {
     const isSel = !inDC && !inTN && !inStopCol && !inStopEdit && ri === ancR && ci === ancC;
     const isRange = !inDC && !inTN && !inStopCol && !inStopEdit && inRect(ri, ci) && !isSel;
     if (cell && cell.interchange) td.classList.add(cell.interchange.type === 'guaranteed' ? 'g-ix-g' : 'g-ix-s');
-    const srcs = ixSources(ri, ci);
-    if (srcs.length) td.classList.add(srcs[0].type === 'guaranteed' ? 'g-ix-tg' : 'g-ix-ts');
+    const into = targetsNow.get(`${ri},${ci}`);
+    if (into) td.classList.add(into === 'guaranteed' ? 'g-ix-tg' : 'g-ix-ts');
     if (linked.has(`${ri},${ci}:guaranteed`)) td.classList.add('g-ix-lg');
     if (linked.has(`${ri},${ci}:stayseated`)) td.classList.add('g-ix-ls');
     if (ixMode && ixSource) {
@@ -1760,8 +1808,9 @@ export function initGrid() {
         const rows = [];
         for (let r = r0; r <= r1; r++) rows.push(r);
         for (let c = c0; c <= c1; c++) if (grid.cols[c]) shiftTimes(grid.cols[c], rows, minutes);
-        render();
+        patchTimes(r0, r1, c0, c1);
       },
+      onClose: () => { if (jogTimer) render(); },
     });
   });
   $('gc-interp').addEventListener('click', () => {

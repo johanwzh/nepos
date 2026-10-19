@@ -910,3 +910,7 @@ select option { background: var(--bg-panel); color: var(--text); }
 .new-prefs { display: flex; gap: 28px; margin-top: 12px; }
 .new-prefs > div { display: flex; flex-direction: column; gap: 2px; }
 .new-prefs-h { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+
+/* A floating box never taller than the window: its body scrolls (user 2026-10-19) */
+.float-box { max-height: calc(100vh - 16px); display: flex; flex-direction: column; }
+.float-box .fb-body { overflow: auto; min-height: 0; }

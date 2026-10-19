@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
 import { initShell, setPage, currentPage } from '../../src/ui/shell.js';
-import { grid, initGrid, loadGrid, onGridChange, gridData, selectedStopRow, render } from '../../src/ui/grid.js';
+import { grid, initGrid, loadGrid, onGridChange, gridData, selectedStopRow, render, onGridRender } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { newRouteState } from '../../src/ui/route-state.js';
 
@@ -281,6 +281,28 @@ describe('nudging times with the mini-jog (user test 2026-10-17)', () => {
     expect(document.querySelector('.nudge-box')).not.toBeNull(); // a click in the grid keeps it open
     key(jog, 'ArrowDown');
     expect(times()).toEqual(['0659', '0744']);
+  });
+
+  it('while turning, changes only the moved cells; the full redraw waits until the jog rests or closes (user 2026-10-19)', () => {
+    vi.useFakeTimers();
+    try {
+      let renders = 0;
+      onGridRender(() => { renders++; });
+      const jog = open();
+      const before = renders;
+      key(jog, 'ArrowUp');
+      key(jog, 'ArrowUp');
+      key(jog, 'ArrowUp');
+      expect(times()).toEqual(['0703', '0745']);
+      expect(at(0, 0).textContent).toBe('0703'); // the cell shows it at once
+      expect(renders).toBe(before); // nothing else has been redrawn yet
+      vi.advanceTimersByTime(1000);
+      expect(renders).toBe(before + 1); // one redraw once the jog rests
+      key(jog, 'ArrowUp');
+      key(jog, 'Escape');
+      expect(renders).toBe(before + 2); // closing redraws at once
+      expect(at(0, 0).textContent).toBe('0704');
+    } finally { vi.useRealTimers(); }
   });
 
   it('closes with ✕ or Esc, keeping what was done', () => {
@@ -695,5 +717,16 @@ describe('the private code beside the stop name (a view setting)', () => {
     expect(name.querySelector('.g-plat')?.textContent).toBe('B');
     expect(name.querySelector('.g-priv')?.textContent).toBe('06');
     app.settings.showPrivateCode = false;
+  });
+});
+
+describe('interchanges in a big timetable (user 2026-10-19: speed)', () => {
+  it('marks the cell an interchange points to, and only that one', () => {
+    const from = { ...cell('0700'), interchange: { targetC: 1, targetR: 1, type: 'guaranteed' } };
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [from, cell('0710')] }, { dayCode: 'D', cells: [cell('0705'), cell('0715')] }] });
+    const td = (/** @type {number} */ r, /** @type {number} */ c) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="${c}"]`));
+    expect(td(0, 0).classList.contains('g-ix-g')).toBe(true);
+    expect(td(1, 1).classList.contains('g-ix-tg')).toBe(true);
+    expect(document.querySelectorAll('.g-ix-tg, .g-ix-ts')).toHaveLength(1);
   });
 });

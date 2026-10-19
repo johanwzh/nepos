@@ -89,6 +89,7 @@ export function openDatePicker({ x, y, title, base, dates, onApply, removeOnly =
     else if (el.closest('.dp-next')) { start = addMonths(start, 3); draw(); }
     else if (el.closest('.dp-today')) { start = todayYmd().slice(0, 6); draw(); }
   });
-  openFloatBox({ x, y, title, body, cls: 'dp-box', onApply: () => onApply([...toRanges(added, true), ...toRanges(removed, false)]) });
+  const fb = openFloatBox({ x, y, title, body, cls: 'dp-box', onApply: () => onApply([...toRanges(added, true), ...toRanges(removed, false)]) });
   draw();
+  fb.place(); // by its full size, with the calendars in it
 }
