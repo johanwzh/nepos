@@ -88,6 +88,10 @@ linjen til du lagrer eller forkaster dem (**Rediger → Forkast alle endringer**
 En linje har ett eller flere **tabellsett** — fanene over rutetabellen, for eksempel «Bergen–Oslo»
 og «Oslo–Bergen». **+** lager et nytt.
 
+**Høyreklikk en fane** for **Ny… / Dupliser / Rediger… / Slett**. **Rediger…** (eller dobbeltklikk) gir navnet
+og **retningen**: Tur, Retur, Med klokka eller Mot klokka (NeTEx DirectionType). Retningen er valgfri og
+står i fanen, f.eks. «Oslo–Bergen [Retur]». **Dupliser** kopierer tabellsettet med alle turene.
+
 Hvert tabellsett har én eller flere **kalendere** (raden *Kalendere* → **Velg…**). Tidslinjen under
 viser hvilke dager tabellsettet kjører; står du i en kolonne, viser den hvilke dager akkurat den
 turen kjører.
@@ -100,6 +104,13 @@ turen kjører.
   unntatt lørdag og søndag, H = helligdager …).
 - Høyreklikk en dagkode → **Velg dager…** for å klikke dagene i stedet for å skrive koden.
 - Høyreklikk en dagkode → **Vis turnummer** viser en rad for tur- eller tognummer.
+- Høyreklikk en dagkode → **Vis etiketter** viser en rad for dine egne **etiketter** («Normal», «Rush»):
+  velg cellen og trykk Enter (eller dobbeltklikk) for å velge en etikett i fargen sin, Delete fjerner,
+  Ctrl+C / Ctrl+V kopierer mellom kolonner. Etikettene lager du under **Ressurser**; de er bare for deg og
+  eksporteres ikke.
+- Dagkoder ryddes selv: DX76 blir DX67, 1234567 blir D. Ctrl+C / Ctrl+V kopierer en dagkode til en annen kolonne.
+- Stoppkolonnen og radene øverst står fast når du blar, og cellen du står i holdes alltid synlig.
+  Plattformkoden fra NSR (A, B, 2 …) står bak stoppnavnet.
 
 ### Skrive tider
 
@@ -108,7 +119,17 @@ stoppe. Etter tiden kan du skrive `a` (bare avstigning), `p` (bare påstigning) 
 behov) — eller sette det fra høyreklikkmenyen for alle valgte celler.
 
 Velg et område med **Shift + piltaster** eller ved å **dra med musen**. **Ctrl+C / Ctrl+V** kopierer
-og limer inn tider, også fra og til regneark.
+og limer inn tider, også fra og til regneark. Limer du inn flere kolonner eller rader enn tabellen har,
+legges de til (over 50 spør Nepos først).
+
+**Lim inn en liste med stopp:** velg en stoppcelle og lim inn tekst med NSR Quay-ID-er — én per linje,
+skilt med komma eller semikolon, eller rett fra et JSON-svar. Nepos tar ut alle `NSR:Quay:…` i rekkefølge
+og fyller stoppene fra den valgte raden og nedover, som i Excel; rader legges til ved behov.
+
+**Merknad på flere tider:** velg tidene og trykk F7 (eller høyreklikk → merknad).
+
+**Problemer:** nede til venstre står «⚠ 2 feil · 1 advarsel» når linjen mangler noe. Klikk for å gå til
+det første problemet — feltet merkes («Fyll inn!») — og klikk igjen for det neste.
 
 ### Verktøy på høyreklikk
 
@@ -199,6 +220,9 @@ lagres med **Lagre**. Listen viser hvilke linjer som bruker kalenderen — klikk
 **Merkevarer** og **organisasjoner** i én liste. Merkevarer lager og endrer du selv. Organisasjoner
 kommer fra Entur sitt register; det eneste du kan endre, er eksport-ID-en (bare den siste delen etter
 `ABC:Authority:`). Registerets status og Entur-adressene står i **Prosjekt → Prosjektinnstillinger**.
+
+**Etiketter** (+ Ny etikett) er dine egne merkelapper for turer, med navn og farge. De brukes i
+etikett-raden i rutetabellen.
 
 ---
 
