@@ -159,6 +159,7 @@ Route pattern record. One per route pattern: a named set of tables, such as Berg
 | Field | Type | Description |
 |---|---|---|
 | 0 | text | Name of the route pattern. |
+| 1 | text | Direction, as NeTEx's DirectionType: `outbound`, `inbound`, `clockwise` or `anticlockwise`. Optional; empty = not given. |
 
 ### #UID
 

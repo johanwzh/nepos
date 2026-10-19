@@ -197,3 +197,15 @@ describe('private code caption', () => {
     expect(document.querySelector('.rh-private-cap')?.textContent).toBe('privat kode');
   });
 });
+
+describe('the table set\'s direction (61)', () => {
+  it('is an optional choice beside the calendars, in plain words, and is saved with the table set', async () => {
+    await selectRoute(app.routes[0].code);
+    const sel = /** @type {HTMLSelectElement} */ (document.getElementById('sel-direction'));
+    expect([...sel.options].map((o) => o.textContent)).toEqual(['Ikke angitt', 'Utgående', 'Inngående', 'Med klokka', 'Mot klokka']);
+    sel.value = 'inbound';
+    sel.dispatchEvent(new Event('change'));
+    const rs = app.routeState;
+    expect(rs.tableSets.find((/** @type {any} */ s) => s.id === rs.activeSet).direction).toBe('inbound');
+  });
+});

@@ -16,6 +16,7 @@ import { openModeMenu } from './mode-menu.js';
 import { modeIconSvg } from './mode-icons.js';
 import { ernCodeFor, TRANSMODEL_MODES } from '../core/modes.js';
 import { byDate } from '../core/calendars.js';
+import { DIRECTION_TYPES } from '../core/directions.js';
 import { modeLabel, submodeLabel } from '../i18n/modes.js';
 import { writeOrgs } from '../project/orgs-store.js';
 import { pruneProjectCopy } from './org-register.js';
@@ -336,7 +337,13 @@ function renderCalendarBar() {
   }).join('');
   const legacy = periods.length > 1 ? `<select class="rh-select" id="sel-period" title="${esc(t('periodLabel'))}">${periods.map((/** @type {any} */ p) =>
     `<option value="${p.id}"${p.id === rs.activePer ? ' selected' : ''}>${esc(periodLabel(p))}</option>`).join('')}</select>` : '';
-  bar.innerHTML = `<span class="cal-bar-label">${esc(t('calendarsLabel'))}</span>${ro ? '' : `<button class="cal-add" id="cal-add">${esc(t('addCalendar'))}</button>`}${legacy}${chips || `<span class="cal-bar-none">${esc(t('periodNoCalendar'))}</span>`}`;
+  // The table set's direction (customer request 2026-10-19): an optional label, NeTEx's DirectionType
+  const set = rs.tableSets.find((/** @type {any} */ s) => s.id === rs.activeSet);
+  const dir = set?.direction ?? '';
+  const dirSel = `<span class="cal-bar-label cal-dir-label">${esc(t('dirLabel'))}</span><select class="rh-select cal-dir${dir ? '' : ' empty'}" id="sel-direction"${ro ? ' disabled' : ''}>${['', ...DIRECTION_TYPES].map((d) =>
+    `<option value="${d}"${d === dir ? ' selected' : ''}>${esc(t(d ? `dir_${d}` : 'dirNone'))}</option>`).join('')}</select>`;
+  bar.innerHTML = `<span class="cal-bar-label">${esc(t('calendarsLabel'))}</span>${ro ? '' : `<button class="cal-add" id="cal-add">${esc(t('addCalendar'))}</button>`}${legacy}${chips || `<span class="cal-bar-none">${esc(t('periodNoCalendar'))}</span>`}${dirSel}`;
+  $('sel-direction')?.addEventListener('change', () => { if (set) { set.direction = $('sel-direction').value; markDirty(); renderCalendarBar(); } });
   $('sel-period')?.addEventListener('change', () => switchPeriod(+$('sel-period').value));
   renderTimeline();
   if (ro || !per) return;

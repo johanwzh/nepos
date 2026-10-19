@@ -82,7 +82,7 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     // Table sets (#TRA + #UID), each with its periods (#PER + #KAL) and one table per period
     // (timetable structure spec §6).
     for (const set of rs.tableSets) {
-        lines.push(`#TRA;${esc(set.name)}`);
+        lines.push(`#TRA;${esc(set.name)}${set.direction ? `;${set.direction}` : ''}`); // field 1: the direction, when given
         if (!set.uid || !UUID_PATTERN.test(set.uid) || usedUids.has(set.uid)) set.uid = crypto.randomUUID();
         usedUids.add(set.uid);
         lines.push(`#UID;${set.uid}`);
