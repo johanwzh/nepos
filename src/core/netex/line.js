@@ -236,12 +236,15 @@ ${porXml}
           </StopPointInJourneyPattern>`;
             }).join('\n');
 
+            // ServiceLinks (2.3): only when every pair of the pattern is routed
+            const linkIds = data.linkRefsFor?.(rs, stopList) ?? null;
+            const linksXml = linkIds ? `\n        <linksInSequence>\n${linkIds.map((/** @type {string} */ id, /** @type {number} */ i) => `          <ServiceLinkInJourneyPattern id="${cs}:ServiceLinkInJourneyPattern:${jpId.split(':').pop()}-${i + 1}" version="1" order="${i + 1}">\n            <ServiceLinkRef ref="${id}"/>\n          </ServiceLinkInJourneyPattern>`).join('\n')}\n        </linksInSequence>` : '';
             jpsXml.push(`      <JourneyPattern id="${jpId}" version="1">
         <Name>${xe(name)}</Name>
         <RouteRef ref="${routeId}" version="1"/>
         <pointsInSequence>
 ${spijpList}
-        </pointsInSequence>
+        </pointsInSequence>${linksXml}
       </JourneyPattern>`);
         }
     }

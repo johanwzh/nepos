@@ -26,7 +26,8 @@ const route = (secondStopId) => [
   `#TRL;1;${secondStopId};Oslo bussterminal;34;0;-1;-1;34;-1`, '#TRC;0;0710;0;0;0;0;0', '#DSK;0;0;;1',
 ].join('\r\n') + '\r\n';
 
-const bus = (/** @type {string} */ id) => ({ quayId: id, publicCode: 'A', stopPlaceId: 'NSR:StopPlace:1', stopPlaceName: 'X', mode: 'bus', lat: 0, lon: 0 });
+let lookupPositions = false;
+const bus = (/** @type {string} */ id) => ({ quayId: id, publicCode: 'A', stopPlaceId: 'NSR:StopPlace:1', stopPlaceName: 'X', mode: 'bus', lat: lookupPositions ? 59.91 + (id.length % 7) * 0.001 : 0, lon: lookupPositions ? 10.75 : 0 });
 let lookups = 0;
 const lookup = async (/** @type {string[]} */ ids) => { lookups++; return new Map(ids.map((id) => [id, bus(id)])); };
 const press = (/** @type {string} */ key) => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
@@ -72,7 +73,8 @@ describe('export page', () => {
     setPage('export');
     await settle();
     expect(document.getElementById('btn-validate')).toBeNull();
-    expect(document.getElementById('val-results').textContent).toContain('Ingen problemer');
+    expect(document.getElementById('val-results').textContent).toContain('0 feil, 1 advarsel'); // only: its link is not routed yet (2.3)
+    expect(document.getElementById('val-results').textContent).toContain('ikke rutet ennå');
   });
 
   it('does not run the project check while another page is shown (review I5)', async () => {
@@ -235,5 +237,26 @@ describe('finding the export (user 2026-10-19)', () => {
     const [dir] = await fs.list('exports');
     expect(document.getElementById('export-copy-path')).toBeNull();
     expect(document.getElementById('export-status')?.textContent).toContain(`\\exports\\${dir.name}\\TST_${dir.name}.zip`);
+  });
+});
+
+describe('"Rut manglende strekninger" (2.3)', () => {
+  it('routes the exported lines\' missing links, says how many, and checks again', async () => {
+    const { initLinkRouter } = await import('../../src/ui/link-router.js');
+    const asked = [];
+    initLinkRouter({ engine: /** @type {any} */ ({ tilesUsed: () => 0, shapeLink: async (/** @type {any} */ from, /** @type {any} */ to, /** @type {any} */ profile) => {
+      asked.push(`${from.quayId}|${to.quayId}`);
+      return { key: `${from.quayId}|${to.quayId}|${profile}`, status: 'OK', from, to, profile, coordinates: [[from.lon, from.lat], [to.lon, to.lat]], distanceM: 500, arriveBearing: 0, warnings: [], source: 's', engine: 1 };
+    } }), restMs: 100000 });
+    lookupPositions = true;
+    await openProjectWith(route('NSR:Quay:11972'));
+    setPage('export');
+    await settle();
+    await click('btn-route-links');
+    expect(asked).toEqual(['NSR:Quay:7203|NSR:Quay:11972']);
+    expect(document.getElementById('export-status')?.textContent).toContain('1 strekninger rutet');
+    expect(app.shapes.get('NSR:Quay:7203|NSR:Quay:11972|bus')?.status).toBe('OK');
+    lookupPositions = false;
+    setPage('edit');
   });
 });

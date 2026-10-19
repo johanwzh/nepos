@@ -11,6 +11,8 @@ import { TRANSMODEL_MODES } from './modes.js';
 import { destSegments, hasViaWord, firstWord } from './destinations.js';
 import { speedProfile, SPEED_LIMITS, HIGH_LIMIT } from './speed-profile.js';
 import { ERN_MODES } from './ern/modes.js';
+import { linkPairs } from './link-pairs.js';
+import { isExportable } from './link-state.js';
 
 /** Every code the check can give; each has a text 'chk:<code>' in both languages. */
 export const CHECK_CODES = [
@@ -18,7 +20,7 @@ export const CHECK_CODES = [
   'col-one-stop', 'no-name', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'no-mode', 'branding-missing', 'brandings-unreadable', 'table-set-name', 'no-calendar',
   'calendar-missing', 'calendar-empty', 'day-code', 'no-operating-days', 'calendars-unreadable', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'cell-dates-also', 'cell-dates-short', 'route-no-trips',
-  'route-changed-on-disk', 'org-alias-missing', 'no-submode', 'speed-over', 'speed-limit-high', 'dest-missing', 'dest-last-dropped', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
+  'route-changed-on-disk', 'org-alias-missing', 'no-submode', 'speed-over', 'speed-limit-high', 'link-blocked', 'link-missing', 'link-detour', 'dest-missing', 'dest-last-dropped', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
 ];
 
 /**
@@ -39,10 +41,11 @@ const minutes = (cell) => (cell.dayOffset || 0) * 1440 + Number(cell.time.slice(
  *           orgMode: 'codespace' | 'nog', codespace: string, orgsProblem: '' | 'unreadable',
  *           brandings: { id: string }[], brandingsProblem?: '' | 'unreadable',
  *           calendars: import('./calendars.js').Calendar[], calendarsProblem?: '' | 'unreadable',
- *           quayInfo: Map<string, any>, changedOnDisk?: string[], speedLimits?: Record<string, number> | null }} input
+ *           quayInfo: Map<string, any>, changedOnDisk?: string[], speedLimits?: Record<string, number> | null,
+ *           shapes?: Map<string, import('./link-state.js').SavedShape> }} input   shapes: the routed links (2.3); none given, no link checks
  * @returns {CheckIssue[]} errors first, then warnings
  */
-export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', calendars = [], calendarsProblem = '', quayInfo, changedOnDisk = [], speedLimits = null }) {
+export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', calendars = [], calendarsProblem = '', quayInfo, changedOnDisk = [], speedLimits = null, shapes = undefined }) {
   /** @type {CheckIssue[]} */
   const issues = [];
   /** @param {'error' | 'warning'} level @param {string} code @param {Partial<CheckIssue>} [extra] */
@@ -67,6 +70,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     if (!ROUTE_CODE_PATTERN.test(code)) add('error', 'route-code', { route: code });
     const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, brandings, calendars, quayInfo, add, localIds, usedOrgIds, speedLimits, modesUsed });
     if (!routeTrips) add('warning', 'route-no-trips', { route: code });
+    if (shapes) checkLinks(code, rs, { shapes, calendars, quayInfo, add });
     trips += routeTrips;
   }
   if (orgMode === 'codespace') {
@@ -189,6 +193,30 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
     }
   }
   return trips;
+}
+
+/**
+ * Routed links (design §7): a blocked link, a pattern left without links (no route, or not routed yet) and a long
+ * detour are warnings; a link problem never blocks the export (Entur's import then makes its own links).
+ * @param {string} code @param {any} rs
+ * @param {{ shapes: Map<string, any>, calendars: any[], quayInfo: Map<string, any>, add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void }} ctx
+ */
+function checkLinks(code, rs, { shapes, calendars, quayInfo, add }) {
+  const name = (/** @type {{ quayId: string }} */ q) => quayInfo.get(q.quayId)?.stopPlaceName || q.quayId;
+  /** @type {string[]} */ const blockedPairs = [], detours = [];
+  let none = 0, notYet = 0;
+  for (const p of linkPairs(rs, { calendars, quayInfo })) {
+    const s = shapes.get(p.key);
+    const label = `${name(p.from)} – ${name(p.to)}`;
+    if (!s) notYet++;
+    else if (s.status === 'BLOCKED') blockedPairs.push(label);
+    else if (s.status !== 'OK') none++;
+    else if (!isExportable(p.key, s, quayInfo)) notYet++;
+    else if (s.warnings?.includes('long detour')) detours.push(label);
+  }
+  if (blockedPairs.length) add('warning', 'link-blocked', { route: code, detail: list(blockedPairs) });
+  if (none + notYet) add('warning', 'link-missing', { route: code, detail: `${none}|${notYet}` });
+  if (detours.length) add('warning', 'link-detour', { route: code, detail: list(detours) });
 }
 
 /**

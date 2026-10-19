@@ -1,7 +1,36 @@
 // _shared_data.xml generator, ported from Nepos 1.5.7 (nepos.html lines 6076–6220).
 import { xe, pubDelivery, compositeFrame } from './xml.js';
 import { stopLocalId, quayRef } from '../quays.js';
+import { decodePolyline } from '../../shapes/geometry.js';
 import { authorityNetworkLocalId } from '../orgs.js';
+
+/**
+ * The ServiceLinks the line files use (2.3, Lasse's spec): the routed shape as a gml:LineString in lat lon order,
+ * Quay to Quay, between the two ScheduledStopPoints. Empty when none.
+ * @param {any} data
+ */
+function serviceLinksXml(data) {
+    if (!data.usedLinks?.size) return '';
+    const cs = data.cs, CS = String(cs).toUpperCase();
+    const links = [...data.usedLinks.values()].map((/** @type {any} */ l) => {
+        const uuid = l.id.split(':').pop();
+        const pts = decodePolyline(l.shape.polyline, l.shape.precision ?? 6);
+        const pos = pts.map(([lon, lat]) => `${lat.toFixed(6)} ${lon.toFixed(6)}`).join(' ');
+        return `      <ServiceLink id="${l.id}" version="1">
+        <Distance>${Math.round(l.shape.distanceM)}</Distance>
+        <projections>
+          <LinkSequenceProjection id="${cs}:LinkSequenceProjection:${uuid}" version="1">
+            <gml:LineString gml:id="${CS}_LinkSequenceProjection_${uuid}" srsName="WGS84">
+              <gml:posList srsDimension="2" count="${pts.length}">${pos}</gml:posList>
+            </gml:LineString>
+          </LinkSequenceProjection>
+        </projections>
+        <FromPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(l.fromId)}" version="1"/>
+        <ToPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(l.toId)}" version="1"/>
+      </ServiceLink>`;
+    }).join('\n');
+    return `\n      <serviceLinks>\n${links}\n      </serviceLinks>`;
+}
 
 /**
  * @param {any} data from collectNeTExData
@@ -74,7 +103,7 @@ export function genSharedXml(data, { deliveryName = '', timestamp } = {}) {
 ${netXml}${ddXml ? `\n      <destinationDisplays>\n${ddXml}\n      </destinationDisplays>` : ''}
       <scheduledStopPoints>
 ${sspXml}
-      </scheduledStopPoints>
+      </scheduledStopPoints>${serviceLinksXml(data)}
       <stopAssignments>
 ${psaXml}
       </stopAssignments>

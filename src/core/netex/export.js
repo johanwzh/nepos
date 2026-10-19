@@ -9,17 +9,14 @@ import { genLineXml } from './line.js';
  * @param {{ codespace: string, deliveryName: string, routes: { code: string, rs: any }[],
  *           orgs: import('../orgs.js').Company[], orgMode?: 'codespace' | 'nog',
  *           brandings?: import('../../project/brandings-store.js').Branding[],
- *           calendars?: import('../calendars.js').Calendar[], timestamp?: string }} input
+ *           calendars?: import('../calendars.js').Calendar[], timestamp?: string,
+ *           shapes?: Map<string, import('../link-state.js').SavedShape>, quayInfo?: Map<string, any> }} input
  * @returns {{ name: string, xml: string }[]}
  */
-export function buildNeTExFiles({ codespace, deliveryName, routes, orgs, orgMode = 'codespace', brandings = [], calendars = [], timestamp }) {
-  const data = collectNeTExData({ codespace, routes, orgs, orgMode, brandings, calendars });
+export function buildNeTExFiles({ codespace, deliveryName, routes, orgs, orgMode = 'codespace', brandings = [], calendars = [], timestamp, shapes, quayInfo }) {
+  const data = collectNeTExData({ codespace, routes, orgs, orgMode, brandings, calendars, shapes, quayInfo });
   const CS = data.cs.toUpperCase();
-  return [
-    { name: `_${CS}-shared.xml`, xml: genSharedXml(data, { deliveryName, timestamp }) },
-    ...data.routes.map(({ code, rs }) => ({
-      name: `${CS}-Line-${code}.xml`,
-      xml: genLineXml(code, rs, data, { timestamp }),
-    })),
-  ];
+  // The line files first: they register the ServiceLinks the shared file then writes (it still comes first)
+  const lines = data.routes.map(({ code, rs }) => ({ name: `${CS}-Line-${code}.xml`, xml: genLineXml(code, rs, data, { timestamp }) }));
+  return [{ name: `_${CS}-shared.xml`, xml: genSharedXml(data, { deliveryName, timestamp }) }, ...lines];
 }
