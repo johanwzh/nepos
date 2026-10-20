@@ -265,3 +265,56 @@ describe('Ressurser: labels, review fixes', () => {
     expect(name.classList.contains('invalid')).toBe(true);
   });
 });
+
+describe('Ressurser: vehicles (user 2026-10-20)', () => {
+  it('makes a vehicle with a name and a colour, and saves it to data/vehicles.json', async () => {
+    app.vehicles = [];
+    setPage('edit'); setPage('assets');
+    click(/** @type {HTMLElement} */ (document.getElementById('rs-new-vehicle')));
+    expect(q('.re-title').textContent).toMatch(/^Kjøretøy/);
+    const name = /** @type {HTMLInputElement} */ (q('#re-name'));
+    name.value = 'Buss 7';
+    name.dispatchEvent(new Event('input'));
+    click(q('.re-save'));
+    await flush(); await flush();
+    expect(app.vehicles).toEqual([expect.objectContaining({ name: 'Buss 7', colour: expect.stringMatching(/^#[0-9a-f]{6}$/) })]);
+    expect(JSON.parse(/** @type {string} */ (await readText(fs, 'data/vehicles.json')))[0].name).toBe('Buss 7');
+    expect(await readText(fs, 'data/labels.json')).toBeNull(); // not mixed up with the labels
+  });
+
+  it('lists vehicles with their type and how many lines use them (not counting labels of the same name)', () => {
+    app.labels = [{ id: 'l1', name: 'Buss 7', colour: '#2e8b57' }];
+    app.vehicles = [{ id: 'v1', name: 'Buss 7', colour: '#2f6fb5' }];
+    app.routes = [{ code: '1', text: '#TTL;-1;0;;10;Kjøretøy;2\r\n#TTC;0;;10;Buss 7;512\r\n', status: 'ok', issues: [] }];
+    setPage('edit'); setPage('assets');
+    const typed = (/** @type {string} */ type) => rows().find((r) => r.querySelector('.lv-c-name')?.textContent === 'Buss 7' && r.querySelector('.lv-c-type')?.textContent === type);
+    expect(typed('Kjøretøy')?.querySelector('.lv-c-used')?.textContent).toContain('1');
+    expect(typed('Etikett')?.querySelector('.lv-c-used')?.textContent).toContain('0');
+  });
+
+  it('a vehicle may share a label\'s name, but not another vehicle\'s', () => {
+    app.labels = [{ id: 'l1', name: 'Buss 7', colour: '#2e8b57' }];
+    app.vehicles = [{ id: 'v1', name: 'Buss 12', colour: '#2f6fb5' }];
+    setPage('edit'); setPage('assets');
+    click(/** @type {HTMLElement} */ (document.getElementById('rs-new-vehicle')));
+    const name = /** @type {HTMLInputElement} */ (q('#re-name'));
+    name.value = 'Buss 7';
+    name.dispatchEvent(new Event('input'));
+    expect(name.classList.contains('invalid')).toBe(false);
+    name.value = 'buss 12';
+    name.dispatchEvent(new Event('input'));
+    expect(name.classList.contains('invalid')).toBe(true);
+  });
+
+  it('deletes a vehicle; labels and vehicles are deleted separately', async () => {
+    app.labels = [{ id: 'l1', name: 'Normal', colour: '#2e8b57' }];
+    app.vehicles = [{ id: 'v1', name: 'Buss 7', colour: '#2f6fb5' }];
+    setPage('edit'); setPage('assets');
+    const row = /** @type {HTMLElement} */ (rows().find((r) => r.querySelector('.lv-c-name')?.textContent === 'Buss 7'));
+    dbl(row);
+    click(q('.re-del'));
+    await flush(); await flush();
+    expect(app.vehicles).toEqual([]);
+    expect(app.labels).toHaveLength(1);
+  });
+});

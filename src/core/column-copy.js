@@ -36,6 +36,7 @@ export function copiesAtInterval(col, interval, lastStart) {
       uid: crypto.randomUUID(),
       dayCode: shiftDayCode(col.dayCode, copyDay - startDay),
       tripNo: '', // a trip number belongs to one trip
+      vehicle: '', // so does its vehicle: one vehicle cannot run every copy
       dest: col.dest ? structuredClone(col.dest) : null, // its own destinations, not shared with the original
       dests: col.dests ? structuredClone(col.dests) : undefined,
       dates: moveDates(col.dates, copyDay - startDay), // its own dates move with it

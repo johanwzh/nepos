@@ -350,7 +350,7 @@ Text row record. A row of text instead of a stop; one per text row and language.
 | 2 | text | Font name. |
 | 3 | char | Font size (default 10). |
 | 4 | text | The text. |
-| 5 | int | Flags. Bit 0 (`1`): a row of column labels, the planner's own labels for trips (such as "Normal" or "Rush"); its `#TTC` cells have flags `256` and the label as their text. Otherwise `0`. |
+| 5 | int | Flags. Bit 0 (`1`): a row of column labels, the planner's own labels for trips (such as "Normal" or "Rush"); its `#TTC` cells have flags `256` and the label as their text. Bit 1 (`2`): a row of vehicles, the vehicle that runs each trip (a name from the project's own vehicle list, such as "Buss 7"); its `#TTC` cells have flags `512` and the vehicle's name as their text. Otherwise `0`. |
 | 6 | text | Language, as a three-letter ISO 639 code. Empty means `nob`. |
 
 Typography, for both `#TRL` and `#TTL`:

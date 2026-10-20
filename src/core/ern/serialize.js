@@ -114,6 +114,11 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
                 lines.push('#TTL;-1;0;;10;Etikett;1');
                 grid.cols.forEach((col, ci) => { if (col.label) lines.push(`#TTC;${ci};;10;${esc(col.label)};256`); });
             }
+            // The vehicle row (user 2026-10-20): field 5 bit 1; a column's vehicle as #TTC with flags 512
+            if (grid.vehicleRow) {
+                lines.push('#TTL;-1;0;;10;Kjøretøy;2');
+                grid.cols.forEach((col, ci) => { if (col.vehicle) lines.push(`#TTC;${ci};;10;${esc(col.vehicle)};512`); });
+            }
 
             grid.stops.forEach((stop, ri) => {
                 const sid = (stop.stopId != null) ? stop.stopId : -1;

@@ -5,6 +5,7 @@ import { readSettings } from './settings.js';
 import { readOrgs } from './orgs-store.js';
 import { readBrandings } from './brandings-store.js';
 import { readLabels } from './labels-store.js';
+import { readVehicles } from './vehicles-store.js';
 import { readShapes } from './shapes-store.js';
 import { readCalendars } from './calendars-store.js';
 import { listRoutes, readRoute, writeRoute } from './routes.js';
@@ -27,6 +28,7 @@ import { orgNameList } from '../core/orgs.js';
  *             orgs: import('../core/orgs.js').Company[], orgsError: null | 'unreadable',
  *             brandings: import('./brandings-store.js').Branding[], brandingsError: null | 'unreadable',
  *             labels: import('./labels-store.js').Label[], labelsError: null | 'unreadable',
+ *             vehicles: import('./vehicles-store.js').Vehicle[], vehiclesError: null | 'unreadable',
  *             shapes: Map<string, import('../core/link-state.js').SavedShape>, shapesError: '' | 'unreadable',
  *             calendars: import('../core/calendars.js').Calendar[], calendarsError: null | 'unreadable',
  *             routes: RouteEntry[], summary: { ok: number, outdated: number, damaged: number },
@@ -68,6 +70,7 @@ export async function openProject(fs, { now = new Date() } = {}) {
   const { orgs, error: orgsError } = await readOrgs(fs);
   const { brandings, error: brandingsError } = await readBrandings(fs);
   const { labels, error: labelsError } = await readLabels(fs);
+  const { vehicles, error: vehiclesError } = await readVehicles(fs);
   const { shapes, error: shapesError } = await readShapes(fs);
   const { calendars, error: calendarsError } = await readCalendars(fs);
 
@@ -84,7 +87,7 @@ export async function openProject(fs, { now = new Date() } = {}) {
     routes.push({ code, text, status, issues });
   }
 
-  return { ok: true, meta, settings, settingsRecovered, orgs, orgsError, brandings, brandingsError, labels, labelsError, shapes, shapesError, calendars, calendarsError, routes, summary: summarizeIntegrity(routes), migrated };
+  return { ok: true, meta, settings, settingsRecovered, orgs, orgsError, brandings, brandingsError, labels, labelsError, vehicles, vehiclesError, shapes, shapesError, calendars, calendarsError, routes, summary: summarizeIntegrity(routes), migrated };
 }
 
 /**
