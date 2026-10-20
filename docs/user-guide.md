@@ -219,21 +219,8 @@ Nepos tilbyr bare stopp med samme transportmåte som linjen.
 
 ### Strekninger på kartet
 
-Kartet bruker OpenFreeMap (lyst eller mørkt etter Nepos' utseende). Mellom to stopp som har tider i
-samme tur, ruter Nepos selv **strekningen** (ServiceLink) langs vei, spor eller fergerute for
-linjens transportmåte — litt etter at du har skrevet tidene, uten at rutetabellen venter på det.
-Hopper en tur over et stopp, rutes strekningen mellom stoppene den faktisk stopper ved.
-
-- **Hel blå linje**: rutet. **Stiplet grå**: rutes nå. **Stiplet oransje**: ikke rutet — hold musen
-  over for å se hvorfor (for langt, ingen vei nær stoppet, ingen vei mellom stoppene, eller blokkert).
-- **Høyreklikk en strekning → Ikke rut denne strekningen** når ruten er feil, for eksempel fordi
-  kartdataene i OpenStreetMap er feil. Den blir en rett linje, gjelder alle linjer som bruker de to
-  stoppene, og eksporteres ikke. Rett kartdataene, og velg **Rut på nytt** senere.
-- En strekning rutes én gang og deles av alle linjer og turer med de samme to stoppene. Strekninger
-  eldre enn et halvt år, og strekninger der NSR har flyttet et stopp, rutes på nytt i bakgrunnen når
-  du åpner linjen. Strekninger du har blokkert, rører Nepos ikke.
-- Strekningene lagres i prosjektmappen (`data/shapes.json`).
-- Ekstreme strekninger rutes ikke (for eksempel buss over 150 km i luftlinje).
+Kartet bruker OpenFreeMap (lyst eller mørkt etter Nepos' utseende). Turen tegnes som rette linjer mellom
+stoppene.
 
 ---
 
@@ -273,9 +260,6 @@ Hver tur blir en NeTEx ServiceJourney med én DatedServiceJourney for hver dag d
 dagkode + turens egne datoer). Tognummer eksporteres som TrainNumber, andre turnummer som PrivateCode.
 
 
-Strekningene eksporteres som ServiceLinks. Mangler en tur noen av sine strekninger (ikke rutet ennå,
-ingen rute funnet eller blokkert), eksporteres den uten strekninger, og kontrollen gir en advarsel —
-aldri en feil. **Rut manglende strekninger** prøver å rute dem som mangler for linjene som eksporteres.
 ---
 
 ## 7. Hurtigtaster

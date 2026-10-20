@@ -2,40 +2,24 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
-## 2.3.0 — not released yet
+## 2.3.0 — 2026-10-20
 
-- **Routing is switched off for now** (a new routing service is planned): the map draws straight lines between the
-  stops again, nothing is routed in the background, and the export writes no ServiceLinks (Entur's import can make
-  them). The routing below stays in Nepos, ready to be switched back on.
-- **One marker at a time:** selecting a label or vehicle cell takes the marker off the timetable cell.
-- **Ctrl+S on Ressurser** saves the open organisation alias, merkevare, label or vehicle (on the list: all unsaved ones).
-- **What is new:** after an update, Nepos shows the changes since the version you used last, once.
+- **Vehicles:** the project's own vehicles ("Buss 7") on Ressurser, and a vehicle row in the timetable (right-click a
+  day code → Vis kjøretøy) to say which vehicle runs each trip; it works like the label row. A vehicle has a short code
+  (shown in the timetable instead of the name), a transport mode (a vehicle of another mode than the line is an export
+  error, and the timetable offers only matching vehicles), fuel (NeTEx's fuel types), low floor, seats, length, width
+  and height in metres, a vehicle type ID made by Nepos, and a VehicleTypeRef after the fixed `NMR:VehicleType:`. Its
+  colour only marks it in the timetable. Saved in `data/vehicles.json` and as a text row in the line file; not exported
+  yet (later a vehicle will refer to Entur's vehicle register).
 - **Several columns at once:** Shift+click or Shift+arrows in the day-code row select several columns; F7 (or
   right-click → note) puts one note on all of them, and Ctrl+V pastes a day code into all of them.
 - **The note row can be selected:** click a cell in the row above the day codes (Shift+click for several); a
   double-click or Enter edits the note, Ctrl+C / Ctrl+V copies a column's note and dates to other columns.
-- **The map is MapLibre** on OpenFreeMap's free vector tiles: Positron in light mode, Dark in dark mode. A custom
-  raster tile address from before still works (links are then not routed).
-- **Routed links (ServiceLinks):** Nepos routes the link between every two stops with times in a trip, along roads,
-  rails, tram tracks or ferry routes for the line's mode, in the background, from the same tiles as the map. A link is
-  routed once and shared by every line and trip with the same two stops; links older than half a year, or whose stop
-  NSR has moved, are routed again quietly when their line is opened.
-- **Buses take the fast roads:** links are routed by travel time, with the road speeds and turn costs of Entur's own
-  bus router (motorways 88 km/h, main roads 65, residential 25 …), in a corridor wide enough to reach a motorway.
-  A stop belongs to the road it stands beside, so the links arriving and leaving meet there; roads cut at a tile
-  edge are joined.
-- **Right-click a link:** "Don't route this link" (a straight line, not exported, for wrong map data) and "Route
-  again". Extreme links (e.g. a bus over 150 km in a straight line) are never routed.
-- **Export:** routed links are exported as ServiceLinks, and each JourneyPattern gets its links when all of them are
-  routed. Missing, blocked and long-detour links are warnings in the export check, never errors; "Route missing
-  links" on the export page tries the missing ones.
-- **Vehicles:** the project's own vehicles ("Buss 7"), made on Resources with a name and a colour, and a vehicle row
-  in the timetable (right-click a day code → Show vehicles) to say which vehicle runs each trip; it works like the
-  label row. Saved in `data/vehicles.json` and as a text row in the line file. Not exported yet: later a vehicle will
-  refer to Entur's vehicle register. A vehicle has a short code (shown in the timetable instead of the name), a
-  transport mode (a vehicle of another mode than the line is an export error, and the timetable offers only matching
-  vehicles), fuel (NeTEx's fuel types), low floor, seats, length, width and height in metres, a vehicle type ID made by
-  Nepos, and a VehicleTypeRef after the fixed `NMR:VehicleType:`. Its colour only marks it in the timetable.
+- **Ctrl+S on Ressurser** saves the open organisation alias, merkevare, label or vehicle (on the list: all unsaved ones).
+- **What is new:** after an update, Nepos shows the changes since the version you used last, once (this window).
+- **New map:** the map is MapLibre on OpenFreeMap's free vector tiles: Positron in light mode, Dark in dark mode. A
+  custom raster tile address from before still works.
+- **One marker at a time:** selecting a label or vehicle cell takes the marker off the timetable cell.
 - **Fewer destination warnings:** the export check no longer warns that a destination or via is not one of the stops
   the trip goes on to (it repeated itself on every trip). The other destination checks stay.
 
