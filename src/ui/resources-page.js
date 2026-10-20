@@ -13,7 +13,11 @@ import { generatedAlias, aliasIssues } from '../core/orgs.js';
 import { writeOrgs } from '../project/orgs-store.js';
 import { writeBrandings, newBranding } from '../project/brandings-store.js';
 import { writeLabels, newLabel, LABEL_COLOURS } from '../project/labels-store.js';
-import { writeVehicles, newVehicle } from '../project/vehicles-store.js';
+import { writeVehicles, newVehicle, vehicleTypeIdFor } from '../project/vehicles-store.js';
+import { FUEL_TYPES, VEHICLE_TYPE_REF_PREFIX, SHORT_CODE_MAX, vehicleProblems } from '../core/vehicles.js';
+import { TRANSMODEL_MODES } from '../core/modes.js';
+import { modeLabel } from '../i18n/modes.js';
+import { getLang } from '../i18n/strings.js';
 import { refreshRegister } from './org-register.js';
 
 /**
@@ -42,10 +46,10 @@ const drafts = () => app.resourceDrafts;
 
 // Labels (62) and vehicles (user 2026-10-20): the project's own lists, kept the same way ("tags": a name and a colour)
 const TAGS = /** @type {Record<TagKind, { prefix: string, flag: number, list: () => Label[], set: (l: Label[]) => void, error: () => null | string,
-  write: (fs: any, l: Label[]) => Promise<void>, make: (n: number) => Label, type: string, add: string, unreadable: string, deleteConfirm: string }>} */ ({
+  write: (fs: any, l: any[]) => Promise<void>, make: (n: number) => any, type: string, add: string, unreadable: string, deleteConfirm: string }>} */ ({
   label: { prefix: 'l:', flag: 256, list: () => app.labels ?? [], set: (l) => { app.labels = l; }, error: () => app.labelsError, write: writeLabels, make: newLabel,
     type: 'rsTypeLabel', add: 'labelAdd', unreadable: 'labelsUnreadable', deleteConfirm: 'labelDeleteConfirm' },
-  vehicle: { prefix: 'v:', flag: 512, list: () => app.vehicles ?? [], set: (l) => { app.vehicles = l; }, error: () => app.vehiclesError, write: writeVehicles, make: newVehicle,
+  vehicle: { prefix: 'v:', flag: 512, list: () => app.vehicles ?? [], set: (l) => { app.vehicles = l; }, error: () => app.vehiclesError, write: writeVehicles, make: (n) => newVehicle(n, app.meta?.codespace ?? ''),
     type: 'rsTypeVehicle', add: 'vehicleAdd', unreadable: 'vehiclesUnreadable', deleteConfirm: 'vehicleDeleteConfirm' },
 });
 const TAG_KINDS = /** @type {TagKind[]} */ (['label', 'vehicle']);
@@ -128,6 +132,7 @@ const resource = (id) => allResources().find((r) => r.id === id) ?? null;
 /** @param {Resource} r */
 function detail(r) {
   if (r.kind === 'branding') return r.branding.url;
+  if (r.kind === 'vehicle') return vehicleDetail(/** @type {any} */ (r.tag));
   if (isTag(r)) return r.tag.colour;
   return r.company.companyNumber ? `${t('orgCompanyNumber')} ${r.company.companyNumber}` : '';
 }
@@ -138,6 +143,7 @@ const aliasPrefix = (role) => `${app.meta?.codespace ?? ''}:${role === 'authorit
 /** @param {Resource} r */
 function exportIds(r) {
   if (r.kind === 'branding') return r.branding.id;
+  if (r.kind === 'vehicle') return /** @type {any} */ (r.tag).vehicleTypeRef || /** @type {any} */ (r.tag).vehicleTypeId || '';
   if (isTag(r)) return '';
   return r.entry.alias || generatedAlias(r.entry.id, app.meta?.codespace ?? '');
 }
@@ -193,10 +199,12 @@ async function saveTags(kind, ids) {
   let list = [...tag.list()];
   for (const id of ids) {
     const d = drafts().get(id);
-    if (!d || tagNameProblem(kind, id, d.name, list, false)) continue;
+    if (!d || tagNameProblem(kind, id, d.name, list, false) || kind === 'vehicle' && Object.keys(vehicleProblems(d)).length) continue;
     drafts().delete(id); // checked against what is saved so far: a second new one with the same name is refused
     const at = list.findIndex((l) => tagKey(kind, l) === id);
-    if (at >= 0) list[at] = { ...d, name: d.name.trim() }; else list = [...list, { ...d, name: d.name.trim() }];
+    const saved = { ...d, name: d.name.trim() };
+    if (kind === 'vehicle' && !saved.vehicleTypeId) saved.vehicleTypeId = vehicleTypeIdFor(app.meta?.codespace ?? '');
+    if (at >= 0) list[at] = saved; else list = [...list, saved];
   }
   await runAction(() => tag.write(fs, list));
   tag.set(list);
@@ -438,13 +446,90 @@ function brandingForm(main, r) {
   }
 }
 
-/** A label's or a vehicle's editor: name and colour. @param {HTMLElement} main @param {Resource & { kind: TagKind }} r */
+/** The list's detail for a vehicle: short code, mode, fuel. @param {any} v */
+function vehicleDetail(v) {
+  return [v.shortCode, v.transportMode ? modeLabel(v.transportMode, getLang()) : '', v.fuelType ? t(`fuel_${v.fuelType}`) : ''].filter(Boolean).join(' · ');
+}
+
+/** A typed number: empty is none, a comma is a decimal point; anything else stays as typed so the check can refuse it. @param {string} text */
+const typedNumber = (text) => { const x = text.trim().replace(',', '.'); return x === '' ? null : Number(x); };
+
+/**
+ * A vehicle's own fields (user 2026-10-20): short code, mode, fuel, low floor, seats and size.
+ * @param {HTMLElement} main @param {string} id @param {() => any} cur @param {() => boolean} valid
+ */
+function vehicleFields(main, id, cur, valid) {
+  /** @param {string} key @param {any} value */
+  const set = (key, value) => { drafts().set(id, { ...cur(), [key]: value }); };
+  /** Mark every field the check refuses. */
+  const mark = () => { const p = vehicleProblems(cur()); for (const k of ['shortCode', 'seats', 'length', 'width', 'height']) main.querySelector(`#re-${k}`)?.classList.toggle('invalid', !!p[k]); };
+  /** @param {string} key @param {string} label @param {(text: string) => any} parse @param {string} [note] */
+  const text = (key, label, parse, note = '') => {
+    const input = /** @type {HTMLInputElement} */ (el('input', 're-in'));
+    input.id = `re-${key}`;
+    const v = cur()[key];
+    input.value = v == null ? '' : String(v);
+    input.autocomplete = 'off';
+    input.addEventListener('keydown', (e) => e.stopPropagation());
+    input.addEventListener('input', () => { set(key, parse(input.value)); mark(); touched(main, valid()); });
+    if (note) { const box = el('span', 're-field'); box.append(input, el('span', 're-hint', note)); row(main, label, box); } else row(main, label, input);
+  };
+  /** @param {string} key @param {string} label @param {[string, string][]} options value → text */
+  const choose = (key, label, options) => {
+    const sel = /** @type {HTMLSelectElement} */ (el('select', 're-in'));
+    sel.id = `re-${key}`;
+    for (const [value, shown] of options) { const o = document.createElement('option'); o.value = value; o.textContent = shown; sel.appendChild(o); }
+    sel.value = cur()[key] ?? '';
+    sel.addEventListener('change', () => { set(key, sel.value); touched(main, valid()); });
+    row(main, label, sel);
+  };
+  text('shortCode', t('vehShortCode'), (x) => x.trim(), t('vehShortCodeNote'));
+  const shortCode = /** @type {HTMLInputElement} */ (main.querySelector('#re-shortCode'));
+  shortCode.maxLength = SHORT_CODE_MAX + 4; // room to see that it is too long
+  choose('transportMode', t('vehMode'), [['', t('vehModeNone')], ...TRANSMODEL_MODES.map((m) => /** @type {[string, string]} */ ([m.mode, modeLabel(m.mode, getLang())]))]);
+  choose('fuelType', t('vehFuel'), [['', '—'], ...FUEL_TYPES.map((x) => /** @type {[string, string]} */ ([x, t(`fuel_${x}`)]))]);
+  const low = /** @type {HTMLInputElement} */ (el('input', 're-check'));
+  low.type = 'checkbox';
+  low.id = 're-lowFloor';
+  low.checked = !!cur().lowFloor;
+  low.addEventListener('change', () => { set('lowFloor', low.checked); touched(main, valid()); });
+  row(main, t('vehLowFloor'), low);
+  text('seats', t('vehSeats'), typedNumber);
+  text('length', t('vehLength'), typedNumber);
+  text('width', t('vehWidth'), typedNumber);
+  text('height', t('vehHeight'), typedNumber);
+  mark();
+}
+
+/** The VehicleTypeRef: the fixed NMR:VehicleType: prefix, then what is typed. @param {HTMLElement} main @param {string} id @param {() => any} cur @param {() => boolean} valid */
+function vehicleRefField(main, id, cur, valid) {
+  const input = /** @type {HTMLInputElement} */ (el('input', 're-alias'));
+  input.id = 're-vehicleTypeRef';
+  const ref = String(cur().vehicleTypeRef ?? '');
+  input.value = ref.startsWith(VEHICLE_TYPE_REF_PREFIX) ? ref.slice(VEHICLE_TYPE_REF_PREFIX.length) : ref;
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+  const check = () => input.classList.toggle('invalid', !!vehicleProblems(cur()).vehicleTypeRef);
+  input.addEventListener('keydown', (e) => e.stopPropagation());
+  input.addEventListener('input', () => {
+    const typed = input.value.trim();
+    drafts().set(id, { ...cur(), vehicleTypeRef: typed ? VEHICLE_TYPE_REF_PREFIX + typed : '' });
+    check();
+    touched(main, valid());
+  });
+  check();
+  const field = el('span', 're-alias-field');
+  field.append(el('span', 're-alias-prefix', VEHICLE_TYPE_REF_PREFIX), input);
+  row(main, t('vehTypeRef'), field);
+}
+
+/** A label's or a vehicle's editor: name and colour (a vehicle also has its own data). @param {HTMLElement} main @param {Resource & { kind: TagKind }} r */
 function tagForm(main, r) {
   const kind = r.kind, tag = TAGS[kind];
   main.appendChild(el('div', 're-title', `${t(tag.type)} · ${r.name || t('tableSetUnnamed')}`));
   if (tag.error()) main.appendChild(el('p', 'assets-status bad', t(tag.unreadable)));
   const cur = () => drafts().get(r.id) ?? r.tag;
-  const valid = () => !tagNameProblem(kind, r.id, cur().name) && !tag.error();
+  const valid = () => !tagNameProblem(kind, r.id, cur().name) && !tag.error() && (kind !== 'vehicle' || !Object.keys(vehicleProblems(cur())).length);
   const name = /** @type {HTMLInputElement} */ (el('input', 're-in'));
   name.id = 're-name';
   name.value = r.tag.name;
@@ -457,6 +542,7 @@ function tagForm(main, r) {
     touched(main, valid());
   });
   row(main, t('labelName'), name);
+  if (kind === 'vehicle') vehicleFields(main, r.id, cur, valid);
   // The colour: a picker and a few ready ones
   const colour = /** @type {HTMLInputElement} */ (el('input', 're-colour'));
   colour.type = 'color';
@@ -473,7 +559,13 @@ function tagForm(main, r) {
     sw.addEventListener('click', (e) => { e.preventDefault(); setColour(c); });
     field.appendChild(sw);
   }
-  row(main, t('labelColour'), field);
+  row(main, t(kind === 'vehicle' ? 'vehColour' : 'labelColour'), field);
+  if (kind === 'vehicle') {
+    main.appendChild(el('div', 're-note', t('vehColourNote')));
+    const v = /** @type {any} */ (cur());
+    row(main, t('vehTypeId'), el('span', 're-static', v.vehicleTypeId || t('vehTypeIdOnSave')));
+    vehicleRefField(main, r.id, cur, valid);
+  }
   main.appendChild(el('div', 're-note', `${t('orgUsedBy', r.used)} · ${t('labelRenameNote')}`));
   main.appendChild(footer(r, valid()));
   if (!r.isNew) {

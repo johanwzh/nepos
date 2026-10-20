@@ -22,7 +22,10 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Vehicles:** the project's own vehicles ("Buss 7"), made on Resources with a name and a colour, and a vehicle row
   in the timetable (right-click a day code → Show vehicles) to say which vehicle runs each trip; it works like the
   label row. Saved in `data/vehicles.json` and as a text row in the line file. Not exported yet: later a vehicle will
-  refer to Entur's vehicle register.
+  refer to Entur's vehicle register. A vehicle has a short code (shown in the timetable instead of the name), a
+  transport mode (a vehicle of another mode than the line is an export error, and the timetable offers only matching
+  vehicles), fuel (NeTEx's fuel types), low floor, seats, length, width and height in metres, a vehicle type ID made by
+  Nepos, and a VehicleTypeRef after the fixed `NMR:VehicleType:`. Its colour only marks it in the timetable.
 - **Fewer destination warnings:** the export check no longer warns that a destination or via is not one of the stops
   the trip goes on to (it repeated itself on every trip). The other destination checks stay.
 

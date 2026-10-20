@@ -33,3 +33,15 @@ describe('vehicles (user 2026-10-20)', () => {
     expect(r.vehiclesError).toBe(null);
   });
 });
+
+describe('vehicles: their own data (user 2026-10-20)', () => {
+  it('a new vehicle gets a vehicle type ID in the project\'s codespace', () => {
+    expect(newVehicle(0, 'TST').vehicleTypeId).toMatch(/^TST:VehicleType:[0-9a-f-]{36}$/);
+  });
+
+  it('a vehicle saved before these fields existed reads with empty fields', async () => {
+    const fs = createMemoryFs();
+    await fs.writeBytes('data/vehicles.json', new TextEncoder().encode('[{"id":"v1","name":"Buss 7","colour":"#2f6fb5"}]'));
+    expect((await readVehicles(fs)).vehicles[0]).toMatchObject({ shortCode: '', transportMode: '', lowFloor: false, seats: null });
+  });
+});

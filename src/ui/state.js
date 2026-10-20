@@ -24,7 +24,7 @@ export const app = {
   labels: [],
   /** @type {null | 'unreadable'} */
   labelsError: null,
-  /** @type {import('../project/vehicles-store.js').Vehicle[]} the project's vehicles (user 2026-10-20), kept like the labels */
+  /** @type {(import('../project/labels-store.js').Label & Partial<import('../core/vehicles.js').Vehicle>)[]} the project's vehicles (user 2026-10-20), kept like the labels; older ones may lack the vehicle fields */
   vehicles: [],
   /** @type {null | 'unreadable'} */
   vehiclesError: null,

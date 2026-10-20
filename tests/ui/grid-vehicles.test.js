@@ -111,3 +111,23 @@ describe('the vehicle row', () => {
     expect(/** @type {HTMLElement} */ (vh(0).querySelector('.g-lb-chip')).style.background).toMatch(/136, 136, 136|#888888/);
   });
 });
+
+describe('the vehicle row: short codes and modes (user 2026-10-20)', () => {
+  it('shows a vehicle\'s short code, with the full name as a tooltip', () => {
+    app.vehicles = [{ id: 'v1', name: 'Buss 7', colour: '#2f6fb5', shortCode: 'B7' }];
+    loadGrid({ stops: [stop('A')], cols: [{ dayCode: 'D', cells: [cell('0700')], vehicle: 'Buss 7' }], vehicleRow: true });
+    const chip = /** @type {HTMLElement} */ (vh(0).querySelector('.g-lb-chip'));
+    expect(chip.textContent).toBe('B7');
+    expect(chip.title).toBe('Buss 7');
+  });
+
+  it('offers only vehicles of the line\'s mode (and those without a mode)', () => {
+    app.routeState = { ...newRouteState('no'), mode: 'bus' };
+    app.vehicles = [{ id: 'v1', name: 'Buss 7', colour: '#2f6fb5', transportMode: 'bus' }, { id: 'v2', name: 'Ferje 1', colour: '#2f6fb5', transportMode: 'water' },
+      { id: 'v3', name: 'Reserve', colour: '#2f6fb5', transportMode: '' }];
+    loadGrid({ stops: [stop('A')], cols: [{ dayCode: 'D', cells: [cell('0700')] }], vehicleRow: true });
+    down(vh(0));
+    press('Enter');
+    expect([...document.querySelectorAll('.lb-pick .lb-item')].map((x) => x.textContent)).toEqual(['Buss 7', 'Reserve', 'Ingen']);
+  });
+});

@@ -45,7 +45,7 @@ function check(routes) {
     routes, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(app.meta),
     codespace: app.meta?.codespace ?? '', orgsProblem: app.orgsError ? 'unreadable' : '', brandings: app.brandings,
     brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars,
-    calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, speedLimits: app.meta?.speedLimits ?? null, shapes: app.shapes,
+    calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, speedLimits: app.meta?.speedLimits ?? null, shapes: app.shapes, vehicles: app.vehicles ?? [],
   });
 }
 
@@ -63,7 +63,7 @@ export function lineIssues(code) {
   const rs = lineState(code);
   const live = code === app.activeRoute || app.drafts.has(code);
   // Saved lines: cached by their text and by the project data the check reads.
-  const key = [entry.text, app.orgs, app.orgRegister, app.brandings, app.calendars, app.meta, quayInfo.size];
+  const key = [entry.text, app.orgs, app.orgRegister, app.brandings, app.calendars, app.vehicles, app.meta, quayInfo.size];
   const hit = cache.get(code);
   if (!live && hit && hit.key.every((/** @type {any} */ v, /** @type {number} */ i) => v === key[i])) return hit.issues;
   const issues = check([{ code, rs, status: entry.status }]).filter((i) => i.route === code);

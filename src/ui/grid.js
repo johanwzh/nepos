@@ -25,6 +25,7 @@ import { unionDays, tripDays } from '../core/calendars.js';
 import { app } from './state.js';
 import { normalizeDests, servedRows, setDestAt, moveChange, viaDrag, applySuggestion, copyDests, pasteDests, snapshotDests, restoreDests, destLabel } from '../core/destinations.js';
 import { destColumnsOpen, onDestToggle, destCellInfo, renderDestCell, openDestEditor, toggleDestColumns } from './dest-columns.js';
+import { vehicleShown } from '../core/vehicles.js';
 
 /** The grid being edited: one period × direction of the open route. */
 export const grid = {
@@ -819,10 +820,13 @@ function renderFootRow(tbl) {
 // Two rows of the same kind under the day codes: the planner's labels ("Normal", "Rush", user 2026-10-19) and the
 // vehicles (user 2026-10-20), each a name from the project's own list, shown as a chip in that entry's colour.
 /** @typedef {'label' | 'vehicle'} TagKind */
-/** What differs between the two rows: the column field, the project list, the texts, the row's class. */
+/** What differs between the two rows: the column field, the project list (all, and those offered), what a chip shows, the texts, the row's class. */
 const TAGS = /** @type {const} */ ({
-  label: { field: 'label', list: () => app.labels ?? [], title: 'labelsRow', none: 'labelNone', noneYet: 'labelsNoneYet', cls: 'g-row-lb' },
-  vehicle: { field: 'vehicle', list: () => app.vehicles ?? [], title: 'vehiclesRow', none: 'vehicleNone', noneYet: 'vehiclesNoneYet', cls: 'g-row-lb g-row-vh' },
+  label: { field: 'label', list: () => app.labels ?? [], offered: () => app.labels ?? [], shown: (/** @type {string} */ n) => n, title: 'labelsRow', none: 'labelNone', noneYet: 'labelsNoneYet', cls: 'g-row-lb' },
+  // A vehicle shows its short code; the picker offers those of the line's mode, and those without a mode
+  vehicle: { field: 'vehicle', list: () => app.vehicles ?? [],
+    offered: () => (app.vehicles ?? []).filter((v) => !v.transportMode || !app.routeState?.mode || v.transportMode === app.routeState.mode),
+    shown: (/** @type {string} */ n) => { const v = app.vehicles?.find((x) => x.name === n); return v ? vehicleShown(v) : n; }, title: 'vehiclesRow', none: 'vehicleNone', noneYet: 'vehiclesNoneYet', cls: 'g-row-lb g-row-vh' },
 });
 /** A tag row is selected: which one (lbKind) and its column (lbCol) */
 let inLB = false, lbCol = 0, lbKind = /** @type {TagKind} */ ('label');
@@ -851,7 +855,8 @@ function renderLabelRow(tbl, kind) {
     if (name) {
       const chip = document.createElement('span');
       chip.className = 'g-lb-chip';
-      chip.textContent = name;
+      chip.textContent = tag.shown(name);
+      if (chip.textContent !== name) chip.title = name;
       chip.style.background = tagColour(kind, name);
       td.appendChild(chip);
     }
@@ -878,7 +883,7 @@ function openLabelPicker(ci, kind) {
   const box = document.createElement('div');
   box.className = 'lb-pick';
   const set = (/** @type {string} */ name) => { closeLabelPicker(); if (grid.cols[ci]) { grid.cols[ci][tag.field] = name; render(); } };
-  const names = [...tag.list()].map((l) => l.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'nb'));
+  const names = [...tag.offered()].map((l) => l.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'nb'));
   for (const name of [...names, '']) {
     const item = document.createElement('div');
     item.className = 'lb-item';

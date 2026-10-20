@@ -912,3 +912,7 @@ select option { background: var(--bg-panel); color: var(--text); }
 /* A floating box never taller than the window: its body scrolls (user 2026-10-19) */
 .float-box { max-height: calc(100vh - 16px); display: flex; flex-direction: column; }
 .float-box .fb-body { overflow: auto; min-height: 0; }
+/* A vehicle's own fields (user 2026-10-20): a field with a hint after it, the low-floor box */
+.re-field { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.re-hint { font-size: 11px; color: var(--text-m); }
+.re-check { width: 16px; height: 16px; margin: 0; justify-self: start; }

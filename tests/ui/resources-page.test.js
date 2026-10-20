@@ -318,3 +318,53 @@ describe('Ressurser: vehicles (user 2026-10-20)', () => {
     expect(app.labels).toHaveLength(1);
   });
 });
+
+describe('Ressurser: a vehicle\'s own data (user 2026-10-20)', () => {
+  const field = (/** @type {string} */ id) => /** @type {HTMLInputElement} */ (q(`#${id}`));
+  const type = (/** @type {string} */ id, /** @type {string} */ v) => { const f = field(id); f.value = v; f.dispatchEvent(new Event('input')); f.dispatchEvent(new Event('change')); };
+
+  it('saves short code, mode, fuel, low floor, seats, size and the VehicleTypeRef after its fixed prefix', async () => {
+    app.vehicles = [];
+    setPage('edit'); setPage('assets');
+    click(/** @type {HTMLElement} */ (document.getElementById('rs-new-vehicle')));
+    type('re-name', 'Buss 7');
+    type('re-shortCode', 'B7');
+    type('re-transportMode', 'bus');
+    type('re-fuelType', 'electricity');
+    field('re-lowFloor').checked = true; field('re-lowFloor').dispatchEvent(new Event('change'));
+    type('re-seats', '45');
+    type('re-length', '12,2');
+    type('re-width', '2.55');
+    type('re-height', '3.3');
+    type('re-vehicleTypeRef', 'ABC-12');
+    expect(page().textContent).toContain('NMR:VehicleType:');
+    click(q('.re-save'));
+    await flush(); await flush();
+    expect(app.vehicles[0]).toMatchObject({ name: 'Buss 7', shortCode: 'B7', transportMode: 'bus', fuelType: 'electricity', lowFloor: true, seats: 45,
+      length: 12.2, width: 2.55, height: 3.3, vehicleTypeRef: 'NMR:VehicleType:ABC-12', vehicleTypeId: expect.stringMatching(/^TST:VehicleType:/) });
+  });
+
+  it('says the colour is the timetable label\'s, not the vehicle\'s', () => {
+    app.vehicles = [];
+    setPage('edit'); setPage('assets');
+    click(/** @type {HTMLElement} */ (document.getElementById('rs-new-vehicle')));
+    expect(page().textContent).toMatch(/ikke kjøretøyets farge/);
+  });
+
+  it('will not save a wrong number', () => {
+    app.vehicles = [];
+    setPage('edit'); setPage('assets');
+    click(/** @type {HTMLElement} */ (document.getElementById('rs-new-vehicle')));
+    type('re-name', 'Buss 7');
+    type('re-seats', '4.5');
+    expect(field('re-seats').classList.contains('invalid')).toBe(true);
+    expect(/** @type {HTMLButtonElement} */ (q('.re-save')).disabled).toBe(true);
+  });
+
+  it('lists a vehicle with its short code, mode and fuel', () => {
+    app.vehicles = [{ id: 'v1', name: 'Buss 7', colour: '#2f6fb5', shortCode: 'B7', transportMode: 'bus', fuelType: 'electricity' }];
+    setPage('edit'); setPage('assets');
+    const row = rows().find((r) => r.querySelector('.lv-c-name')?.textContent === 'Buss 7');
+    expect(row?.querySelector('.lv-c-detail')?.textContent).toBe('B7 · Buss · Elektrisitet');
+  });
+});

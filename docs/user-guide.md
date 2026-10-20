@@ -250,8 +250,11 @@ kommer fra Entur sitt register; det eneste du kan endre, er eksport-ID-en (bare 
 **Etiketter** (+ Ny etikett) er dine egne merkelapper for turer, med navn og farge. De brukes i
 etikett-raden i rutetabellen.
 
-**Kjøretøy** (+ Nytt kjøretøy) er prosjektets egne kjøretøy, med navn og farge, til kjøretøy-raden i
-rutetabellen. De eksporteres ikke ennå; senere skal et kjøretøy her vise til Entur sitt kjøretøyregister.
+**Kjøretøy** (+ Nytt kjøretøy) er prosjektets egne kjøretøy, til kjøretøy-raden i rutetabellen. Et kjøretøy har
+navn, kortkode (vises i rutetabellen i stedet for navnet), transportform (må være den samme som linjens; rutetabellen
+viser bare kjøretøy som passer), drivstoff, lavgulv, sitteplasser, lengde, bredde og høyde i meter, en kjøretøytype-ID
+som Nepos lager, og en VehicleTypeRef (du skriver delen etter `NMR:VehicleType:`). Fargen er bare fargen på
+merkelappen i rutetabellen, ikke kjøretøyets farge. De eksporteres ikke ennå; senere skal et kjøretøy her vise til Entur sitt kjøretøyregister.
 
 ---
 

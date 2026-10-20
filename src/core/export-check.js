@@ -20,7 +20,7 @@ export const CHECK_CODES = [
   'col-one-stop', 'no-name', 'org-not-in-register', 'org-register-missing', 'org-alias-format', 'org-alias-duplicate', 'org-not-in-project', 'no-mode', 'branding-missing', 'brandings-unreadable', 'table-set-name', 'no-calendar',
   'calendar-missing', 'calendar-empty', 'day-code', 'no-operating-days', 'calendars-unreadable', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'cell-dates-also', 'cell-dates-short', 'route-no-trips',
-  'route-changed-on-disk', 'org-alias-missing', 'no-submode', 'speed-over', 'speed-limit-high', 'link-blocked', 'link-missing', 'link-detour', 'dest-missing', 'dest-last-dropped', 'dest-via-text', 'dest-unserved', 'dest-not-on-route',
+  'route-changed-on-disk', 'org-alias-missing', 'no-submode', 'speed-over', 'speed-limit-high', 'link-blocked', 'link-missing', 'link-detour', 'dest-missing', 'dest-last-dropped', 'dest-via-text', 'dest-unserved', 'dest-not-on-route', 'vehicle-mode',
 ];
 
 /**
@@ -42,10 +42,11 @@ const minutes = (cell) => (cell.dayOffset || 0) * 1440 + Number(cell.time.slice(
  *           brandings: { id: string }[], brandingsProblem?: '' | 'unreadable',
  *           calendars: import('./calendars.js').Calendar[], calendarsProblem?: '' | 'unreadable',
  *           quayInfo: Map<string, any>, changedOnDisk?: string[], speedLimits?: Record<string, number> | null,
- *           shapes?: Map<string, import('./link-state.js').SavedShape> }} input   shapes: the routed links (2.3); none given, no link checks
+ *           shapes?: Map<string, import('./link-state.js').SavedShape>,
+ *           vehicles?: { name: string, transportMode?: string }[] }} input   shapes: the routed links (2.3); none given, no link checks. vehicles: the project's (a trip's vehicle must run the line's mode)
  * @returns {CheckIssue[]} errors first, then warnings
  */
-export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', calendars = [], calendarsProblem = '', quayInfo, changedOnDisk = [], speedLimits = null, shapes = undefined }) {
+export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', calendars = [], calendarsProblem = '', quayInfo, changedOnDisk = [], speedLimits = null, shapes = undefined, vehicles = [] }) {
   /** @type {CheckIssue[]} */
   const issues = [];
   /** @param {'error' | 'warning'} level @param {string} code @param {Partial<CheckIssue>} [extra] */
@@ -71,6 +72,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, brandings, calendars, quayInfo, add, localIds, usedOrgIds, speedLimits, modesUsed });
     if (!routeTrips) add('warning', 'route-no-trips', { route: code });
     if (shapes) checkLinks(code, rs, { shapes, calendars, quayInfo, add });
+    checkVehicles(code, rs, vehicles, add);
     trips += routeTrips;
   }
   if (orgMode === 'codespace') {
@@ -217,6 +219,26 @@ function checkLinks(code, rs, { shapes, calendars, quayInfo, add }) {
   if (blockedPairs.length) add('warning', 'link-blocked', { route: code, detail: list(blockedPairs) });
   if (none + notYet) add('warning', 'link-missing', { route: code, detail: `${none}|${notYet}` });
   if (detours.length) add('warning', 'link-detour', { route: code, detail: list(detours) });
+}
+
+/**
+ * A trip's vehicle must run the line's mode (user 2026-10-20): one error per vehicle and line. A vehicle without a
+ * mode, or a name no longer in the list, is not checked.
+ * @param {string} code @param {any} rs @param {{ name: string, transportMode?: string }[]} vehicles
+ * @param {(level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void} add
+ */
+function checkVehicles(code, rs, vehicles, add) {
+  if (!vehicles.length) return;
+  const mode = rs.mode || /** @type {any} */ (ERN_MODES)[rs.transportMode ?? 0]?.mode || '';
+  /** @type {Set<string>} */ const said = new Set();
+  for (const grid of Object.values(rs.grids ?? {})) {
+    for (const col of /** @type {any} */ (grid).cols ?? []) {
+      const v = col.vehicle ? vehicles.find((x) => x.name === col.vehicle) : null;
+      if (!v?.transportMode || v.transportMode === mode || said.has(v.name)) continue;
+      said.add(v.name);
+      add('error', 'vehicle-mode', { route: code, detail: v.name });
+    }
+  }
 }
 
 /** The "not one of the stops this trip goes on to" warning: off for now (user 2026-10-20). */

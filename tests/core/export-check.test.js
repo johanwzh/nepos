@@ -424,3 +424,26 @@ describe('routed links (2.3): warnings only, never errors', () => {
     expect(check(route(), { quayInfo: at })).toEqual([]);
   });
 });
+
+describe('vehicles on trips (user 2026-10-20)', () => {
+  const V = (/** @type {object} */ v) => ({ id: 'v1', name: 'Buss 7', colour: '#2f6fb5', transportMode: 'bus', ...v });
+  it('a vehicle of another mode than the line is an error', () => {
+    const rs = route();
+    grid0(rs).cols[0].vehicle = 'Ferje 1';
+    const issues = check(rs, { vehicles: [V({ name: 'Ferje 1', transportMode: 'water' })] });
+    expect(issues.filter((i) => i.code === 'vehicle-mode')).toEqual([expect.objectContaining({ level: 'error', route: '50', detail: 'Ferje 1' })]);
+  });
+
+  it('a vehicle of the line\'s mode, or with no mode, is fine', () => {
+    const rs = route();
+    grid0(rs).cols[0].vehicle = 'Buss 7';
+    expect(check(rs, { vehicles: [V({})] }).filter((i) => i.code === 'vehicle-mode')).toEqual([]);
+    expect(check(rs, { vehicles: [V({ transportMode: '' })] }).filter((i) => i.code === 'vehicle-mode')).toEqual([]);
+    expect(check(rs).filter((i) => i.code === 'vehicle-mode')).toEqual([]); // no vehicle list given
+  });
+
+  it('has texts in both languages', () => {
+    expect(CHECK_CODES).toContain('vehicle-mode');
+    for (const lang of Object.keys(STRINGS)) expect(STRINGS[lang]['chk:vehicle-mode']).toBeTruthy();
+  });
+});
