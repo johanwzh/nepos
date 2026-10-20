@@ -19,6 +19,10 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Export:** routed links are exported as ServiceLinks, and each JourneyPattern gets its links when all of them are
   routed. Missing, blocked and long-detour links are warnings in the export check, never errors; "Route missing
   links" on the export page tries the missing ones.
+- **Vehicles:** the project's own vehicles ("Buss 7"), made on Resources with a name and a colour, and a vehicle row
+  in the timetable (right-click a day code → Show vehicles) to say which vehicle runs each trip; it works like the
+  label row. Saved in `data/vehicles.json` and as a text row in the line file. Not exported yet: later a vehicle will
+  refer to Entur's vehicle register.
 
 ## 2.2.0 — 2026-10-19
 

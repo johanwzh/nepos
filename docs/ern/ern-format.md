@@ -723,7 +723,8 @@ flags decide the role. `-1` or an empty field means "no organisation".
 ### #TUR field 6 — vehicle reference *Nepos 1.x only*
 
 Nepos 1.x wrote a seventh `#TUR` field holding a vehicle reference. Nepos 2 ignores it on read
-and no longer writes it.
+and no longer writes it. From Nepos 2.3 a trip's vehicle is in the vehicle row instead (`#TTL` field 5
+bit 1, `#TTC` flags `512`, see the standard): the field is not reused.
 
 ### #TRL field layout *Nepos deviation*
 

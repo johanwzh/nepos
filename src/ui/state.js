@@ -24,6 +24,10 @@ export const app = {
   labels: [],
   /** @type {null | 'unreadable'} */
   labelsError: null,
+  /** @type {import('../project/vehicles-store.js').Vehicle[]} the project's vehicles (user 2026-10-20), kept like the labels */
+  vehicles: [],
+  /** @type {null | 'unreadable'} */
+  vehiclesError: null,
   /** @type {Map<string, import('../core/link-state.js').SavedShape>} routed links, by fromQuay|toQuay|profile (2.3) */
   shapes: new Map(),
   /** @type {'' | 'unreadable'} */

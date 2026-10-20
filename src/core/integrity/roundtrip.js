@@ -18,8 +18,10 @@ function normalize(line, dst) {
   switch (f[0]) {
     case '#LEV': // personal data is removed on purpose
       return f.slice(0, 3).join(';');
-    case '#TTL': // the trip-number row: its label and fonts follow the line's mode on purpose; the label row keeps its flag
-      return `#TTL;${f[1]}${((parseInt(f[6] ?? '', 10) || 0) & 1) ? ';label' : ''}`;
+    case '#TTL': { // the trip-number row: its label and fonts follow the line's mode on purpose; the label and vehicle rows keep their flag
+      const flags = parseInt(f[6] ?? '', 10) || 0;
+      return `#TTL;${f[1]}${flags & 1 ? ';label' : flags & 2 ? ';vehicle' : ''}`;
+    }
     case '#TTC': // a column's trip number: only the column and the number count
       return `#TTC;${f[1]};${f[4] ?? ''}`;
     case '#TUR': // the 1.x vehicle field is removed on purpose

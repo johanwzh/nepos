@@ -13,14 +13,16 @@ import { generatedAlias, aliasIssues } from '../core/orgs.js';
 import { writeOrgs } from '../project/orgs-store.js';
 import { writeBrandings, newBranding } from '../project/brandings-store.js';
 import { writeLabels, newLabel, LABEL_COLOURS } from '../project/labels-store.js';
+import { writeVehicles, newVehicle } from '../project/vehicles-store.js';
 import { refreshRegister } from './org-register.js';
 
 /**
  * @typedef {import('../project/brandings-store.js').Branding} Branding
  * @typedef {import('../core/orgs.js').Company} Company
  * @typedef {import('../project/labels-store.js').Label} Label
+ * @typedef {'label' | 'vehicle'} TagKind
  * @typedef {{ id: string, kind: 'branding', name: string, branding: Branding, used: number, unsaved: boolean, isNew: boolean }
- *   | { id: string, kind: 'label', name: string, label: Label, used: number, unsaved: boolean, isNew: boolean }
+ *   | { id: string, kind: TagKind, name: string, tag: Label, used: number, unsaved: boolean, isNew: boolean }
  *   | { id: string, kind: 'org', role: 'authority' | 'operator', name: string, company: Company, entry: any, used: number, unsaved: boolean, changed: boolean, gone: boolean }} Resource
  */
 
@@ -35,17 +37,32 @@ const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 const roleKey = (entry) => `o:${entry.id}`;
 /** @param {Branding} b */
 const brandKey = (b) => `b:${b.id}`;
-/** @param {Label} l */
-const labelKey = (l) => `l:${l.id}`;
 /** @returns {Map<string, any>} */
 const drafts = () => app.resourceDrafts;
 
-/** How many route files use each label name (the label row's #TTC cells, flags 256). */
-function labelUsage() {
+// Labels (62) and vehicles (user 2026-10-20): the project's own lists, kept the same way ("tags": a name and a colour)
+const TAGS = /** @type {Record<TagKind, { prefix: string, flag: number, list: () => Label[], set: (l: Label[]) => void, error: () => null | string,
+  write: (fs: any, l: Label[]) => Promise<void>, make: (n: number) => Label, type: string, add: string, unreadable: string, deleteConfirm: string }>} */ ({
+  label: { prefix: 'l:', flag: 256, list: () => app.labels ?? [], set: (l) => { app.labels = l; }, error: () => app.labelsError, write: writeLabels, make: newLabel,
+    type: 'rsTypeLabel', add: 'labelAdd', unreadable: 'labelsUnreadable', deleteConfirm: 'labelDeleteConfirm' },
+  vehicle: { prefix: 'v:', flag: 512, list: () => app.vehicles ?? [], set: (l) => { app.vehicles = l; }, error: () => app.vehiclesError, write: writeVehicles, make: newVehicle,
+    type: 'rsTypeVehicle', add: 'vehicleAdd', unreadable: 'vehiclesUnreadable', deleteConfirm: 'vehicleDeleteConfirm' },
+});
+const TAG_KINDS = /** @type {TagKind[]} */ (['label', 'vehicle']);
+/** @param {TagKind} kind @param {Label} l */
+const tagKey = (kind, l) => `${TAGS[kind].prefix}${l.id}`;
+/** The tag kind of a row ID, if it is one. @param {string} id @returns {TagKind | null} */
+const tagKindOf = (id) => TAG_KINDS.find((k) => id.startsWith(TAGS[k].prefix)) ?? null;
+/** @param {Resource} r @returns {r is Resource & { kind: TagKind }} */
+const isTag = (r) => r.kind === 'label' || r.kind === 'vehicle';
+
+/** How many route files use each name of this kind (its row's #TTC cells: flags 256 for labels, 512 for vehicles). @param {TagKind} kind */
+function tagUsage(kind) {
   /** @type {Map<string, number>} */
   const count = new Map();
+  const flag = TAGS[kind].flag;
   for (const r of app.routes) {
-    const names = new Set([...r.text.matchAll(/^[ \t]*#TTC;[^;\r\n]*;[^;\r\n]*;[^;\r\n]*;([^;\r\n]*);256\s*$/gm)].map((m) => m[1]));
+    const names = new Set([...r.text.matchAll(/^[ \t]*#TTC;[^;\r\n]*;[^;\r\n]*;[^;\r\n]*;([^;\r\n]*);(\d+)\s*$/gm)].filter((m) => Number(m[2]) === flag).map((m) => m[1]));
     for (const n of names) count.set(n, (count.get(n) ?? 0) + 1);
   }
   return count;
@@ -78,16 +95,18 @@ function allResources() {
   for (const [id, d] of drafts()) {
     if (id.startsWith('b:') && !saved.has(id)) rows.push({ id, kind: 'branding', name: d.name, branding: d, used: 0, unsaved: true, isNew: true });
   }
-  // Column labels (62): the project's own, like merkevarer
-  const lused = labelUsage();
-  const savedL = new Set((app.labels ?? []).map(labelKey));
-  for (const l of app.labels ?? []) {
-    const draft = drafts().get(labelKey(l));
-    const shown = draft ?? l;
-    rows.push({ id: labelKey(l), kind: 'label', name: shown.name, label: shown, used: lused.get(l.name) ?? 0, unsaved: !!draft, isNew: false });
-  }
-  for (const [id, d] of drafts()) {
-    if (id.startsWith('l:') && !savedL.has(id)) rows.push({ id, kind: 'label', name: d.name, label: d, used: 0, unsaved: true, isNew: true });
+  // Column labels (62) and vehicles: the project's own, like merkevarer
+  for (const kind of TAG_KINDS) {
+    const tused = tagUsage(kind);
+    const savedT = new Set(TAGS[kind].list().map((l) => tagKey(kind, l)));
+    for (const l of TAGS[kind].list()) {
+      const draft = drafts().get(tagKey(kind, l));
+      const shown = draft ?? l;
+      rows.push({ id: tagKey(kind, l), kind, name: shown.name, tag: shown, used: tused.get(l.name) ?? 0, unsaved: !!draft, isNew: false });
+    }
+    for (const [id, d] of drafts()) {
+      if (tagKindOf(id) === kind && !savedT.has(id)) rows.push({ id, kind, name: d.name, tag: d, used: 0, unsaved: true, isNew: true });
+    }
   }
   if (!app.orgsError) {
     for (const c of app.orgs) {
@@ -109,7 +128,7 @@ const resource = (id) => allResources().find((r) => r.id === id) ?? null;
 /** @param {Resource} r */
 function detail(r) {
   if (r.kind === 'branding') return r.branding.url;
-  if (r.kind === 'label') return r.label.colour;
+  if (isTag(r)) return r.tag.colour;
   return r.company.companyNumber ? `${t('orgCompanyNumber')} ${r.company.companyNumber}` : '';
 }
 
@@ -119,7 +138,7 @@ const aliasPrefix = (role) => `${app.meta?.codespace ?? ''}:${role === 'authorit
 /** @param {Resource} r */
 function exportIds(r) {
   if (r.kind === 'branding') return r.branding.id;
-  if (r.kind === 'label') return '';
+  if (isTag(r)) return '';
   return r.entry.alias || generatedAlias(r.entry.id, app.meta?.codespace ?? '');
 }
 
@@ -135,7 +154,7 @@ function statusCell(r) {
 /** @param {Resource} r */
 const typeKey = (r) => (r.kind === 'org' ? r.role : r.kind);
 /** @param {Resource} r */
-const typeText = (r) => t(r.kind === 'branding' ? 'rsTypeBranding' : r.kind === 'label' ? 'rsTypeLabel' : r.role === 'authority' ? 'roleAuthority' : 'roleOperator');
+const typeText = (r) => t(r.kind === 'branding' ? 'rsTypeBranding' : isTag(r) ? TAGS[r.kind].type : r.role === 'authority' ? 'roleAuthority' : 'roleOperator');
 /** The name, with the role when the company has both (the navigator). @param {Resource} r */
 const navName = (r) => (r.kind === 'org' && r.company.authority && r.company.operator ? `${r.name} · ${typeText(r)}` : r.name || t('tableSetUnnamed'));
 
@@ -156,51 +175,55 @@ async function saveBrandings(ids) {
   for (const id of ids) drafts().delete(id);
 }
 
-/** Is this label name missing or already used by another label? @param {string} id @param {string} name */
-function labelNameProblem(id, name, list = app.labels ?? [], withDrafts = true) {
+/** Is this name missing, or already used by another of the same kind (a vehicle may share a label's name)?
+ *  @param {TagKind} kind @param {string} id @param {string} name */
+function tagNameProblem(kind, id, name, list = TAGS[kind].list(), withDrafts = true) {
   const n = name.trim();
   if (!n || n.includes(';')) return true; // ; separates ERN fields
   const same = (/** @type {string} */ other) => other.trim().toLowerCase() === n.toLowerCase();
-  return list.some((l) => labelKey(l) !== id && same(l.name))
-    || withDrafts && [...drafts()].some(([k, d]) => k.startsWith('l:') && k !== id && !list.some((l) => labelKey(l) === k) && same(d.name));
+  return list.some((l) => tagKey(kind, l) !== id && same(l.name))
+    || withDrafts && [...drafts()].some(([k, d]) => tagKindOf(k) === kind && k !== id && !list.some((l) => tagKey(kind, l) === k) && same(d.name));
 }
 
-/** Write labels with the given drafts applied; unnamed or doubled ones are not saved. @param {string[]} ids */
-async function saveLabels(ids) {
+/** Write labels or vehicles with the given drafts applied; unnamed or doubled ones are not saved. @param {TagKind} kind @param {string[]} ids */
+async function saveTags(kind, ids) {
   const fs = app.fs;
-  if (!fs || app.labelsError) return;
-  let list = [...(app.labels ?? [])];
+  const tag = TAGS[kind];
+  if (!fs || tag.error() || !ids.length) return;
+  let list = [...tag.list()];
   for (const id of ids) {
     const d = drafts().get(id);
-    if (!d || labelNameProblem(id, d.name, list, false)) continue;
-    drafts().delete(id); // checked against what is saved so far: a second new label with the same name is refused
-    const at = list.findIndex((l) => labelKey(l) === id);
+    if (!d || tagNameProblem(kind, id, d.name, list, false)) continue;
+    drafts().delete(id); // checked against what is saved so far: a second new one with the same name is refused
+    const at = list.findIndex((l) => tagKey(kind, l) === id);
     if (at >= 0) list[at] = { ...d, name: d.name.trim() }; else list = [...list, { ...d, name: d.name.trim() }];
   }
-  await runAction(() => writeLabels(fs, list));
-  app.labels = list;
+  await runAction(() => tag.write(fs, list));
+  tag.set(list);
 }
 
-/** Delete labels (lines that use them keep the name, shown grey). @param {string[]} ids */
-async function deleteLabels(ids) {
-  const picked = /** @type {Resource[]} */ (ids.map(resource).filter((r) => r && r.kind === 'label'));
-  if (!picked.length || app.labelsError) return;
+/** Delete labels or vehicles (lines that use them keep the name, shown grey). @param {TagKind} kind @param {string[]} ids */
+async function deleteTags(kind, ids) {
+  const tag = TAGS[kind];
+  const picked = /** @type {Resource[]} */ (ids.map(resource).filter((r) => r && r.kind === kind));
+  if (!picked.length || tag.error()) return;
   const users = picked.reduce((n, r) => n + r.used, 0);
-  if (users && !confirm(t('labelDeleteConfirm', picked.length, users))) return;
+  if (users && !confirm(t(tag.deleteConfirm, picked.length, users))) return;
   const gone = new Set(picked.map((r) => r.id));
   for (const id of gone) drafts().delete(id);
-  const keep = (app.labels ?? []).filter((l) => !gone.has(labelKey(l)));
+  const keep = tag.list().filter((l) => !gone.has(tagKey(kind, l)));
   const fs = app.fs;
-  if (fs) await runAction(() => writeLabels(fs, keep));
-  app.labels = keep;
+  if (fs) await runAction(() => tag.write(fs, keep));
+  tag.set(keep);
   if (app.resourceSelected && gone.has(app.resourceSelected)) app.resourceSelected = null;
   renderResourcesPage();
 }
 
-function newLabelDraft() {
-  const l = newLabel((app.labels ?? []).length);
-  drafts().set(labelKey(l), l);
-  open(labelKey(l));
+/** @param {TagKind} kind */
+function newTagDraft(kind) {
+  const l = TAGS[kind].make(TAGS[kind].list().length);
+  drafts().set(tagKey(kind, l), l);
+  open(tagKey(kind, l));
   /** @type {HTMLInputElement | null} */ (document.querySelector('#re-name'))?.focus();
 }
 
@@ -224,14 +247,15 @@ export const unsavedResourceCount = () => app.resourceDrafts.size;
 export async function saveAllResources() {
   const ids = [...drafts().keys()];
   await saveBrandings(ids.filter((id) => id.startsWith('b:')));
-  await saveLabels(ids.filter((id) => id.startsWith('l:')));
+  for (const kind of TAG_KINDS) await saveTags(kind, ids.filter((id) => tagKindOf(id) === kind));
   for (const id of ids.filter((id) => id.startsWith('o:'))) await saveOrg(id);
   renderResourcesPage();
 }
 
 /** @param {string} id */
 async function save(id) {
-  if (id.startsWith('b:')) await saveBrandings([id]); else if (id.startsWith('l:')) await saveLabels([id]); else await saveOrg(id);
+  const kind = tagKindOf(id);
+  if (id.startsWith('b:')) await saveBrandings([id]); else if (kind) await saveTags(kind, [id]); else await saveOrg(id);
   renderResourcesPage();
 }
 
@@ -265,6 +289,14 @@ function open(id) {
   renderResourcesPage();
 }
 
+/** Only one kind is deleted at a time: merkevarer, labels or vehicles (organisations come from the register). @param {string[]} ids */
+const deletable = (ids) => ids.every((id) => id.startsWith('b:')) || TAG_KINDS.some((k) => ids.every((id) => tagKindOf(id) === k));
+/** @param {string[]} ids */
+function deleteSome(ids) {
+  const kind = tagKindOf(ids[0] ?? '');
+  void (kind ? deleteTags(kind, ids) : deleteBrandings(ids));
+}
+
 // ─── The list ───────────────────────────────────────────────────────────────
 /** @type {ReturnType<typeof createListView> | null} */
 let view = null;
@@ -288,7 +320,7 @@ function makeView(host) {
     renderFinders: (box, state, changed) => {
       box.innerHTML = `<input id="rs-search" type="search" autocomplete="off" placeholder="${esc(t('rsSearch'))}">
         <select id="rs-f-type"><option value="">${esc(t('rsAllTypes'))}</option><option value="branding">${esc(t('rsTypeBranding'))}</option>
-          <option value="authority">${esc(t('roleAuthority'))}</option><option value="operator">${esc(t('roleOperator'))}</option><option value="label">${esc(t('rsTypeLabel'))}</option></select>`;
+          <option value="authority">${esc(t('roleAuthority'))}</option><option value="operator">${esc(t('roleOperator'))}</option><option value="label">${esc(t('rsTypeLabel'))}</option><option value="vehicle">${esc(t('rsTypeVehicle'))}</option></select>`;
       for (const id of ['rs-search', 'rs-f-type']) {
         const f = /** @type {HTMLInputElement} */ (box.querySelector('#' + id));
         if (state[id] != null) f.value = state[id];
@@ -302,14 +334,14 @@ function makeView(host) {
     },
     tools: [
       { id: 'rs-new', label: () => t('brandAdd'), enabled: () => !app.brandingsError, run: newBrandingDraft },
-      { id: 'rs-new-label', label: () => t('labelAdd'), enabled: () => !app.labelsError, run: newLabelDraft },
+      { id: 'rs-new-label', label: () => t('labelAdd'), enabled: () => !app.labelsError, run: () => newTagDraft('label') },
+      { id: 'rs-new-vehicle', label: () => t('vehicleAdd'), enabled: () => !app.vehiclesError, run: () => newTagDraft('vehicle') },
       { id: 'rs-edit', label: () => t('lvEdit'), enabled: (sel) => sel.length === 1, run: (sel) => open(sel[0]) },
-      { id: 'rs-del', label: () => t('ltDelete'), danger: true, enabled: (sel) => sel.length > 0 && (sel.every((id) => id.startsWith('b:')) || sel.every((id) => id.startsWith('l:'))),
-        run: (sel) => { void (sel[0]?.startsWith('l:') ? deleteLabels(sel) : deleteBrandings(sel)); } },
+      { id: 'rs-del', label: () => t('ltDelete'), danger: true, enabled: (sel) => sel.length > 0 && deletable(sel), run: (sel) => deleteSome(sel) },
       { id: 'rs-refresh', label: () => t('rsRefresh'), enabled: () => app.orgRegisterStatus !== 'loading', run: () => { void refreshRegister(); } },
     ],
     onEdit: (id) => open(id),
-    onDelete: (ids) => { if (ids.every((id) => id.startsWith('b:'))) void deleteBrandings(ids); else if (ids.every((id) => id.startsWith('l:'))) void deleteLabels(ids); },
+    onDelete: (ids) => { if (ids.length && deletable(ids)) deleteSome(ids); },
     empty: () => t(allResources().length ? 'noMatches' : 'rsNone'),
   });
 }
@@ -406,21 +438,22 @@ function brandingForm(main, r) {
   }
 }
 
-/** @param {HTMLElement} main @param {Resource & { kind: 'label' }} r */
-function labelForm(main, r) {
-  main.appendChild(el('div', 're-title', `${t('rsTypeLabel')} · ${r.name || t('tableSetUnnamed')}`));
-  if (app.labelsError) main.appendChild(el('p', 'assets-status bad', t('labelsUnreadable')));
-  const cur = () => drafts().get(r.id) ?? r.label;
-  const valid = () => !labelNameProblem(r.id, cur().name) && !app.labelsError;
+/** A label's or a vehicle's editor: name and colour. @param {HTMLElement} main @param {Resource & { kind: TagKind }} r */
+function tagForm(main, r) {
+  const kind = r.kind, tag = TAGS[kind];
+  main.appendChild(el('div', 're-title', `${t(tag.type)} · ${r.name || t('tableSetUnnamed')}`));
+  if (tag.error()) main.appendChild(el('p', 'assets-status bad', t(tag.unreadable)));
+  const cur = () => drafts().get(r.id) ?? r.tag;
+  const valid = () => !tagNameProblem(kind, r.id, cur().name) && !tag.error();
   const name = /** @type {HTMLInputElement} */ (el('input', 're-in'));
   name.id = 're-name';
-  name.value = r.label.name;
+  name.value = r.tag.name;
   name.autocomplete = 'off';
-  name.classList.toggle('invalid', labelNameProblem(r.id, r.label.name));
+  name.classList.toggle('invalid', tagNameProblem(kind, r.id, r.tag.name));
   name.addEventListener('keydown', (e) => e.stopPropagation());
   name.addEventListener('input', () => {
     drafts().set(r.id, { ...cur(), name: name.value });
-    name.classList.toggle('invalid', labelNameProblem(r.id, name.value));
+    name.classList.toggle('invalid', tagNameProblem(kind, r.id, name.value));
     touched(main, valid());
   });
   row(main, t('labelName'), name);
@@ -428,7 +461,7 @@ function labelForm(main, r) {
   const colour = /** @type {HTMLInputElement} */ (el('input', 're-colour'));
   colour.type = 'color';
   colour.id = 're-colour';
-  colour.value = r.label.colour;
+  colour.value = r.tag.colour;
   const setColour = (/** @type {string} */ c) => { colour.value = c; drafts().set(r.id, { ...cur(), colour: c }); touched(main, valid()); };
   colour.addEventListener('input', () => setColour(colour.value));
   const field = el('span', 're-colours');
@@ -445,7 +478,7 @@ function labelForm(main, r) {
   main.appendChild(footer(r, valid()));
   if (!r.isNew) {
     const del = el('button', 're-del danger', t('ltDelete'));
-    del.addEventListener('click', () => { void deleteLabels([r.id]); });
+    del.addEventListener('click', () => { void deleteTags(kind, [r.id]); });
     /** @type {HTMLElement} */ (main.querySelector('.ce-foot')).prepend(del);
   }
 }
@@ -512,7 +545,7 @@ function orgForm(main, r) {
 function renderEditor(body, r) {
   const wrap = el('div', 're-editor');
   const main = el('div', 're-main');
-  if (r.kind === 'branding') brandingForm(main, r); else if (r.kind === 'label') labelForm(main, r); else orgForm(main, r);
+  if (r.kind === 'branding') brandingForm(main, r); else if (isTag(r)) tagForm(main, r); else orgForm(main, r);
   wrap.append(main, navigator(r));
   body.appendChild(wrap);
 }

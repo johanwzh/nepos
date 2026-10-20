@@ -108,6 +108,9 @@ turen kjører.
   velg cellen og trykk Enter (eller dobbeltklikk) for å velge en etikett i fargen sin, Delete fjerner,
   Ctrl+C / Ctrl+V kopierer mellom kolonner. Etikettene lager du under **Ressurser**; de er bare for deg og
   eksporteres ikke.
+- Høyreklikk en dagkode → **Vis kjøretøy** viser en rad for hvilket **kjøretøy** som kjører turen. Den virker
+  som etikett-raden: Enter eller dobbeltklikk velger, Delete fjerner, Ctrl+C / Ctrl+V kopierer. Kjøretøyene lager
+  du under **Ressurser**. En tur som kopieres med intervall, får ikke med seg kjøretøyet.
 - Dagkoder ryddes selv: DX76 blir DX67, 1234567 blir D. Ctrl+C / Ctrl+V kopierer en dagkode til en annen kolonne.
 - Stoppkolonnen og radene øverst står fast når du blar, og cellen du står i holdes alltid synlig.
   Plattformkoden fra NSR (A, B, 2 …) står bak stoppnavnet. **Visning → Vis stoppenes privatkode** viser også
@@ -246,6 +249,9 @@ kommer fra Entur sitt register; det eneste du kan endre, er eksport-ID-en (bare 
 
 **Etiketter** (+ Ny etikett) er dine egne merkelapper for turer, med navn og farge. De brukes i
 etikett-raden i rutetabellen.
+
+**Kjøretøy** (+ Nytt kjøretøy) er prosjektets egne kjøretøy, med navn og farge, til kjøretøy-raden i
+rutetabellen. De eksporteres ikke ennå; senere skal et kjøretøy her vise til Entur sitt kjøretøyregister.
 
 ---
 

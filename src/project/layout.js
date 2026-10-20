@@ -4,6 +4,7 @@ export const PROJECT_FILE = 'data/nepos-project.json';
 export const ORGS_FILE = 'data/orgs.json';
 export const BRANDINGS_FILE = 'data/brandings.json';
 export const LABELS_FILE = 'data/labels.json';
+export const VEHICLES_FILE = 'data/vehicles.json';
 export const CALENDARS_FILE = 'data/calendars.json';
 export const SHAPES_FILE = 'data/shapes.json'; // routed links (2.3), shared by every line
 export const ROUTES_DIR = 'data/routes';

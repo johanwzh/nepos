@@ -34,6 +34,8 @@ export const grid = {
   tripRow: false,
   /** the label row is shown (a column's label is col.label, a name from the project's labels) */
   labelRow: false,
+  /** the vehicle row is shown (a column's vehicle is col.vehicle, a name from the project's vehicles) */
+  vehicleRow: false,
   active: false,
   readOnly: false,
 };
@@ -92,7 +94,7 @@ const $ = (/** @type {string} */ id) => /** @type {any} */ (document.getElementB
 const clampR = (/** @type {number} */ r) => Math.max(0, Math.min(grid.stops.length - 1, r));
 const clampC = (/** @type {number} */ c) => Math.max(0, Math.min(grid.cols.length - 1, c));
 const esc = (/** @type {string} */ s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const snapshot = () => JSON.stringify([grid.stops, grid.cols, grid.tripRow, grid.labelRow]);
+const snapshot = () => JSON.stringify([grid.stops, grid.cols, grid.tripRow, grid.labelRow, grid.vehicleRow]);
 
 /** Index of the selected column (for the footnote preview and, in Plan 3, the map). */
 export function selectedColumn() {
@@ -101,7 +103,7 @@ export function selectedColumn() {
 
 /**
  * Show a period × direction.
- * @param {{ stops: any[], cols: any[], tripRow?: boolean, labelRow?: boolean }} data
+ * @param {{ stops: any[], cols: any[], tripRow?: boolean, labelRow?: boolean, vehicleRow?: boolean }} data
  * @param {{ readOnly?: boolean }} [opts]
  */
 export function loadGrid(data, { readOnly = false } = {}) {
@@ -109,6 +111,7 @@ export function loadGrid(data, { readOnly = false } = {}) {
   grid.cols = JSON.parse(JSON.stringify(data.cols));
   grid.tripRow = !!(/** @type {any} */ (data).tripRow);
   grid.labelRow = !!(/** @type {any} */ (data).labelRow);
+  grid.vehicleRow = !!(/** @type {any} */ (data).vehicleRow);
   inLB = false;
   normalizeDests(grid); // a start and one change slot per stop for every column
   destUndo = ''; inDest = false;
@@ -137,7 +140,7 @@ export function commitPending() {
 
 /** A copy of the grid's data, for storing in the route state. */
 export function gridData() {
-  return { stops: JSON.parse(JSON.stringify(grid.stops)), cols: JSON.parse(JSON.stringify(grid.cols)), tripRow: grid.tripRow, labelRow: grid.labelRow };
+  return { stops: JSON.parse(JSON.stringify(grid.stops)), cols: JSON.parse(JSON.stringify(grid.cols)), tripRow: grid.tripRow, labelRow: grid.labelRow, vehicleRow: grid.vehicleRow };
 }
 
 /** The grid now matches what is saved. */
@@ -504,7 +507,8 @@ export function render() {
   renderInsertRow(tbl);
   renderFootRow(tbl);
   renderDayCodeRow(tbl);
-  if (grid.labelRow) renderLabelRow(tbl);
+  if (grid.labelRow) renderLabelRow(tbl, 'label');
+  if (grid.vehicleRow) renderLabelRow(tbl, 'vehicle');
   if (grid.tripRow) renderTripRow(tbl);
   grid.stops.forEach((stop, ri) => renderStopRow(tbl, stop, ri, linked));
   renderBottomRow(tbl);
@@ -811,33 +815,44 @@ function renderFootRow(tbl) {
   tr.insertCell().className = 'cw-ins g-add';
 }
 
-// ─── Labels (62) ─────────────────────────────────────────────────────────────
-/** The label row: selected (its column is lbCol) */
-let inLB = false, lbCol = 0;
-/** The label copied last with Ctrl+C in the label row */
-let lbClip = /** @type {string | null} */ (null);
+// ─── Labels (62) and vehicles ───────────────────────────────────────────────
+// Two rows of the same kind under the day codes: the planner's labels ("Normal", "Rush", user 2026-10-19) and the
+// vehicles (user 2026-10-20), each a name from the project's own list, shown as a chip in that entry's colour.
+/** @typedef {'label' | 'vehicle'} TagKind */
+/** What differs between the two rows: the column field, the project list, the texts, the row's class. */
+const TAGS = /** @type {const} */ ({
+  label: { field: 'label', list: () => app.labels ?? [], title: 'labelsRow', none: 'labelNone', noneYet: 'labelsNoneYet', cls: 'g-row-lb' },
+  vehicle: { field: 'vehicle', list: () => app.vehicles ?? [], title: 'vehiclesRow', none: 'vehicleNone', noneYet: 'vehiclesNoneYet', cls: 'g-row-lb g-row-vh' },
+});
+/** A tag row is selected: which one (lbKind) and its column (lbCol) */
+let inLB = false, lbCol = 0, lbKind = /** @type {TagKind} */ ('label');
+/** The entry copied last with Ctrl+C in each row (a label is never pasted as a vehicle) */
+const lbClip = /** @type {Record<TagKind, string | null>} */ ({ label: null, vehicle: null });
 
-/** A label's colour, from the project's list (grey for a name not in it). @param {string} name */
-const labelColour = (name) => app.labels?.find((l) => l.name === name)?.colour ?? '#888888';
+/** An entry's colour, from the project's list (grey for a name not in it). @param {TagKind} kind @param {string} name */
+const tagColour = (kind, name) => TAGS[kind].list().find((l) => l.name === name)?.colour ?? '#888888';
 
-/** The label row (user 2026-10-19): the planner's labels, such as "Normal" or "Rush", under the day codes. @param {HTMLTableElement} tbl */
-function renderLabelRow(tbl) {
+/** A tag row, under the day codes. @param {HTMLTableElement} tbl @param {TagKind} kind */
+function renderLabelRow(tbl, kind) {
+  const tag = TAGS[kind];
   const tr = tbl.insertRow();
-  tr.className = 'g-row-lb';
+  tr.className = tag.cls;
   tr.insertCell().className = 'cw-ins g-sticky0';
   const th = tr.insertCell();
   th.className = 'cw-name g-sticky1 g-lb-label';
-  th.textContent = t('labelsRow');
+  th.textContent = t(tag.title);
   grid.cols.forEach((col, ci) => {
     const td = tr.insertCell();
     td.className = 'cw-time g-lb-cell';
     td.dataset.ci = String(ci);
-    if (inLB && ci === lbCol) td.classList.add('lb-sel');
-    if (col.label) {
+    td.dataset.kind = kind;
+    if (inLB && lbKind === kind && ci === lbCol) td.classList.add('lb-sel');
+    const name = col[tag.field];
+    if (name) {
       const chip = document.createElement('span');
       chip.className = 'g-lb-chip';
-      chip.textContent = col.label;
-      chip.style.background = labelColour(col.label);
+      chip.textContent = name;
+      chip.style.background = tagColour(kind, name);
       td.appendChild(chip);
     }
     td.addEventListener('mousedown', (e) => {
@@ -845,9 +860,9 @@ function renderLabelRow(tbl) {
       e.preventDefault();
       commitEdit(); commitDayCode(); commitTripNo();
       if (inStopEdit) commitStopEdit();
-      inStopCol = false; inDC = false; inTN = false; inDest = false; inLB = true; lbCol = ci;
+      inStopCol = false; inDC = false; inTN = false; inDest = false; inLB = true; lbKind = kind; lbCol = ci;
       render();
-      if (e.detail >= 2 && !grid.readOnly) openLabelPicker(ci);
+      if (e.detail >= 2 && !grid.readOnly) openLabelPicker(ci, kind);
     });
   });
   tr.insertCell().className = 'cw-ins g-add';
@@ -855,46 +870,52 @@ function renderLabelRow(tbl) {
 
 function closeLabelPicker() { document.querySelector('.lb-pick')?.remove(); }
 
-/** The project's labels to choose from, under a column's label cell. @param {number} ci */
-function openLabelPicker(ci) {
+/** The project's labels or vehicles to choose from, under a column's cell. @param {number} ci @param {TagKind} kind */
+function openLabelPicker(ci, kind) {
   closeLabelPicker();
-  const anchor = document.querySelector(`.g-lb-cell[data-ci="${ci}"]`)?.getBoundingClientRect();
+  const tag = TAGS[kind];
+  const anchor = document.querySelector(`.g-lb-cell[data-kind="${kind}"][data-ci="${ci}"]`)?.getBoundingClientRect();
   const box = document.createElement('div');
   box.className = 'lb-pick';
-  const set = (/** @type {string} */ name) => { closeLabelPicker(); if (grid.cols[ci]) { grid.cols[ci].label = name; render(); } };
-  const names = [...(app.labels ?? [])].map((l) => l.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'nb'));
+  const set = (/** @type {string} */ name) => { closeLabelPicker(); if (grid.cols[ci]) { grid.cols[ci][tag.field] = name; render(); } };
+  const names = [...tag.list()].map((l) => l.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'nb'));
   for (const name of [...names, '']) {
     const item = document.createElement('div');
     item.className = 'lb-item';
-    if (name) { const sw = document.createElement('span'); sw.className = 'lb-swatch'; sw.style.background = labelColour(name); item.appendChild(sw); }
-    item.append(name || t('labelNone'));
+    if (name) { const sw = document.createElement('span'); sw.className = 'lb-swatch'; sw.style.background = tagColour(kind, name); item.appendChild(sw); }
+    item.append(name || t(tag.none));
     item.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); set(name); });
     box.appendChild(item);
   }
-  if (!names.length) { const hint = document.createElement('div'); hint.className = 'lb-hint'; hint.textContent = t('labelsNoneYet'); box.prepend(hint); }
+  if (!names.length) { const hint = document.createElement('div'); hint.className = 'lb-hint'; hint.textContent = t(tag.noneYet); box.prepend(hint); }
   box.style.left = `${anchor?.left ?? 200}px`;
   box.style.top = `${(anchor?.bottom ?? 160) + 2}px`;
   document.body.appendChild(box);
   setTimeout(() => document.addEventListener('mousedown', function away(e) { if (!/** @type {HTMLElement} */ (e.target).closest?.('.lb-pick')) { closeLabelPicker(); } document.removeEventListener('mousedown', away, true); }, true), 0);
 }
 
-/** Keys in the label row. @param {KeyboardEvent} e */
+/** Keys in a tag row. @param {KeyboardEvent} e */
 function keyLabel(e) {
   const col = grid.cols[lbCol];
+  const field = TAGS[lbKind].field;
   if (e.ctrlKey || e.metaKey) {
     const k = e.key.toLowerCase();
-    if (k === 'c' && col) { e.preventDefault(); lbClip = col.label ?? ''; void navigator.clipboard?.writeText(lbClip).catch(() => {}); }
-    if (k === 'v' && col && lbClip != null && !grid.readOnly) { e.preventDefault(); col.label = lbClip; render(); }
+    if (k === 'c' && col) { e.preventDefault(); const v = col[field] ?? ''; lbClip[lbKind] = v; void navigator.clipboard?.writeText(v).catch(() => {}); }
+    const clip = lbClip[lbKind];
+    if (k === 'v' && col && clip != null && !grid.readOnly) { e.preventDefault(); col[field] = clip; render(); }
     return;
   }
+  // Up from the vehicle row goes to the label row when it is shown
+  const up = () => { if (lbKind === 'vehicle' && grid.labelRow) { lbKind = 'label'; render(); } else { inLB = false; inDC = true; dcCol = lbCol; render(); } };
+  const down = () => { if (lbKind === 'label' && grid.vehicleRow) { lbKind = 'vehicle'; render(); } else { inLB = false; dcCol = lbCol; downFromDayCodes(); } };
   switch (e.key) {
     case 'ArrowLeft': e.preventDefault(); lbCol = Math.max(0, lbCol - 1); render(); break;
     case 'ArrowRight': e.preventDefault(); lbCol = Math.min(grid.cols.length - 1, lbCol + 1); render(); break;
-    case 'ArrowUp': e.preventDefault(); inLB = false; inDC = true; dcCol = lbCol; render(); break;
-    case 'ArrowDown': e.preventDefault(); inLB = false; dcCol = lbCol; downFromDayCodes(); break;
+    case 'ArrowUp': e.preventDefault(); up(); break;
+    case 'ArrowDown': e.preventDefault(); down(); break;
     case 'Escape': e.preventDefault(); closeLabelPicker(); inLB = false; render(); break;
-    case 'Enter': case 'F2': e.preventDefault(); if (!grid.readOnly) openLabelPicker(lbCol); break;
-    case 'Delete': case 'Backspace': e.preventDefault(); if (col && !grid.readOnly) { col.label = ''; render(); } break;
+    case 'Enter': case 'F2': e.preventDefault(); if (!grid.readOnly) openLabelPicker(lbCol, lbKind); break;
+    case 'Delete': case 'Backspace': e.preventDefault(); if (col && !grid.readOnly) { col[field] = ''; render(); } break;
   }
 }
 
@@ -1549,6 +1570,7 @@ function showCtx(x, y, isDC = false) {
   $('gctx-dest').style.display = 'none';
   if (isDC) $('gc-tripno').textContent = t(grid.tripRow ? 'ctxTripHide' : 'ctxTripShow');
   if (isDC) $('gc-labels').textContent = t(grid.labelRow ? 'ctxLabelsHide' : 'ctxLabelsShow');
+  if (isDC) $('gc-vehicles').textContent = t(grid.vehicleRow ? 'ctxVehiclesHide' : 'ctxVehiclesShow');
   if (!isStop && !isDC && ctxC >= 0 && ctxC < grid.cols.length) {
     const cell = grid.cols[ctxC].cells[ctxR];
     const timed = !!(cell && cell.time && cell.time !== '|'), withIx = timed && !!cell.interchange;
@@ -1841,17 +1863,20 @@ export function initGrid() {
     hideCtx(); render();
   });
   $('gc-add-note').addEventListener('click', () => { hideCtx(); openNoteOnSelection(ctxR, ctxC); });
-  $('gc-labels').addEventListener('click', () => {
-    hideCtx();
-    if (grid.readOnly) return;
-    if (grid.labelRow) {
-      if (grid.cols.some((/** @type {any} */ c) => c.label) && !confirm(t('confirmLabelsHide'))) return;
-      for (const c of grid.cols) c.label = '';
-      inLB = false;
-    }
-    grid.labelRow = !grid.labelRow;
-    render();
-  });
+  // Show or hide a tag row; hiding removes what is in it (after asking)
+  for (const [id, kind, rowKey, ask] of /** @type {const} */ ([['gc-labels', 'label', 'labelRow', 'confirmLabelsHide'], ['gc-vehicles', 'vehicle', 'vehicleRow', 'confirmVehiclesHide']])) {
+    $(id).addEventListener('click', () => {
+      hideCtx();
+      if (grid.readOnly) return;
+      if (grid[rowKey]) {
+        if (grid.cols.some((/** @type {any} */ c) => c[kind]) && !confirm(t(ask))) return;
+        for (const c of grid.cols) c[kind] = '';
+        if (lbKind === kind) inLB = false;
+      }
+      grid[rowKey] = !grid[rowKey];
+      render();
+    });
+  }
   $('gc-tripno').addEventListener('click', () => {
     hideCtx();
     if (grid.readOnly) return;
