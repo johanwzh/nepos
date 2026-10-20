@@ -51,3 +51,40 @@ describe('version history', () => {
     expect(document.getElementById('help-body')?.textContent).not.toContain('Ikke publisert');
   });
 });
+
+describe('what is new after an update (user 2026-10-21)', () => {
+  const MD = `## 2.3.0 — 2026-10-21\n\n- **Vehicles.**\n\n## 2.2.0 — 2026-10-19\n\n- **Labels.**\n\n## 2.1.0 — 2026-10-18\n\n- Old.\n`;
+  /** @param {Record<string, string>} [init] */
+  const store = (init = {}) => { const m = new Map(Object.entries(init)); return { getItem: (/** @type {string} */ k) => m.get(k) ?? null, setItem: (/** @type {string} */ k, /** @type {string} */ v) => { m.set(k, v); }, m }; };
+
+  it('shows the versions since the one seen last, then remembers this one', async () => {
+    const { showWhatsNew } = await import('../../src/ui/help.js');
+    const s = store({ 'nepos.seenVersion': '2.1.0' });
+    expect(showWhatsNew({ md: MD, running: '2.3.0', storage: s })).toBe(true);
+    const dlg = /** @type {HTMLDialogElement} */ (document.getElementById('help-dlg'));
+    expect(dlg.open).toBe(true);
+    expect(document.getElementById('help-title')?.textContent).toContain('2.3.0');
+    expect(document.getElementById('help-body')?.textContent).toContain('Vehicles');
+    expect(document.getElementById('help-body')?.textContent).toContain('Labels');
+    expect(document.getElementById('help-body')?.textContent).not.toContain('Old');
+    expect(s.m.get('nepos.seenVersion')).toBe('2.3.0');
+    dlg.close();
+    expect(showWhatsNew({ md: MD, running: '2.3.0', storage: s })).toBe(false); // seen: not again
+  });
+
+  it('a returning user from before this feature sees this version\'s notes; a new user sees nothing', async () => {
+    const { showWhatsNew } = await import('../../src/ui/help.js');
+    const old = store({ 'nepos.lastTheme': 'dark' });
+    expect(showWhatsNew({ md: MD, running: '2.3.0', storage: old })).toBe(true);
+    expect(document.getElementById('help-body')?.textContent).not.toContain('Labels');
+    /** @type {HTMLDialogElement} */ (document.getElementById('help-dlg')).close();
+    const fresh = store();
+    expect(showWhatsNew({ md: MD, running: '2.3.0', storage: fresh })).toBe(false);
+    expect(fresh.m.get('nepos.seenVersion')).toBe('2.3.0');
+  });
+
+  it('shows nothing when the running version is not released yet (no date)', async () => {
+    const { showWhatsNew } = await import('../../src/ui/help.js');
+    expect(showWhatsNew({ md: '## 2.4.0 — not released yet\n\n- x\n' + MD, running: '2.4.0', storage: store({ 'nepos.seenVersion': '2.3.0' }) })).toBe(false);
+  });
+});

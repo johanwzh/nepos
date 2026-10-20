@@ -25,10 +25,12 @@ import { initStopCard } from './ui/stop-card.js';
 import { initSpeedStrip } from './ui/speed-strip.js';
 import { initOrgRegister } from './ui/org-register.js';
 import { initMenus } from './ui/menus.js';
-import { initHelp } from './ui/help.js';
+import { initHelp, showWhatsNew } from './ui/help.js';
 import { initNoAutofill } from './ui/no-autofill.js';
 
 initNoAutofill(document);
+// Used Nepos before? (read before the shell stores the theme): then show what is new after an update
+const returningUser = (() => { try { return localStorage.getItem('nepos.lastTheme') != null; } catch { return false; } })();
 initShell();
 initOrgRegister({ fetchOnStart: true });
 initMenus();
@@ -68,6 +70,8 @@ refreshAll();
 // The splash stays for at least a second from page start, so everything settles behind it.
 const splash = document.getElementById('splash');
 if (splash) setTimeout(() => { splash.classList.add('done'); setTimeout(() => splash.remove(), 400); }, Math.max(0, 1000 - performance.now()));
+// After an update: what is new, once (user 2026-10-21); after the splash, not over it
+setTimeout(() => { showWhatsNew({ returning: returningUser }); }, Math.max(0, 1100 - performance.now()));
 if (sample) {
   const { createSampleFs } = await import('./ui/sample.js');
   await openFs(await createSampleFs(), { sample: true });

@@ -664,6 +664,16 @@ export function renderResourcesPage() {
   /** @type {ReturnType<typeof createListView>} */ (view).render();
 }
 
+let keysWired = false;
 export function initResourcesPage() {
   onRefresh(renderResourcesPage);
+  if (keysWired) return;
+  keysWired = true;
+  // Ctrl+S (user 2026-10-21): in an editor it saves that resource, on the list every unsaved one (as Kalendere)
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 's' || currentPage() !== 'assets' || document.querySelector('dialog[open]')) return;
+    e.preventDefault();
+    const id = app.resourceSelected;
+    void (id ? save(id) : saveAllResources());
+  }, true);
 }

@@ -81,6 +81,28 @@ export function showVersionHistory() {
     : `<p class="help-soon">${esc(t('helpVersionsNone'))}</p>`);
 }
 
+const SEEN_KEY = 'nepos.seenVersion';
+
+/**
+ * After an update (user 2026-10-21): the changelog's released sections newer than the version seen last, once. A user
+ * from before this was remembered (they have a remembered theme) sees this version's own notes; a new user sees none.
+ * @param {{ md?: string, running?: string, storage?: Pick<Storage, 'getItem' | 'setItem'>, returning?: boolean }} [opts]
+ *   returning: read before the app stores its theme at start-up (main.js); otherwise from storage
+ * @returns {boolean} whether it was shown
+ */
+export function showWhatsNew({ md = CHANGELOG, running = VERSION, storage = window.localStorage, returning = undefined } = {}) {
+  let seen = null;
+  try { seen = storage.getItem(SEEN_KEY); returning ??= storage.getItem('nepos.lastTheme') != null; } catch { return false; }
+  const remember = () => { try { storage.setItem(SEEN_KEY, running); } catch { /* not remembered */ } };
+  if (seen == null && !returning) { remember(); return false; }
+  const all = changelogSections(md, running);
+  const fresh = seen == null ? all.filter((s) => s.version === running) : all.filter((s) => cmpVersion(s.version, seen) > 0);
+  if (!fresh.length) return false; // nothing released since (or this version is not released yet)
+  remember();
+  show(t('helpWhatsNew', running), `<div class="help-versions">${fresh.map((s) => `<h3>${esc(s.version)} <small>${esc(s.date)}</small></h3>${s.html}`).join('')}</div>`);
+  return true;
+}
+
 export function showContact() {
   show(t('helpContact'), `<p>${esc(t('helpContactText'))}</p>
     <p><b>Entur</b><br><a href="mailto:kollektivdata@entur.org">kollektivdata@entur.org</a></p>`);

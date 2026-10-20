@@ -368,3 +368,32 @@ describe('Ressurser: a vehicle\'s own data (user 2026-10-20)', () => {
     expect(row?.querySelector('.lv-c-detail')?.textContent).toBe('B7 · Buss · Elektrisitet');
   });
 });
+
+describe('Ressurser: Ctrl+S (user 2026-10-21)', () => {
+  const ctrlS = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true }));
+
+  it('saves the open vehicle', async () => {
+    app.vehicles = [];
+    setPage('edit'); setPage('assets');
+    click(/** @type {HTMLElement} */ (document.getElementById('rs-new-vehicle')));
+    const name = /** @type {HTMLInputElement} */ (q('#re-name'));
+    name.value = 'Buss 7';
+    name.dispatchEvent(new Event('input'));
+    ctrlS();
+    await flush(); await flush();
+    expect(app.vehicles.map((v) => v.name)).toEqual(['Buss 7']);
+  });
+
+  it('saves an organisation\'s alias typed in the field', async () => {
+    setPage('edit'); setPage('assets');
+    const row = /** @type {HTMLElement} */ (rows().find((r) => r.querySelector('.lv-c-type')?.textContent === 'Operatør'));
+    dbl(row);
+    const alias = /** @type {HTMLInputElement} */ (q('.re-alias'));
+    alias.value = 'Buss1';
+    alias.dispatchEvent(new Event('input'));
+    ctrlS();
+    await flush(); await flush();
+    expect(JSON.stringify(app.orgs)).toContain('TST:Operator:Buss1');
+    expect(app.resourceDrafts.size).toBe(0);
+  });
+});
