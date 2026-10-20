@@ -1080,8 +1080,8 @@ function renderStopRow(tbl, stop, ri, linked) {
     td.dataset.r = String(ri);
     td.dataset.c = String(ci);
     const cell = col.cells[ri];
-    const isSel = !inDC && !inTN && !inStopCol && !inStopEdit && ri === ancR && ci === ancC;
-    const isRange = !inDC && !inTN && !inStopCol && !inStopEdit && inRect(ri, ci) && !isSel;
+    const isSel = !inDC && !inTN && !inLB && !inStopCol && !inStopEdit && ri === ancR && ci === ancC;
+    const isRange = !inDC && !inTN && !inLB && !inStopCol && !inStopEdit && inRect(ri, ci) && !isSel;
     if (cell && cell.interchange) td.classList.add(cell.interchange.type === 'guaranteed' ? 'g-ix-g' : 'g-ix-s');
     const into = targetsNow.get(`${ri},${ci}`);
     if (into) td.classList.add(into === 'guaranteed' ? 'g-ix-tg' : 'g-ix-ts');

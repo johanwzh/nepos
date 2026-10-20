@@ -13,6 +13,7 @@ import { listRoutes, readRoute } from '../project/routes.js';
 import { checkRouteFile } from '../core/integrity/check.js';
 import { quayInfo, loadProjectQuays } from './quays.js';
 import { routeMissingForExport } from './link-router.js';
+import { ROUTING, routedLinks } from '../core/features.js';
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -83,7 +84,7 @@ async function runCheck() {
   // Lines set to "Eksporteres: nei" are left out entirely (navigation spec §4), damaged or not; other
   // damaged lines are still checked (and block the export).
   const exported = routes.filter((r) => (r.rs ? r.rs.exported !== false : !r.excluded));
-  const issues = checkForExport({ routes: exported, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, brandings: app.brandings, brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars, calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, changedOnDisk, vehicles: app.vehicles ?? [], speedLimits: meta.speedLimits ?? null, shapes: app.shapes });
+  const issues = checkForExport({ routes: exported, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, brandings: app.brandings, brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars, calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, changedOnDisk, vehicles: app.vehicles ?? [], speedLimits: meta.speedLimits ?? null, shapes: routedLinks(app.shapes) });
   result = { fs, issues };
   refreshAll(); // the route list shows the files as they are now
   return { routes: exported.map(({ code, rs }) => ({ code, rs })), issues };
@@ -98,7 +99,7 @@ async function runExport() {
     return;
   }
   const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: app.orgs, orgMode: orgExportMode(app.meta), brandings: app.brandings, calendars: app.calendars,
-    shapes: app.shapes, quayInfo });
+    shapes: routedLinks(app.shapes), quayInfo });
   const asZip = app.settings.exportAsZip !== false;
   let written = '';
   const ok = await runAction(async () => { written = await writeExport(fs, files, { codespace: meta.codespace, asZip }); });
@@ -164,6 +165,7 @@ function renderExportPage() {
   const open = !!app.meta;
   $('btn-netex').disabled = !open || busy;
   $('btn-route-links').disabled = !open || busy;
+  $('btn-route-links').hidden = !ROUTING; // routing is off for now (core/features.js)
   $('chk-zip').disabled = !open;
   $('chk-zip').checked = app.settings.exportAsZip !== false;
   const mode = orgExportMode(app.meta);

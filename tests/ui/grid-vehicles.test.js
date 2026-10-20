@@ -131,3 +131,14 @@ describe('the vehicle row: short codes and modes (user 2026-10-20)', () => {
     expect([...document.querySelectorAll('.lb-pick .lb-item')].map((x) => x.textContent)).toEqual(['Buss 7', 'Reserve', 'Ingen']);
   });
 });
+
+describe('one marker at a time (user 2026-10-20)', () => {
+  it('selecting a label or vehicle cell takes the marker off the timetable cell', () => {
+    const marked = () => document.querySelectorAll('#tbl td.is-anchor, #tbl td.in-range').length;
+    expect(marked()).toBe(1); // the first time is selected when a grid opens
+    down(vh(1));
+    expect(marked()).toBe(0);
+    down(lb(0));
+    expect(marked()).toBe(0);
+  });
+});

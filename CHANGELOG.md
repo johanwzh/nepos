@@ -4,6 +4,10 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 ## 2.3.0 — not released yet
 
+- **Routing is switched off for now** (a new routing service is planned): the map draws straight lines between the
+  stops again, nothing is routed in the background, and the export writes no ServiceLinks (Entur's import can make
+  them). The routing below stays in Nepos, ready to be switched back on.
+- **One marker at a time:** selecting a label or vehicle cell takes the marker off the timetable cell.
 - **The map is MapLibre** on OpenFreeMap's free vector tiles: Positron in light mode, Dark in dark mode. A custom
   raster tile address from before still works (links are then not routed).
 - **Routed links (ServiceLinks):** Nepos routes the link between every two stops with times in a trip, along roads,

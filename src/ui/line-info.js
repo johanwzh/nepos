@@ -9,6 +9,7 @@ import { quayInfo } from './quays.js';
 import { routeSummary } from './route-summary.js';
 import { grid, gridData } from './grid.js';
 import { gridKey } from './route-state.js';
+import { routedLinks } from '../core/features.js';
 
 /** @type {Map<string, any>} parsed saved texts */
 const parsed = new Map();
@@ -45,7 +46,7 @@ function check(routes) {
     routes, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(app.meta),
     codespace: app.meta?.codespace ?? '', orgsProblem: app.orgsError ? 'unreadable' : '', brandings: app.brandings,
     brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars,
-    calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, speedLimits: app.meta?.speedLimits ?? null, shapes: app.shapes, vehicles: app.vehicles ?? [],
+    calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, speedLimits: app.meta?.speedLimits ?? null, shapes: routedLinks(app.shapes), vehicles: app.vehicles ?? [],
   });
 }
 

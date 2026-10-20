@@ -73,8 +73,10 @@ describe('export page', () => {
     setPage('export');
     await settle();
     expect(document.getElementById('btn-validate')).toBeNull();
-    expect(document.getElementById('val-results').textContent).toContain('0 feil, 1 advarsel'); // only: its link is not routed yet (2.3)
-    expect(document.getElementById('val-results').textContent).toContain('ikke rutet ennå');
+    // Routing is off for now (core/features.js): no 'link not routed yet' warning, so the line checks clean
+    expect(document.getElementById('val-results').textContent).toContain('Ingen problemer funnet');
+    expect(document.getElementById('val-results').textContent).not.toContain('ikke rutet ennå');
+    expect(/** @type {HTMLElement} */ (document.getElementById('btn-route-links')).hidden).toBe(true);
   });
 
   it('does not run the project check while another page is shown (review I5)', async () => {

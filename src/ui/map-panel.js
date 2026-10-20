@@ -14,6 +14,7 @@ import { modeIconSvg } from './mode-icons.js';
 import { placeMenu } from './place-menu.js';
 import { createMapView } from './map-view.js';
 import { linkFeatures, onLinksChanged, blockLink, routeAgain, linesUsing, linkFor, linkBudgetLeft } from './link-router.js';
+import { ROUTING } from '../core/features.js';
 
 /** @type {import('./map-view.js').MapView | null} */ let view = null;
 let styleKey = '';
@@ -164,7 +165,7 @@ function update() {
   const col = grid.active ? grid.cols[ci] : null;
   const trip = col ? tripOnMap(grid, col, quayInfo) : { points: [], missing: [] };
 
-  const notes = [trip.missing.length ? t('mapMissing', trip.missing.join(', ')) : '', linkBudgetLeft() ? '' : t('linkBudgetUsed')].filter(Boolean);
+  const notes = [trip.missing.length ? t('mapMissing', trip.missing.join(', ')) : '', !ROUTING || linkBudgetLeft() ? '' : t('linkBudgetUsed')].filter(Boolean);
   $('map-missing').hidden = !notes.length;
   $('map-missing').textContent = notes.join(' ');
   /** @type {HTMLElement | null} */ (document.querySelector('#map-inner .map-hint-overlay')).style.display = trip.points.length ? 'none' : '';
@@ -176,7 +177,7 @@ function update() {
   const here = trip.points.find((p) => p.ri === ri || (grid.stops[/** @type {number} */ (ri)]?.isDwellArr && p.ri === /** @type {number} */ (ri) + 1));
   const ink = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#000';
   // Routed links replace the straight trip line when the line's mode is routed (2.3)
-  const links = col ? linkFeatures(col) : null;
+  const links = ROUTING && col ? linkFeatures(col) : null;
   v.setLinks(links ?? []);
   v.setTrip({
     // Bold stops (the main stops in the timetable) are the larger dots

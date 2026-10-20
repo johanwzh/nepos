@@ -16,6 +16,7 @@ import { initRouteEditor } from './ui/route-editor.js';
 import { initExportPage } from './ui/export-page.js';
 import { initMapPanel } from './ui/map-panel.js';
 import { initLinkRouter } from './ui/link-router.js';
+import { ROUTING } from './core/features.js';
 import { createShapeEngine } from './shapes/index.js';
 import { styleUrlFor, styleSourceFrom } from './core/map-style.js';
 import { app } from './ui/state.js';
@@ -44,8 +45,9 @@ initFootnoteEditor();
 initRouteEditor();
 initExportPage();
 initMapPanel();
-// Routed links (2.3): the engine runs in a worker on the map style's own vector tiles; made on first need
-initLinkRouter({
+// Routed links (2.3): the engine runs in a worker on the map style's own vector tiles; made on first need.
+// Off for now (core/features.js): the map draws straight lines.
+if (ROUTING) initLinkRouter({
   makeEngine: async () => {
     const style = styleUrlFor(app.settings, 'light');
     if (typeof style !== 'string') return null; // a raster map: no vector tiles, links stay straight
