@@ -23,6 +23,8 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   in the timetable (right-click a day code → Show vehicles) to say which vehicle runs each trip; it works like the
   label row. Saved in `data/vehicles.json` and as a text row in the line file. Not exported yet: later a vehicle will
   refer to Entur's vehicle register.
+- **Fewer destination warnings:** the export check no longer warns that a destination or via is not one of the stops
+  the trip goes on to (it repeated itself on every trip). The other destination checks stay.
 
 ## 2.2.0 — 2026-10-19
 

@@ -219,6 +219,9 @@ function checkLinks(code, rs, { shapes, calendars, quayInfo, add }) {
   if (detours.length) add('warning', 'link-detour', { route: code, detail: list(detours) });
 }
 
+/** The "not one of the stops this trip goes on to" warning: off for now (user 2026-10-20). */
+const DEST_NOT_ON_ROUTE = false;
+
 /**
  * A trip's destinations (destination displays spec): every trip needs one; "via" is data, not text;
  * a change on a stop the trip does not serve, and a destination or via the trip does not go on to,
@@ -236,7 +239,9 @@ function checkDestinations(grid, col, add) {
     if (hasViaWord(seg.dest.text)) once('error', 'dest-via-text', { detail: seg.dest.text });
     if (seg.state === 'unserved') { once('warning', 'dest-unserved', { detail: grid.stops[seg.row]?.name ?? '' }); continue; }
     if (seg.state === 'last') { once('warning', 'dest-last-dropped', { detail: grid.stops[seg.row]?.name ?? '' }); continue; }
-    if (seg.state !== 'ok') continue;
+    // 'dest-not-on-route' (a destination or via the trip does not go on to) is off for now: too repetitive (user
+    // 2026-10-20). Its code and texts are kept; set DEST_NOT_ON_ROUTE to bring it back.
+    if (seg.state !== 'ok' || !DEST_NOT_ON_ROUTE) continue;
     const ahead = new Set(calls.filter((c) => c.ri > seg.row).map((c) => word(c.name)));
     for (const text of [seg.dest.text, ...seg.dest.vias]) if (!ahead.has(word(text))) once('warning', 'dest-not-on-route', { detail: text });
   }

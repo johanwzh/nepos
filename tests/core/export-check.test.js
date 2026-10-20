@@ -302,12 +302,12 @@ describe('destinations', () => {
     expect(destCodes(rs)).toEqual(['warning:dest-unserved']);
   });
 
-  it('warns about a destination or a via the trip does not go to', () => {
+  it('does not warn about a destination or a via the trip does not go to (too repetitive, off for now: user 2026-10-20)', () => {
     const rs = route();
     grid0(rs).cols[0].dest = { text: 'Røros', vias: [] };
-    expect(destCodes(rs)).toEqual(['warning:dest-not-on-route']);
+    expect(destCodes(rs)).toEqual([]);
     grid0(rs).cols[0].dest = { text: 'Oslo', vias: ['Støren'] };
-    expect(check(rs).find((i) => i.code === 'dest-not-on-route')?.detail).toBe('Støren');
+    expect(check(rs).filter((i) => i.code === 'dest-not-on-route')).toEqual([]);
   });
 
   it('finds nothing wrong with a destination, a via and a change that fit the trip', () => {
@@ -331,16 +331,6 @@ describe('check messages (user 2026-10-18)', () => {
     expect(issues[0]).toMatchObject({ code: 'route-damaged', detail: '#KOS would be lost' });
   });
 
-  it('warns once about a destination that appears twice on a trip', () => {
-    const rs = route();
-    const g = grid0(rs);
-    g.stops.push({ name: 'Jernbanetorget', stopId: 'NSR:Quay:7203', bold: false, sep: false, isDwellArr: false, price: null });
-    g.cols[0].cells.push({ time: '0720', dayOffset: 0, suffix: '', interchange: null });
-    g.cols[0].dests.push(null);
-    g.cols[0].dest = { text: 'Sentrum', vias: [] };
-    g.cols[0].dests[1] = { text: 'Sentrum', vias: ['Oslo'] };
-    expect(check(rs).filter((i) => i.code === 'dest-not-on-route' && i.detail === 'Sentrum')).toHaveLength(1);
-  });
 });
 
 describe('organisation aliases (user 2026-10-18)', () => {
