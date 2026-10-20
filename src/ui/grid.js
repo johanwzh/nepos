@@ -69,6 +69,24 @@ function posOf(stop) {
 let ancR = 0, ancC = 0, endR = 0, endC = 0;
 let editing = false, editBuf = '';
 let inDC = false, dcCol = 0, dcEdit = false, dcBuf = '';
+/** Several day codes (user 2026-10-21): the run dcCol..dcEnd, valid while dcSpanAt === dcCol (any other move of dcCol
+ *  makes it one column again); inFN: the selection is in the note row above the day codes, not on the codes */
+let dcEnd = 0, dcSpanAt = -1, inFN = false;
+/** The selected columns in the day-code or note row, from left to right. @returns {[number, number]} */
+const dcRange = () => { const end = dcSpanAt === dcCol ? dcEnd : dcCol; return [Math.min(dcCol, end), Math.max(dcCol, end)]; };
+/** @param {number} ci */
+const inDcRange = (ci) => { const [a, b] = dcRange(); return ci >= a && ci <= b; };
+/** Extend the run to column ci (Shift+click, Shift+arrows). @param {number} ci */
+const extendDc = (ci) => { if (dcSpanAt !== dcCol) { dcSpanAt = dcCol; dcEnd = dcCol; } dcEnd = Math.max(0, Math.min(grid.cols.length - 1, ci)); };
+/** The note editor for every selected column. */
+function openColNotes() {
+  const [a, b] = dcRange();
+  const cells = [];
+  for (let ci = a; ci <= b; ci++) cells.push({ ri: 0, ci });
+  openFnEditor('col', 0, a, cells.length > 1 ? cells : undefined);
+}
+/** The note and dates copied last in the note row */
+let fnClip = /** @type {{ note: string, dates: any[] } | null} */ (null);
 /** The trip-number row: selected (its column is dcCol), being typed in */
 let inTN = false, tnEdit = false, tnBuf = '';
 let inStopCol = false;
@@ -494,6 +512,7 @@ function completeIx(tr, tc) {
 // ─── Render ─────────────────────────────────────────────────────────────────
 export function render() {
   if (!grid.active) return;
+  if (!inDC) { inFN = false; dcSpanAt = -1; }
   /** @type {Set<string>} */
   const linked = new Set();
   if (!inDC && !inStopCol) {
@@ -795,7 +814,21 @@ function renderFootRow(tbl) {
   tr.insertCell().className = 'cw-name g-sticky1';
   grid.cols.forEach((col, ci) => {
     const td = tr.insertCell();
-    td.className = 'cw-time';
+    td.className = 'cw-time g-fn-cell';
+    td.dataset.ci = String(ci);
+    if (inDC && inFN && inDcRange(ci)) td.classList.add('fn-sel');
+    // A note cell can be selected (user 2026-10-21): Shift+click for several, a double-click opens the note
+    td.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      if (ixMode) { exitIx(); return; }
+      commitEdit(); commitDayCode(); commitTripNo();
+      if (inStopEdit) commitStopEdit();
+      if (e.shiftKey && inDC && inFN) extendDc(ci);
+      else { inStopCol = false; inTN = false; inDest = false; inLB = false; inDC = true; inFN = true; dcEdit = false; dcCol = ci; dcSpanAt = -1; }
+      render();
+      if (e.detail >= 2 && !grid.readOnly) openColNotes();
+    });
     // The column's note and dates, as small marks over the day code
     if (col.note) {
       const dot = document.createElement('span');
@@ -1000,7 +1033,7 @@ function renderDayCodeRow(tbl) {
     const td = tr.insertCell();
     td.className = 'cw-time g-dc-cell';
     td.dataset.ci = String(ci);
-    const isSel = inDC && ci === dcCol && !dcEdit, isEdit = inDC && ci === dcCol && dcEdit;
+    const isSel = inDC && !inFN && inDcRange(ci) && !dcEdit, isEdit = inDC && ci === dcCol && dcEdit;
     if (isEdit) { td.classList.add('dc-edit'); td.innerHTML = esc(dcBuf) + '▌'; }
     else { td.textContent = col.dayCode; if (isSel) td.classList.add('dc-sel'); }
     td.addEventListener('mousedown', (e) => {
@@ -1008,13 +1041,16 @@ function renderDayCodeRow(tbl) {
       e.preventDefault();
       if (ixMode) { exitIx(); return; }
       commitEdit(); commitDayCode(); commitStopEdit();
-      inStopCol = false; inDC = true; dcCol = ci; dcEdit = false;
+      if (e.shiftKey && inDC) { inFN = false; extendDc(ci); render(); return; }
+      inStopCol = false; inDC = true; inFN = false; dcCol = ci; dcSpanAt = -1; dcEdit = false;
       render();
     });
     td.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       if (ixMode || grid.readOnly) return;
-      ctxDCCol = ci; dcCol = ci; inDC = true; inStopCol = false;
+      // Inside the selected run the run stays (a note for all of them); elsewhere this column alone
+      if (!(inDC && inDcRange(ci))) { dcCol = ci; dcSpanAt = -1; }
+      ctxDCCol = ci; inDC = true; inFN = false; inStopCol = false;
       showCtx(e.clientX, e.clientY, true);
     });
   });
@@ -1222,10 +1258,26 @@ function onKeyDown(e) {
     return;
   }
   // Day codes: Ctrl+C on a column's day code, Ctrl+V on another's (user 2026-10-18)
+  if ((e.ctrlKey || e.metaKey) && inDC && inFN && grid.cols[dcCol]) {
+    const k = e.key.toLowerCase();
+    const [a, b] = dcRange();
+    if (k === 'c') { e.preventDefault(); const col = grid.cols[a]; fnClip = { note: col.note ?? '', dates: structuredClone(col.dates ?? []) }; void navigator.clipboard?.writeText(fnClip.note).catch(() => {}); return; }
+    if (k === 'v' && !grid.readOnly && fnClip) {
+      e.preventDefault();
+      for (let ci = a; ci <= b; ci++) { grid.cols[ci].note = fnClip.note; grid.cols[ci].dates = structuredClone(fnClip.dates); }
+      render(); return;
+    }
+    return;
+  }
   if ((e.ctrlKey || e.metaKey) && inDC && !dcEdit && grid.cols[dcCol]) {
     const k = e.key.toLowerCase();
     if (k === 'c') { e.preventDefault(); dcClip = grid.cols[dcCol].dayCode; void navigator.clipboard?.writeText(dcClip).catch(() => {}); return; }
-    if (k === 'v' && !grid.readOnly && dcClip && isValidDayCode(dcClip)) { e.preventDefault(); grid.cols[dcCol].dayCode = dcClip; render(); return; }
+    if (k === 'v' && !grid.readOnly && dcClip && isValidDayCode(dcClip)) {
+      e.preventDefault();
+      const [a, b] = dcRange();
+      for (let ci = a; ci <= b; ci++) grid.cols[ci].dayCode = dcClip;
+      render(); return;
+    }
   }
   if ((e.ctrlKey || e.metaKey) && !editing && !dcEdit && !inStopCol && !inDC && !inTN && !tnEdit && !inLB) {
     if (e.key === 'c') { e.preventDefault(); copySelection(); return; }
@@ -1236,6 +1288,7 @@ function onKeyDown(e) {
   if (tnEdit) { keyTripEdit(e); return; }
   if (inTN) { keyTripNav(e); return; }
   if (dcEdit) { keyDayCodeEdit(e); return; }
+  if (inDC && inFN) { keyNoteRow(e); return; }
   if (inDC) { keyDayCodeNav(e); return; }
   if (inStopCol) { keyStopCol(e); return; }
   if (editing) { keyEdit(e); return; }
@@ -1336,14 +1389,29 @@ function downFromDayCodes(pastTrip = false) {
 /** @param {KeyboardEvent} e */
 function keyDayCodeNav(e) {
   switch (e.key) {
-    case 'ArrowLeft': e.preventDefault(); dcCol = Math.max(0, dcCol - 1); render(); break;
-    case 'ArrowRight': e.preventDefault(); dcCol = Math.min(grid.cols.length - 1, dcCol + 1); render(); break;
+    case 'ArrowLeft': e.preventDefault(); if (e.shiftKey) extendDc(dcRangeEnd() - 1); else { dcCol = Math.max(0, dcCol - 1); dcSpanAt = -1; } render(); break;
+    case 'ArrowRight': e.preventDefault(); if (e.shiftKey) extendDc(dcRangeEnd() + 1); else { dcCol = Math.min(grid.cols.length - 1, dcCol + 1); dcSpanAt = -1; } render(); break;
     case 'ArrowDown': e.preventDefault(); downFromDayCodes(); break;
     case 'Escape': e.preventDefault(); inDC = false; render(); break;
-    case 'F7': e.preventDefault(); openFnEditor('col', 0, dcCol); break;
+    case 'F7': e.preventDefault(); openColNotes(); break;
     case 'Enter': e.preventDefault(); dcEdit = true; dcBuf = grid.cols[dcCol].dayCode; render(); break;
     default:
       if (e.key.length === 1 && /[A-Za-z0-9]/.test(e.key) && !e.ctrlKey && !e.metaKey) { e.preventDefault(); dcEdit = true; dcBuf = e.key.toUpperCase(); render(); }
+  }
+}
+
+/** The moving end of the run (dcCol alone when there is none). */
+const dcRangeEnd = () => (dcSpanAt === dcCol ? dcEnd : dcCol);
+
+/** Keys in the note row (user 2026-10-21): arrows (Shift for several), Enter or F7 edits the notes, down to the day codes. @param {KeyboardEvent} e */
+function keyNoteRow(e) {
+  switch (e.key) {
+    case 'ArrowLeft': e.preventDefault(); if (e.shiftKey) extendDc(dcRangeEnd() - 1); else { dcCol = Math.max(0, dcCol - 1); dcSpanAt = -1; } render(); break;
+    case 'ArrowRight': e.preventDefault(); if (e.shiftKey) extendDc(dcRangeEnd() + 1); else { dcCol = Math.min(grid.cols.length - 1, dcCol + 1); dcSpanAt = -1; } render(); break;
+    case 'ArrowDown': e.preventDefault(); inFN = false; render(); break;
+    case 'Escape': e.preventDefault(); inDC = false; render(); break;
+    case 'Enter': case 'F7': e.preventDefault(); if (!grid.readOnly) openColNotes(); break;
+    default: if (e.key.length === 1) e.preventDefault(); // typing here does not change a day code
   }
 }
 
@@ -1917,5 +1985,5 @@ export function initGrid() {
   });
   $('gc-dc-dates').addEventListener('click', () => { hideCtx(); openDates('col', 0, ctxDCCol >= 0 ? ctxDCCol : dcCol); });
   $('gc-cell-dates').addEventListener('click', () => { hideCtx(); openDates('cell', ctxR, ctxC); });
-  $('gc-dc-note').addEventListener('click', () => { hideCtx(); openFnEditor('col', 0, ctxDCCol >= 0 ? ctxDCCol : dcCol); });
+  $('gc-dc-note').addEventListener('click', () => { hideCtx(); openColNotes(); });
 }

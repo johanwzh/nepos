@@ -10,6 +10,10 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **One marker at a time:** selecting a label or vehicle cell takes the marker off the timetable cell.
 - **Ctrl+S on Ressurser** saves the open organisation alias, merkevare, label or vehicle (on the list: all unsaved ones).
 - **What is new:** after an update, Nepos shows the changes since the version you used last, once.
+- **Several columns at once:** Shift+click or Shift+arrows in the day-code row select several columns; F7 (or
+  right-click → note) puts one note on all of them, and Ctrl+V pastes a day code into all of them.
+- **The note row can be selected:** click a cell in the row above the day codes (Shift+click for several); a
+  double-click or Enter edits the note, Ctrl+C / Ctrl+V copies a column's note and dates to other columns.
 - **The map is MapLibre** on OpenFreeMap's free vector tiles: Positron in light mode, Dark in dark mode. A custom
   raster tile address from before still works (links are then not routed).
 - **Routed links (ServiceLinks):** Nepos routes the link between every two stops with times in a trip, along roads,
