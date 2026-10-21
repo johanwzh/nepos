@@ -35,10 +35,8 @@ export function ernModeNeTEx(n) { const m=ERN_MODES[+n]; return m?{mode:m.mode,s
 
 export function dirType(i) { return i===0?'outbound':'inbound'; }
 
-/** Where the files come from (user 2026-10-21): every PublicationDelivery's Description names Nepos and its version. */
-const NEPOS_URL = 'https://github.com/johanwzh/nepos';
-
-export function pubDelivery(cs, desc, compositeFrame, timestamp = new Date().toISOString().slice(0,10)+'T00:00:00') {
+/** Every PublicationDelivery's Description says only which app and version made it (user 2026-10-21). */
+export function pubDelivery(cs, compositeFrame, timestamp = new Date().toISOString().slice(0,10)+'T00:00:00') {
     const ts = timestamp;
     return `<?xml version="1.0" encoding="utf-8"?>
 <PublicationDelivery
@@ -47,7 +45,7 @@ export function pubDelivery(cs, desc, compositeFrame, timestamp = new Date().toI
     version="${NETEX_PROFILE}">
   <PublicationTimestamp>${ts}</PublicationTimestamp>
   <ParticipantRef>${xe(cs)}</ParticipantRef>
-  <Description>${xe(`${desc} · made with Nepos ${VERSION} (${NEPOS_URL})`)}</Description>
+  <Description>Created with Nepos ${xe(VERSION)}</Description>
   <dataObjects>
 ${compositeFrame}
   </dataObjects>

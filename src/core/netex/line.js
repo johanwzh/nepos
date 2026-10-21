@@ -288,7 +288,7 @@ ${[...sjOnly, ...dsjs].join('\n')}
     </TimetableFrame>`;
 
     const cf = compositeFrame(cs,`Line_${routeCode}`,lineFrom,lineTo,false,svcFrame,ttFrame);
-    return pubDelivery(cs, `${cs} Line ${routeCode}`, cf, timestamp);
+    return pubDelivery(cs, cf, timestamp);
 }
 
 /**

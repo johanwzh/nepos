@@ -123,5 +123,5 @@ ${odXml}
 
     const frames = [resFrame, svcFrame, calFrame].filter(Boolean);
     const cf = compositeFrame(cs,'shared',overallFrom,overallTo,false,...frames);
-    return pubDelivery(cs, `${cs} shared data`, cf, timestamp);
+    return pubDelivery(cs, cf, timestamp);
 }

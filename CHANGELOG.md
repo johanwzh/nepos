@@ -4,8 +4,7 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 ## 2.3.1 — not released yet
 
-- **The NeTEx files say where they come from:** each file's PublicationDelivery Description ends with "made with
-  Nepos <version> (https://github.com/johanwzh/nepos)".
+- **The NeTEx files say where they come from:** the PublicationDelivery Description is "Created with Nepos <version>".
 
 ## 2.3.0 — 2026-10-20
 

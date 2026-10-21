@@ -28,7 +28,7 @@ describe('NeTEx XML helpers', () => {
   });
 
   it('uses the given publication timestamp', () => {
-    expect(pubDelivery('TST', 'x', '', '2026-01-01T00:00:00'))
+    expect(pubDelivery('TST', '', '2026-01-01T00:00:00'))
       .toContain('<PublicationTimestamp>2026-01-01T00:00:00</PublicationTimestamp>');
   });
 });
@@ -36,7 +36,8 @@ describe('NeTEx XML helpers', () => {
 describe('the source of the files (user 2026-10-21)', () => {
   it('says in PublicationDelivery\'s Description that Nepos made it, with the version', async () => {
     const { VERSION } = await import('../../../src/version.js');
-    const xml = pubDelivery('ATU', 'ATU Line 35', '<CompositeFrame/>', '2026-10-21T00:00:00');
-    expect(xml).toContain(`<Description>ATU Line 35 · made with Nepos ${VERSION} (https://github.com/johanwzh/nepos)</Description>`);
+    const xml = pubDelivery('ATU', '<CompositeFrame/>', '2026-10-21T00:00:00');
+    expect(xml).toContain(`<Description>Created with Nepos ${VERSION}</Description>`);
+    expect(xml.match(/<Description>/g)).toHaveLength(1); // only the app and version: no file name, no address
   });
 });
