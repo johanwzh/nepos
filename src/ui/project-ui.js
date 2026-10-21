@@ -55,7 +55,7 @@ export async function openFs(fs, { handle = null, sample = false } = {}) {
     orgs: result.orgs, orgsError: result.orgsError,
     brandings: result.brandings, brandingsError: result.brandingsError,
     labels: result.labels ?? [], labelsError: result.labelsError ?? null,
-    vehicles: result.vehicles ?? [], vehiclesError: result.vehiclesError ?? null,
+    vehicles: result.vehicles ?? [], vehiclesError: result.vehiclesError ?? null, exports: result.exports ?? {},
     shapes: result.shapes ?? new Map(), shapesError: result.shapesError ?? '',
     calendars: result.calendars, calendarsError: result.calendarsError,
     routes: result.routes, activeRoute: null, routeState: null, dirty: false, drafts: new Map(), calendarDrafts: new Map(), calendarSelected: null, resourceDrafts: new Map(), resourceSelected: null, calendarMonth: '',
@@ -191,7 +191,7 @@ export async function pickAndOpen() {
 /** Close the open project (after the unsaved-changes check). */
 export async function closeProject() {
   if (!app.meta || !(await beforeLeave())) return;
-  Object.assign(app, { fs: null, handle: null, meta: null, routes: [], orgs: [], orgsError: null, brandings: [], brandingsError: null, labels: [], labelsError: null, vehicles: [], vehiclesError: null, shapes: new Map(), shapesError: '',
+  Object.assign(app, { fs: null, handle: null, meta: null, routes: [], orgs: [], orgsError: null, brandings: [], brandingsError: null, labels: [], labelsError: null, vehicles: [], vehiclesError: null, exports: {}, shapes: new Map(), shapesError: '',
     calendars: [], calendarsError: null, activeRoute: null, routeState: null, dirty: false, drafts: new Map(), calendarDrafts: new Map(), calendarSelected: null, resourceDrafts: new Map(), resourceSelected: null, fileNameProblems: [], sampleMode: false });
   clearGrid();
   refreshAll();

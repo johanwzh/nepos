@@ -14,6 +14,9 @@ import { checkRouteFile } from '../core/integrity/check.js';
 import { quayInfo, loadProjectQuays } from './quays.js';
 import { routeMissingForExport } from './link-router.js';
 import { ROUTING, routedLinks } from '../core/features.js';
+import { groupIssues } from '../core/issue-groups.js';
+import { recordExports, writeExports } from '../project/exports-store.js';
+import { lineErn } from './line-text.js';
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -104,6 +107,9 @@ async function runExport() {
   let written = '';
   const ok = await runAction(async () => { written = await writeExport(fs, files, { codespace: meta.codespace, asZip }); });
   if (ok) {
+    // Remember the export of each line, for Oversikt (user 2026-10-21): when, and what it looked like
+    app.exports = recordExports(app.exports ?? {}, checked.routes.map(({ code, rs }) => ({ code, text: lineErn(code, rs) })), new Date());
+    await runAction(() => writeExports(fs, app.exports));
     // Where it is, from the project folder (a web page knows no more of the path than that), as Explorer writes it
     const place = [app.handle?.name ?? app.meta?.name ?? '', ...written.split('/')].filter(Boolean).join('\\');
     setStatus(t('exportDone', place, files.length), false);
@@ -134,6 +140,22 @@ function issueLine(i) {
   </div>`;
 }
 
+/**
+ * A kind of problem on a line (user 2026-10-21): one issue as before; several as one row with a count that opens to
+ * the single issues, so hundreds of columns do not push the export button out of reach.
+ * @param {import('../core/issue-groups.js').IssueGroup} g
+ */
+function groupLine(g) {
+  if (g.count === 1) return issueLine(g.issues[0]);
+  const first = g.issues[0];
+  return `<details class="n2-group ${g.level}"><summary class="n2-issue ${g.level}">
+    <span class="n2-issue-ico">${g.level === 'error' ? '✖' : '⚠'}</span>
+    ${g.route ? `<span class="n2-issue-where">${esc(lineLabel(g.route))}</span>` : ''}
+    <span class="n2-issue-text">${esc(t(`chk:${g.code}`, first.detail ?? ''))}</span>
+    <span class="n2-group-count">×${g.count}</span>
+  </summary>${g.issues.map(issueLine).join('')}</details>`;
+}
+
 function renderResults() {
   const el = $('val-results');
   const run = result && result.fs === app.fs ? result : null;
@@ -145,7 +167,7 @@ function renderResults() {
   if (!current.issues.length) { el.innerHTML = `${live}<span class="n2-issue-ok">✔ ${esc(t('checkClean'))}</span>`; return; }
   const errors = current.issues.filter((i) => i.level === 'error').length;
   const warnings = current.issues.length - errors;
-  el.innerHTML = `${live}<div class="n2-issue-summary">${esc(t('checkSummary', errors, warnings))}</div>${current.issues.map(issueLine).join('')}`;
+  el.innerHTML = `${live}<div class="n2-issue-summary">${esc(t('checkSummary', errors, warnings))}</div>${groupIssues(current.issues).map(groupLine).join('')}`;
 }
 
 let wasOnPage = false;

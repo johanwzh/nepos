@@ -262,3 +262,38 @@ describe('"Rut manglende strekninger" (2.3)', () => {
     setPage('edit');
   });
 });
+
+describe('the problems, grouped (user 2026-10-21)', () => {
+  it('shows one row per kind per line, with a count, that opens to the single problems', async () => {
+    // Three trips, none with a destination: three "no destination" errors on line 50
+    const text = route('NSR:Quay:11972').replace('#TUR;0;DX67;0;0;0;0', '#TUR;0;DX67;0;0;0;0\r\n#TUR;1;DX67;0;0;0;0\r\n#TUR;2;DX67;0;0;0;0')
+      .replace('#TRC;0;0700;0;0;0;0;0', '#TRC;0;0700;0;0;0;0;0\r\n#TRC;1;0800;0;0;0;0;0\r\n#TRC;2;0900;0;0;0;0;0')
+      .replace('#TRC;0;0710;0;0;0;0;0', '#TRC;0;0710;0;0;0;0;0\r\n#TRC;1;0810;0;0;0;0;0\r\n#TRC;2;0910;0;0;0;0;0')
+      .replace('#DSK;0;0;;1\r\n', '');
+    await openProjectWith(text);
+    setPage('export');
+    await settle();
+    const results = /** @type {HTMLElement} */ (document.getElementById('val-results'));
+    const groups = [...results.querySelectorAll('details.n2-group')];
+    expect(groups).toHaveLength(1);
+    expect(groups[0].querySelector('summary')?.textContent).toContain('×3');
+    expect(groups[0].querySelectorAll(':scope > div.n2-issue')).toHaveLength(3);
+  });
+});
+
+describe('the export is remembered (user 2026-10-21)', () => {
+  it('a finished export records each exported line in data/exports.json', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    await click('btn-netex');
+    const records = JSON.parse(/** @type {string} */ (await readText(fs, 'data/exports.json'))).lines;
+    expect(Object.keys(records)).toEqual(['50']);
+    expect(records['50'].hash).toMatch(/^[0-9a-f]{8}$/);
+    expect(app.exports['50']).toEqual(records['50']);
+  });
+
+  it('a refused export records nothing', async () => {
+    await openProjectWith(route('104'));
+    await click('btn-netex');
+    expect(await readText(fs, 'data/exports.json')).toBeNull();
+  });
+});

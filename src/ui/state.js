@@ -28,6 +28,8 @@ export const app = {
   vehicles: [],
   /** @type {null | 'unreadable'} */
   vehiclesError: null,
+  /** @type {import('../project/exports-store.js').ExportRecords} when each line was last exported (Oversikt) */
+  exports: {},
   /** @type {Map<string, import('../core/link-state.js').SavedShape>} routed links, by fromQuay|toQuay|profile (2.3) */
   shapes: new Map(),
   /** @type {'' | 'unreadable'} */
