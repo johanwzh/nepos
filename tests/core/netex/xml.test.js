@@ -32,3 +32,11 @@ describe('NeTEx XML helpers', () => {
       .toContain('<PublicationTimestamp>2026-01-01T00:00:00</PublicationTimestamp>');
   });
 });
+
+describe('the source of the files (user 2026-10-21)', () => {
+  it('says in PublicationDelivery\'s Description that Nepos made it, with the version', async () => {
+    const { VERSION } = await import('../../../src/version.js');
+    const xml = pubDelivery('ATU', 'ATU Line 35', '<CompositeFrame/>', '2026-10-21T00:00:00');
+    expect(xml).toContain(`<Description>ATU Line 35 · made with Nepos ${VERSION} (https://github.com/johanwzh/nepos)</Description>`);
+  });
+});

@@ -2,6 +2,11 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
+## 2.3.1 — not released yet
+
+- **The NeTEx files say where they come from:** each file's PublicationDelivery Description ends with "made with
+  Nepos <version> (https://github.com/johanwzh/nepos)".
+
 ## 2.3.0 — 2026-10-20
 
 - **Vehicles:** the project's own vehicles ("Buss 7") on Ressurser, and a vehicle row in the timetable (right-click a

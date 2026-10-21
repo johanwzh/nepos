@@ -1,5 +1,6 @@
 // NeTEx XML helpers, ported from Nepos 1.5.7 (nepos.html lines 5742–5815).
 import { ERN_MODES } from '../ern/modes.js';
+import { VERSION } from '../../version.js';
 
 export const NETEX_PROFILE = '1.15:NO-NeTEx-networktimetable:1.5';
 
@@ -34,6 +35,9 @@ export function ernModeNeTEx(n) { const m=ERN_MODES[+n]; return m?{mode:m.mode,s
 
 export function dirType(i) { return i===0?'outbound':'inbound'; }
 
+/** Where the files come from (user 2026-10-21): every PublicationDelivery's Description names Nepos and its version. */
+const NEPOS_URL = 'https://github.com/johanwzh/nepos';
+
 export function pubDelivery(cs, desc, compositeFrame, timestamp = new Date().toISOString().slice(0,10)+'T00:00:00') {
     const ts = timestamp;
     return `<?xml version="1.0" encoding="utf-8"?>
@@ -43,7 +47,7 @@ export function pubDelivery(cs, desc, compositeFrame, timestamp = new Date().toI
     version="${NETEX_PROFILE}">
   <PublicationTimestamp>${ts}</PublicationTimestamp>
   <ParticipantRef>${xe(cs)}</ParticipantRef>
-  <Description>${xe(desc)}</Description>
+  <Description>${xe(`${desc} · made with Nepos ${VERSION} (${NEPOS_URL})`)}</Description>
   <dataObjects>
 ${compositeFrame}
   </dataObjects>
