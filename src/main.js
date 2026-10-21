@@ -26,6 +26,7 @@ import { initSpeedStrip } from './ui/speed-strip.js';
 import { initOrgRegister } from './ui/org-register.js';
 import { initMenus } from './ui/menus.js';
 import { initHelp, showWhatsNew } from './ui/help.js';
+import { initDashboardPage } from './ui/dashboard-page.js';
 import { initNoAutofill } from './ui/no-autofill.js';
 
 initNoAutofill(document);
@@ -46,6 +47,7 @@ initGrid();
 initFootnoteEditor();
 initRouteEditor();
 initExportPage();
+initDashboardPage();
 initMapPanel();
 // Routed links (2.3): the engine runs in a worker on the map style's own vector tiles; made on first need.
 // Off for now (core/features.js): the map draws straight lines.
@@ -74,5 +76,5 @@ if (splash) setTimeout(() => { splash.classList.add('done'); setTimeout(() => sp
 setTimeout(() => { showWhatsNew({ returning: returningUser }); }, Math.max(0, 1100 - performance.now()));
 if (sample) {
   const { createSampleFs } = await import('./ui/sample.js');
-  await openFs(await createSampleFs(), { sample: true });
+  await openFs(await createSampleFs(), { sample: true, landing: true });
 }

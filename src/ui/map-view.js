@@ -40,7 +40,7 @@ export function createMapView(el, { style, dark = false }) {
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
 
   /** What each source holds, so a new style can be filled again. @type {Record<string, any>} */
-  const data = { links: collection([]), 'trip-line': collection([]), dashed: collection([]), dots: collection([]), ring: collection([]) };
+  const data = { network: collection([]), netstops: collection([]), links: collection([]), 'trip-line': collection([]), dashed: collection([]), dots: collection([]), ring: collection([]) };
   let isDark = dark;
   const size = { w: el.clientWidth, h: el.clientHeight };
   let ready = false;
@@ -50,6 +50,11 @@ export function createMapView(el, { style, dark = false }) {
 
   function addLayers() {
     for (const [id, value] of Object.entries(data)) map.addSource(id, { type: 'geojson', data: value });
+    // The network (Oversikt): stretches with their own width and colour, and the stops
+    map.addLayer({ id: 'network', type: 'line', source: 'network', layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': ['get', 'c'], 'line-width': ['get', 'w'], 'line-opacity': 0.85 } });
+    map.addLayer({ id: 'netstops', type: 'circle', source: 'netstops', paint: { 'circle-radius': ['get', 'r'], 'circle-color': isDark ? '#d8d0c0' : '#ffffff',
+      'circle-stroke-color': isDark ? '#998a78' : '#606060', 'circle-stroke-width': 1.5 } });
     map.addLayer({ id: 'dashed', type: 'line', source: 'dashed', paint: { 'line-color': '#888', 'line-width': 2, 'line-opacity': 0.5, 'line-dasharray': [2, 2] } });
     map.addLayer({ id: 'trip-line', type: 'line', source: 'trip-line', paint: { 'line-color': BLUE, 'line-width': 3, 'line-opacity': 0.85 } });
     map.addLayer({ id: 'links-pending', type: 'line', source: 'links', filter: ['==', ['get', 'status'], 'PENDING'],
@@ -75,7 +80,7 @@ export function createMapView(el, { style, dark = false }) {
   }
 
   // Hover texts: the trip's stops, and why a link is not routed
-  for (const layer of ['dots', 'links-hit']) {
+  for (const layer of ['dots', 'links-hit', 'netstops', 'network']) {
     map.on('mousemove', layer, (e) => {
       const tip = e.features?.[0]?.properties?.tooltip;
       if (!tip) return;
@@ -109,6 +114,11 @@ export function createMapView(el, { style, dark = false }) {
     },
     /** Routed links: features with properties { key, status, tooltip }. @param {any[]} features */
     setLinks(features) { put('links', collection(features)); },
+    /** The network (Oversikt): lines { coords, w, c, tooltip } and stops { lon, lat, r, tooltip }. @param {{ lines: { coords: LonLat[], w: number, c: string, tooltip?: string }[], stops: { lon: number, lat: number, r: number, tooltip?: string }[] }} net */
+    setNetwork(net) {
+      put('network', collection(net.lines.map((l) => lineFeature(l.coords, { w: l.w, c: l.c, tooltip: l.tooltip ?? '' }))));
+      put('netstops', collection(net.stops.map((p) => pointFeature([p.lon, p.lat], { r: p.r, tooltip: p.tooltip ?? '' }))));
+    },
     /** @param {LonLat[]} line */
     setDashed(line) { put('dashed', collection(line.length > 1 ? [lineFeature(line)] : [])); },
     /** @param {MapMarker[]} list */

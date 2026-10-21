@@ -35,11 +35,28 @@ som må rettes, eller som har feil filnavn — og tilbyr å rette det som kan re
 
 | Fane | Hurtigtast | Hva du gjør der |
 |---|---|---|
+| **Oversikt** | Alt+0 | Det som trenger deg i dag: linjer som snart slutter å gå, linjer med feil, endringer som ikke er eksportert. Prosjektet åpner her. |
 | **Rediger rutetabell** | Alt+1 | Linjens detaljer, tabellsett, kalendere og selve rutetabellen. Kartet ligger til venstre. |
 | **Linjer** | Alt+2 | Alle linjene i én liste: finn, sorter, endre flere samtidig. |
 | **Kalendere** | Alt+3 | Prosjektets kalendere (hvilke datoer noe kjører). |
 | **Ressurser** | Alt+4 | Merkevarer og organisasjoner (autoriteter og operatører). |
 | **Eksport** | Alt+5 | Kontroll og eksport til NeTEx. |
+
+### Oversikt
+
+Når du åpner et prosjekt, kommer du til **Oversikt**. Den sier med vanlige ord hva som trenger deg:
+
+- **I dag** (store kort, hvert med én knapp): en linje som slutter å gå om under 30 dager (eller alt har sluttet), en
+  linje med feil (feilene samlet etter type), og linjer som er endret siden forrige eksport.
+- **Snart**: linjer som slutter å gå om 30–120 dager. Entur krever at dataene er gyldige i 120 dager når de leveres.
+  Her står også linjer som ikke er eksportert på et halvt år, og linjer som bare har advarsler.
+- En grønn linje når resten er i orden.
+- **Gyldighet**: hver linje som eksporteres, frem til sin siste dag, med merker ved 30, 60, 90 og 120 dager.
+- **Nettverket**: alle linjene som eksporteres på ett kart. Hver strekning tegnes én gang, tykkere der flere turer går,
+  og rødt der en linje har feil.
+
+Linjer som er satt til **Eksporteres ikke**, er ikke med. Nepos husker hver eksport (`data/exports.json`) fra denne
+versjonen; før den første eksporten står linjene som «ingen eksport registrert».
 
 ---
 
@@ -255,6 +272,9 @@ På **Eksport** kontrollerer Nepos hele prosjektet først. **Feil** må rettes f
 er ting du bør se på. **Eksporter NeTEx** skriver filene til `exports/` (som ZIP hvis du vil). Linjer
 merket **Eksporteres ikke** kommer ikke med. Etter eksporten står det hvor den ligger, fra prosjektmappen
 (prosjektmappen\exports\tidspunkt).
+
+Problemene er samlet etter type: samme feil på mange turer i en linje står på én linje med antallet (for eksempel
+«×20»). Klikk for å se hver av dem.
 
 Hver tur blir en NeTEx ServiceJourney med én DatedServiceJourney for hver dag den kjører (kalender +
 dagkode + turens egne datoer). Tognummer eksporteres som TrainNumber, andre turnummer som PrivateCode.
