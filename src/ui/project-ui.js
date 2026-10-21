@@ -1,6 +1,6 @@
 // Opening, creating and reopening projects, and the empty-state placeholder.
 import { app } from './state.js';
-import { $, onRefresh, refreshAll, showMessage, runAction, beforeLeave, applyTheme } from './shell.js';
+import { $, onRefresh, refreshAll, showMessage, runAction, beforeLeave, applyTheme, setPage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { createHandleFs } from '../project/fs.js';
 import { openProject, updateOutdatedRoutes } from '../project/open.js';
@@ -34,10 +34,10 @@ const supported = () => typeof (/** @type {any} */ (window)).showDirectoryPicker
 /**
  * Load a project folder into the app.
  * @param {import('../project/fs.js').ProjectFs} fs
- * @param {{ handle?: any, sample?: boolean }} [opts]
+ * @param {{ handle?: any, sample?: boolean, landing?: boolean }} [opts] landing: show Oversikt (when the user opens it, not on a reload)
  * @returns {Promise<boolean>} whether the project opened
  */
-export async function openFs(fs, { handle = null, sample = false } = {}) {
+export async function openFs(fs, { handle = null, sample = false, landing = false } = {}) {
   let result;
   try {
     result = await openProject(fs);
@@ -69,6 +69,7 @@ export async function openFs(fs, { handle = null, sample = false } = {}) {
     await onRecentChanged();
     app.lastHandle = handle;
   }
+  if (landing) setPage('home'); // Oversikt is a project's first page (dashboard design 2026-10-21)
   refreshAll();
   showProjectCheck();
   void syncProjectCopy(); // the organisation copy follows Entur's register (organisations spec §3.2)
@@ -174,7 +175,7 @@ export async function openRecent(handle) {
     }
     return false;
   }
-  return openFs(createHandleFs(handle), { handle });
+  return openFs(createHandleFs(handle), { handle, landing: true });
 }
 
 
@@ -220,7 +221,7 @@ export async function copyProject() {
     }
   };
   if (!(await runAction(() => copyTree('data')))) return;
-  await openFs(to, { handle });
+  await openFs(to, { handle, landing: true });
 }
 
 // ─── New project dialog ─────────────────────────────────────────────────────
@@ -263,7 +264,7 @@ async function createFromDialog() {
     return;
   }
   $('new-dlg').close();
-  await openFs(fs, { handle });
+  await openFs(fs, { handle, landing: true });
 }
 
 // ─── Placeholder (shown where the grid will be) ─────────────────────────────
@@ -370,6 +371,6 @@ export async function initProjectUi({ restoreLast = true } = {}) {
   const last = (await loadRecentFolders())[0]?.handle;
   if (!last) return;
   app.lastHandle = last;
-  if (await hasPermission(last, false)) await openFs(createHandleFs(last), { handle: last });
+  if (await hasPermission(last, false)) await openFs(createHandleFs(last), { handle: last, landing: true });
   else refreshAll();
 }

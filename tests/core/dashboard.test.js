@@ -28,7 +28,7 @@ describe('Oversikt', () => {
   it('a line with errors is for today, its errors grouped by kind', () => {
     const d = buildDashboard({ lines: [line({ code: '34', issues: [err('dest-missing', '34'), err('dest-missing', '34'), err('speed-over', '34')] })], exports: { 34: recent }, today: TODAY });
     expect(d.today).toEqual([expect.objectContaining({ kind: 'errors', code: '34', count: 3 })]);
-    expect(d.today[0].groups.map((/** @type {any} */ g) => [g.code, g.count])).toEqual([['dest-missing', 2], ['speed-over', 1]]);
+    expect(/** @type {any} */ (d.today[0]).groups.map((/** @type {any} */ g) => [g.code, g.count])).toEqual([['dest-missing', 2], ['speed-over', 1]]);
   });
 
   it('lines changed since their last export make one card for today', () => {
@@ -62,6 +62,6 @@ describe('Oversikt', () => {
   it('orders today: ending soonest first, then errors, then changes', () => {
     const d = buildDashboard({ lines: [line({ code: 'e', issues: [err('x', 'e')] }), line({ code: 'f', lastDay: day(20) }), line({ code: 'g', lastDay: day(5) }), line({ code: 'h', hash: 'new' })],
       exports: { e: recent, f: recent, g: recent, h: recent }, today: TODAY });
-    expect(d.today.map((x) => x.kind + ':' + (x.code ?? x.codes.join(',')))).toEqual(['expires:g', 'expires:f', 'errors:e', 'changed:h']);
+    expect(d.today.map((/** @type {any} */ x) => x.kind + ':' + (x.code ?? x.codes.join(',')))).toEqual(['expires:g', 'expires:f', 'errors:e', 'changed:h']);
   });
 });

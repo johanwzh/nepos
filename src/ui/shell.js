@@ -347,7 +347,7 @@ export function initShell() {
   if (!keysWired) document.addEventListener('keydown', (e) => {
     if (document.querySelector('dialog[open]')) return;
     /** @type {Record<string, string>} */
-    const byDigit = { 1: 'edit', 2: 'lines', 3: 'calendars', 4: 'assets', 5: 'export' };
+    const byDigit = { 0: 'home', 1: 'edit', 2: 'lines', 3: 'calendars', 4: 'assets', 5: 'export' };
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
     // The map is part of the timetable page: Alt+M opens and closes it there.
     if (e.key.toLowerCase() === 'm') { if (curPage === 'edit') { e.preventDefault(); e.stopPropagation(); togglePanel('right'); } return; }
