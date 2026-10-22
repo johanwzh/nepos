@@ -8,7 +8,7 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   days, a line with errors (grouped by kind), lines changed since their last export. Under "Snart": lines ending within
   Entur's 120 days, lines not exported for half a year, warnings. Then every line's validity against the 30, 60, 90 and
   120-day marks, and the network of all exported lines on one map (each stretch once, thicker where more trips run,
-  red where a line has errors). Alt+0.
+  red where a line has errors). The tab right of Eksport, Alt+6.
 - **Exports are remembered** (`data/exports.json`): when each line was last exported, and whether it changed since.
 - **Problems grouped on the export page:** the same problem on many trips of a line is one row with a count, which
   opens to the single problems, so the export button stays within reach.

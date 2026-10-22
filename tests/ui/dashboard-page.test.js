@@ -63,11 +63,11 @@ beforeEach(async () => {
 });
 
 describe('Oversikt', () => {
-  it('is where a project opens, and Alt+0 goes there', async () => {
+  it('is where a project opens, and Alt+6 goes there', async () => {
     await openProject(200);
     expect(currentPage()).toBe('home');
     setPage('lines');
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: '0', altKey: true, bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '6', altKey: true, bubbles: true }));
     expect(currentPage()).toBe('home');
   });
 

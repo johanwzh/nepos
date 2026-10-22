@@ -35,12 +35,12 @@ som må rettes, eller som har feil filnavn — og tilbyr å rette det som kan re
 
 | Fane | Hurtigtast | Hva du gjør der |
 |---|---|---|
-| **Oversikt** | Alt+0 | Det som trenger deg i dag: linjer som snart slutter å gå, linjer med feil, endringer som ikke er eksportert. Prosjektet åpner her. |
 | **Rediger rutetabell** | Alt+1 | Linjens detaljer, tabellsett, kalendere og selve rutetabellen. Kartet ligger til venstre. |
 | **Linjer** | Alt+2 | Alle linjene i én liste: finn, sorter, endre flere samtidig. |
 | **Kalendere** | Alt+3 | Prosjektets kalendere (hvilke datoer noe kjører). |
 | **Ressurser** | Alt+4 | Merkevarer og organisasjoner (autoriteter og operatører). |
 | **Eksport** | Alt+5 | Kontroll og eksport til NeTEx. |
+| **Oversikt** | Alt+6 | Det som trenger deg i dag: linjer som snart slutter å gå, linjer med feil, endringer som ikke er eksportert. Prosjektet åpner her. |
 
 ### Oversikt
 
