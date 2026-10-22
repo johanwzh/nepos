@@ -273,6 +273,10 @@ er ting du bør se på. **Eksporter NeTEx** skriver filene til `exports/` (som Z
 merket **Eksporteres ikke** kommer ikke med. Etter eksporten står det hvor den ligger, fra prosjektmappen
 (prosjektmappen\exports\tidspunkt).
 
+**Levering til Entur:** last opp de eksporterte filene på siden Rutetabeller på https://entur-partner.entur.org/.
+Codespace i prosjektet må være nøyaktig det samme som codespacet Entur har gitt deg tilgang til. Mer under
+**Hjelp → Levering til Entur**.
+
 Problemene er samlet etter type: samme feil på mange turer i en linje står på én linje med antallet (for eksempel
 «×20»). Klikk for å se hver av dem.
 

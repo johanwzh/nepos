@@ -104,7 +104,12 @@ export function showWhatsNew({ md = CHANGELOG, running = VERSION, storage = wind
 }
 
 export function showContact() {
-  show(t('helpContact'), `<p>${esc(t('helpContactText'))}</p>
+  // Delivery to Entur (user 2026-10-22): where to upload, the codespace, what to do when something is missing, the e-mail
+  const link = '<a href="https://entur-partner.entur.org/" target="_blank" rel="noopener">https://entur-partner.entur.org/</a>';
+  show(t('helpContact'), `<p>${esc(t('helpDeliverUpload')).replace('{link}', link)}</p>
+    <p>${esc(t('helpDeliverCodespace'))}</p>
+    <p>${esc(t('helpDeliverMissing'))}</p>
+    <p>${esc(t('helpContactText'))}</p>
     <p><b>Entur</b><br><a href="mailto:kollektivdata@entur.org">kollektivdata@entur.org</a></p>`);
 }
 

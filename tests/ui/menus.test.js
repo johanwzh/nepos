@@ -52,7 +52,7 @@ describe('menu bar', () => {
     openMenu(2);
     expect(items()).toEqual(['Språk', 'Lys/mørk', 'Fargetema', 'Vis stoppenes privatkode']);
     openMenu(3);
-    expect(items()).toEqual(['Hurtigtaster', 'Brukerveiledning', 'Versjonshistorikk', 'Kontakt', 'GitHub']);
+    expect(items()).toEqual(['Hurtigtaster', 'Brukerveiledning', 'Versjonshistorikk', 'Levering til Entur', 'GitHub']);
   });
 
   it('switches the stops\' private codes on and off from Visning, and remembers it', () => {
@@ -88,7 +88,7 @@ describe('menu bar', () => {
     dlg.close();
     openMenu(0);
     openMenu(3);
-    item('Kontakt').click();
+    item('Levering til Entur').click();
     expect(dlg.querySelector('a[href="mailto:kollektivdata@entur.org"]')).not.toBeNull();
   });
 

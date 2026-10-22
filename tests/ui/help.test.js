@@ -88,3 +88,26 @@ describe('what is new after an update (user 2026-10-21)', () => {
     expect(showWhatsNew({ md: '## 2.4.0 — not released yet\n\n- x\n' + MD, running: '2.4.0', storage: store({ 'nepos.seenVersion': '2.3.0' }) })).toBe(false);
   });
 });
+
+describe('Help → Delivery to Entur (user 2026-10-22)', () => {
+  it('tells how to deliver: Entur partner, the codespace, missing organisations or stops, and the e-mail', async () => {
+    const { showContact } = await import('../../src/ui/help.js');
+    const { setLang, t } = await import('../../src/i18n/strings.js');
+    setLang('no');
+    showContact();
+    const title = document.getElementById('help-title')?.textContent;
+    const text = document.getElementById('help-body')?.textContent ?? '';
+    expect(title).toBe('Levering til Entur');
+    expect(t('helpContact')).toBe('Levering til Entur');
+    expect(text).toContain('Rutetabeller');
+    expect(document.querySelector('#help-body a[href="https://entur-partner.entur.org/"]')).not.toBeNull();
+    expect(text).toContain('codespace');
+    expect(text).toContain('organisasjonene');
+    expect(text).toContain('kollektivdata@entur.org');
+    setLang('en');
+    showContact();
+    expect(document.getElementById('help-title')?.textContent).toBe('Delivery to Entur');
+    expect(document.getElementById('help-body')?.textContent).toContain('Timetables (Rutetabeller in Norwegian translation)');
+    setLang('no');
+  });
+});
