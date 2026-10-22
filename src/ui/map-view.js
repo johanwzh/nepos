@@ -2,6 +2,7 @@
 // router give it plain data (lines, dots, markers, links) and get plain events back. The data survives a style
 // change (light/dark): every source is filled again when the new style has loaded.
 import maplibregl from 'maplibre-gl';
+import { t } from '../i18n/strings.js';
 
 /** @typedef {[number, number]} LonLat */
 /**
@@ -35,9 +36,12 @@ export function createMapView(el, { style, dark = false }) {
   const map = new maplibregl.Map({
     container: el, style: /** @type {any} */ (style), center: [13, 62.5], zoom: 4,
     keyboard: false, // arrow keys, digits and +/- belong to the grid, never to the map
+    // The map's own buttons in the app's language
+    locale: { 'NavigationControl.ResetBearing': t('mapNorth'), 'NavigationControl.ZoomIn': t('mapZoomIn'), 'NavigationControl.ZoomOut': t('mapZoomOut') },
     attributionControl: { compact: true },
   });
-  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
+  // The compass turns a rotated or tilted map back to north and flat (user 2026-10-22)
+  map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-left');
 
   /** What each source holds, so a new style can be filled again. @type {Record<string, any>} */
   const data = { network: collection([]), netstops: collection([]), links: collection([]), 'trip-line': collection([]), dashed: collection([]), dots: collection([]), ring: collection([]) };

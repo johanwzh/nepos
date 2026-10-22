@@ -12,6 +12,8 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Exports are remembered** (`data/exports.json`): when each line was last exported, and whether it changed since.
 - **Problems grouped on the export page:** the same problem on many trips of a line is one row with a count, which
   opens to the single problems, so the export button stays within reach.
+- **North up:** the map has a compass button that turns a rotated or tilted map back to north and flat; the map's
+  buttons speak the app's language.
 - **The NeTEx files say where they come from:** the PublicationDelivery Description is "Created with Nepos <version>".
 
 ## 2.3.0 — 2026-10-20
