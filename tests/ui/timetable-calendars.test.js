@@ -170,6 +170,18 @@ describe('the note and the grid edges', () => {
     expect(kom.textContent).not.toContain('kommentar');
   });
 
+  it('sets the line\'s booking from the line details, beside the note (booking spec 2026-10-22)', async () => {
+    await selectRoute('7');
+    const btn = /** @type {HTMLElement} */ (document.querySelector('#kom-bar .kom-booking'));
+    expect(btn.textContent).toContain('Ingen bestilling');
+    btn.click();
+    const phone = /** @type {HTMLInputElement} */ (document.querySelector('.bk-phone'));
+    phone.value = '815';
+    /** @type {HTMLElement} */ (document.querySelector('.fb-apply')).click();
+    expect(app.routeState.booking).toEqual({ phone: '815' });
+    expect(/** @type {HTMLElement} */ (document.querySelector('#kom-bar .kom-booking')).textContent).toContain('815');
+  });
+
   it('has no extra column: "+ column" sits above the row ×, and the add column and row are tinted', async () => {
     await selectRoute('7');
     const rows = [...document.querySelectorAll('#tbl tr')];

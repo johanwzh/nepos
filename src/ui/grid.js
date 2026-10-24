@@ -27,6 +27,8 @@ import { app } from './state.js';
 import { normalizeDests, servedRows, setDestAt, moveChange, viaDrag, applySuggestion, copyDests, pasteDests, snapshotDests, restoreDests, destLabel } from '../core/destinations.js';
 import { destColumnsOpen, onDestToggle, destCellInfo, renderDestCell, openDestEditor, toggleDestColumns } from './dest-columns.js';
 import { vehicleShown } from '../core/vehicles.js';
+import { openXWindow } from './x-window.js';
+import { openBookingForm } from './booking-form.js';
 
 /** The grid being edited: one period × direction of the open route. */
 export const grid = {
@@ -224,7 +226,8 @@ function cellHTML(cell, isEdit, buf, letter = '') {
   if (cell.time === '|') return slots('|', '');
   let m = '';
   if (cell.suffix) m += `<span class="g-sfx-${cell.suffix}">${cell.suffix}</span>`;
-  if (cell.req) m += '<span class="g-sfx-x">x</span>';
+  // x: a request stop or a booking on this time (not the trip's or the line's booking)
+  if (cell.req || cell.booking) m += '<span class="g-sfx-x">x</span>';
   // The note letter, in place of the old triangle (booking spec 2026-10-22)
   if (letter) m += `<span class="g-fn-l">${letter}</span>`;
   if (cell.dayOffset > 0) m += `<span class="g-day-off">+${cell.dayOffset}</span>`;
@@ -857,6 +860,14 @@ function renderFootRow(tbl) {
       dot.addEventListener('click', () => openFnEditor('col', 0, ci));
       td.appendChild(dot);
     }
+    // The trip's booking: an icon next to the dates (booking spec 2026-10-22)
+    if (col.booking) {
+      const bk = document.createElement('span');
+      bk.className = 'bk-col-mark';
+      bk.textContent = '☎';
+      bk.addEventListener('click', () => { inDC = true; inFN = true; dcCol = ci; dcSpanAt = -1; render(); if (!grid.readOnly) openTripBooking(); });
+      td.appendChild(bk);
+    }
     if (col.dates?.length) {
       const mark = document.createElement('span');
       mark.className = 'dt-col-mark';
@@ -1370,6 +1381,7 @@ function keyNav(e) {
     case 'ArrowRight': e.preventDefault(); if (sh) extend(endR, endC + 1); else setAnchor(ancR, ancC + 1); render(); scrollTo(ancR, ancC); break;
     case 'F2': e.preventDefault(); enterStopEdit(ancR); break;
     case 'F7': e.preventDefault(); openNoteOnSelection(ancR, ancC); break;
+    case 'F8': e.preventDefault(); openXOnSelection(); break;
     case 'Enter': e.preventDefault(); startEdit(''); break;
     case 'Delete': case 'Backspace': e.preventDefault(); clearSelection(); render(); break;
     case '|': e.preventDefault(); grid.cols[ancC].cells[ancR] = { time: '|', dayOffset: 0, suffix: '', interchange: null }; render(); break;
@@ -1432,6 +1444,7 @@ function keyNoteRow(e) {
     case 'ArrowDown': e.preventDefault(); inFN = false; render(); break;
     case 'Escape': e.preventDefault(); inDC = false; render(); break;
     case 'Enter': case 'F7': e.preventDefault(); if (!grid.readOnly) openColNotes(); break;
+    case 'F8': e.preventDefault(); if (!grid.readOnly) openTripBooking(); break;
     default: if (e.key.length === 1) e.preventDefault(); // typing here does not change a day code
   }
 }
@@ -1642,6 +1655,45 @@ function openNoteOnSelection(r, c) {
   else openFnEditor('cell', r, c);
 }
 
+/** A deep copy, so cells never share one booking object. @param {any} b */
+const copyOf = (b) => (b ? JSON.parse(JSON.stringify(b)) : null);
+
+/**
+ * The x window on the selected times (booking spec 2026-10-22): one choice for all of them. A new booking starts as a
+ * copy of the trip's, else the line's.
+ */
+function openXOnSelection() {
+  if (grid.readOnly) return;
+  const cells = timedInSelection();
+  if (!cells.length) return;
+  const at = document.querySelector(`[data-r="${ancR}"][data-c="${ancC}"]`)?.getBoundingClientRect();
+  openXWindow({
+    req: !!cells[0].req, booking: cells[0].booking ?? null, startFrom: grid.cols[ancC]?.booking ?? app.routeState?.booking ?? null,
+    x: at?.left ?? 200, y: (at?.bottom ?? 120) + 4,
+    onApply: ({ req, booking }) => {
+      for (const c of cells) {
+        if (req) c.req = true; else delete c.req;
+        if (booking) c.booking = copyOf(booking); else delete c.booking;
+      }
+      render();
+    },
+  });
+}
+
+/** The trip booking of the note row's selected columns (a trip has a booking, never a request stop). */
+function openTripBooking() {
+  const [a, b] = dcRange();
+  const at = document.querySelector(`.g-fn-cell[data-ci="${a}"]`)?.getBoundingClientRect();
+  openBookingForm({
+    booking: grid.cols[a]?.booking ?? app.routeState?.booking ?? null, title: t('bkTrip'),
+    x: at?.left ?? 200, y: (at?.bottom ?? 120) + 4,
+    onApply: (booking) => {
+      for (let ci = a; ci <= b; ci++) { const col = grid.cols[ci]; if (!col) continue; if (booking) col.booking = copyOf(booking); else delete col.booking; }
+      render();
+    },
+  });
+}
+
 /** What "Interpoler tider" would fill: per column of the selection (a single cell: the whole column). */
 function interpolationFills() {
   const { r0, r1, c0, c1 } = selRect();
@@ -1675,8 +1727,8 @@ function showCtx(x, y, isDC = false) {
     const timedSel = timedInSelection();
     const sfx = timedSel.map((c) => c.suffix || '');
     for (const [k, key] of /** @type {[string, string][]} */ ([['a', 'ctxSfxA'], ['p', 'ctxSfxP'], ['x', 'ctxSfxX']])) {
-      const on = k === 'x' ? timedSel.length > 0 && timedSel.every((c) => c.req) : sfx.length > 0 && sfx.every((v) => v === k);
-      $(`gc-sfx-${k}`).textContent = (on ? '✓ ' : '    ') + t(key);
+      const on = k === 'x' ? timedSel.length > 0 && timedSel.every((c) => c.req || c.booking) : sfx.length > 0 && sfx.every((v) => v === k);
+      $(`gc-sfx-${k}`).textContent = (on ? '✓ ' : '    ') + t(k === 'x' ? 'ctxXWindow' : key);
       $(`gc-sfx-${k}`).className = 'gci' + (sfx.length ? '' : ' dis');
     }
     $('gc-sfx-none').className = 'gci' + (sfx.some((v) => v) ? '' : ' dis');
@@ -1910,8 +1962,7 @@ export function initGrid() {
       hideCtx();
       if (grid.readOnly) return;
       const cells = timedInSelection();
-      // x is the request stop, its own mark beside a/p; it turns on for all, or off when all have it
-      if (k === 'x') { const all = cells.every((c) => c.req); for (const cell of cells) { if (all) delete cell.req; else cell.req = true; } }
+      if (k === 'x') { openXOnSelection(); return; } // request stop or booking: the x window
       else for (const cell of cells) cell.suffix = k === 'none' ? '' : k;
       render();
     });

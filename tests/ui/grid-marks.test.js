@@ -46,6 +46,41 @@ describe('a/p and x on a time', () => {
     expect(td(1, 0).title).toBe('');
   });
 
+  it('F8 sets a request stop on every selected time at once', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [] }] });
+    selectCell(0, 0);
+    press('ArrowDown', { shiftKey: true });
+    press('F8');
+    /** @type {HTMLElement} */ (document.querySelector('.xw-choice[data-v="req"]')).click();
+    expect(grid.cols[0].cells.map((c) => !!c.req)).toEqual([true, true]);
+    expect(marks(0, 0)).toBe('x');
+  });
+
+  it('F8 booking starts as a copy of the trip booking and shows x on the time', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [], booking: { phone: '77' } }] });
+    selectCell(1, 0);
+    press('F8');
+    /** @type {HTMLElement} */ (document.querySelector('.xw-choice[data-v="booking"]')).click();
+    expect(/** @type {HTMLInputElement} */ (document.querySelector('.bk-phone')).value).toBe('77');
+    /** @type {HTMLElement} */ (document.querySelector('.fb-apply')).click();
+    expect(grid.cols[0].cells[1].booking).toEqual({ phone: '77' });
+    expect(marks(1, 0)).toBe('x');
+    expect(marks(0, 0)).toBe(''); // a bookable trip puts no x on its times
+  });
+
+  it('the note row: F8 sets the trip booking, shown as an icon next to the dates', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [] }] });
+    const fnCell = /** @type {HTMLElement} */ (document.querySelector('.g-fn-cell[data-ci="0"]'));
+    fnCell.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    press('F8');
+    expect(document.querySelector('.xw-choice')).toBeNull(); // a trip has no request stop
+    const phone = /** @type {HTMLInputElement} */ (document.querySelector('.bk-phone'));
+    phone.value = '55';
+    /** @type {HTMLElement} */ (document.querySelector('.fb-apply')).click();
+    expect(grid.cols[0].booking).toEqual({ phone: '55' });
+    expect(document.querySelector('.g-fn-cell[data-ci="0"] .bk-col-mark')).not.toBeNull();
+  });
+
   it('keeps the request stop when the time is typed again', () => {
     selectCell(0, 0);
     for (const k of ['0', '7', '0', '5', 'p']) press(k);

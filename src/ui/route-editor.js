@@ -22,6 +22,7 @@ import { writeOrgs } from '../project/orgs-store.js';
 import { pruneProjectCopy } from './org-register.js';
 import { compareRouteCodes } from '../core/route-codes.js';
 import { writeRoute } from '../project/routes.js';
+import { openBookingForm } from './booking-form.js';
 import { showProjectCheck } from './project-ui.js';
 import { renderTimeline } from './timeline.js';
 import { unsavedCalendarCount, saveAllCalendars, discardAllCalendars } from './calendar-drafts.js';
@@ -418,6 +419,23 @@ function renderCommentBar() {
   el.style.display = '';
   const text = rs.kom?.trim() || '';
   el.innerHTML = `<span class="kom-icon">✎</span><span class="kom-text${text ? '' : ' empty'}">${text ? esc(text) : esc(t('komPlaceholder'))}</span>`;
+  // The line's booking (booking spec 2026-10-22), at the right end of the line's note bar
+  const bk = document.createElement('button');
+  bk.type = 'button';
+  bk.className = 'kom-booking';
+  const b = rs.booking;
+  bk.textContent = b ? `☎ ${t('bkLine')}: ${b.phone || b.email || b.url || '✓'}` : `☎ ${t('bkLineNone')}`;
+  bk.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (isReadOnly()) return;
+    const at = bk.getBoundingClientRect();
+    openBookingForm({ booking: rs.booking ?? null, title: t('bkLine'), x: at.left, y: at.bottom + 4, onApply: (nb) => {
+      if (nb) rs.booking = nb; else delete rs.booking;
+      markDirty();
+      renderCommentBar();
+    } });
+  });
+  el.appendChild(bk);
   el.onclick = isReadOnly() ? null : () => {
     el.innerHTML = `<input class="kom-edit" placeholder="${esc(t('komPlaceholder'))}">`;
     const input = el.querySelector('.kom-edit');

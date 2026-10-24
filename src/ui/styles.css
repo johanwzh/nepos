@@ -1406,3 +1406,17 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 .cur-pick-sym { font-weight: 700; min-width: 36px; }
 .cur-pick-name { color: var(--text-m); font-size: 11px; }
 
+
+/* Booking (2.4): the trip's booking mark in the note row, the x window and the booking form */
+.bk-col-mark { cursor: pointer; font-size: 11px; margin-right: 2px; }
+.xw { display: flex; flex-direction: column; gap: 6px; }
+.xw-choice { text-align: left; padding: 6px 10px; border: 1px solid var(--border, #ccc); border-radius: 6px; background: none; cursor: pointer; }
+.xw-choice.on { border-color: var(--accent, #2a6fdb); font-weight: 600; }
+.bk-form { display: flex; flex-direction: column; gap: 6px; min-width: 340px; }
+.bk-row { display: grid; grid-template-columns: 9.5em 1fr; align-items: center; gap: 8px; }
+.bk-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.bk-chip { padding: 2px 8px; border: 1px solid var(--border, #ccc); border-radius: 12px; background: none; cursor: pointer; font-size: 12px; }
+.bk-chip.on { background: var(--accent-bg, #dbe8ff); border-color: var(--accent, #2a6fdb); }
+.bk-dur { display: flex; gap: 4px; } .bk-dur input { width: 5em; }
+
+.kom-booking { margin-left: auto; padding: 1px 8px; border: 1px solid var(--border, #ccc); border-radius: 10px; background: none; cursor: pointer; font-size: 12px; white-space: nowrap; }
