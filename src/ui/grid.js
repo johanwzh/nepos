@@ -18,8 +18,10 @@ import { interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan, fi
 import { openDayCodeHelper } from './day-code-helper.js';
 import { sortColumns } from '../core/column-sort.js';
 import { openCopyInterval } from './copy-interval.js';
-import { activeTool, setJogHandler, onToolChange } from './power-tools.js';
-import { withBlocks, withoutBlocks } from '../core/blocks.js';
+import { activeTool, setJogHandler, onToolChange, setUnpackHandler } from './power-tools.js';
+import { withBlocks, withoutBlocks, blockTrips, canBeBlock, dragResult, snapSpan, firstDeparture, MIN_SPAN, MAX_SPAN } from '../core/blocks.js';
+import { DRAG_STEP_PX, openBlockDialog, openHowOften } from './interval-tool.js';
+import { jogDial } from './jog/jogDial.js';
 import { shiftTimes } from '../core/time-shift.js';
 import { openDatePicker } from './date-picker.js';
 import { placeMenu } from './place-menu.js';
@@ -303,6 +305,97 @@ function syncBlocks() {
   if (!grid.cols.some((c) => c.block || c.virt)) return;
   grid.cols = withBlocks(withoutBlocks(grid.cols));
 }
+// ─── Virtual intervals: the drag (power tools spec 2026-10-24) ─────────────
+/** The drag in progress: the parent (by uid), where it started, the column width, the steps now. */
+let ivDrag = /** @type {{ uid: string, base: number, x0: number, w: number, steps: number, moved: boolean } | null} */ (null);
+/** The first row with a time in a column. @param {any} col */
+const topRow = (col) => col.cells.findIndex((/** @type {any} */ c) => c?.time && c.time !== '|');
+/** The index of a column's parent (itself when it is real). @param {number} ci */
+const parentIndex = (ci) => { const c = grid.cols[ci]; return c?.virt ? grid.cols.findIndex((x) => x.uid === c.of) : ci; };
+
+/** A press on a time with the tool on: the drag starts here (and the cell is selected, for Unpack). @param {MouseEvent} e @param {number} ri @param {number} ci */
+function startIntervalDrag(e, ri, ci) {
+  ancR = ri; ancC = ci; endR = ri; endC = ci;
+  const pi = parentIndex(ci);
+  const parent = grid.cols[pi];
+  if (!parent) return;
+  if (!parent.block && !canBeBlock(grid.cols, pi)) { showMessage(t('ivNoIx')); render(); return; }
+  const w = /** @type {HTMLElement} */ (e.currentTarget)?.getBoundingClientRect?.().width || DRAG_STEP_PX;
+  ivDrag = { uid: parent.uid, base: ci - pi, x0: e.clientX, w, steps: ci - pi, moved: false };
+  render();
+}
+
+/** Put the drag's steps on the parent: a band, or no block. @param {number} steps */
+function dragTo(steps) {
+  const d = ivDrag;
+  const parent = d && grid.cols.find((c) => c.uid === d.uid);
+  if (!d || !parent) return;
+  d.steps = steps;
+  const res = dragResult(steps);
+  if (res.kind === 'band') parent.block = { every: res.every, span: snapSpan(res.every, parent.block?.span ?? MIN_SPAN) };
+  else if (res.kind === 'none' || res.kind === 'dialog') delete parent.block;
+  render();
+}
+
+/** @param {MouseEvent} e */
+function moveIntervalDrag(e) {
+  if (!ivDrag) return;
+  const steps = Math.max(0, ivDrag.base + Math.round((e.clientX - ivDrag.x0) / ivDrag.w));
+  if (steps !== ivDrag.steps) { ivDrag.moved = true; dragTo(steps); }
+}
+
+/** Letting go: a band stays; step 1 opens the dialog, past the band "how often?". */
+function endIntervalDrag() {
+  const d = ivDrag;
+  if (!d) return;
+  ivDrag = null;
+  const pi = grid.cols.findIndex((c) => c.uid === d.uid);
+  const parent = grid.cols[pi];
+  render();
+  if (!d.moved || !parent) return;
+  const res = dragResult(d.steps);
+  const at = document.querySelector(`.g-dc-cell[data-ci="${pi}"]`)?.getBoundingClientRect();
+  const x = (at?.left ?? 200) + 40, y = (at?.bottom ?? 120) + 4;
+  if (res.kind === 'dialog') {
+    openBlockDialog({ first: firstDeparture(parent) ?? 0, x, y, onApply: (b) => { parent.block = b; render(); } });
+  } else if (res.kind === 'ask') {
+    openHowOften({ x, y, onPick: (every) => { parent.block = { every, span: snapSpan(every, parent.block?.span ?? MIN_SPAN) }; render(); } });
+  }
+}
+
+/** The end column's jog: each notch moves the last departure by the interval (2 h to 23 h 59 min). @param {any} end */
+function endJog(end) {
+  const dial = jogDial({
+    size: 18, detents: true, pxPerNotch: 9,
+    onNudge: (/** @type {1 | -1} */ dir) => {
+      const parent = grid.cols.find((c) => c.uid === end.of);
+      if (!parent?.block) return;
+      const span = parent.block.span + dir * parent.block.every;
+      if (span < MIN_SPAN || span > MAX_SPAN) return;
+      parent.block = { ...parent.block, span };
+      // Only the end column changes while the dial turns (it stays under the mouse); the full redraw waits for rest
+      syncBlocks();
+      const ci = grid.cols.findIndex((c) => c.virt === 'end' && c.of === parent.uid);
+      if (ci >= 0) patchTimes(0, grid.stops.length - 1, ci, ci);
+    },
+  });
+  dial.addEventListener('keydown', (e) => e.stopPropagation()); // its arrows are not the grid's
+  return dial;
+}
+
+/** Unpack the selected block into real columns (asks first: there is no undo). */
+function unpackBlock() {
+  if (grid.readOnly) return;
+  const pi = parentIndex(ancC);
+  const parent = grid.cols[pi];
+  if (!parent?.block) { showMessage(t('ivNoBlock')); return; }
+  const trips = blockTrips(parent);
+  if (!confirm(t('ivUnpackConfirm', trips.length + 1))) return;
+  delete parent.block;
+  grid.cols = withoutBlocks(grid.cols);
+  insertColumnsAfter(grid.cols.indexOf(parent), trips);
+}
+
 /** A band or end column: drawn from its parent, never edited itself. @param {number} ci */
 const locked = (ci) => !!grid.cols[ci]?.virt;
 
@@ -1102,6 +1195,7 @@ function renderDayCodeRow(tbl) {
     td.dataset.ci = String(ci);
     const isSel = inDC && !inFN && inDcRange(ci) && !dcEdit, isEdit = inDC && ci === dcCol && dcEdit;
     if (isEdit) { td.classList.add('dc-edit'); td.innerHTML = esc(dcBuf) + '▌'; }
+    else if (col.virt) { td.textContent = ''; td.classList.add('g-locked'); if (col.virt === 'end' && activeTool() === 'intervals' && !grid.readOnly) td.appendChild(endJog(col)); }
     else { td.textContent = col.dayCode; if (isSel) td.classList.add('dc-sel'); }
     td.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
@@ -1202,11 +1296,12 @@ function renderStopRow(tbl, stop, ri, linked) {
     if (isDecreasing(ri, ci) && !ixMode) td.classList.add('is-dec');
     if (isRange && !ixMode) td.classList.add('in-range');
     if (isSel && editing) { td.classList.add('is-edit'); td.innerHTML = cellHTML(cell, true, editBuf); }
-    else { td.innerHTML = col.virt === 'band' ? bandHTML(col, ri) : cellHTML(cell, false, '', letters.get(`${ci}:${ri}`)); if (isSel && !ixMode) td.classList.add('is-anchor'); }
+    else { td.innerHTML = col.virt && ivDrag && ri !== topRow(col) ? '' : col.virt === 'band' ? bandHTML(col, ri) : cellHTML(cell, false, '', letters.get(`${ci}:${ri}`)); if (isSel && !ixMode) td.classList.add('is-anchor'); }
     blockFrame(td, ci);
     td.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
+      if (activeTool() === 'intervals' && !grid.readOnly) { startIntervalDrag(e, ri, ci); return; }
       if (ixMode && ixSource) {
         if (ri === ixSource.r && ci === ixSource.c) { exitIx(); return; }
         if (hasTime(ri, ci)) { completeIx(ri, ci); return; }
@@ -2001,7 +2096,9 @@ export function initGrid() {
       const r = Number(td.dataset.r), c = Number(td.dataset.c);
       if (r !== endR || c !== endC) { endR = r; endC = c; render(); }
     });
-    document.addEventListener('mouseup', () => { dragging = false; });
+    document.addEventListener('mouseup', () => { dragging = false; endIntervalDrag(); });
+    document.addEventListener('mousemove', moveIntervalDrag);
+    setUnpackHandler(unpackBlock);
     document.addEventListener('mousedown', (e) => {
       if (!/** @type {HTMLElement} */ (e.target).closest?.('#grid-ctx')) hideCtx();
     });

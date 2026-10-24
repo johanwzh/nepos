@@ -1442,3 +1442,9 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 .g-td-time.g-blk-r { box-shadow: inset -2px 0 0 var(--accent, #9db8e8); }
 .g-td-time.g-locked { color: var(--muted, #667); cursor: default; }
 .g-band-every { font-size: 11px; font-style: italic; white-space: nowrap; }
+
+.iv { display: flex; flex-direction: column; gap: 6px; min-width: 260px; }
+.iv-row { display: grid; grid-template-columns: 8em 1fr; align-items: center; gap: 8px; }
+.iv-err { color: var(--danger, #b3261e); font-size: 12px; min-height: 1em; }
+.iv-often { display: flex; flex-wrap: wrap; gap: 4px; }
+.g-dc-cell .jd { vertical-align: middle; }

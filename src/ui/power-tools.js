@@ -17,6 +17,8 @@ const TOOLS = /** @type {{ name: ToolName, icon: string, label: string, key: str
 let active = '';
 /** @type {((name: ToolName) => void)[]} */
 const listeners = [];
+/** Unpack the selected block (the grid does it). @type {() => void} */
+let unpackHandler = () => {};
 /** What a jog notch does (the grid moves its selected times). @type {(minutes: number) => void} */
 let jogHandler = () => {};
 let keysWired = false;
@@ -29,6 +31,9 @@ export function onToolChange(fn) { listeners.push(fn); }
 
 /** @param {(minutes: number) => void} fn */
 export function setJogHandler(fn) { jogHandler = fn; }
+
+/** @param {() => void} fn */
+export function setUnpackHandler(fn) { unpackHandler = fn; }
 
 /** Turn a tool on ('' turns all off). @param {ToolName} name */
 export function setTool(name) {
@@ -66,7 +71,12 @@ function draw() {
     const hint = document.createElement('div');
     hint.className = 'pt-hint';
     hint.textContent = t('ptIntervalsHint');
-    body.append(hint);
+    const unpack = document.createElement('button');
+    unpack.type = 'button';
+    unpack.className = 'pop-btn pt-unpack';
+    unpack.textContent = t('ivUnpack');
+    unpack.addEventListener('click', () => unpackHandler());
+    body.append(unpack, hint);
   }
 }
 

@@ -1,0 +1,118 @@
+// @vitest-environment jsdom
+// The Virtual intervals tool (power tools spec 2026-10-24): drag a column right; step 1 opens a dialog, 2–7 make a band
+// of 1–6 columns, more asks how often; the end column's jog moves the last departure by the interval; Unpack.
+import { describe, it, expect, beforeEach } from 'vitest';
+import { loadAppMarkup } from './dom-setup.js';
+import { app } from '../../src/ui/state.js';
+import { initShell } from '../../src/ui/shell.js';
+import { grid, initGrid, loadGrid, gridData, selectCell } from '../../src/ui/grid.js';
+import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
+import { initPowerTools, setTool } from '../../src/ui/power-tools.js';
+import { newRouteState } from '../../src/ui/route-state.js';
+import { DRAG_STEP_PX } from '../../src/ui/interval-tool.js';
+
+const stop = (name) => ({ name, stopId: null, bold: false, sep: false, isDwellArr: false, price: null });
+const cell = (time) => ({ time, dayOffset: 0, suffix: '', interchange: null });
+const col = (t0, t1, more = {}) => ({ dayCode: 'D', note: '', dates: [], uid: crypto.randomUUID(), cells: [t0 ? cell(t0) : null, t1 ? cell(t1) : null], ...more });
+const td = (/** @type {number} */ r, /** @type {number} */ c) => /** @type {HTMLElement} */ (document.querySelector(`td[data-r="${r}"][data-c="${c}"]`));
+/** Drag cell (r, c) `steps` column widths to the right (negative: left) and let go. */
+const drag = (/** @type {number} */ r, /** @type {number} */ c, /** @type {number} */ steps, drop = true) => {
+  td(r, c).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, clientX: 100 }));
+  document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100 + steps * DRAG_STEP_PX }));
+  if (drop) document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: 100 + steps * DRAG_STEP_PX }));
+};
+const virt = () => grid.cols.map((c) => c.virt ?? '');
+const saved = () => gridData().cols;
+
+let wired = false;
+beforeEach(() => {
+  loadAppMarkup();
+  initShell();
+  initGrid();
+  initPowerTools();
+  if (!wired) { initFootnoteEditor(); wired = true; }
+  app.routeState = newRouteState('no');
+  loadGrid({ stops: [stop('A'), stop('B')], cols: [col('0605', '0625'), col('0900', '0910')] });
+  setTool('intervals');
+  window.confirm = () => true;
+});
+
+describe('the Virtual intervals tool', () => {
+  it('dragging 3 steps makes a half-hourly block for two hours; the column on the right moves along', () => {
+    drag(1, 0, 3);
+    expect(saved()[0].block).toEqual({ every: 30, span: 120 });
+    expect(virt()).toEqual(['', 'band', 'band', 'end', '']);
+    expect(grid.cols[4].cells[0].time).toBe('0900');
+  });
+
+  it('while dragging, only the top departures are drawn', () => {
+    drag(0, 0, 2, false);
+    expect(td(0, 2).textContent).toBe('0805');
+    expect(td(1, 2).textContent).toBe('');
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: 100 + 2 * DRAG_STEP_PX }));
+    expect(td(1, 2).textContent).toBe('0825');
+  });
+
+  it('dropping at step 1 opens the dialog: OK makes the block, an off-band last departure is refused', () => {
+    drag(0, 0, 1);
+    const box = /** @type {HTMLElement} */ (document.querySelector('.iv-box'));
+    expect(box).not.toBeNull();
+    /** @type {HTMLSelectElement} */ (box.querySelector('.iv-every')).value = '2';
+    const last = /** @type {HTMLInputElement} */ (box.querySelector('.iv-last'));
+    last.value = '16:02';
+    /** @type {HTMLElement} */ (box.querySelector('.fb-apply')).click();
+    expect(saved()[0].block).toBeUndefined();
+    expect(box.querySelector('.iv-err')?.textContent).not.toBe('');
+    last.value = '16:05';
+    /** @type {HTMLElement} */ (box.querySelector('.fb-apply')).click();
+    expect(saved()[0].block).toEqual({ every: 2, span: 600 });
+    expect(virt()).toEqual(['', 'band', 'end', '']); // collapsed
+  });
+
+  it('dragging past 7 steps asks how often', () => {
+    drag(0, 0, 9);
+    const btn = /** @type {HTMLElement} */ (document.querySelector('.iv-often [data-every="5"]'));
+    btn.click();
+    expect(saved()[0].block).toEqual({ every: 5, span: 120 });
+  });
+
+  it('dragging back onto the parent removes the block; dragging the end changes the band', () => {
+    drag(0, 0, 3);
+    drag(0, 3, 1); // the end, one step further: three band columns
+    expect(saved()[0].block.every).toBe(20);
+    drag(0, 4, -4); // the end back onto the parent
+    expect(saved()[0].block).toBeUndefined();
+    expect(virt()).toEqual(['', '']);
+  });
+
+  it('the end column\'s jog moves the last departure by the interval, within the limits', () => {
+    drag(0, 0, 3);
+    const jog = /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="3"] .jd'));
+    jog.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    expect(saved()[0].block.span).toBe(150);
+    expect(td(0, 3).textContent).toBe('0835');
+    const jog2 = /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="3"] .jd'));
+    jog2.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    jog2.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(saved()[0].block.span).toBe(120); // never below two hours
+  });
+
+  it('a column with an interchange cannot become a block', () => {
+    const cols = saved();
+    cols[0].cells[0].interchange = { targetC: 1, targetR: 0, type: 'guaranteed' };
+    loadGrid({ stops: [stop('A'), stop('B')], cols });
+    drag(0, 0, 3);
+    expect(saved()[0].block).toBeUndefined();
+  });
+
+  it('Unpack makes real columns with the generated ids', () => {
+    drag(0, 0, 3);
+    selectCell(0, 0);
+    /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-unpack')).click();
+    const cols = saved();
+    expect(cols.map((c) => c.cells[0]?.time)).toEqual(['0605', '0635', '0705', '0735', '0805', '0900']);
+    expect(cols[0].block).toBeUndefined();
+    expect(cols[1].uid).toMatch(/^[0-9a-f-]{36}$/);
+    expect(virt().every((v) => v === '')).toBe(true);
+  });
+});
