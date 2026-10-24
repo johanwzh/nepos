@@ -1448,3 +1448,5 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 .iv-err { color: var(--danger, #b3261e); font-size: 12px; min-height: 1em; }
 .iv-often { display: flex; flex-wrap: wrap; gap: 4px; }
 .g-dc-cell .jd { vertical-align: middle; }
+
+.cpi-tip { font-size: 11px; opacity: .75; margin-top: 4px; }

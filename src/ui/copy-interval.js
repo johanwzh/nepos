@@ -3,6 +3,7 @@
 import { t } from '../i18n/strings.js';
 import { copiesAtInterval } from '../core/column-copy.js';
 import { openFloatBox } from './float-box.js';
+import { INTERVALS } from '../core/blocks.js';
 
 /** "60", "90", "1:30", "1.30" → minutes, or null. @param {string} s */
 export function parseInterval(s) {
@@ -28,7 +29,8 @@ export function openCopyInterval({ col, x, y, onApply }) {
   body.className = 'cpi';
   body.innerHTML = `<label class="cpi-row"><span>${t('cpiInterval')}</span><input class="cpi-interval" value="60" autocomplete="off"></label>
     <label class="cpi-row"><span>${t('cpiLast')}</span><input class="cpi-last" placeholder="16:00" autocomplete="off"></label>
-    <div class="cpi-sum"></div>`;
+    <div class="cpi-sum"></div>
+    <div class="cpi-tip" hidden></div>`;
   const interval = /** @type {HTMLInputElement} */ (body.querySelector('.cpi-interval'));
   const last = /** @type {HTMLInputElement} */ (body.querySelector('.cpi-last'));
   const copies = () => {
@@ -42,6 +44,10 @@ export function openCopyInterval({ col, x, y, onApply }) {
     /** @type {HTMLElement} */ (body.querySelector('.cpi-sum')).textContent = list.length
       ? t('cpiSum', list.length, fmt(first(list[0])), fmt(first(list[list.length - 1]))) : t('cpiNone');
     fb.setApplyEnabled(list.length > 0);
+    // A quiet pointer to Virtual intervals (power tools spec 2026-10-24): an interval that divides an hour, 3+ copies
+    const tip = /** @type {HTMLElement} */ (body.querySelector('.cpi-tip'));
+    tip.hidden = !(INTERVALS.includes(parseInterval(interval.value) ?? 0) && list.length >= 3);
+    tip.textContent = t('cpiTip');
   };
   interval.addEventListener('input', show);
   last.addEventListener('input', show);
