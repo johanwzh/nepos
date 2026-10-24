@@ -204,7 +204,9 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 if (ri < 0 || !time) break;
                 let suffix = '';
                 // Request stop: bit 8 (ERN 2.0); Nepos's older files used bit 3
-                if ((mask&256) || (mask&8)) suffix='x'; else if (mask&1) suffix='a'; else if (mask&2) suffix='p';
+                // It sits beside the boarding rule (bits 0/1), not instead of it (booking spec 2026-10-22)
+                if (mask&1) suffix='a'; else if (mask&2) suffix='p';
+                const req = !!((mask&256) || (mask&8));
                 let interchange = null;
                 if ((mask&0x400)||(mask&0x800)) {
                     const colXtoIdx2 = {};
@@ -215,7 +217,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                         type: (mask&0x800)?'stayseated':'guaranteed'
                     };
                 }
-                cellMap[`${cx}:${ri}`] = { time, dayOffset:dOff, suffix, interchange };
+                cellMap[`${cx}:${ri}`] = req ? { time, dayOffset:dOff, suffix, interchange, req } : { time, dayOffset:dOff, suffix, interchange };
                 break;
             }
             case '#TTL':

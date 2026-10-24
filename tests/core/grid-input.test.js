@@ -12,9 +12,15 @@ describe('parseCellInput (the 1.5.7 grid rules)', () => {
     expect(parseCellInput('07:05:00')).toEqual({ time: '0705', dayOffset: 0, suffix: '' });
   });
 
-  it('reads the a / p / x suffix', () => {
-    expect(parseCellInput('0745x')).toEqual({ time: '0745', dayOffset: 0, suffix: 'x' });
+  it('reads the a / p suffix; an x is never typed and is ignored (booking spec 2026-10-22)', () => {
+    expect(parseCellInput('0745x')).toEqual({ time: '0745', dayOffset: 0, suffix: '' });
     expect(parseCellInput('745A')).toEqual({ time: '0745', dayOffset: 0, suffix: 'a' });
+    expect(parseCellInput('0605px')).toEqual({ time: '0605', dayOffset: 0, suffix: 'p' });
+  });
+
+  it('refuses a and p together (that is a passing stop, |)', () => {
+    expect(parseCellInput('0605ap')).toBeNull();
+    expect(parseCellInput('0605pa')).toBeNull();
   });
 
   it('accepts the pass-through pipe', () => {

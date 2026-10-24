@@ -8,7 +8,7 @@
 import { t } from '../i18n/strings.js';
 import { isValidDayCode } from '../core/ern/validate.js';
 import { canonicalDayCode } from '../core/day-codes.js';
-import { parseCellInput } from '../core/grid-input.js';
+import { parseCellInput, normalizeCell } from '../core/grid-input.js';
 import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
@@ -128,6 +128,7 @@ export function selectedColumn() {
 export function loadGrid(data, { readOnly = false } = {}) {
   grid.stops = JSON.parse(JSON.stringify(data.stops));
   grid.cols = JSON.parse(JSON.stringify(data.cols));
+  for (const col of grid.cols) for (const c of col.cells ?? []) normalizeCell(c);
   grid.tripRow = !!(/** @type {any} */ (data).tripRow);
   grid.labelRow = !!(/** @type {any} */ (data).labelRow);
   grid.vehicleRow = !!(/** @type {any} */ (data).vehicleRow);
@@ -201,6 +202,17 @@ function isDecreasing(r, c) {
   }
   return false;
 }
+/**
+ * A new time (typed or pasted) keeps the cell's note, dates, request stop and booking: typing never adds or removes
+ * them (booking spec 2026-10-22). @param {any} prev @param {any} p
+ */
+function keepMarks(prev, p) {
+  if (prev.note) p.note = prev.note;
+  if (prev.dates?.length) p.dates = prev.dates;
+  if (prev.req) p.req = true;
+  if (prev.booking) p.booking = prev.booking;
+}
+
 /** @param {any} cell @param {boolean} isEdit @param {string} buf */
 function cellHTML(cell, isEdit, buf) {
   // The time in its own fixed slot and its marks (a/p/x, day offset) in a slot to the right, so every time
@@ -211,6 +223,7 @@ function cellHTML(cell, isEdit, buf) {
   if (cell.time === '|') return slots('|', '');
   let m = '';
   if (cell.suffix) m += `<span class="g-sfx-${cell.suffix}">${cell.suffix}</span>`;
+  if (cell.req) m += '<span class="g-sfx-x">x</span>';
   if (cell.dayOffset > 0) m += `<span class="g-day-off">+${cell.dayOffset}</span>`;
   return slots(esc(cell.time), m);
 }
@@ -1212,7 +1225,7 @@ function commitEdit() {
       if (prev && p.time !== '|') p.dayOffset = prev.dayOffset || 0;
       p.interchange = prev && p.time !== '|' ? prev.interchange : null;
       // A new time keeps the cell's note and dates
-      if (prev && p.time !== '|') { if (prev.note) p.note = prev.note; if (prev.dates?.length) p.dates = prev.dates; }
+      if (prev && p.time !== '|') keepMarks(prev, p);
       grid.cols[ancC].cells[ancR] = p;
     }
   }
@@ -1491,7 +1504,7 @@ function onPaste(e) {
       if (prev && p.time !== '|') p.dayOffset = prev.dayOffset || 0;
       p.interchange = null;
       // A pasted time keeps the cell's note and dates, as a typed one does
-      if (prev && p.time !== '|') { if (prev.note) p.note = prev.note; if (prev.dates?.length) p.dates = prev.dates; }
+      if (prev && p.time !== '|') keepMarks(prev, p);
       grid.cols[c].cells[r] = p;
     });
   });
@@ -1651,9 +1664,11 @@ function showCtx(x, y, isDC = false) {
     $('gc-ix-s').className = 'gci' + (timed && !withIx ? '' : ' dis');
     $('gc-ix-del').className = 'gci red' + (withIx ? '' : ' dis');
     // Boarding restrictions: ticked when every timed cell in the selection has it
-    const sfx = timedInSelection().map((c) => c.suffix || '');
+    const timedSel = timedInSelection();
+    const sfx = timedSel.map((c) => c.suffix || '');
     for (const [k, key] of /** @type {[string, string][]} */ ([['a', 'ctxSfxA'], ['p', 'ctxSfxP'], ['x', 'ctxSfxX']])) {
-      $(`gc-sfx-${k}`).textContent = (sfx.length && sfx.every((v) => v === k) ? '✓ ' : '    ') + t(key);
+      const on = k === 'x' ? timedSel.length > 0 && timedSel.every((c) => c.req) : sfx.length > 0 && sfx.every((v) => v === k);
+      $(`gc-sfx-${k}`).textContent = (on ? '✓ ' : '    ') + t(key);
       $(`gc-sfx-${k}`).className = 'gci' + (sfx.length ? '' : ' dis');
     }
     $('gc-sfx-none').className = 'gci' + (sfx.some((v) => v) ? '' : ' dis');
@@ -1886,7 +1901,10 @@ export function initGrid() {
     $(`gc-sfx-${k}`).addEventListener('click', () => {
       hideCtx();
       if (grid.readOnly) return;
-      for (const cell of timedInSelection()) cell.suffix = k === 'none' ? '' : k;
+      const cells = timedInSelection();
+      // x is the request stop, its own mark beside a/p; it turns on for all, or off when all have it
+      if (k === 'x') { const all = cells.every((c) => c.req); for (const cell of cells) { if (all) delete cell.req; else cell.req = true; } }
+      else for (const cell of cells) cell.suffix = k === 'none' ? '' : k;
       render();
     });
   }

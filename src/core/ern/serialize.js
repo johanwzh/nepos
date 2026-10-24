@@ -133,7 +133,7 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
                     let mask = 0;
                     if (cell.suffix === 'a') mask |= 1;
                     if (cell.suffix === 'p') mask |= 2;
-                    if (cell.suffix === 'x') mask |= 256; // request stop: bit 8
+                    if (cell.req) mask |= 256; // request stop: bit 8
                     let dx = 0, dy = 0;
                     if (cell.interchange) {
                         dx = cell.interchange.targetC - ci;

@@ -47,7 +47,7 @@ describe('ERN 2.0: what Nepos writes', () => {
     const rs = parseERN(text);
     expect([rs.mode, rs.submode, rs.brandingId]).toEqual(['bus', 'expressBus', 'TST:Branding:b1']);
     expect(grid(rs).stops.map((/** @type {any} */ s) => [s.bold, s.sep, s.price])).toEqual([[true, false, 12.5], [false, true, null]]);
-    expect(grid(rs).cols[0].cells[0].suffix).toBe('x');
+    expect(grid(rs).cols[0].cells[0].req).toBe(true); // x is the request-stop flag (2.4)
     expect(checkRouteFile(text)).toEqual({ status: 'ok', issues: [] });
   });
 });
@@ -57,7 +57,7 @@ describe('ERN 2.0: reading older files', () => {
     const rs = parseERN(OLD);
     expect([rs.mode, rs.brandingId, rs.kom]).toEqual(['bus', 'TST:Branding:b1', 'Hei']);
     expect(grid(rs).stops.map((/** @type {any} */ s) => [s.bold, s.sep, s.price])).toEqual([[true, false, 12.5], [false, true, null]]);
-    expect(grid(rs).cols[0].cells[0].suffix).toBe('x');
+    expect(grid(rs).cols[0].cells[0].req).toBe(true); // x is the request-stop flag (2.4)
     expect(grid(rs).cols[0].note).toBe('Merknad');
   });
 
