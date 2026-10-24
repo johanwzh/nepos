@@ -4,6 +4,7 @@ import { modeFromErn } from '../modes.js';
 import { UUID_PATTERN } from './serialize.js';
 import { normalizeDests, servedRows } from '../destinations.js';
 import { readDirection } from '../directions.js';
+import { normalizeBooking, fromBits, BOOKING_METHODS, BUY_WHEN } from '../booking.js';
 
 /**
  * Parse an ERN route file into a route state.
@@ -66,12 +67,13 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         }
         const grid = { stops: stopsCopy, cols: gCols2, tripRow: _tripRow, labelRow: _labelRow, vehicleRow: _vehicleRow };
         // Notes and dates from #FOT/#UNT: on the column (row -1) or on a cell that has a time
-        _pendingNotes.forEach(({ ci, ri, note, date }) => {
+        _pendingNotes.forEach(({ ci, ri, note, date, booking }) => {
             if (ci < 0 || ci >= grid.cols.length) return;
             const target = ri === -1 ? grid.cols[ci] : (ri >= 0 && ri < grid.stops.length ? grid.cols[ci].cells[ri] : null);
             if (!target) return;
             if (note != null) target.note = note;
             if (date) (target.dates ??= []).push(date);
+            if (booking) { const b = normalizeBooking({ ...(target.booking ?? {}), ...booking }); if (b) target.booking = b; }
         });
         rs.grids[key] = grid;
         dskByGrid.push({ grid, links: _pendingDsk });
@@ -249,6 +251,24 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 const lang = (f[4]||'').trim().toLowerCase();
                 if (lang && lang !== 'nob' && lang !== '0') break; // notes in other languages: not shown (the check says so)
                 _pendingNotes.push({ ci: buildXtoIdx()[parseInt(f[1])] ?? parseInt(f[1]), ri: parseInt(f[2]), note: txt });
+                break;
+            }
+            case '#BOD': case '#BOF': {
+                // Booking (booking spec 2026-10-22): (column, row) a stop on a trip, (column, -1) a trip, (-1, -1) the line
+                const x = parseInt(f[1]), y = parseInt(f[2]);
+                /** @type {any} */
+                let part;
+                if (f[0] === '#BOF') {
+                    const lang = (f[4]||'').trim().toLowerCase();
+                    if (lang && lang !== 'nob') break; // other languages: not shown, as notes
+                    part = { note: f[3] || '' };
+                } else {
+                    part = { contact: f[3], phone: f[4], email: f[5], url: f[6], details: f[7], access: f[8], bookWhen: f[9],
+                        methods: fromBits(parseInt(f[10]) || 0, BOOKING_METHODS), buyWhen: fromBits(parseInt(f[11]) || 0, BUY_WHEN),
+                        latest: f[12], minAhead: f[13], maxAhead: f[14] };
+                }
+                if (x === -1) { if (y === -1) rs.booking = normalizeBooking({ ...(rs.booking ?? {}), ...part }); break; }
+                _pendingNotes.push({ ci: buildXtoIdx()[x] ?? x, ri: y, booking: part });
                 break;
             }
             case '#DST': {

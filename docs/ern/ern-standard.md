@@ -474,7 +474,7 @@ Day mask (field 6):
 
 ### #BOD
 
-Booking data record. How a trip, or a stop on a trip, can or must be booked; at most one per position. The fields follow NeTEx's booking arrangements.
+Booking data record. How a trip, or a stop on a trip, can or must be booked; at most one per position. The fields follow NeTEx's booking arrangements. The line's booking is the record at `-1;-1`, written once, in the line's first table (as the line's note, `#FOT -1;-1`). Nepos 2.4 reads the contact person (field 2) and writes it back, but does not show it.
 
 | Field | Type | Description |
 |---|---|---|

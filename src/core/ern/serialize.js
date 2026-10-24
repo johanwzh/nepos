@@ -1,6 +1,7 @@
 // ERN serializer, ported from Nepos 1.5.7 (nepos.html lines 2720–2809). See docs/ern/ern-format.md.
 import { ernCodeFor } from '../modes.js';
 import { servedRows, destKey } from '../destinations.js';
+import { normalizeBooking, toBits, BOOKING_METHODS, BUY_WHEN } from '../booking.js';
 
 /** A column's stable ID (#UID). */
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -154,14 +155,26 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
                     lines.push(`#UNT;${ci};${ri};${d.from||''};${pmu};${d.to||''};${pmu};0;0;`);
                 }
             };
+            /** Booking (#BOD) and its note (#BOF) at a position. @param {any} b @param {number} ci @param {number} ri */
+            const bookingOf = (b, ci, ri) => {
+                const n = normalizeBooking(b);
+                if (!n) return;
+                const bits = (/** @type {string[] | undefined} */ l, /** @type {string[]} */ all) => toBits(l, all) || '';
+                const { note, ...rest } = n;
+                if (Object.keys(rest).length) lines.push(`#BOD;${ci};${ri};${[n.contact, n.phone, n.email, n.url, n.details, n.access, n.bookWhen].map((v) => esc(v)).join(';')};${bits(n.methods, BOOKING_METHODS)};${bits(n.buyWhen, BUY_WHEN)};${[n.latest, n.minAhead, n.maxAhead].map((v) => esc(v)).join(';')}`);
+                if (note) lines.push(`#BOF;${ci};${ri};${esc(note)};nob`);
+            };
             // The line's note once, on the whole of the first table (#FOT -1;-1), then other languages
             if (!komWritten) {
+                bookingOf(rs.booking, -1, -1); // the line's booking, once, as its note
                 if (rs.kom?.trim()) lines.push(`#FOT;-1;-1;${esc(rs.kom)};nob`);
                 for (const k of rs.komOther || []) if (k.text?.trim()) lines.push(`#FOT;-1;-1;${esc(k.text)};${esc(k.lang)}`);
                 komWritten = true;
             }
             grid.cols.forEach((col, ci) => notesOf(col, ci, -1));
             grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => notesOf(col.cells[ri], ci, ri)));
+            grid.cols.forEach((col, ci) => bookingOf(col.booking, ci, -1));
+            grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => bookingOf(col.cells[ri]?.booking, ci, ri)));
             lines.push(...(dskLines.get(grid) ?? []));
         }
     }
