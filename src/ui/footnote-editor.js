@@ -6,6 +6,7 @@ import { t } from '../i18n/strings.js';
 import { markDirty } from './shell.js';
 import { grid, render } from './grid.js';
 import { openFloatBox, closeFloatBox } from './float-box.js';
+import { normalizeBooking } from '../core/booking.js';
 
 const $ = (/** @type {string} */ id) => /** @type {any} */ (document.getElementById(id));
 
@@ -14,23 +15,57 @@ function holder(type, ri, ci) {
   return type === 'col' ? grid.cols[ci] ?? null : grid.cols[ci]?.cells[ri] ?? null;
 }
 
-/** Show the selected cell's note, else its column's, under the grid. @param {{ type: 'col' | 'cell', ri: number, ci: number } | null} where */
+/** A booking in words, every field it has (booking spec 2026-10-22). @param {any} booking @param {string} label */
+export function bookingSummary(booking, label) {
+  const b = normalizeBooking(booking);
+  if (!b) return '';
+  const parts = [
+    b.phone && `${t('bkPhone')} ${b.phone}`, b.email && `${t('bkEmail')} ${b.email}`, b.url && `${t('bkUrl')} ${b.url}`, b.details,
+    b.access && t(`bk:${b.access}`), b.bookWhen && t(`bk:${b.bookWhen}`),
+    b.methods && b.methods.map((m) => t(`bk:${m}`)).join(', '),
+    b.buyWhen && `${t('bkBuyWhen')}: ${b.buyWhen.map((m) => t(`bk:${m}`)).join(', ')}`,
+    b.latest && `${t('bkLatest')} ${b.latest.slice(0, 2)}:${b.latest.slice(2)}`,
+    b.minAhead && `${t('bkMinAhead')} ${b.minAhead}`, b.maxAhead && `${t('bkMaxAhead')} ${b.maxAhead}`, b.note,
+  ].filter(Boolean);
+  return `${label}: ${parts.join(' · ')}`;
+}
+
+/** The dates on a time or a trip in a few words. @param {any[]} dates */
+const datesText = (dates) => `${t('fnDates')}: ${t('datesSummary', dates.filter((d) => d.on).length, dates.filter((d) => !d.on).length)}`;
+
+/**
+ * Under the grid: everything about the selected time — its note (else its trip's), dates, boarding rule, request stop and
+ * booking (else the trip's, else the line's) — in full; the grid itself has no hover texts (booking spec 2026-10-22).
+ * @param {{ type: 'col' | 'cell', ri: number, ci: number } | null} where
+ */
 export function updateFnPreview(where = null) {
   const el = $('fn-preview');
   if (!el) return;
   let text = '';
   /** @type {{ type: 'col' | 'cell', ri: number, ci: number } | null} */
   let target = null;
+  /** @type {string[]} */
+  const more = [];
   if (where && grid.active) {
     const col = grid.cols[where.ci];
-    if (where.type === 'cell' && col?.cells[where.ri]?.note) { text = col.cells[where.ri].note; target = where; }
+    const cell = where.type === 'cell' ? col?.cells[where.ri] : null;
+    if (cell?.note) { text = cell.note; target = where; }
     else if (col?.note) { text = col.note; target = { type: 'col', ri: 0, ci: where.ci }; }
+    if (cell?.dates?.length) more.push(datesText(cell.dates));
+    else if (where.type === 'col' && col?.dates?.length) more.push(datesText(col.dates));
+    if (cell?.suffix === 'a') more.push(t('fnAlight'));
+    if (cell?.suffix === 'p') more.push(t('fnBoard'));
+    if (cell?.req) more.push(t('xwReq'));
+    const booking = cell?.booking ? bookingSummary(cell.booking, t('bkTitle'))
+      : col?.booking ? bookingSummary(col.booking, t('bkTrip'))
+      : app.routeState?.booking ? bookingSummary(app.routeState.booking, t('bkLine')) : '';
+    if (booking) more.push(booking);
   }
-  if (!text || !target) { el.classList.remove('visible'); el.onclick = null; return; }
-  el.textContent = text;
+  if (!text && !more.length) { el.classList.remove('visible'); el.onclick = null; return; }
+  el.textContent = [text, ...more].filter(Boolean).join(' · ');
   el.classList.add('visible');
   const at = target;
-  el.onclick = () => openFnEditor(at.type, at.ri, at.ci);
+  el.onclick = at ? () => openFnEditor(at.type, at.ri, at.ci) : null;
 }
 
 /**

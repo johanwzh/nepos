@@ -81,6 +81,32 @@ describe('a/p and x on a time', () => {
     expect(document.querySelector('.g-fn-cell[data-ci="0"] .bk-col-mark')).not.toBeNull();
   });
 
+  it('the note bar shows the note, dates, boarding rule, request stop and booking in full', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', note: '', dates: [], booking: { url: 'https://t.no' }, cells: [
+      cell('0700', { suffix: 'a', req: true, note: 'Bytt her', dates: [{ from: '20260101', to: '20260101', on: false }] }),
+      cell('0710', { suffix: 'p', booking: { phone: '22', methods: ['callOffice', 'online'], bookWhen: 'untilPreviousDay', latest: '1800' } }),
+    ] }] });
+    selectCell(0, 0);
+    const bar = () => /** @type {HTMLElement} */ (document.getElementById('fn-preview')).textContent ?? '';
+    expect(bar()).toContain('Bytt her');
+    expect(bar()).toContain('Kun avstigning');
+    expect(bar()).toContain('Stopper ved behov');
+    expect(bar()).toContain('1 fjernet');
+    selectCell(1, 0);
+    expect(bar()).toContain('Kun påstigning');
+    expect(bar()).toContain('Bestilling');
+    expect(bar()).toContain('22');
+    expect(bar()).toContain('Ring kontoret, På nett');
+    expect(bar()).toContain('Innen dagen før');
+    expect(bar()).toContain('18:00');
+  });
+
+  it('the note bar shows the trip\'s booking on a time of a bookable trip', () => {
+    loadGrid({ stops: [stop('A')], cols: [{ dayCode: 'D', note: '', dates: [], booking: { url: 'https://t.no' }, cells: [cell('0700')] }] });
+    selectCell(0, 0);
+    expect(document.getElementById('fn-preview')?.textContent).toContain('https://t.no');
+  });
+
   it('keeps the request stop when the time is typed again', () => {
     selectCell(0, 0);
     for (const k of ['0', '7', '0', '5', 'p']) press(k);
