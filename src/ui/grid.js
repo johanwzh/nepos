@@ -9,6 +9,7 @@ import { t } from '../i18n/strings.js';
 import { isValidDayCode } from '../core/ern/validate.js';
 import { canonicalDayCode } from '../core/day-codes.js';
 import { parseCellInput, normalizeCell } from '../core/grid-input.js';
+import { noteLetters } from '../core/note-letters.js';
 import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
@@ -214,7 +215,7 @@ function keepMarks(prev, p) {
 }
 
 /** @param {any} cell @param {boolean} isEdit @param {string} buf */
-function cellHTML(cell, isEdit, buf) {
+function cellHTML(cell, isEdit, buf, letter = '') {
   // The time in its own fixed slot and its marks (a/p/x, day offset) in a slot to the right, so every time
   // in a column starts at the same place (user 2026-10-17, as in Reggi)
   const slots = (/** @type {string} */ time, /** @type {string} */ marks) => `<span class="g-t">${time}</span><span class="g-m">${marks}</span>`;
@@ -224,6 +225,8 @@ function cellHTML(cell, isEdit, buf) {
   let m = '';
   if (cell.suffix) m += `<span class="g-sfx-${cell.suffix}">${cell.suffix}</span>`;
   if (cell.req) m += '<span class="g-sfx-x">x</span>';
+  // The note letter, in place of the old triangle (booking spec 2026-10-22)
+  if (letter) m += `<span class="g-fn-l">${letter}</span>`;
   if (cell.dayOffset > 0) m += `<span class="g-day-off">+${cell.dayOffset}</span>`;
   return slots(esc(cell.time), m);
 }
@@ -265,13 +268,16 @@ const JOG_REST = 400;
  * jog rests, as after typing a time.
  * @param {number} r0 @param {number} r1 @param {number} c0 @param {number} c1
  */
+/** The note letters of the table drawn last ('ci:ri' → letter). @type {Map<string, string>} */
+let letters = new Map();
+
 function patchTimes(r0, r1, c0, c1) {
   for (let c = c0; c <= c1; c++) {
     if (!grid.cols[c]) continue;
     for (let r = r0; r <= r1 + 1 && r < grid.stops.length; r++) { // the row after: its "earlier than above" mark
       const td = document.querySelector(`#tbl td[data-r="${r}"][data-c="${c}"]`);
       if (!td) continue;
-      if (r <= r1) td.innerHTML = cellHTML(grid.cols[c].cells[r], false, '');
+      if (r <= r1) td.innerHTML = cellHTML(grid.cols[c].cells[r], false, '', letters.get(`${c}:${r}`));
       td.classList.toggle('is-dec', isDecreasing(r, c));
     }
   }
@@ -525,6 +531,7 @@ function completeIx(tr, tc) {
 // ─── Render ─────────────────────────────────────────────────────────────────
 export function render() {
   if (!grid.active) return;
+  letters = noteLetters(grid);
   if (!inDC) { inFN = false; dcSpanAt = -1; }
   /** @type {Set<string>} */
   const linked = new Set();
@@ -1142,12 +1149,13 @@ function renderStopRow(tbl, stop, ri, linked) {
       else td.classList.add('g-ix-dim');
     }
     if (cell && cell.time === '|') td.classList.add('is-pipe');
-    if (cell?.note) { td.classList.add('has-fn'); td.title = cell.note; }
-    if (cell?.dates?.length) { td.classList.add('has-dates'); td.title = [td.title, datesSummary(cell.dates)].filter(Boolean).join(' · '); }
+    // No hover text: the note bar shows a time's note, dates and booking (booking spec 2026-10-22)
+    if (cell?.note) td.classList.add('has-fn');
+    if (cell?.dates?.length) td.classList.add('has-dates');
     if (isDecreasing(ri, ci) && !ixMode) td.classList.add('is-dec');
     if (isRange && !ixMode) td.classList.add('in-range');
     if (isSel && editing) { td.classList.add('is-edit'); td.innerHTML = cellHTML(cell, true, editBuf); }
-    else { td.innerHTML = cellHTML(cell, false, ''); if (isSel && !ixMode) td.classList.add('is-anchor'); }
+    else { td.innerHTML = cellHTML(cell, false, '', letters.get(`${ci}:${ri}`)); if (isSel && !ixMode) td.classList.add('is-anchor'); }
     td.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();

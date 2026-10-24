@@ -36,6 +36,16 @@ describe('a/p and x on a time', () => {
     expect(gridData().cols[0].cells[1].suffix).toBe('');
   });
 
+  it('shows a/p, x and the note letter, with no hover text', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [
+      { dayCode: 'D', cells: [cell('0605', { suffix: 'a', req: true, note: 'Bytt her' }), cell('0610', { dates: [{ from: '20260101', to: '20260101', on: false }] })], note: '', dates: [] },
+    ] });
+    expect(marks(0, 0)).toBe('axb');
+    expect(marks(1, 0)).toBe('c');
+    expect(td(0, 0).title).toBe('');
+    expect(td(1, 0).title).toBe('');
+  });
+
   it('keeps the request stop when the time is typed again', () => {
     selectCell(0, 0);
     for (const k of ['0', '7', '0', '5', 'p']) press(k);
