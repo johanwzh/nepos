@@ -1247,7 +1247,7 @@ function renderStopRow(tbl, stop, ri, linked) {
     input.addEventListener('blur', () => { if (inStopEdit) commitStopEdit(); });
     tdn.appendChild(input);
   } else {
-    const isSel = inStopCol && ri === ancR;
+    const isSel = inStopCol && ri >= Math.min(ancR, endR) && ri <= Math.max(ancR, endR);
     tdn.className = 'cw-name g-sticky1 g-td-name' + (stop.bold ? ' stop-bold' : '') + (isSel ? ' stop-sel' : '');
     tdn.dataset.ri = String(ri);
     applyStopMark(tdn, stop);
@@ -1258,7 +1258,8 @@ function renderStopRow(tbl, stop, ri, linked) {
       if (ixMode) return;
       commitEdit(); commitDayCode();
       if (inStopEdit) commitStopEdit();
-      inDC = false; inStopCol = true; ancR = ri; endR = ri;
+      inDC = false;
+      if (e.shiftKey && inStopCol) endR = ri; else { inStopCol = true; ancR = ri; endR = ri; }
       render();
     });
     tdn.addEventListener('contextmenu', (e) => {
@@ -1329,7 +1330,7 @@ function renderStopRow(tbl, stop, ri, linked) {
   });
   const tdd = tr.insertCell();
   tdd.className = 'cw-ins g-td-btn g-add';
-  if (!grid.readOnly) tdd.appendChild(smallButton('×', 'g-ibtn g-ibtn-del', t('delRow'), () => deleteRow(ri)));
+  if (!grid.readOnly) tdd.appendChild(smallButton('×', 'g-ibtn g-ibtn-del', t('delRow'), () => { const run = selectedRowRun(); if (run.length > 1 && run.includes(ri)) deleteRows(run); else deleteRow(ri); }));
 }
 
 /** @param {HTMLTableElement} tbl */
@@ -1343,7 +1344,7 @@ function renderBottomRow(tbl) {
   grid.cols.forEach((col, ci) => {
     const td = tr.insertCell();
     td.className = 'cw-time g-td-btn g-add';
-    if (!grid.readOnly && !col.virt) td.appendChild(smallButton('×', 'g-ibtn g-ibtn-del', t('delCol'), () => deleteCol(ci)));
+    if (!grid.readOnly && !col.virt) td.appendChild(smallButton('×', 'g-ibtn g-ibtn-del', t('delCol'), () => { const run = selectedColRun(); if (run.length > 1 && run.includes(ci)) deleteCols(run); else deleteCol(ci); }));
   });
   tr.insertCell().className = 'cw-ins g-add';
 }
@@ -1504,8 +1505,8 @@ function keyReadOnly(e) {
 /** @param {KeyboardEvent} e */
 function keyStopCol(e) {
   switch (e.key) {
-    case 'ArrowUp': e.preventDefault(); if (ancR > 0) { ancR--; endR = ancR; render(); } break;
-    case 'ArrowDown': e.preventDefault(); if (ancR < grid.stops.length - 1) { ancR++; endR = ancR; render(); } break;
+    case 'ArrowUp': e.preventDefault(); if (e.shiftKey) { if (endR > 0) { endR--; render(); } } else if (ancR > 0) { ancR--; endR = ancR; render(); } break;
+    case 'ArrowDown': e.preventDefault(); if (e.shiftKey) { if (endR < grid.stops.length - 1) { endR++; render(); } } else if (ancR < grid.stops.length - 1) { ancR++; endR = ancR; render(); } break;
     case 'ArrowRight': e.preventDefault(); if (!grid.cols.length) break; inStopCol = false; ancC = 0; endC = 0; render(); scrollTo(ancR, 0); break;
     case 'Escape': e.preventDefault(); inStopCol = false; render(); break;
     case 'Enter': case 'F2': e.preventDefault(); enterStopEdit(ancR); break;
@@ -1589,6 +1590,7 @@ function keyDayCodeNav(e) {
     case 'ArrowDown': e.preventDefault(); downFromDayCodes(); break;
     case 'Escape': e.preventDefault(); inDC = false; render(); break;
     case 'F7': e.preventDefault(); openColNotes(); break;
+    case 'Delete': e.preventDefault(); if (!grid.readOnly) { const run = selectedColRun(); if (run.length > 1) deleteCols(run); else deleteCol(dcCol); } break;
     case 'Enter': e.preventDefault(); dcEdit = true; dcBuf = grid.cols[dcCol].dayCode; render(); break;
     default:
       if (e.key.length === 1 && /[A-Za-z0-9]/.test(e.key) && !e.ctrlKey && !e.metaKey) { e.preventDefault(); dcEdit = true; dcBuf = e.key.toUpperCase(); render(); }
@@ -2002,10 +2004,52 @@ function insertColumnsAfter(ci, cols) {
   render();
 }
 
+/** The selected run of columns in the day-code row (several: Shift+click or Shift+arrows), else none. */
+function selectedColRun() {
+  if (!inDC || inFN || dcSpanAt !== dcCol) return [];
+  const [a, b] = dcRange();
+  const out = [];
+  for (let ci = a; ci <= b; ci++) out.push(ci);
+  return out;
+}
+/** The selected run of stops (Shift+click or Shift+arrows in the stop column), else none. */
+function selectedRowRun() {
+  if (!inStopCol) return [];
+  const out = [];
+  for (let ri = Math.min(ancR, endR); ri <= Math.max(ancR, endR); ri++) out.push(ri);
+  return out;
+}
+
+/**
+ * Delete several columns after one question (backlog 74). A block's band and end columns are skipped; a parent takes
+ * its block along. @param {number[]} list
+ */
+function deleteCols(list) {
+  const real = list.filter((ci) => !locked(ci));
+  if (!real.length) return;
+  if (real.length > 1 ? !confirm(t('confirmDelCols', real.length)) : grid.cols[real[0]].cells.some((/** @type {any} */ c) => c !== null) && !confirm(t('confirmDelCol'))) return;
+  for (const ci of real.sort((a, b) => b - a)) dropCol(ci);
+  inDC = false;
+  render();
+}
+
+/** Delete several rows after one question. @param {number[]} list */
+function deleteRows(list) {
+  if (list.length > 1 ? !confirm(t('confirmDelRows', list.length)) : grid.cols.some((col) => col.cells[list[0]] !== null) && !confirm(t('confirmDelRow'))) return;
+  for (const ri of [...list].sort((a, b) => b - a)) dropRow(ri);
+  ancR = clampR(Math.min(ancR, endR)); endR = ancR;
+  render();
+}
+
 /** @param {number} ci */
 function deleteCol(ci) {
   if (locked(ci)) return;
   if (grid.cols[ci].cells.some((/** @type {any} */ c) => c !== null) && !confirm(t('confirmDelCol'))) return;
+  dropCol(ci);
+  render();
+}
+/** Remove a column; interchanges to it go, to later ones move along. @param {number} ci */
+function dropCol(ci) {
   grid.cols.splice(ci, 1);
   for (const col of grid.cols) for (const cell of col.cells) {
     if (cell && cell.interchange) {
@@ -2015,7 +2059,6 @@ function deleteCol(ci) {
   }
   ancC = clampC(ancC); endC = clampC(endC);
   if (inDC) dcCol = clampC(dcCol);
-  render();
 }
 /** A new empty stop row at the bottom (recording stops); its index. */
 export function appendStopRow() {
