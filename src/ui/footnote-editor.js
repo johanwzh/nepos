@@ -31,7 +31,7 @@ export function bookingSummary(booking, label) {
 }
 
 /** The dates on a time or a trip in a few words. @param {any[]} dates */
-const datesText = (dates) => `${t('fnDates')}: ${t('datesSummary', dates.filter((d) => d.on).length, dates.filter((d) => !d.on).length)}`;
+const datesText = (dates) => `${t('fnDatesLabel')}: ${t('datesSummary', dates.filter((d) => d.on).length, dates.filter((d) => !d.on).length)}`;
 
 /**
  * Under the grid: everything about the selected time — its note (else its trip's), dates, boarding rule, request stop and
