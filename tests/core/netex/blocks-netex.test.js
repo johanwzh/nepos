@@ -35,6 +35,26 @@ describe('blocks in the export', () => {
     expect(line).toMatch(/<DepartureTime>08:05:00<\/DepartureTime>/);
   });
 
+  it('review I-5: a generated trip never takes the id of a real column (a kept column from an earlier Unpack)', () => {
+    const { rs, grid } = gridOf(miniErn({ times: [['0605', '0615', '0625'], ['0640', '0650', '0700']] }));
+    grid.cols[0].block = { every: 30, span: 120 };
+    grid.cols[1].uid = tripCols({ cols: [grid.cols[0]] })[1].uid; // the 06:35 trip's id, kept from an Unpack
+    const ids = [...buildLine(rs).line.matchAll(/<ServiceJourney id="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toHaveLength(6);
+    expect(new Set(ids).size).toBe(6);
+  });
+
+  it('review M-2: a request stop or booking on a waiting stop\'s arrival time is exported', () => {
+    const text = ['#LEV;Test;TST', '#RUT;-1;1;A - C;;6;', '#SEK;TST:Authority:1;F;1;0;0;0', '#SEK;TST:Operator:1;B;0;1;0;0', '#TRA;Fram', '#PER;;;;;;', '#KAL;h1', '#TAB;0;;;;',
+      '#TUR;0;D;0;0;0;0', `#UID;${U[0]}`,
+      '#TRL;0;NSR:Quay:1;A;0;-1;-1;-1;0;-1', '#TRC;0;0700;0;0;0;0;0',
+      '#TRL;1;NSR:Quay:2;B;0;-1;-1;-1;0;-1', '#TRC;0;0710;0;0;0;0;256',
+      '#TRL;2;NSR:Quay:2;B;0;-1;-1;-1;0;-1', '#TRC;0;0715;0;0;0;0;0',
+      '#TRL;3;NSR:Quay:3;C;0;-1;-1;-1;0;-1', '#TRC;0;0730;0;0;0;0;0'].join('\r\n') + '\r\n';
+    const { rs } = gridOf(text);
+    expect(buildLine(rs).line).toContain('<RequestStop>true</RequestStop>');
+  });
+
   it('runs past midnight with DayOffset on the parent\'s days', () => {
     const { rs, grid } = gridOf(miniErn({ times: [['0605', '0615', '0625']] }));
     grid.cols[0].block = { every: 30, span: 1380 };

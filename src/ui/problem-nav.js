@@ -5,7 +5,7 @@ import { app } from './state.js';
 import { t } from '../i18n/strings.js';
 import { $, onLinesChanged } from './shell.js';
 import { lineIssues } from './line-info.js';
-import { grid, onGridRender, selectDayCode, selectStopCell, selectDestCell, selectCell } from './grid.js';
+import { grid, onGridRender, selectDayCode, selectStopCell, selectDestCell, selectCell, viewColumn } from './grid.js';
 import { switchTableSet, switchPeriod } from './route-editor.js';
 import { openEditDialog } from './table-set-tabs.js';
 import { quayStatus } from '../core/quays.js';
@@ -88,7 +88,7 @@ function stopRowFor(code) {
 export function goToProblem(issue) {
   const fill = t('probFill'), fix = t('probFix');
   const c = issue.code;
-  const col = (issue.where?.column ?? 1) - 1;
+  const col = viewColumn((issue.where?.column ?? 1) - 1); // a block's band and end columns are not counted
   const focus = (/** @type {string} */ id, /** @type {string} */ text) => { const el = /** @type {HTMLElement | null} */ (document.getElementById(id)); el?.focus(); markHere(el, text); };
   if (c === 'no-name') { focus('rh-name', fill); return; }
   if (c === 'no-mode' || c === 'no-submode') { focus('rh-mode-tile', fill); return; }

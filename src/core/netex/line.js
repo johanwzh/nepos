@@ -104,8 +104,8 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                         stopId, name, arrCell, depCell,
                         forBoarding:  depCell.suffix !== 'a',
                         forAlighting: depCell.suffix !== 'p',
-                        requestStop:  !!depCell.req,
-                        booking:      depCell.booking ?? null,
+                        requestStop:  !!(depCell.req || arrCell?.req), // a waiting stop: either of its times
+                        booking:      depCell.booking ?? arrCell?.booking ?? null,
                     }));
                     for (const st of jpStopList) routePointsMap.set(st.stopId, st.name);
                     // The destination starting at each call: the trip's start on the first, a change further on

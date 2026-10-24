@@ -19,7 +19,7 @@ import { openDayCodeHelper } from './day-code-helper.js';
 import { sortColumns } from '../core/column-sort.js';
 import { openCopyInterval } from './copy-interval.js';
 import { activeTool, setJogHandler, onToolChange, setUnpackHandler } from './power-tools.js';
-import { withBlocks, withoutBlocks, blockTrips, canBeBlock, dragResult, snapSpan, firstDeparture, MIN_SPAN, MAX_SPAN } from '../core/blocks.js';
+import { withBlocks, withoutBlocks, freeUid, DRAG_INTERVALS, blockTrips, canBeBlock, dragResult, snapSpan, firstDeparture, MIN_SPAN, MAX_SPAN } from '../core/blocks.js';
 import { DRAG_STEP_PX, openBlockDialog, openHowOften } from './interval-tool.js';
 import { jogDial } from './jog/jogDial.js';
 import { shiftTimes } from '../core/time-shift.js';
@@ -307,7 +307,7 @@ function syncBlocks() {
 }
 // ─── Virtual intervals: the drag (power tools spec 2026-10-24) ─────────────
 /** The drag in progress: the parent (by uid), where it started, the column width, the steps now. */
-let ivDrag = /** @type {{ uid: string, base: number, x0: number, w: number, steps: number, moved: boolean } | null} */ (null);
+let ivDrag = /** @type {{ uid: string, base: number, x0: number, w: number, steps: number, moved: boolean, orig: any } | null} */ (null);
 /** The first row with a time in a column. @param {any} col */
 const topRow = (col) => col.cells.findIndex((/** @type {any} */ c) => c?.time && c.time !== '|');
 /** The index of a column's parent (itself when it is real). @param {number} ci */
@@ -315,13 +315,16 @@ const parentIndex = (ci) => { const c = grid.cols[ci]; return c?.virt ? grid.col
 
 /** A press on a time with the tool on: the drag starts here (and the cell is selected, for Unpack). @param {MouseEvent} e @param {number} ri @param {number} ci */
 function startIntervalDrag(e, ri, ci) {
+  commitEdit(); commitDayCode(); // a half-typed time lands where it was typed
   ancR = ri; ancC = ci; endR = ri; endC = ci;
   const pi = parentIndex(ci);
   const parent = grid.cols[pi];
   if (!parent) return;
   if (!parent.block && !canBeBlock(grid.cols, pi)) { showMessage(t('ivNoIx')); render(); return; }
   const w = /** @type {HTMLElement} */ (e.currentTarget)?.getBoundingClientRect?.().width || DRAG_STEP_PX;
-  ivDrag = { uid: parent.uid, base: ci - pi, x0: e.clientX, w, steps: ci - pi, moved: false };
+  // A collapsed band (under 10 min) stands for the steps past the band, not its two drawn columns
+  const base = parent.block && parent.block.every < 10 && ci !== pi ? DRAG_INTERVALS.length + 2 : ci - pi;
+  ivDrag = { uid: parent.uid, base, x0: e.clientX, w, steps: base, moved: false, orig: parent.block ? { ...parent.block } : null };
   render();
 }
 
@@ -332,7 +335,7 @@ function dragTo(steps) {
   if (!d || !parent) return;
   d.steps = steps;
   const res = dragResult(steps);
-  if (res.kind === 'band') parent.block = { every: res.every, span: snapSpan(res.every, parent.block?.span ?? MIN_SPAN) };
+  if (res.kind === 'band') parent.block = { every: res.every, span: snapSpan(res.every, d.orig?.span ?? parent.block?.span ?? MIN_SPAN) };
   else if (res.kind === 'none' || res.kind === 'dialog') delete parent.block;
   render();
 }
@@ -356,10 +359,12 @@ function endIntervalDrag() {
   const res = dragResult(d.steps);
   const at = document.querySelector(`.g-dc-cell[data-ci="${pi}"]`)?.getBoundingClientRect();
   const x = (at?.left ?? 200) + 40, y = (at?.bottom ?? 120) + 4;
+  // Cancel gives back the block the drag started from
+  const restore = () => { if (d.orig) parent.block = d.orig; else delete parent.block; render(); };
   if (res.kind === 'dialog') {
-    openBlockDialog({ first: firstDeparture(parent) ?? 0, x, y, onApply: (b) => { parent.block = b; render(); } });
+    openBlockDialog({ first: firstDeparture(parent) ?? 0, every: d.orig?.every, span: d.orig?.span, x, y, onApply: (b) => { parent.block = b; render(); }, onCancel: restore });
   } else if (res.kind === 'ask') {
-    openHowOften({ x, y, onPick: (every) => { parent.block = { every, span: snapSpan(every, parent.block?.span ?? MIN_SPAN) }; render(); } });
+    openHowOften({ x, y, onPick: (every) => { parent.block = { every, span: snapSpan(every, d.orig?.span ?? parent.block?.span ?? MIN_SPAN) }; render(); }, onCancel: restore });
   }
 }
 
@@ -389,13 +394,22 @@ function unpackBlock() {
   const pi = parentIndex(ancC);
   const parent = grid.cols[pi];
   if (!parent?.block) { showMessage(t('ivNoBlock')); return; }
-  const trips = blockTrips(parent);
+  const used = new Set(grid.cols.filter((c) => !c.virt).map((c) => c.uid));
+  const trips = blockTrips(parent).map((trip) => ({ ...trip, uid: freeUid(trip.uid, used) }));
   if (!confirm(t('ivUnpackConfirm', trips.length + 1))) return;
   delete parent.block;
   grid.cols = withoutBlocks(grid.cols);
   insertColumnsAfter(grid.cols.indexOf(parent), trips);
 }
 
+/** A parent, band or end column: no interchanges this round (power tools spec). @param {number} ci */
+const inBlock = (ci) => !!grid.cols[ci]?.block || !!grid.cols[ci]?.virt;
+/** The working-copy index of a stored column (the problems count stored columns). @param {number} n */
+export function viewColumn(n) {
+  let seen = -1;
+  for (let ci = 0; ci < grid.cols.length; ci++) if (!grid.cols[ci].virt && ++seen === n) return ci;
+  return n;
+}
 /** A band or end column: drawn from its parent, never edited itself. @param {number} ci */
 const locked = (ci) => !!grid.cols[ci]?.virt;
 
@@ -652,6 +666,7 @@ function exitIx() {
 /** @param {number} tr @param {number} tc */
 function completeIx(tr, tc) {
   const { r, c, type } = /** @type {{ r: number, c: number, type: string }} */ (ixSource);
+  if (inBlock(c) || inBlock(tc)) { exitIx(); showMessage(t('ivNoIx')); return; } // not with a block (this round)
   if (r !== tr || c !== tc) {
     const cell = grid.cols[c].cells[r];
     if (cell) cell.interchange = { targetC: tc, targetR: tr, type };
@@ -1932,8 +1947,9 @@ function showCtx(x, y, isDC = false) {
   if (!isStop && !isDC && ctxC >= 0 && ctxC < grid.cols.length) {
     const cell = grid.cols[ctxC].cells[ctxR];
     const timed = !!(cell && cell.time && cell.time !== '|'), withIx = timed && !!cell.interchange;
-    $('gc-ix-g').className = 'gci' + (timed && !withIx ? '' : ' dis');
-    $('gc-ix-s').className = 'gci' + (timed && !withIx ? '' : ' dis');
+    const ixOk = timed && !withIx && !inBlock(ctxC);
+    $('gc-ix-g').className = 'gci' + (ixOk ? '' : ' dis');
+    $('gc-ix-s').className = 'gci' + (ixOk ? '' : ' dis');
     $('gc-ix-del').className = 'gci red' + (withIx ? '' : ' dis');
     // Boarding restrictions: ticked when every timed cell in the selection has it
     const timedSel = timedInSelection();
@@ -2118,11 +2134,20 @@ export function initGrid() {
       const { r0, r1, c0, c1 } = selRect();
       const rows = [];
       for (let r = r0; r <= r1; r++) rows.push(r);
-      for (let c = c0; c <= c1; c++) if (grid.cols[c]) shiftTimes(grid.cols[c], rows, minutes);
-      patchTimes(r0, r1, c0, c1);
+      // A band or end column moves its parent, and so the whole block (power tools spec 2026-10-24)
+      const targets = new Set();
+      for (let c = c0; c <= c1; c++) if (grid.cols[c]) targets.add(parentIndex(c));
+      for (const c of targets) if (c >= 0) shiftTimes(grid.cols[c], rows, minutes);
+      syncBlocks();
+      let lo = c0, hi = c1;
+      for (const c of targets) { lo = Math.min(lo, c); while (grid.cols[hi + 1]?.virt) hi++; }
+      patchTimes(r0, r1, lo, hi);
     });
     // Turning a tool off: the redraw the jog was waiting for happens now
-    onToolChange(() => { if (jogTimer) render(); });
+    onToolChange(() => {
+      commitEdit(); commitDayCode(); commitTripNo(); // a half-typed time lands where it was typed
+      if (jogTimer) render();
+    });
     document.addEventListener('paste', onPaste);
     document.addEventListener('mousedown', (e) => {
       const el = /** @type {HTMLElement} */ (e.target);
@@ -2246,7 +2271,7 @@ export function initGrid() {
   });
   $('gc-extrap-fwd').addEventListener('click', () => extrapolate('fwd'));
   $('gc-extrap-bwd').addEventListener('click', () => extrapolate('bwd'));
-  $('gc-ix-g').addEventListener('click', () => { hideCtx(); if (hasTime(ctxR, ctxC)) enterIx(ctxR, ctxC, 'guaranteed'); });
+  $('gc-ix-g').addEventListener('click', () => { hideCtx(); if (hasTime(ctxR, ctxC) && !inBlock(ctxC)) enterIx(ctxR, ctxC, 'guaranteed'); });
   $('gc-ix-s').addEventListener('click', () => { hideCtx(); if (hasTime(ctxR, ctxC)) enterIx(ctxR, ctxC, 'stayseated'); });
   $('gc-ix-del').addEventListener('click', () => {
     hideCtx();

@@ -19,10 +19,10 @@ const hhmm = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${Strin
 /**
  * The block typed in: interval (one that divides an hour) and the last departure (a time of day; one at or before the
  * first departure is the next day). Refuses a last departure off the band or outside 2 h – 23 h 59 min.
- * @param {{ first: number, every?: number, span?: number, x: number, y: number, onApply: (b: { every: number, span: number }) => void }} opts
+ * @param {{ first: number, every?: number, span?: number, x: number, y: number, onApply: (b: { every: number, span: number }) => void, onCancel?: () => void }} opts
  *   first: the parent's first departure, minutes (with its day offset)
  */
-export function openBlockDialog({ first, every = 60, span = MIN_SPAN, x, y, onApply }) {
+export function openBlockDialog({ first, every = 60, span = MIN_SPAN, x, y, onApply, onCancel }) {
   const body = document.createElement('div');
   body.className = 'iv';
   body.innerHTML = `<label class="iv-row"><span>${t('ivEvery')}</span><select class="iv-every">${INTERVALS.map((n) => `<option value="${n}"${n === every ? ' selected' : ''}>${t('ivEveryN', n)}</option>`).join('')}</select></label>
@@ -30,7 +30,7 @@ export function openBlockDialog({ first, every = 60, span = MIN_SPAN, x, y, onAp
     <div class="iv-err"></div>`;
   const err = /** @type {HTMLElement} */ (body.querySelector('.iv-err'));
   openFloatBox({
-    x, y, title: t('ivTitle'), body, cls: 'iv-box',
+    x, y, title: t('ivTitle'), body, cls: 'iv-box', onCancel,
     onApply: () => {
       const n = Number(/** @type {HTMLSelectElement} */ (body.querySelector('.iv-every')).value);
       const at = clock(/** @type {HTMLInputElement} */ (body.querySelector('.iv-last')).value);
@@ -44,12 +44,12 @@ export function openBlockDialog({ first, every = 60, span = MIN_SPAN, x, y, onAp
   });
 }
 
-/** "How often?" past six band columns: 6, 5, 4, 3, 2 or 1 minutes. @param {{ x: number, y: number, onPick: (every: number) => void }} opts */
-export function openHowOften({ x, y, onPick }) {
+/** "How often?" past six band columns: 6, 5, 4, 3, 2 or 1 minutes. @param {{ x: number, y: number, onPick: (every: number) => void, onCancel?: () => void }} opts */
+export function openHowOften({ x, y, onPick, onCancel }) {
   const body = document.createElement('div');
   body.className = 'iv-often';
   body.innerHTML = [6, 5, 4, 3, 2, 1].map((n) => `<button type="button" class="pop-btn" data-every="${n}">${t('ivEveryN', n)}</button>`).join('');
-  const box = openFloatBox({ x, y, title: t('ivOften'), body, cls: 'iv-box', onApply: () => false });
+  const box = openFloatBox({ x, y, title: t('ivOften'), body, cls: 'iv-box', onApply: () => false, onCancel });
   box.setApplyEnabled(false);
   for (const btn of body.querySelectorAll('[data-every]')) {
     btn.addEventListener('click', () => { box.close(); onPick(Number(/** @type {HTMLElement} */ (btn).dataset.every)); });

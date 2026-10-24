@@ -97,6 +97,31 @@ describe('the Virtual intervals tool', () => {
     expect(saved()[0].block.span).toBe(120); // never below two hours
   });
 
+  it('review I-6: a cancelled dialog gives the old block back, and a band reached again keeps the old last departure', () => {
+    const cols = saved();
+    cols[0].block = { every: 30, span: 990 };
+    loadGrid({ stops: [stop('A'), stop('B')], cols });
+    drag(0, 3, -2); // the end onto step 1
+    /** @type {HTMLElement} */ (document.querySelector('.iv-box .fb-cancel')).click();
+    expect(saved()[0].block).toEqual({ every: 30, span: 990 });
+    td(0, 3).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, clientX: 100 }));
+    document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100 - 2 * DRAG_STEP_PX }));
+    document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: 100 }));
+    expect(saved()[0].block).toEqual({ every: 30, span: 990 });
+  });
+
+  it('review I-6: a small nudge of a collapsed block\'s end does not turn it into another block', () => {
+    const cols = saved();
+    cols[0].block = { every: 5, span: 300 };
+    loadGrid({ stops: [stop('A'), stop('B')], cols });
+    drag(0, 2, -1);
+    expect(saved()[0].block).toEqual({ every: 10, span: 300 });
+    drag(0, 7, 1); // now every 10 min: parent, six band columns, end at 7; one step further asks
+    /** @type {HTMLElement} */ (document.querySelector('.iv-often [data-every="5"]')).click();
+    expect(saved()[0].block).toEqual({ every: 5, span: 300 });
+  });
+
   it('a column with an interchange cannot become a block', () => {
     const cols = saved();
     cols[0].cells[0].interchange = { targetC: 1, targetR: 0, type: 'guaranteed' };

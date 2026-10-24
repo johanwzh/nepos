@@ -124,6 +124,46 @@ describe('a block in the grid', () => {
     expect(grid.cols[2].cells[0].note).toBe('Merk'); // the band shows its parent's
   });
 
+  it('review I-1: a problem on a column right of a block goes to that column, not into the block', async () => {
+    const { goToProblem } = await import('../../src/ui/problem-nav.js');
+    goToProblem(/** @type {any} */ ({ level: 'error', code: 'col-one-stop', where: { column: 3 } }));
+    expect(document.querySelector('.g-dc-cell.dc-sel')?.getAttribute('data-ci')).toBe('5');
+  });
+
+  it('review I-2: no interchange from or to a block', () => {
+    const ctx = (/** @type {number} */ c) => td(0, c).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    ctx(1);
+    expect(document.getElementById('gc-ix-g')?.className).toContain('dis');
+    ctx(3);
+    expect(document.getElementById('gc-ix-g')?.className).toContain('dis');
+    ctx(0);
+    /** @type {HTMLElement} */ (document.getElementById('gc-ix-g')).click();
+    td(0, 4).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })); // the end column
+    td(0, 1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 })); // the parent
+    expect(gridData().cols[0].cells[0].interchange).toBeNull();
+  });
+
+  it('review I-3: the jog on a band or end cell moves the parent, and so the block', () => {
+    selectCell(0, 4);
+    setTool('jog');
+    const dial = /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-body .jd'));
+    dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    setTool('');
+    expect(gridData().cols[1].cells[0].time).toBe('0606');
+    expect(td(0, 4).textContent).toBe('0806');
+  });
+
+  it('review I-4: turning a tool on finishes a half-typed time where it was typed', () => {
+    selectCell(0, 0);
+    for (const k of ['0', '4', '1', '5']) press(k);
+    setTool('intervals');
+    expect(gridData().cols[0].cells[0].time).toBe('0415');
+    setTool('');
+    selectCell(1, 2 + 3);
+    press('Enter'); press('Escape');
+    expect(gridData().cols[2].cells[1].time).toBe('0910');
+  });
+
   it('a parent with no times keeps its block, waiting for times', () => {
     selectCell(0, 1);
     press('ArrowDown', { shiftKey: true });

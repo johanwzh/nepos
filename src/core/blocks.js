@@ -50,6 +50,18 @@ function shifted(col, offset) {
 /** A generated trip's uid: stable per parent and offset, a real UUID (NeTEx ids). @param {any} col @param {number} offset */
 const tripUid = (col, offset) => uuid5(`${col.uid}|+${offset}`);
 
+/**
+ * A uid not in `used` (then added): a generated trip whose id a real column already has (one kept from an earlier
+ * Unpack) gets another derived id, so the export never writes the same ServiceJourney id twice.
+ * @param {string} uid @param {Set<string>} used
+ */
+export function freeUid(uid, used) {
+  let id = uid;
+  for (let n = 2; used.has(id); n++) id = uuid5(`${uid}|${n}`);
+  used.add(id);
+  return id;
+}
+
 /** The generated trips (not the parent), the end last. @param {any} col @returns {any[]} */
 export function blockTrips(col) {
   if (!validBlock(col.block)) return [];
@@ -146,9 +158,10 @@ export function dragResult(steps) {
  */
 export function tripCols(grid) {
   const real = grid.cols.filter((c) => !c.virt);
+  const used = new Set(real.map((c) => c.uid));
   /** @type {any[]} */
   const gen = [];
-  real.forEach((col, ci) => { for (const trip of blockTrips(col)) gen.push({ ...trip, parentCi: ci }); });
+  real.forEach((col, ci) => { for (const trip of blockTrips(col)) gen.push({ ...trip, uid: freeUid(trip.uid, used), parentCi: ci }); });
   return gen.length ? [...real, ...gen] : real;
 }
 
