@@ -18,7 +18,7 @@ import { interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan, fi
 import { openDayCodeHelper } from './day-code-helper.js';
 import { sortColumns } from '../core/column-sort.js';
 import { openCopyInterval } from './copy-interval.js';
-import { openTimeNudge } from './time-nudge.js';
+import { activeTool, setJogHandler, onToolChange } from './power-tools.js';
 import { shiftTimes } from '../core/time-shift.js';
 import { openDatePicker } from './date-picker.js';
 import { placeMenu } from './place-menu.js';
@@ -1271,6 +1271,13 @@ function scrollTo(r, c) {
 
 // ─── Keyboard ───────────────────────────────────────────────────────────────
 /** @param {KeyboardEvent} e */
+/** Keys a power tool keeps from the grid: typing and the editing keys. @param {KeyboardEvent} e */
+function toolBlocksKey(e) {
+  if (e.altKey) return false;
+  if (e.ctrlKey || e.metaKey) return ['v', 'x'].includes(e.key.toLowerCase());
+  return e.key.length === 1 || ['Delete', 'Backspace', 'Enter', 'F2', 'F7', 'F8'].includes(e.key);
+}
+
 function onKeyDown(e) {
   if (!grid.active || currentPage() !== 'edit') return;
   // A floating box (note, dates, helpers) or a dialog has the keyboard
@@ -1278,6 +1285,8 @@ function onKeyDown(e) {
   if (inStopEdit) return; // the name input handles its own keys
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  // While a power tool is on, only that tool works: no typing, pasting or editing keys (selecting still works)
+  if (activeTool() && toolBlocksKey(e)) { e.preventDefault(); return; }
   if (ixMode) { if (e.key === 'Escape') { e.preventDefault(); exitIx(); } return; }
   if ($('grid-ctx').style.display === 'block') { if (e.key === 'Escape') hideCtx(); return; }
   if (inDest) { keyDest(e); return; }
@@ -1557,7 +1566,7 @@ function pasteStop(id) {
 
 /** Paste uses the paste event, so the browser never asks for clipboard permission. @param {ClipboardEvent} e */
 function onPaste(e) {
-  if (!grid.active || grid.readOnly || currentPage() !== 'edit' || inStopEdit) return;
+  if (!grid.active || grid.readOnly || currentPage() !== 'edit' || inStopEdit || activeTool()) return;
   // Only into the times: never while the day-code or trip-number row has the keyboard
   if (inDC || dcEdit || inTN || tnEdit || inLB || inDest || document.querySelector('.float-box')) return;
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;
@@ -1776,6 +1785,7 @@ function interpolationFills() {
 
 /** @param {number} x @param {number} y @param {boolean} [isDC] */
 function showCtx(x, y, isDC = false) {
+  if (activeTool()) return; // no menus while a power tool is on
   const isStop = ctxIsStop && !isDC;
   $('gctx-time').style.display = !isStop && !isDC ? '' : 'none';
   $('gctx-stop').style.display = isStop ? '' : 'none';
@@ -1801,7 +1811,6 @@ function showCtx(x, y, isDC = false) {
     $('gc-sfx-none').className = 'gci' + (sfx.some((v) => v) ? '' : ' dis');
     // Interpolating: between the times inside the selection (one cell selected: its whole column)
     $('gc-interp').className = 'gci' + (interpolationFills().length ? '' : ' dis');
-    $('gc-nudge').className = 'gci' + (timedInSelection().length || grid.cols[ctxC]?.cells.some((/** @type {any} */ x) => x?.time && x.time !== '|') ? '' : ' dis');
     // Extrapolation by speed is hidden (user test 2026-10-17); the code stays for later
     $('gc-extrap-fwd').style.display = 'none';
     $('gc-extrap-bwd').style.display = 'none';
@@ -1923,6 +1932,17 @@ export function initGrid() {
   if (!documentWired) {
     documentWired = true;
     document.addEventListener('keydown', onKeyDown);
+    // The jog (a power tool): each notch moves the cells selected at that moment, and only those
+    setJogHandler((minutes) => {
+      if (!grid.active || grid.readOnly || inDC || inTN || inStopCol) return;
+      const { r0, r1, c0, c1 } = selRect();
+      const rows = [];
+      for (let r = r0; r <= r1; r++) rows.push(r);
+      for (let c = c0; c <= c1; c++) if (grid.cols[c]) shiftTimes(grid.cols[c], rows, minutes);
+      patchTimes(r0, r1, c0, c1);
+    });
+    // Turning a tool off: the redraw the jog was waiting for happens now
+    onToolChange(() => { if (jogTimer) render(); });
     document.addEventListener('paste', onPaste);
     document.addEventListener('mousedown', (e) => {
       const el = /** @type {HTMLElement} */ (e.target);
@@ -2034,24 +2054,6 @@ export function initGrid() {
       render();
     });
   }
-  $('gc-nudge').addEventListener('click', () => {
-    hideCtx();
-    if (grid.readOnly) return;
-    // A standing tool: each notch moves the cells selected at that moment, and only those
-    const head = /** @type {HTMLElement | null} */ (document.querySelector(`.g-dc-cell[data-ci="${selRect().c0}"]`))?.getBoundingClientRect();
-    openTimeNudge({
-      x: head?.left ?? 200, y: (head?.top ?? 120) - 44,
-      onNudge: (minutes) => {
-        if (grid.readOnly || inDC || inTN || inStopCol) return;
-        const { r0, r1, c0, c1 } = selRect();
-        const rows = [];
-        for (let r = r0; r <= r1; r++) rows.push(r);
-        for (let c = c0; c <= c1; c++) if (grid.cols[c]) shiftTimes(grid.cols[c], rows, minutes);
-        patchTimes(r0, r1, c0, c1);
-      },
-      onClose: () => { if (jogTimer) render(); },
-    });
-  });
   $('gc-interp').addEventListener('click', () => {
     hideCtx();
     if (grid.readOnly) return;

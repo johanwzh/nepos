@@ -4,6 +4,7 @@ import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
 import { initShell, setPage, currentPage } from '../../src/ui/shell.js';
 import { grid, initGrid, loadGrid, onGridChange, gridData, selectedStopRow, render, onGridRender } from '../../src/ui/grid.js';
+import { initPowerTools, setTool, activeTool } from '../../src/ui/power-tools.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { newRouteState } from '../../src/ui/route-state.js';
 
@@ -254,13 +255,14 @@ describe('copying a column at an interval (user test 2026-10-17)', () => {
   });
 });
 
-describe('nudging times with the mini-jog (user test 2026-10-17)', () => {
-  beforeEach(() => { initGrid(); });
+describe('nudging times with the jog, a power tool (user test 2026-10-17; power tools spec 2026-10-24)', () => {
+  beforeEach(() => { initGrid(); initPowerTools(); setTool(''); });
   const at = (/** @type {number} */ r, /** @type {number} */ c) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="${c}"]`));
   const open = () => {
-    at(0, 0).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    /** @type {HTMLElement} */ (document.getElementById('gc-nudge')).click();
-    return /** @type {HTMLElement} */ (document.querySelector('.nudge-box .jd'));
+    at(0, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    setTool('jog');
+    return /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-body .jd'));
   };
   const key = (/** @type {Element} */ el, /** @type {string} */ k, shiftKey = false) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey, bubbles: true, cancelable: true }));
   const times = () => grid.cols[0].cells.map((c) => c.time);
@@ -270,7 +272,7 @@ describe('nudging times with the mini-jog (user test 2026-10-17)', () => {
     key(jog, 'ArrowUp');
     key(jog, 'ArrowUp', true);
     expect(times()).toEqual(['0711', '0745']);
-    expect(document.querySelector('.nudge-read')?.textContent).toBe('+11 min');
+    expect(document.querySelector('#power-tools .pt-read')?.textContent).toBe('+11 min');
   });
 
   it('stays open as a tool while the selection changes, and acts on the new selection', () => {
@@ -278,7 +280,7 @@ describe('nudging times with the mini-jog (user test 2026-10-17)', () => {
     at(0, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
     at(1, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
     document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-    expect(document.querySelector('.nudge-box')).not.toBeNull(); // a click in the grid keeps it open
+    expect(activeTool()).toBe('jog'); // a click in the grid keeps it on
     key(jog, 'ArrowDown');
     expect(times()).toEqual(['0659', '0744']);
   });
@@ -300,20 +302,20 @@ describe('nudging times with the mini-jog (user test 2026-10-17)', () => {
       expect(renders).toBe(before + 1); // one redraw once the jog rests
       key(jog, 'ArrowUp');
       key(jog, 'Escape');
-      expect(renders).toBe(before + 2); // closing redraws at once
+      expect(renders).toBe(before + 2); // turning it off redraws at once
       expect(at(0, 0).textContent).toBe('0704');
     } finally { vi.useRealTimers(); }
   });
 
-  it('closes with ✕ or Esc, keeping what was done', () => {
+  it('turns off with Esc or its button, keeping what was done', () => {
     const jog = open();
     key(jog, 'ArrowUp');
     key(jog, 'Escape');
-    expect(document.querySelector('.nudge-box')).toBeNull();
+    expect(activeTool()).toBe('');
     expect(times()).toEqual(['0701', '0745']);
     open();
-    /** @type {HTMLElement} */ (document.querySelector('.nudge-box .nudge-x')).click();
-    expect(document.querySelector('.nudge-box')).toBeNull();
+    /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-tool[data-tool="jog"]')).click();
+    expect(activeTool()).toBe('');
   });
 });
 

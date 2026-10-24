@@ -1423,3 +1423,15 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 
 .ps { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
 .ps-part { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+/* The power toolbox (2.4): at the bottom of the line navigator */
+#panel-left .route-list { flex: 1 1 auto; min-height: 0; }
+.power-tools { flex: none; border-top: 1px solid var(--border, #ccc); padding: 6px 8px; }
+.pt-head { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; opacity: .7; margin-bottom: 4px; }
+.pt-tools { display: flex; gap: 4px; flex-wrap: wrap; }
+.pt-tool { padding: 3px 8px; border: 1px solid var(--border, #ccc); border-radius: 6px; background: none; cursor: pointer; font-size: 12px; }
+.pt-tool.on { background: var(--accent-bg, #dbe8ff); border-color: var(--accent, #2a6fdb); font-weight: 600; }
+.pt-body { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.pt-body:empty { display: none; }
+.pt-read { font-variant-numeric: tabular-nums; font-size: 12px; }
+.pt-hint { flex-basis: 100%; font-size: 11px; opacity: .75; }
