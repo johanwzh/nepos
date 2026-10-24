@@ -8,6 +8,8 @@ import { isoDate } from '../calendars.js';
 import { submodeElement } from '../modes.js';
 import { UUID_PATTERN } from '../ern/serialize.js';
 import { destSegments, destKey } from '../destinations.js';
+import { bookingElements } from './booking.js';
+import { bookingKey } from '../booking.js';
 
 /**
  * @param {string} routeCode
@@ -103,6 +105,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                         forBoarding:  depCell.suffix !== 'a',
                         forAlighting: depCell.suffix !== 'p',
                         requestStop:  !!depCell.req,
+                        booking:      depCell.booking ?? null,
                     }));
                     for (const st of jpStopList) routePointsMap.set(st.stopId, st.name);
                     // The destination starting at each call: the trip's start on the first, a change further on
@@ -114,7 +117,10 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     // JP key = the stop sequence and the boarding rules at each stop (a/p/x): trips that differ
                     // in either need their own pattern. The ID stays as before for a pattern without rules.
                     const rules = jpStopList.map(s => (s.forBoarding ? '' : 'a') + (s.forAlighting ? '' : 'p') + (s.requestStop ? 'x' : '')).join(',');
+                    // and the bookings on its stops (booking spec 2026-10-22)
+                    const booked = jpStopList.map((s) => bookingKey(s.booking));
                     const ruled = (/[apx]/.test(rules) ? `|rules:${rules}` : '')
+                        + (booked.some(Boolean) ? `|booking:${booked.join(',')}` : '')
                         // trips with other destinations need their own pattern
                         + (callDests.some(Boolean) ? `|dd:${callDests.map((d) => (d ? destKey(d) : '')).join(',')}` : '');
                     const jpKey = `${di}:${jpStopList.map(s=>s.stopId??s.name).join(':')}${ruled}`;
@@ -161,10 +167,14 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     const tnId = `${cs}:TrainNumber:${uuid5(`${sjId}|train`)}`;
                     if (isTrain) trainNumbers.push(`      <TrainNumber id="${tnId}" version="1">\n        <ForAdvertisement>${xe(col.tripNo)}</ForAdvertisement>\n      </TrainNumber>`);
                     const sjTrain = isTrain ? `\n        <trainNumbers>\n          <TrainNumberRef ref="${tnId}" version="1"/>\n        </trainNumbers>` : '';
+                    // The trip's booking, else the line's (booking spec 2026-10-22). Provisional until Entur answers how a
+                    // fixed line where every trip is booked is delivered: the line's booking on every trip without its own
+                    const fspEls = bookingElements(col.booking ?? rs.booking, '          ');
+                    const fsp = fspEls ? `\n        <FlexibleServiceProperties id="${cs}:FlexibleServiceProperties:${uuid5(`${sjId}|booking`)}" version="1">\n${fspEls}\n        </FlexibleServiceProperties>` : '';
                     sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>${sjPriv}
         <JourneyPatternRef ref="${jpId}" version="1"/>${sjTrain}
         <passingTimes>${ptXml}
-        </passingTimes>
+        </passingTimes>${fsp}
       </ServiceJourney>`);
                     for (const d of days) dsjs.push(`      <DatedServiceJourney id="${cs}:DatedServiceJourney:${uuid5(`${sjId}|${d}`)}" version="1"${pubAttr}>
         <ServiceJourneyRef ref="${sjId}" version="1"/>
@@ -231,8 +241,10 @@ ${porXml}
                 const brd = s.forBoarding && i < stopList.length - 1 ? '' : '\n            <ForBoarding>false</ForBoarding>';
                 const alt = s.forAlighting && i > 0 ? '' : '\n            <ForAlighting>false</ForAlighting>';
                 const req = s.requestStop  ? '\n            <RequestStop>true</RequestStop>' : '';
+                const bookingEls = bookingElements(s.booking, '              ');
+                const bkg = bookingEls ? `\n            <BookingArrangements>\n${bookingEls}\n            </BookingArrangements>` : '';
                 return `          <StopPointInJourneyPattern id="${spijpId}" version="1" order="${i+1}">
-            <ScheduledStopPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(s.stopId)}"/>${alt}${brd}${dd}${req}
+            <ScheduledStopPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(s.stopId)}"/>${alt}${brd}${dd}${req}${bkg}
           </StopPointInJourneyPattern>`;
             }).join('\n');
 

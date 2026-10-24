@@ -13,6 +13,7 @@ import { speedProfile, SPEED_LIMITS, HIGH_LIMIT } from './speed-profile.js';
 import { ERN_MODES } from './ern/modes.js';
 import { linkPairs } from './link-pairs.js';
 import { isExportable } from './link-state.js';
+import { normalizeBooking } from './booking.js';
 
 /** Every code the check can give; each has a text 'chk:<code>' in both languages. */
 export const CHECK_CODES = [
@@ -73,6 +74,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     if (!routeTrips) add('warning', 'route-no-trips', { route: code });
     if (shapes) checkLinks(code, rs, { shapes, calendars, quayInfo, add });
     checkVehicles(code, rs, vehicles, add);
+    checkBookings(code, rs, add);
     trips += routeTrips;
   }
   if (orgMode === 'codespace') {
@@ -239,6 +241,19 @@ function checkVehicles(code, rs, vehicles, add) {
       add('error', 'vehicle-mode', { route: code, detail: v.name });
     }
   }
+}
+
+/**
+ * A booking needs a way to book: a phone number, an e-mail or a web address (booking spec 2026-10-22). One warning per
+ * line. @param {string} code @param {any} rs @param {(level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void} add
+ */
+function checkBookings(code, rs, add) {
+  const noContact = (/** @type {any} */ b) => { const n = normalizeBooking(b); return !!n && !n.phone && !n.email && !n.url; };
+  let found = noContact(rs.booking);
+  for (const grid of Object.values(rs.grids ?? {})) for (const col of /** @type {any} */ (grid).cols ?? []) {
+    if (noContact(col.booking) || (col.cells ?? []).some((/** @type {any} */ c) => noContact(c?.booking))) found = true;
+  }
+  if (found) add('warning', 'booking-no-contact', { route: code });
 }
 
 /** The "not one of the stops this trip goes on to" warning: off for now (user 2026-10-20). */
