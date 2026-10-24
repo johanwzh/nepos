@@ -1057,8 +1057,8 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 /* A time and its marks: the time always starts at the same place in the column, the marks (a/p/x, +1, and later
    footnote letters: at most two) get a fixed slot to its right */
 .g-td-time { text-align: left; padding-left: 7px; white-space: nowrap; }
-.g-td-time .g-t { display: inline-block; width: 4ch; text-align: left; }
-.g-td-time .g-m { display: inline-block; width: 3.6ch; text-align: left; font-size: 11px; }
+.g-td-time .g-t { display: inline-block; width: 2.4em; text-align: left; } /* em, not ch: a bold | must not widen the cell */
+.g-td-time .g-m { display: inline-block; width: 2.1em; text-align: left; font-size: 11px; }
 .g-td-time.is-pipe .g-t { text-align: center; }
 
 .g-ix-g  { background: var(--ix-g-bg)     !important; }
@@ -1449,7 +1449,7 @@ body.pt-intervals .g-td-time.g-blk-r { box-shadow: inset -2px 0 0 var(--accent, 
 body.pt-on :is(#menubar, #tabbar, #route-hdr, #kom-bar, #ts-tabs, #cal-bar, #cal-timeline, #panel-right, #map-strip, #panel-left .route-list, #fn-preview, #speed-strip, #edit-footer > :not(#ef-save):not(#ef-discard):not(#ef-state)) { opacity: .4; pointer-events: none; }
 body.pt-on #tbl :is(.g-row-ins, .g-row-bot, .g-td-name, .g-td-btn, .g-td-ins, .g-dc-cell, .g-fn-cell, .g-lb-cell, .g-tn-cell, .cw-dest, .cw-ins) { pointer-events: none; opacity: .55; }
 body.pt-on #tbl .g-dc-cell .jd { pointer-events: auto; }
-body.pt-intervals #tbl .g-dc-cell.g-locked { opacity: 1; }
+body.pt-intervals #tbl .g-dc-cell { pointer-events: auto; opacity: 1; cursor: grab; }
 .pt-read { transition: opacity 1s; }
 .pt-read.pt-fade { opacity: 0; }
 .g-band-every { font-size: 11px; font-style: italic; white-space: nowrap; }

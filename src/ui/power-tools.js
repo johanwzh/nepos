@@ -22,6 +22,8 @@ let jogRead = null;
 /** @type {any} */
 let fadeTimer = null;
 let lastSelection = '';
+/** The jog's turn: a spinner, not a value — it never jumps back (user 2026-10-24). */
+const jogAngle = { value: 0 };
 
 /**
  * The grid's selection now (user 2026-10-24: the readout counts one selection; a new one fades it out over about a
@@ -82,7 +84,7 @@ function draw() {
     jogRead = read;
     total = 0;
     const dial = jogDial({
-      size: 44, detents: true, pxPerNotch: 9, downward: true,
+      size: 44, detents: true, pxPerNotch: 9, downward: true, angleRef: jogAngle,
       onNudge: (/** @type {1 | -1} */ dir, /** @type {boolean} */ coarse) => {
         const d = dir * (coarse ? 10 : 1);
         clearTimeout(fadeTimer);

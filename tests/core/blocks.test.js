@@ -1,6 +1,6 @@
 // Virtual intervals (power tools spec 2026-10-24): a parent column, an interval that divides 60, a last departure.
 import { describe, it, expect } from 'vitest';
-import { INTERVALS, firstDeparture, blockTrips, bandColumns, endColumn, withBlocks, withoutBlocks, snapSpan, canBeBlock, dragResult } from '../../src/core/blocks.js';
+import { INTERVALS, firstDeparture, blockTrips, bandColumns, endColumn, withBlocks, withoutBlocks, snapSpan, canBeBlock, dragResult, minSpan, validBlock } from '../../src/core/blocks.js';
 
 const UID = '5f0c2e1a-1111-4aaa-8bbb-00000000000a';
 const c = (time, dayOffset = 0) => ({ time, dayOffset, suffix: '', interchange: null });
@@ -61,6 +61,15 @@ describe('blocks', () => {
     expect(snapSpan(30, 2000)).toBe(1410);
     expect(snapSpan(20, 130)).toBe(140);
     expect(snapSpan(60, 1439)).toBe(1380);
+  });
+
+  it('the shortest block: an hour, or two intervals when that is longer (user 2026-10-24)', () => {
+    expect(minSpan(60)).toBe(120);
+    expect(minSpan(30)).toBe(60);
+    expect(minSpan(5)).toBe(60);
+    expect(snapSpan(5, 10)).toBe(60);
+    expect(validBlock({ every: 5, span: 60 })).toBe(true);
+    expect(validBlock({ every: 60, span: 60 })).toBe(false);
   });
 
   it('puts the virtual columns after their parent and takes them away again, interchanges intact', () => {

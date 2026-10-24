@@ -300,7 +300,7 @@ know `#INT` sees only the first trip.
 |---|---|---|
 | 0 | int | X position of the trip (its column). |
 | 1 | int | Interval in minutes: one that divides an hour (60, 30, 20, 15, 12, 10, 6, 5, 4, 3, 2 or 1). |
-| 2 | int | The last departure, in minutes after the trip's first departure: a multiple of the interval, from 120 to 1439. |
+| 2 | int | The last departure, in minutes after the trip's first departure: a multiple of the interval, at least 60 and at least twice the interval (120 for an hourly series), at most 1439. |
 
 Every trip of the series is the first trip moved by n × the interval (n = 1, 2, … up to field 2), with everything else
 the same. Example: a trip at 06:05, every 30 minutes, the last at 22:35: `#INT;4;30;990`.

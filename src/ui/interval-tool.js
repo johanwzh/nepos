@@ -3,7 +3,7 @@
 // columns opens (the collapsed intervals).
 import { t } from '../i18n/strings.js';
 import { openFloatBox } from './float-box.js';
-import { INTERVALS, MIN_SPAN, MAX_SPAN } from '../core/blocks.js';
+import { INTERVALS, MIN_SPAN, MAX_SPAN, minSpan } from '../core/blocks.js';
 
 /** A column width for the drag when the page cannot measure one (px). */
 export const DRAG_STEP_PX = 56;
@@ -37,7 +37,7 @@ export function openBlockDialog({ first, every = 60, span = MIN_SPAN, x, y, onAp
       if (at === null) { err.textContent = t('ivErrTime'); return false; }
       let s = at - (first % 1440);
       while (s <= 0) s += 1440;
-      if (s < MIN_SPAN || s > MAX_SPAN) { err.textContent = t('ivErrRange'); return false; }
+      if (s < minSpan(n) || s > MAX_SPAN) { err.textContent = t('ivErrRange'); return false; }
       if (s % n) { err.textContent = t('ivErrBand', n); return false; }
       onApply({ every: n, span: s });
     },

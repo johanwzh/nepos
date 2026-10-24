@@ -141,7 +141,8 @@ describe('the power toolbox', () => {
       return Number(el.querySelector('.jd-dot')?.getAttribute('r')) * size / 100;
     };
     expect(dotPx(18)).toBeCloseTo(dotPx(44), 2);
-    expect(dotPx(18)).toBeGreaterThanOrEqual(2.5);
+    expect(dotPx(18)).toBeGreaterThanOrEqual(1.2);
+    expect(dotPx(18)).toBeLessThanOrEqual(1.8); // about 3 px across: an indicator, not an eye (user 2026-10-24)
   });
 
   it('the context menu no longer has the jog', () => {

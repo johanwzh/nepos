@@ -36,6 +36,7 @@ import { h, s } from './dom.js';
  * @param {(v:number)=>{tone:string}} [o.zones] value mode: health tint (amber = caution, red = error)
  * @param {{label?:string, caption?:string}} [o.auto] value mode: omit-state below the minimum
  * @param {(v:number|null)=>void} [o.onChange] value mode
+ * @param {{ value: number }} [o.angleRef] nudge mode: where the dot points, kept by the caller across redraws
  * @param {boolean} [o.downward] nudge mode: down = more (drag, wheel, arrow) — times run downwards in a timetable
  */
 export function jogDial({
@@ -53,6 +54,7 @@ export function jogDial({
   auto,
   onChange,
   downward = false,
+  angleRef,
 }) {
   const valueMode = typeof onChange === 'function';
   const C = 50;
@@ -62,7 +64,7 @@ export function jogDial({
   const WHEEL_DEG = 16;
   const fine = fineStep ?? step;
   const hasMin = Number.isFinite(min);
-  let angle = 0; // dot angle — visual only, never the value
+  let angle = angleRef?.value ?? 0; // dot angle — visual only, never the value
 
   const pt = (r, deg) => {
     const t = (deg * Math.PI) / 180;
@@ -76,10 +78,11 @@ export function jogDial({
   const read = valueMode ? h('div', { class: 'jd-read' }) : null;
 
   // Nudge mode: the dot is an indicator of the same size on every dial (user 2026-10-24), not scaled with it
-  const DOT_PX = 2.75;
+  const DOT_PX = 1.5;
   const dotR = valueMode ? 4 : (DOT_PX * 100) / size;
   const sgn = downward && !valueMode ? -1 : 1;
   const draw = () => {
+    if (angleRef) angleRef.value = angle;
     const a = detents ? Math.round(angle / nudgeDeg) * nudgeDeg : angle;
     const [x, y] = pt(Math.min(R - 8, R - dotR - 3), a);
     indicator.replaceChildren(s('circle', { class: 'jd-dot', cx: x.toFixed(1), cy: y.toFixed(1), r: dotR.toFixed(2) }));

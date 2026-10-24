@@ -19,7 +19,7 @@ import { openDayCodeHelper } from './day-code-helper.js';
 import { sortColumns } from '../core/column-sort.js';
 import { openCopyInterval } from './copy-interval.js';
 import { activeTool, setJogHandler, onToolChange, setUnpackHandler, notifySelection } from './power-tools.js';
-import { withBlocks, withoutBlocks, freeUid, DRAG_INTERVALS, blockTrips, canBeBlock, dragResult, snapSpan, firstDeparture, MIN_SPAN, MAX_SPAN } from '../core/blocks.js';
+import { withBlocks, withoutBlocks, freeUid, DRAG_INTERVALS, blockTrips, canBeBlock, dragResult, snapSpan, firstDeparture, MIN_SPAN, MAX_SPAN, minSpan } from '../core/blocks.js';
 import { DRAG_STEP_PX, openBlockDialog, openHowOften } from './interval-tool.js';
 import { jogDial } from './jog/jogDial.js';
 import { shiftTimes } from '../core/time-shift.js';
@@ -328,15 +328,20 @@ function startIntervalDrag(e, ri, ci) {
   render();
 }
 
-/** At step 1 nothing is drawn yet: a hint by the parent says that letting go opens the dialog. @param {string | null} uid */
-function dropHint(uid) {
+/**
+ * Where letting go does something else than a band: at step 1 (the dialog) a hint by the parent, one step past the band
+ * ("how often?") a hint by the end column. @param {string | null} uid @param {string} key the hint's text
+ */
+function dropHint(uid, key) {
   document.querySelector('.iv-drop-hint')?.remove();
   if (!uid) return;
-  const ci = grid.cols.findIndex((c) => c.uid === uid);
+  const pi = grid.cols.findIndex((c) => c.uid === uid);
+  const end = grid.cols.findIndex((c) => c.virt === 'end' && c.of === uid);
+  const ci = key === 'ivMoreHint' && end >= 0 ? end : pi;
   const at = document.querySelector(`.g-dc-cell[data-ci="${ci}"]`)?.getBoundingClientRect();
   const hint = document.createElement('div');
   hint.className = 'iv-drop-hint';
-  hint.textContent = t('ivDropHint');
+  hint.textContent = t(key);
   hint.style.left = `${(at?.right ?? 200) + 6}px`;
   hint.style.top = `${(at?.top ?? 120)}px`;
   document.body.appendChild(hint);
@@ -349,16 +354,19 @@ function dragTo(steps) {
   if (!d || !parent) return;
   d.steps = steps;
   const res = dragResult(steps);
-  dropHint(res.kind === 'dialog' ? parent.uid : null);
+  dropHint(res.kind === 'dialog' || res.kind === 'ask' ? parent.uid : null, res.kind === 'ask' ? 'ivMoreHint' : 'ivDropHint');
   if (res.kind === 'band') parent.block = { every: res.every, span: snapSpan(res.every, d.orig?.span ?? parent.block?.span ?? MIN_SPAN) };
   else if (res.kind === 'none' || res.kind === 'dialog') delete parent.block;
+  // Past the band: the band stays at its most (every 10 min) while the hint says what letting go does
+  else if (res.kind === 'ask' && !(parent.block && parent.block.every <= DRAG_INTERVALS[DRAG_INTERVALS.length - 1])) { const every = DRAG_INTERVALS[DRAG_INTERVALS.length - 1]; parent.block = { every, span: snapSpan(every, d.orig?.span ?? MIN_SPAN) }; }
   render();
 }
 
 /** @param {MouseEvent} e */
 function moveIntervalDrag(e) {
   if (!ivDrag) return;
-  const steps = Math.max(0, ivDrag.base + Math.round((e.clientX - ivDrag.x0) / ivDrag.w));
+  // The drag stops one step past six band columns: that step means "more often" (user 2026-10-24)
+  const steps = Math.min(DRAG_INTERVALS.length + 2, Math.max(0, ivDrag.base + Math.round((e.clientX - ivDrag.x0) / ivDrag.w)));
   if (steps !== ivDrag.steps) { ivDrag.moved = true; dragTo(steps); }
 }
 
@@ -367,7 +375,7 @@ function endIntervalDrag() {
   const d = ivDrag;
   if (!d) return;
   ivDrag = null;
-  dropHint(null);
+  dropHint(null, '');
   const pi = grid.cols.findIndex((c) => c.uid === d.uid);
   const parent = grid.cols[pi];
   render();
@@ -384,15 +392,20 @@ function endIntervalDrag() {
   }
 }
 
+/** Each end jog's turn, by its block's parent: kept when the table is redrawn. @type {Map<string, { value: number }>} */
+const endJogAngles = new Map();
+/** @param {string} uid */
+const endJogAngle = (uid) => { if (!endJogAngles.has(uid)) endJogAngles.set(uid, { value: 0 }); return /** @type {{ value: number }} */ (endJogAngles.get(uid)); };
+
 /** The end column's jog: each notch moves the last departure by the interval (2 h to 23 h 59 min). @param {any} end */
 function endJog(end) {
   const dial = jogDial({
-    size: 18, detents: true, pxPerNotch: 9, downward: true,
+    size: 18, detents: true, pxPerNotch: 9, downward: true, angleRef: endJogAngle(end.of),
     onNudge: (/** @type {1 | -1} */ dir) => {
       const parent = grid.cols.find((c) => c.uid === end.of);
       if (!parent?.block) return;
       const span = parent.block.span + dir * parent.block.every;
-      if (span < MIN_SPAN || span > MAX_SPAN) return;
+      if (span < minSpan(parent.block.every) || span > MAX_SPAN) return;
       parent.block = { ...parent.block, span };
       // Only the end column changes while the dial turns (it stays under the mouse); the full redraw waits for rest
       syncBlocks();
@@ -1231,6 +1244,8 @@ function renderDayCodeRow(tbl) {
     else { td.textContent = col.dayCode; if (isSel) td.classList.add('dc-sel'); }
     td.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
+      // The day code stands for its column: with Virtual intervals on it drags like the times (user 2026-10-24)
+      if (activeTool() === 'intervals' && !grid.readOnly && !(/** @type {HTMLElement} */ (e.target).closest?.('.jd'))) { e.preventDefault(); startIntervalDrag(e, Math.max(0, topRow(col)), ci); return; }
       e.preventDefault();
       if (ixMode) { exitIx(); return; }
       commitEdit(); commitDayCode(); commitStopEdit();
@@ -1331,7 +1346,7 @@ function renderStopRow(tbl, stop, ri, linked) {
     if (isSel && editing) { td.classList.add('is-edit'); td.innerHTML = cellHTML(cell, true, editBuf); }
     else { td.innerHTML = col.virt && ivDrag && ri !== topRow(col) ? '' : col.virt === 'band' ? bandHTML(col, ri) : cellHTML(cell, false, '', letters.get(`${ci}:${ri}`)); if (isSel && !ixMode) td.classList.add('is-anchor'); }
     blockFrame(td, ci);
-    if (ivDrag && ivDrag.steps === 1 && col.uid === ivDrag.uid) td.classList.add('g-blk-pending');
+    if (ivDrag && ((ivDrag.steps === 1 && col.uid === ivDrag.uid) || (ivDrag.steps > DRAG_INTERVALS.length + 1 && col.virt === 'end' && col.of === ivDrag.uid))) td.classList.add('g-blk-pending');
     td.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();

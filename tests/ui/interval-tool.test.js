@@ -62,6 +62,34 @@ describe('the Virtual intervals tool', () => {
     expect(document.querySelector('.iv-drop-hint')).toBeNull();
   });
 
+  it('the drag stops one step past six band columns, with a hint that letting go there asks how often', () => {
+    drag(0, 0, 12, false);
+    expect(virt()).toEqual(['', 'band', 'band', 'band', 'band', 'band', 'band', 'end', '']); // every 10 min, not more
+    expect(document.querySelector('.iv-drop-hint')?.textContent).toMatch(/10/);
+    expect(td(0, 7).classList.contains('g-blk-pending')).toBe(true);
+    drag(0, 0, 0, false);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: 100 + 7 * DRAG_STEP_PX }));
+    expect(document.querySelector('.iv-drop-hint')).toBeNull();
+    expect(document.querySelector('.iv-often')).toBeNull(); // step 7 is a band: no question
+  });
+
+  it('a column can be dragged by its day code too', () => {
+    const dcCell = /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]'));
+    dcCell.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, clientX: 100 }));
+    document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100 + 3 * DRAG_STEP_PX }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: 100 + 3 * DRAG_STEP_PX }));
+    expect(saved()[0].block).toEqual({ every: 30, span: 120 });
+  });
+
+  it('the end jog keeps its turn when the table is redrawn', () => {
+    drag(0, 0, 3);
+    const dot = () => document.querySelector('.g-dc-cell[data-ci="3"] .jd-dot');
+    const before = `${dot()?.getAttribute('cx')},${dot()?.getAttribute('cy')}`;
+    /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="3"] .jd')).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    selectCell(1, 0); // a redraw
+    expect(`${dot()?.getAttribute('cx')},${dot()?.getAttribute('cy')}`).not.toBe(before);
+  });
+
   it('dropping at step 1 opens the dialog: OK makes the block, an off-band last departure is refused', () => {
     drag(0, 0, 1);
     const box = /** @type {HTMLElement} */ (document.querySelector('.iv-box'));
@@ -103,7 +131,7 @@ describe('the Virtual intervals tool', () => {
     const jog2 = /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="3"] .jd'));
     jog2.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
     jog2.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
-    expect(saved()[0].block.span).toBe(120); // never below two hours
+    expect(saved()[0].block.span).toBe(90); // shorter blocks are allowed now: at least an hour, or two intervals (user 2026-10-24)
   });
 
   it('review I-6: a cancelled dialog gives the old block back, and a band reached again keeps the old last departure', () => {

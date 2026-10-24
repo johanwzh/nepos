@@ -8,8 +8,13 @@ import { uuid5 } from './uuid5.js';
 export const INTERVALS = [60, 30, 20, 15, 12, 10, 6, 5, 4, 3, 2, 1];
 /** The intervals a drag reaches: 1–6 band columns. */
 export const DRAG_INTERVALS = [60, 30, 20, 15, 12, 10];
-/** Default and minimum: parent + 2 h (a shorter block says nothing a few real columns would not). */
+/** A new block's length: parent + 2 h. */
 export const MIN_SPAN = 120;
+/**
+ * The shortest block (user 2026-10-24): an hour, or two intervals when that is longer — an hourly block needs 2 h
+ * (06:05 | 05 | 08:05), every 5 min can end an hour after the first trip. @param {number} every
+ */
+export const minSpan = (every) => Math.max(60, 2 * every);
 export const MAX_SPAN = 1439;
 
 /** @param {any} c */
@@ -28,7 +33,7 @@ export function firstDeparture(col) {
 
 /** Whether a block is one Nepos can hold. @param {any} block */
 export const validBlock = (block) => !!block && INTERVALS.includes(block.every) && Number.isInteger(block.span)
-  && block.span >= MIN_SPAN && block.span <= MAX_SPAN && block.span % block.every === 0;
+  && block.span >= minSpan(block.every) && block.span <= MAX_SPAN && block.span % block.every === 0;
 
 /**
  * A copy of the column with every time moved by `offset` minutes (day offsets follow); no block, no trip number.
@@ -129,7 +134,7 @@ export function withoutBlocks(cols) {
 
 /** Clamp to the limits and round up to the band (down when that passes the maximum). @param {number} every @param {number} span */
 export function snapSpan(every, span) {
-  const s = Math.min(MAX_SPAN, Math.max(MIN_SPAN, span));
+  const s = Math.min(MAX_SPAN, Math.max(minSpan(every), span));
   const up = Math.ceil(s / every) * every;
   return up <= MAX_SPAN ? up : Math.floor(MAX_SPAN / every) * every;
 }
