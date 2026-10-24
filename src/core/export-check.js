@@ -11,6 +11,7 @@ import { TRANSMODEL_MODES } from './modes.js';
 import { destSegments, hasViaWord, firstWord } from './destinations.js';
 import { speedProfile, SPEED_LIMITS, HIGH_LIMIT } from './speed-profile.js';
 import { ERN_MODES } from './ern/modes.js';
+import { expandRoute } from './blocks.js';
 import { linkPairs } from './link-pairs.js';
 import { isExportable } from './link-state.js';
 import { normalizeBooking } from './booking.js';
@@ -70,7 +71,8 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     if (status === 'damaged' || !rs) { add('error', 'route-damaged', { route: code, detail: problem || undefined }); damaged++; continue; }
     // The route code becomes part of NeTEx IDs and the line file name.
     if (!ROUTE_CODE_PATTERN.test(code)) add('error', 'route-code', { route: code });
-    const routeTrips = checkRoute(code, rs, { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, brandings, calendars, quayInfo, add, localIds, usedOrgIds, speedLimits, modesUsed });
+    // A block's trips are checked as the export writes them, their problems shown on the parent column
+    const routeTrips = checkRoute(code, expandRoute(rs), { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, brandings, calendars, quayInfo, add, localIds, usedOrgIds, speedLimits, modesUsed });
     if (!routeTrips) add('warning', 'route-no-trips', { route: code });
     if (shapes) checkLinks(code, rs, { shapes, calendars, quayInfo, add });
     checkVehicles(code, rs, vehicles, add);
@@ -101,6 +103,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
  * @returns {number} trips (columns with times) in the route
  */
 function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add, localIds, usedOrgIds, speedLimits, modesUsed }) {
+  const addIssue = add;
   const mode = rs.mode || /** @type {any} */ (ERN_MODES)[rs.transportMode ?? 0]?.mode || '';
   modesUsed.add(mode);
   const r = { route: code };
@@ -164,9 +167,18 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
       if (byStatus['mode-mismatch'].length) add('warning', 'stop-mode', { ...r, where, detail: list(byStatus['mode-mismatch']) });
       if (byStatus.unknown.length) add('warning', 'stop-unchecked', { ...r, where, detail: list(byStatus.unknown) });
 
+      /** @type {Set<string>} */
+      const said = new Set();
       grid.cols.forEach((/** @type {any} */ col, /** @type {number} */ ci) => {
+        // A block waiting for times (its parent has none left) is an error on the parent
+        if (col.block && !col.cells.some(timed)) { addIssue('error', 'block-empty', { ...r, where: { ...where, column: ci + 1 } }); return; }
         if (!col.cells.some(timed)) return;
-        const at = { ...where, column: ci + 1 };
+        const at = { ...where, column: (col.parentCi ?? ci) + 1 };
+        // A block's trips share their parent's problems: each is said once
+        const add = (/** @type {'error' | 'warning'} */ level, /** @type {string} */ c, /** @type {any} */ extra) => {
+          const key = `${level}|${c}|${JSON.stringify(extra)}`;
+          if (!said.has(key)) { said.add(key); addIssue(level, c, extra); }
+        };
         // What the export writes (journeys.js): two or more calls make a trip. Timed rows
         // without a stop ID count too here — they are already errors of their own.
         const unnamed = grid.stops.filter((/** @type {any} */ st, /** @type {number} */ ri) => timed(col.cells[ri]) && (st.stopId == null || st.stopId === '') && !st.isDwellArr).length;

@@ -1,6 +1,7 @@
 // The network on Oversikt (dashboard design 2026-10-21): every stretch between two stops a trip calls at, drawn once
 // however many lines and patterns use it, with the number of trips on it and whether a line with errors uses it.
 // Straight lines between the stops' NSR positions (routing is off); stops without a position are left out.
+import { tripCols } from './blocks.js';
 
 /**
  * @typedef {{ from: string, to: string, coords: [number, number][], trips: number, problem: boolean, lines: string[] }} Segment
@@ -25,7 +26,7 @@ export function networkOf(routes, quayInfo) {
   for (const { code, rs, problem } of routes) {
     for (const grid of Object.values(rs?.grids ?? {})) {
       const g = /** @type {any} */ (grid);
-      for (const col of g.cols ?? []) {
+      for (const col of g.cols ? tripCols(g) : []) { // a block's trips count too
         /** @type {string[]} the stops this trip calls at, in order, a waiting stop once */
         const seq = [];
         (col.cells ?? []).forEach((/** @type {any} */ c, /** @type {number} */ ri) => {

@@ -1,6 +1,7 @@
 // NeTEx data collection, ported from Nepos 1.5.7 (nepos.html lines 5818–6040).
 // Pure: takes the parsed routes and stop database as input instead of reading app state.
 import { journeyStops, routeHasTrips } from './journeys.js';
+import { expandRoute } from '../blocks.js';
 import { unionDays, tripDays, isoDate } from '../calendars.js';
 import { findRole, exportOrgId, netexOrgId } from '../orgs.js';
 import { destSegments, destKey } from '../destinations.js';
@@ -22,7 +23,8 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
     const cs = codespace || '1869';
 
     // Routes without a trip (two or more calls) have nothing to export: no line file at all
-    const routes = inputRoutes.filter(({ rs }) => rs && rs.periods?.length && routeHasTrips(rs));
+    // A block's trips are ordinary trips here (power tools spec 2026-10-24), after the real columns
+    const routes = inputRoutes.map((r) => ({ ...r, rs: expandRoute(r.rs) })).filter(({ rs }) => rs && rs.periods?.length && routeHasTrips(rs));
 
     // Brandings used by the exported lines (line header spec §6)
     const brandings = new Map();

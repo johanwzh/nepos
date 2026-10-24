@@ -139,3 +139,29 @@ export function dragResult(steps) {
   if (steps - 2 < DRAG_INTERVALS.length) return { kind: 'band', every: DRAG_INTERVALS[steps - 2] };
   return { kind: 'ask' };
 }
+
+/**
+ * Every trip of a table in order: the real columns, then each block's generated trips (with `parentCi`, the parent's
+ * index). Appended after the real columns, so stored interchange indices stay valid. @param {{ cols: any[] }} grid
+ */
+export function tripCols(grid) {
+  const real = grid.cols.filter((c) => !c.virt);
+  /** @type {any[]} */
+  const gen = [];
+  real.forEach((col, ci) => { for (const trip of blockTrips(col)) gen.push({ ...trip, parentCi: ci }); });
+  return gen.length ? [...real, ...gen] : real;
+}
+
+/** The route with every table's blocks expanded (tripCols); the route itself is not changed. @param {any} rs */
+export function expandRoute(rs) {
+  if (!rs?.grids) return rs;
+  let any = false;
+  /** @type {Record<string, any>} */
+  const grids = {};
+  for (const [k, g] of Object.entries(rs.grids)) {
+    const cols = tripCols(/** @type {any} */ (g));
+    if (cols.length !== /** @type {any} */ (g).cols.length) any = true;
+    grids[k] = { .../** @type {any} */ (g), cols };
+  }
+  return any ? { ...rs, grids } : rs;
+}
