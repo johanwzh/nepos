@@ -47,6 +47,13 @@ function normalize(line, dst) {
       if (m & 8) f[7] = String((m & ~8) | 256);
       return f.join(';');
     }
+    case '#BOD': { // all fifteen fields; an empty bitmask may be written as 0
+      const g = [...f, ...Array(15).fill('')].slice(0, 15);
+      for (const i of [10, 11]) if (g[i] === '0') g[i] = '';
+      return g.join(';');
+    }
+    case '#BOF': // empty language = Bokmål
+      return `#BOF;${f[1]};${f[2]};${f[3] ?? ''};${(f[4] ?? '').trim() || 'nob'}`;
     case '#MOD': // renamed in ERN 2.0
       return ['#TRM', ...f.slice(1)].join(';');
     case '#BRA':
@@ -140,7 +147,8 @@ function keyRecords(text) {
     else if (record === '#PER') { per++; tab = -1; row = -1; where = `P${per}`; }
     else if (record === '#KAL') where = `P${per}`;
     else if (record === '#TAB') { tab++; row = -1; where = `P${per}T${tab}`; }
-    else if (record === '#TUR' || record === '#FOT' || record === '#UNT' || record === '#DSK') where = `P${per}T${tab}`;
+    else if ((record === '#BOD' || record === '#BOF') && norm.split(';')[1] === '-1') where = 'P0T0'; // the line's booking goes into the first table
+    else if (record === '#TUR' || record === '#FOT' || record === '#UNT' || record === '#DSK' || record === '#BOD' || record === '#BOF' || record === '#INT') where = `P${per}T${tab}`;
     else if (record === '#TRL') { row++; where = `P${per}T${tab}R${row}`; }
     else if (record === '#TRC') where = `P${per}T${tab}R${row}`;
     out.push({ line: i + 1, key: `${where}|${norm}`, record });

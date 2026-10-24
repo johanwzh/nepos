@@ -207,7 +207,7 @@ Calendar record. A calendar the period runs on. One per calendar, directly after
 
 ### #FRE
 
-Frequency time record. The time limits for frequency routes. One per time limit.
+Frequency time record. The time limits for frequency routes. One per time limit. **Deprecated (2.x):** replaced by `#INT`; read as before, never written.
 
 | Field | Type | Description |
 |---|---|---|
@@ -288,6 +288,22 @@ Trip record. One per trip: a column in the table. A trip's `#UID` follows direct
 | 3 | int | CO2 produced per km. Deprecated: emissions follow from vehicle data and distance. |
 | 4 | int | An abstract comfort factor. |
 | 5 | int | Replacement transport type, when the trip is a replacement service: `1` = bus, `5` = express boat, `7` = ferry, `18` = combi boat, `19` = taxi. Optional. |
+
+### #INT
+
+Interval record (2.x). A virtual-interval block on a trip: the trip is the first of a clock-face series, and the table
+shows the trips in between only as minutes past the hour (in Norwegian *Intervall*). It follows the trip's `#TUR` and `#UID`;
+at most one per trip. Only this first trip is written as a `#TUR`; the others follow from the record. A reader that does not
+know `#INT` sees only the first trip.
+
+| Field | Type | Description |
+|---|---|---|
+| 0 | int | X position of the trip (its column). |
+| 1 | int | Interval in minutes: one that divides an hour (60, 30, 20, 15, 12, 10, 6, 5, 4, 3, 2 or 1). |
+| 2 | int | The last departure, in minutes after the trip's first departure: a multiple of the interval, from 120 to 1439. |
+
+Every trip of the series is the first trip moved by n × the interval (n = 1, 2, … up to field 2), with everything else
+the same. Example: a trip at 06:05, every 30 minutes, the last at 22:35: `#INT;4;30;990`.
 
 ### #TUT
 
@@ -371,7 +387,7 @@ Time cell record. One per cell with a time.
 | 0 | int | X position of the cell (its column). |
 | 1 | text | The time (`0800`). A pipe character (\|) = the trip passes without stopping. |
 | 2 | int | Day counter: days after the day the trip starts. |
-| 3 | int | Hour counter: hours after the trip starts (only for minute routes). |
+| 3 | int | Hour counter: hours after the trip starts (only for minute routes). **Deprecated (2.x):** replaced by `#INT`; written as `0`. |
 | 4 | int | Interchange: the target cell's column, relative to this cell. |
 | 5 | int | Interchange: the target cell's row, relative to this cell. |
 | 6 | int | Mask: a bitmask, see below. |
@@ -385,6 +401,9 @@ Mask (field 6):
 - Bit 4: a frequency cell (rush 2).
 - Bit 5: a frequency cell (daytime).
 - Bit 6: a frequency cell (evening).
+
+  Bits 2–6 (minute and frequency cells) are **deprecated (2.x)**: replaced by `#INT`, never written. Nepos reads bit 3 in its own older files as a request stop.
+
 - Bit 7: `-`: stops without a time given.
 - Bit 8: `x`: stops on request.
 - Bit 9: the time is calculated, not given by the operator.
@@ -1132,6 +1151,7 @@ What the record codes stand for, in alphabetical order. Most are Norwegian; a (?
 | `#BOD` | bookingdata | Booking data |
 | `#BOF` | bookingfotnote | Booking note |
 | `#DAG` | dag | Days |
+| `#INT` | intervall | Interval (virtual-interval block) |
 | `#DSK` | destinasjonskobling | Destination link |
 | `#DSS` | destinasjonsskilt | Destination sign |
 | `#DST` | destinasjon | Destination |

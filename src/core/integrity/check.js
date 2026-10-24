@@ -12,7 +12,7 @@ import { isValidMode } from '../modes.js';
  */
 
 // Records the Nepos parser reads and writes back. Anything else would be dropped on save.
-const KNOWN = new Set(['#LEV', '#RUT', '#SEK', '#VAL', '#TRA', '#KOM', '#PER', '#TAB', '#TUR', '#TRL', '#TRC', '#FOT', '#UNT', '#TTL', '#TTC', '#TRM', '#MRK', '#EKS', '#OFF', '#UID', '#KAL', '#DSS', '#DST', '#DSK',
+const KNOWN = new Set(['#LEV', '#RUT', '#SEK', '#VAL', '#TRA', '#KOM', '#PER', '#TAB', '#TUR', '#TRL', '#TRC', '#FOT', '#UNT', '#TTL', '#TTC', '#TRM', '#MRK', '#EKS', '#OFF', '#UID', '#KAL', '#DSS', '#DST', '#DSK', '#BOD', '#BOF', '#INT',
   // Nepos's older names and the deprecated comment records: read, and updated to ERN 2.0
   '#MOD', '#BRA', '#CUR', '#KON', '#KOE', '#KOT']);
 

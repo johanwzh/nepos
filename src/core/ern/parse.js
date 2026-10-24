@@ -5,6 +5,7 @@ import { UUID_PATTERN } from './serialize.js';
 import { normalizeDests, servedRows } from '../destinations.js';
 import { readDirection } from '../directions.js';
 import { normalizeBooking, fromBits, BOOKING_METHODS, BUY_WHEN } from '../booking.js';
+import { validBlock } from '../blocks.js';
 
 /**
  * Parse an ERN route file into a route state.
@@ -46,6 +47,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         cols.forEach((c,i) => { colXtoIdx[c.x] = i; });
         const gCols2 = cols.map(c => ({
             dayCode: c.dayCode, uid: c.uid ?? null, note: '', dates: [], tripNo: c.tripNo ?? '', label: c.label ?? '', vehicle: c.vehicle ?? '',
+            ...(c.block ? { block: c.block } : {}),
             cells: rows.map((_,ri) => {
                 const cell = cellMap[`${c.x}:${ri}`];
                 return cell || null;
@@ -251,6 +253,13 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 const lang = (f[4]||'').trim().toLowerCase();
                 if (lang && lang !== 'nob' && lang !== '0') break; // notes in other languages: not shown (the check says so)
                 _pendingNotes.push({ ci: buildXtoIdx()[parseInt(f[1])] ?? parseInt(f[1]), ri: parseInt(f[2]), note: txt });
+                break;
+            }
+            case '#INT': {
+                // A virtual-interval block on a column (power tools spec 2026-10-24); one Nepos cannot hold is dropped
+                const col = cols.find((c) => c.x === parseInt(f[1]));
+                const block = { every: parseInt(f[2]), span: parseInt(f[3]) };
+                if (col && validBlock(block)) /** @type {any} */ (col).block = block;
                 break;
             }
             case '#BOD': case '#BOF': {

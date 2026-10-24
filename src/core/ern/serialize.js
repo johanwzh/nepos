@@ -2,6 +2,7 @@
 import { ernCodeFor } from '../modes.js';
 import { servedRows, destKey } from '../destinations.js';
 import { normalizeBooking, toBits, BOOKING_METHODS, BUY_WHEN } from '../booking.js';
+import { validBlock } from '../blocks.js';
 
 /** A column's stable ID (#UID). */
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -101,6 +102,8 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
                 if (!col.uid || !UUID_PATTERN.test(col.uid) || usedUids.has(col.uid)) col.uid = crypto.randomUUID();
                 usedUids.add(col.uid);
                 lines.push(`#UID;${col.uid}`);
+                // A virtual-interval block on this column (power tools spec 2026-10-24)
+                if (validBlock(col.block)) lines.push(`#INT;${ci};${col.block.every};${col.block.span}`);
             });
 
             // The trip-number row (#TTL once, #TTC per column with a number): a train number for rail
