@@ -19,6 +19,7 @@ import { openDayCodeHelper } from './day-code-helper.js';
 import { sortColumns } from '../core/column-sort.js';
 import { openCopyInterval } from './copy-interval.js';
 import { activeTool, setJogHandler, onToolChange } from './power-tools.js';
+import { withBlocks, withoutBlocks } from '../core/blocks.js';
 import { shiftTimes } from '../core/time-shift.js';
 import { openDatePicker } from './date-picker.js';
 import { placeMenu } from './place-menu.js';
@@ -131,7 +132,7 @@ export function selectedColumn() {
  */
 export function loadGrid(data, { readOnly = false } = {}) {
   grid.stops = JSON.parse(JSON.stringify(data.stops));
-  grid.cols = JSON.parse(JSON.stringify(data.cols));
+  grid.cols = withBlocks(JSON.parse(JSON.stringify(data.cols)));
   for (const col of grid.cols) for (const c of col.cells ?? []) normalizeCell(c);
   grid.tripRow = !!(/** @type {any} */ (data).tripRow);
   grid.labelRow = !!(/** @type {any} */ (data).labelRow);
@@ -164,7 +165,7 @@ export function commitPending() {
 
 /** A copy of the grid's data, for storing in the route state. */
 export function gridData() {
-  return { stops: JSON.parse(JSON.stringify(grid.stops)), cols: JSON.parse(JSON.stringify(grid.cols)), tripRow: grid.tripRow, labelRow: grid.labelRow, vehicleRow: grid.vehicleRow };
+  return { stops: JSON.parse(JSON.stringify(grid.stops)), cols: withoutBlocks(JSON.parse(JSON.stringify(grid.cols))), tripRow: grid.tripRow, labelRow: grid.labelRow, vehicleRow: grid.vehicleRow };
 }
 
 /** The grid now matches what is saved. */
@@ -218,6 +219,28 @@ function keepMarks(prev, p) {
 }
 
 /** @param {any} cell @param {boolean} isEdit @param {string} buf */
+/**
+ * A band column's cell: the minutes past the hour; a collapsed band says "every N min" on its first time.
+ * @param {any} col @param {number} ri
+ */
+function bandHTML(col, ri) {
+  const cell = col.cells[ri];
+  if (!cell?.time) return '';
+  if (cell.time === '|') return '<span class="g-t">|</span><span class="g-m"></span>';
+  if (col.every) return col.cells.findIndex((/** @type {any} */ c) => c?.time && c.time !== '|') === ri ? `<span class="g-band-every">${esc(t('bandEvery', col.every))}</span>` : '';
+  return `<span class="g-t">${cell.time.slice(2)}</span><span class="g-m"></span>`;
+}
+
+/** The faint frame round a block: parent, band and end (power tools spec 2026-10-24). @param {HTMLElement} td @param {number} ci */
+function blockFrame(td, ci) {
+  const col = grid.cols[ci];
+  if (!col?.block && !col?.virt) return;
+  td.classList.add('g-blk');
+  if (col.block) td.classList.add('g-blk-l');
+  if (col.virt === 'end') td.classList.add('g-blk-r');
+  if (col.virt) td.classList.add('g-locked');
+}
+
 function cellHTML(cell, isEdit, buf, letter = '') {
   // The time in its own fixed slot and its marks (a/p/x, day offset) in a slot to the right, so every time
   // in a column starts at the same place (user 2026-10-17, as in Reggi)
@@ -272,6 +295,17 @@ const JOG_REST = 400;
  * jog rests, as after typing a time.
  * @param {number} r0 @param {number} r1 @param {number} c0 @param {number} c1
  */
+/**
+ * Virtual intervals (power tools spec 2026-10-24): each block's band and end columns are rebuilt from their parent before
+ * every drawing, so an edit to the parent shows in the whole block, and a deleted parent takes its block along.
+ */
+function syncBlocks() {
+  if (!grid.cols.some((c) => c.block || c.virt)) return;
+  grid.cols = withBlocks(withoutBlocks(grid.cols));
+}
+/** A band or end column: drawn from its parent, never edited itself. @param {number} ci */
+const locked = (ci) => !!grid.cols[ci]?.virt;
+
 /** The note letters of the table drawn last ('ci:ri' → letter). @type {Map<string, string>} */
 let letters = new Map();
 
@@ -535,6 +569,7 @@ function completeIx(tr, tc) {
 // ─── Render ─────────────────────────────────────────────────────────────────
 export function render() {
   if (!grid.active) return;
+  syncBlocks();
   letters = noteLetters(grid);
   if (!inDC) { inFN = false; dcSpanAt = -1; }
   /** @type {Set<string>} */
@@ -1167,7 +1202,8 @@ function renderStopRow(tbl, stop, ri, linked) {
     if (isDecreasing(ri, ci) && !ixMode) td.classList.add('is-dec');
     if (isRange && !ixMode) td.classList.add('in-range');
     if (isSel && editing) { td.classList.add('is-edit'); td.innerHTML = cellHTML(cell, true, editBuf); }
-    else { td.innerHTML = cellHTML(cell, false, '', letters.get(`${ci}:${ri}`)); if (isSel && !ixMode) td.classList.add('is-anchor'); }
+    else { td.innerHTML = col.virt === 'band' ? bandHTML(col, ri) : cellHTML(cell, false, '', letters.get(`${ci}:${ri}`)); if (isSel && !ixMode) td.classList.add('is-anchor'); }
+    blockFrame(td, ci);
     td.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
@@ -1209,10 +1245,10 @@ function renderBottomRow(tbl) {
   ti.className = 'cw-ins g-sticky0 g-td-btn g-td-ins g-add';
   if (!grid.readOnly) ti.appendChild(smallButton('+', 'g-ibtn g-ibtn-end', t('addRowEnd'), () => insertRow(grid.stops.length)));
   tr.insertCell().className = 'cw-name g-sticky1 g-add';
-  grid.cols.forEach((_, ci) => {
+  grid.cols.forEach((col, ci) => {
     const td = tr.insertCell();
     td.className = 'cw-time g-td-btn g-add';
-    if (!grid.readOnly) td.appendChild(smallButton('×', 'g-ibtn g-ibtn-del', t('delCol'), () => deleteCol(ci)));
+    if (!grid.readOnly && !col.virt) td.appendChild(smallButton('×', 'g-ibtn g-ibtn-del', t('delCol'), () => deleteCol(ci)));
   });
   tr.insertCell().className = 'cw-ins g-add';
 }
@@ -1228,13 +1264,14 @@ function setAnchor(r, c) {
 function extend(r, c) { endR = clampR(r); endC = clampC(c); }
 function clearSelection() {
   const { r1, r2, c1, c2 } = rect();
-  for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) grid.cols[c].cells[r] = null;
+  for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) if (!locked(c)) grid.cols[c].cells[r] = null;
 }
 /** @param {string} init */
-function startEdit(init) { editing = true; editBuf = init || ''; render(); }
+function startEdit(init) { if (locked(ancC)) return; editing = true; editBuf = init || ''; render(); }
 function commitEdit() {
   if (!editing) return;
   editing = false;
+  if (locked(ancC)) { editBuf = ''; render(); return; }
   const raw = editBuf.trim();
   if (!raw) {
     grid.cols[ancC].cells[ancR] = null;
@@ -1258,6 +1295,7 @@ function commitDayCode() {
   dcEdit = false;
   const v = canonicalDayCode(dcBuf); // one spelling: DX76 → DX67, 1234567 → D (user 2026-10-18)
   dcBuf = '';
+  if (locked(dcCol)) { render(); return; } // a band or end column has its parent's day code
   if (isValidDayCode(v)) { grid.cols[dcCol].dayCode = v; render(); return; }
   render();
   const td = document.querySelector(`.g-dc-cell[data-ci="${dcCol}"]`);
@@ -1329,7 +1367,7 @@ function onKeyDown(e) {
     if (k === 'v' && !grid.readOnly && dcClip && isValidDayCode(dcClip)) {
       e.preventDefault();
       const [a, b] = dcRange();
-      for (let ci = a; ci <= b; ci++) grid.cols[ci].dayCode = dcClip;
+      for (let ci = a; ci <= b; ci++) if (!locked(ci)) grid.cols[ci].dayCode = dcClip;
       render(); return;
     }
   }
@@ -1526,7 +1564,7 @@ function pasteCells(parts) {
   if (!clip || grid.readOnly) return;
   clip.cells.forEach((row, dr) => row.forEach((src, dc) => {
     const r = ancR + dr, c = ancC + dc;
-    if (r >= grid.stops.length || c >= grid.cols.length) return;
+    if (r >= grid.stops.length || c >= grid.cols.length || locked(c)) return;
     const col = grid.cols[c];
     if (parts.has('times')) {
       if (!src?.time) { col.cells[r] = null; return; }
@@ -1592,7 +1630,7 @@ function onPaste(e) {
     if (!line) return;
     line.split('\t').forEach((val, dc) => {
       const r = ancR + dr, c = ancC + dc;
-      if (r >= grid.stops.length || c >= grid.cols.length) return;
+      if (r >= grid.stops.length || c >= grid.cols.length || locked(c)) return;
       const v = val.trim();
       if (!v) { grid.cols[c].cells[r] = null; return; }
       const p = /** @type {any} */ (parseCellInput(v));
@@ -1708,7 +1746,7 @@ function timedInSelection() {
   const { r0, r1, c0, c1 } = selRect();
   const out = [];
   for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) {
-    const cell = grid.cols[c]?.cells[r];
+    const cell = locked(c) ? null : grid.cols[c]?.cells[r];
     if (cell && cell.time && cell.time !== '|') out.push(cell);
   }
   return out;
@@ -1832,6 +1870,7 @@ function hideCtx() {
 // ─── Insert / delete ────────────────────────────────────────────────────────
 /** @param {number} at */
 function insertCol(at) {
+  while (locked(at)) at++; // not inside a block: after its end
   grid.cols.splice(at, 0, { dayCode: '', uid: crypto.randomUUID(), note: '', dates: [], cells: grid.stops.map(() => null), dest: null, dests: grid.stops.map(() => null) });
   for (const col of grid.cols) for (const cell of col.cells) if (cell && cell.interchange && cell.interchange.targetC >= at) cell.interchange.targetC++;
   if (!inDC) { if (ancC >= at && grid.cols.length > 1) ancC++; if (endC >= at && grid.cols.length > 1) endC++; } else if (dcCol >= at) dcCol++;
@@ -1857,6 +1896,8 @@ export function addStopRowAt(at) {
 /** Put new columns right after column ci; interchanges to later columns move with them. @param {number} ci @param {any[]} cols */
 function insertColumnsAfter(ci, cols) {
   if (!cols.length) return;
+  while (locked(ci + 1)) ci++; // after a block's end
+  for (const c of cols) { delete c.block; delete c.virt; delete c.of; } // a copy of a parent is a trip, not a block
   for (const col of grid.cols) for (const cell of col.cells) if (cell?.interchange && cell.interchange.targetC > ci) cell.interchange.targetC += cols.length;
   grid.cols.splice(ci + 1, 0, ...cols);
   if (ancC > ci) ancC += cols.length;
@@ -1868,6 +1909,7 @@ function insertColumnsAfter(ci, cols) {
 
 /** @param {number} ci */
 function deleteCol(ci) {
+  if (locked(ci)) return;
   if (grid.cols[ci].cells.some((/** @type {any} */ c) => c !== null) && !confirm(t('confirmDelCol'))) return;
   grid.cols.splice(ci, 1);
   for (const col of grid.cols) for (const cell of col.cells) {
@@ -2118,6 +2160,7 @@ export function initGrid() {
     $(id).addEventListener('click', () => {
       hideCtx();
       if (grid.readOnly) return;
+      grid.cols = withoutBlocks(grid.cols);
       sortColumns(grid, by);
       inDC = false; ancC = 0; endC = 0;
       render();

@@ -1435,3 +1435,10 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 .pt-body:empty { display: none; }
 .pt-read { font-variant-numeric: tabular-nums; font-size: 12px; }
 .pt-hint { flex-basis: 100%; font-size: 11px; opacity: .75; }
+
+/* Virtual intervals (2.4): a block's faint frame; band and end columns are drawn from the parent and locked */
+.g-td-time.g-blk { background-image: linear-gradient(var(--accent-bg, #eef3ff), var(--accent-bg, #eef3ff)); background-size: 100% 100%; background-blend-mode: multiply; }
+.g-td-time.g-blk-l { box-shadow: inset 2px 0 0 var(--accent, #9db8e8); }
+.g-td-time.g-blk-r { box-shadow: inset -2px 0 0 var(--accent, #9db8e8); }
+.g-td-time.g-locked { color: var(--muted, #667); cursor: default; }
+.g-band-every { font-size: 11px; font-style: italic; white-space: nowrap; }
