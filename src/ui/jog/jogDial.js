@@ -36,6 +36,7 @@ import { h, s } from './dom.js';
  * @param {(v:number)=>{tone:string}} [o.zones] value mode: health tint (amber = caution, red = error)
  * @param {{label?:string, caption?:string}} [o.auto] value mode: omit-state below the minimum
  * @param {(v:number|null)=>void} [o.onChange] value mode
+ * @param {boolean} [o.downward] nudge mode: down = more (drag, wheel, arrow) — times run downwards in a timetable
  */
 export function jogDial({
   size = 26,
@@ -51,6 +52,7 @@ export function jogDial({
   zones,
   auto,
   onChange,
+  downward = false,
 }) {
   const valueMode = typeof onChange === 'function';
   const C = 50;
@@ -73,10 +75,14 @@ export function jogDial({
     : null;
   const read = valueMode ? h('div', { class: 'jd-read' }) : null;
 
+  // Nudge mode: the dot is an indicator of the same size on every dial (user 2026-10-24), not scaled with it
+  const DOT_PX = 2.75;
+  const dotR = valueMode ? 4 : (DOT_PX * 100) / size;
+  const sgn = downward && !valueMode ? -1 : 1;
   const draw = () => {
     const a = detents ? Math.round(angle / nudgeDeg) * nudgeDeg : angle;
-    const [x, y] = pt(R - 8, a);
-    indicator.replaceChildren(s('circle', { class: 'jd-dot', cx: x.toFixed(1), cy: y.toFixed(1), r: valueMode ? 4 : 4.5 }));
+    const [x, y] = pt(Math.min(R - 8, R - dotR - 3), a);
+    indicator.replaceChildren(s('circle', { class: 'jd-dot', cx: x.toFixed(1), cy: y.toFixed(1), r: dotR.toFixed(2) }));
     if (valueMode) {
       // Raw number inside (what goes on the wire); translated value below — same split as the dial.
       valueText.textContent = value == null ? auto?.label ?? 'Auto' : String(value);
@@ -88,7 +94,7 @@ export function jogDial({
     }
   };
 
-  const face = s('circle', { cx: C, cy: C, r: R, fill: 'var(--panel)', stroke: 'currentColor', 'stroke-width': 2, class: 'jd-rim' });
+  const face = s('circle', { cx: C, cy: C, r: R, fill: 'var(--panel, var(--bg-raised, #fff))', stroke: 'currentColor', 'stroke-width': 2, class: 'jd-rim' });
   const svg = s('svg', { class: 'jd-face', viewBox: '0 0 100 100', width: size, height: size, 'aria-hidden': 'true' }, face, indicator, ...(valueText ? [valueText] : []));
 
   // ---- value-mode plumbing -------------------------------------------------
@@ -132,7 +138,7 @@ export function jogDial({
   });
   svg.addEventListener('pointermove', (e) => {
     if (!dragging) return;
-    const dy = lastY - e.clientY;
+    const dy = (lastY - e.clientY) * sgn;
     lastY = e.clientY;
     if (Math.abs(e.clientY - startY) > 2 || Math.abs(e.clientX - startX) > 2) moved = true;
     acc += dy;
@@ -163,7 +169,7 @@ export function jogDial({
   svg.addEventListener('pointercancel', end);
   svg.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const dir = e.deltaY < 0 ? 1 : -1;
+    const dir = (e.deltaY < 0 ? 1 : -1) * sgn;
     if (valueMode) { nudgeValue(dir, fine); spinDot(dir * WHEEL_DEG); }
     else { angle += dir * nudgeDeg; draw(); onNudge(dir, e.shiftKey); }
   }, { passive: false });
@@ -175,8 +181,8 @@ export function jogDial({
     ...(valueMode ? [stage, read] : [stage])
   );
   root.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { e.preventDefault(); if (valueMode) { nudgeValue(1, fine); spinDot(WHEEL_DEG); } else { angle += nudgeDeg; draw(); onNudge(1, e.shiftKey); } }
-    if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { e.preventDefault(); if (valueMode) { nudgeValue(-1, fine); spinDot(-WHEEL_DEG); } else { angle -= nudgeDeg; draw(); onNudge(-1, e.shiftKey); } }
+    if ((e.key === 'ArrowUp' && sgn === 1) || (e.key === 'ArrowDown' && sgn === -1) || e.key === 'ArrowRight') { e.preventDefault(); if (valueMode) { nudgeValue(1, fine); spinDot(WHEEL_DEG); } else { angle += nudgeDeg; draw(); onNudge(1, e.shiftKey); } }
+    if ((e.key === 'ArrowDown' && sgn === 1) || (e.key === 'ArrowUp' && sgn === -1) || e.key === 'ArrowLeft') { e.preventDefault(); if (valueMode) { nudgeValue(-1, fine); spinDot(-WHEEL_DEG); } else { angle -= nudgeDeg; draw(); onNudge(-1, e.shiftKey); } }
   });
   draw();
   return root;

@@ -147,7 +147,7 @@ describe('a block in the grid', () => {
     selectCell(0, 4);
     setTool('jog');
     const dial = /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-body .jd'));
-    dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     setTool('');
     expect(gridData().cols[1].cells[0].time).toBe('0606');
     expect(td(0, 4).textContent).toBe('0806');

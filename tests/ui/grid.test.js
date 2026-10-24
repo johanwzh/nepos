@@ -269,8 +269,8 @@ describe('nudging times with the jog, a power tool (user test 2026-10-17; power 
 
   it('only ever moves the selected cells, one minute a notch (Shift: ten)', () => {
     const jog = open(); // one cell selected: only that cell
-    key(jog, 'ArrowUp');
-    key(jog, 'ArrowUp', true);
+    key(jog, 'ArrowDown');
+    key(jog, 'ArrowDown', true);
     expect(times()).toEqual(['0711', '0745']);
     expect(document.querySelector('#power-tools .pt-read')?.textContent).toBe('+11 min');
   });
@@ -281,7 +281,7 @@ describe('nudging times with the jog, a power tool (user test 2026-10-17; power 
     at(1, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
     document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     expect(activeTool()).toBe('jog'); // a click in the grid keeps it on
-    key(jog, 'ArrowDown');
+    key(jog, 'ArrowUp');
     expect(times()).toEqual(['0659', '0744']);
   });
 
@@ -292,15 +292,15 @@ describe('nudging times with the jog, a power tool (user test 2026-10-17; power 
       onGridRender(() => { renders++; });
       const jog = open();
       const before = renders;
-      key(jog, 'ArrowUp');
-      key(jog, 'ArrowUp');
-      key(jog, 'ArrowUp');
+      key(jog, 'ArrowDown');
+      key(jog, 'ArrowDown');
+      key(jog, 'ArrowDown');
       expect(times()).toEqual(['0703', '0745']);
       expect(at(0, 0).textContent).toBe('0703'); // the cell shows it at once
       expect(renders).toBe(before); // nothing else has been redrawn yet
       vi.advanceTimersByTime(1000);
       expect(renders).toBe(before + 1); // one redraw once the jog rests
-      key(jog, 'ArrowUp');
+      key(jog, 'ArrowDown');
       key(jog, 'Escape');
       expect(renders).toBe(before + 2); // turning it off redraws at once
       expect(at(0, 0).textContent).toBe('0704');
@@ -309,7 +309,7 @@ describe('nudging times with the jog, a power tool (user test 2026-10-17; power 
 
   it('turns off with Esc or its button, keeping what was done', () => {
     const jog = open();
-    key(jog, 'ArrowUp');
+    key(jog, 'ArrowDown');
     key(jog, 'Escape');
     expect(activeTool()).toBe('');
     expect(times()).toEqual(['0701', '0745']);

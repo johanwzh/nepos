@@ -349,6 +349,8 @@ export function initShell() {
     /** @type {Record<string, string>} */
     const byDigit = { 1: 'edit', 2: 'lines', 3: 'calendars', 4: 'assets', 5: 'export', 6: 'home' };
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
+    // A power tool on: finish with it first (Esc) — nothing else opens or changes page (user 2026-10-24)
+    if (document.body.classList.contains('pt-on')) { if (!['j', 'i'].includes(e.key.toLowerCase())) { e.preventDefault(); e.stopPropagation(); } return; }
     // The map is part of the timetable page: Alt+M opens and closes it there.
     if (e.key.toLowerCase() === 'm') { if (curPage === 'edit') { e.preventDefault(); e.stopPropagation(); togglePanel('right'); } return; }
     // The destination columns, likewise (destination displays spec)

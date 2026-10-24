@@ -18,7 +18,7 @@ import { interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan, fi
 import { openDayCodeHelper } from './day-code-helper.js';
 import { sortColumns } from '../core/column-sort.js';
 import { openCopyInterval } from './copy-interval.js';
-import { activeTool, setJogHandler, onToolChange, setUnpackHandler } from './power-tools.js';
+import { activeTool, setJogHandler, onToolChange, setUnpackHandler, notifySelection } from './power-tools.js';
 import { withBlocks, withoutBlocks, freeUid, DRAG_INTERVALS, blockTrips, canBeBlock, dragResult, snapSpan, firstDeparture, MIN_SPAN, MAX_SPAN } from '../core/blocks.js';
 import { DRAG_STEP_PX, openBlockDialog, openHowOften } from './interval-tool.js';
 import { jogDial } from './jog/jogDial.js';
@@ -328,6 +328,20 @@ function startIntervalDrag(e, ri, ci) {
   render();
 }
 
+/** At step 1 nothing is drawn yet: a hint by the parent says that letting go opens the dialog. @param {string | null} uid */
+function dropHint(uid) {
+  document.querySelector('.iv-drop-hint')?.remove();
+  if (!uid) return;
+  const ci = grid.cols.findIndex((c) => c.uid === uid);
+  const at = document.querySelector(`.g-dc-cell[data-ci="${ci}"]`)?.getBoundingClientRect();
+  const hint = document.createElement('div');
+  hint.className = 'iv-drop-hint';
+  hint.textContent = t('ivDropHint');
+  hint.style.left = `${(at?.right ?? 200) + 6}px`;
+  hint.style.top = `${(at?.top ?? 120)}px`;
+  document.body.appendChild(hint);
+}
+
 /** Put the drag's steps on the parent: a band, or no block. @param {number} steps */
 function dragTo(steps) {
   const d = ivDrag;
@@ -335,6 +349,7 @@ function dragTo(steps) {
   if (!d || !parent) return;
   d.steps = steps;
   const res = dragResult(steps);
+  dropHint(res.kind === 'dialog' ? parent.uid : null);
   if (res.kind === 'band') parent.block = { every: res.every, span: snapSpan(res.every, d.orig?.span ?? parent.block?.span ?? MIN_SPAN) };
   else if (res.kind === 'none' || res.kind === 'dialog') delete parent.block;
   render();
@@ -352,6 +367,7 @@ function endIntervalDrag() {
   const d = ivDrag;
   if (!d) return;
   ivDrag = null;
+  dropHint(null);
   const pi = grid.cols.findIndex((c) => c.uid === d.uid);
   const parent = grid.cols[pi];
   render();
@@ -371,7 +387,7 @@ function endIntervalDrag() {
 /** The end column's jog: each notch moves the last departure by the interval (2 h to 23 h 59 min). @param {any} end */
 function endJog(end) {
   const dial = jogDial({
-    size: 18, detents: true, pxPerNotch: 9,
+    size: 18, detents: true, pxPerNotch: 9, downward: true,
     onNudge: (/** @type {1 | -1} */ dir) => {
       const parent = grid.cols.find((c) => c.uid === end.of);
       if (!parent?.block) return;
@@ -678,6 +694,7 @@ function completeIx(tr, tc) {
 export function render() {
   if (!grid.active) return;
   syncBlocks();
+  notifySelection(`${inDC}|${ancR},${ancC}|${endR},${endC}`);
   letters = noteLetters(grid);
   if (!inDC) { inFN = false; dcSpanAt = -1; }
   /** @type {Set<string>} */
@@ -1314,6 +1331,7 @@ function renderStopRow(tbl, stop, ri, linked) {
     if (isSel && editing) { td.classList.add('is-edit'); td.innerHTML = cellHTML(cell, true, editBuf); }
     else { td.innerHTML = col.virt && ivDrag && ri !== topRow(col) ? '' : col.virt === 'band' ? bandHTML(col, ri) : cellHTML(cell, false, '', letters.get(`${ci}:${ri}`)); if (isSel && !ixMode) td.classList.add('is-anchor'); }
     blockFrame(td, ci);
+    if (ivDrag && ivDrag.steps === 1 && col.uid === ivDrag.uid) td.classList.add('g-blk-pending');
     td.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
@@ -2146,7 +2164,8 @@ export function initGrid() {
     // Turning a tool off: the redraw the jog was waiting for happens now
     onToolChange(() => {
       commitEdit(); commitDayCode(); commitTripNo(); // a half-typed time lands where it was typed
-      if (jogTimer) render();
+      clearTimeout(jogTimer); jogTimer = null;
+      render(); // the blocks' look and the end jogs follow the tool at once
     });
     document.addEventListener('paste', onPaste);
     document.addEventListener('mousedown', (e) => {

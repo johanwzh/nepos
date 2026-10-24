@@ -53,6 +53,15 @@ describe('the Virtual intervals tool', () => {
     expect(td(1, 2).textContent).toBe('0825');
   });
 
+  it('at step 1 a hint says that dropping opens the dialog; it goes when the drag ends', () => {
+    drag(0, 0, 1, false);
+    expect(document.querySelector('.iv-drop-hint')).not.toBeNull();
+    expect(td(0, 0).classList.contains('g-blk-pending')).toBe(true);
+    drag(0, 0, 0, false);
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: 100 }));
+    expect(document.querySelector('.iv-drop-hint')).toBeNull();
+  });
+
   it('dropping at step 1 opens the dialog: OK makes the block, an off-band last departure is refused', () => {
     drag(0, 0, 1);
     const box = /** @type {HTMLElement} */ (document.querySelector('.iv-box'));
@@ -88,12 +97,12 @@ describe('the Virtual intervals tool', () => {
   it('the end column\'s jog moves the last departure by the interval, within the limits', () => {
     drag(0, 0, 3);
     const jog = /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="3"] .jd'));
-    jog.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    jog.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     expect(saved()[0].block.span).toBe(150);
     expect(td(0, 3).textContent).toBe('0835');
     const jog2 = /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="3"] .jd'));
-    jog2.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
-    jog2.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    jog2.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    jog2.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
     expect(saved()[0].block.span).toBe(120); // never below two hours
   });
 

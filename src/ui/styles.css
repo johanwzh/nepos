@@ -1436,11 +1436,22 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 .pt-read { font-variant-numeric: tabular-nums; font-size: 12px; }
 .pt-hint { flex-basis: 100%; font-size: 11px; opacity: .75; }
 
-/* Virtual intervals (2.4): a block's faint frame; band and end columns are drawn from the parent and locked */
-.g-td-time.g-blk { background-image: linear-gradient(var(--accent-bg, #eef3ff), var(--accent-bg, #eef3ff)); background-size: 100% 100%; background-blend-mode: multiply; }
-.g-td-time.g-blk-l { box-shadow: inset 2px 0 0 var(--accent, #9db8e8); }
-.g-td-time.g-blk-r { box-shadow: inset -2px 0 0 var(--accent, #9db8e8); }
-.g-td-time.g-locked { color: var(--muted, #667); cursor: default; }
+/* Virtual intervals (2.4). Tool off: a block looks like ordinary columns, with a faint mark that its band and end cannot
+   be typed in. Tool on: every block is lit, framed, and its end jog shows (user 2026-10-24). */
+.g-td-time.g-locked { color: var(--muted, #8a8f99); cursor: default; background-image: repeating-linear-gradient(135deg, transparent 0 6px, rgba(128,128,128,.07) 6px 7px); }
+.g-dc-cell.g-locked { cursor: default; }
+body.pt-intervals .g-td-time.g-blk { background-color: var(--accent-bg, #eef3ff); }
+body.pt-intervals .g-td-time.g-blk-l { box-shadow: inset 2px 0 0 var(--accent, #9db8e8); }
+body.pt-intervals .g-td-time.g-blk-r { box-shadow: inset -2px 0 0 var(--accent, #9db8e8); }
+.g-td-time.g-blk-pending { box-shadow: inset -2px 0 0 var(--accent, #9db8e8); outline: 1px dashed var(--accent, #9db8e8); outline-offset: -1px; }
+.iv-drop-hint { position: fixed; z-index: 50; padding: 3px 8px; border-radius: 6px; font-size: 12px; background: var(--bg-raised, #fff); border: 1px dashed var(--accent, #9db8e8); pointer-events: none; }
+/* A power tool on: only the grid's times and the toolbox respond; Save and Discard stay (user 2026-10-24) */
+body.pt-on :is(#menubar, #tabbar, #route-hdr, #kom-bar, #ts-tabs, #cal-bar, #cal-timeline, #panel-right, #map-strip, #panel-left .route-list, #fn-preview, #speed-strip, #edit-footer > :not(#ef-save):not(#ef-discard):not(#ef-state)) { opacity: .4; pointer-events: none; }
+body.pt-on #tbl :is(.g-row-ins, .g-row-bot, .g-td-name, .g-td-btn, .g-td-ins, .g-dc-cell, .g-fn-cell, .g-lb-cell, .g-tn-cell, .cw-dest, .cw-ins) { pointer-events: none; opacity: .55; }
+body.pt-on #tbl .g-dc-cell .jd { pointer-events: auto; }
+body.pt-intervals #tbl .g-dc-cell.g-locked { opacity: 1; }
+.pt-read { transition: opacity 1s; }
+.pt-read.pt-fade { opacity: 0; }
 .g-band-every { font-size: 11px; font-style: italic; white-space: nowrap; }
 
 .iv { display: flex; flex-direction: column; gap: 6px; min-width: 260px; }

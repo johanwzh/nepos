@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 // The power toolbox (power tools spec 2026-10-24): at the bottom of the line navigator panel, always visible; turning a
 // tool on changes the editing context, and while a tool is on only that tool works. The jog lives here now.
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell } from '../../src/ui/shell.js';
+import { initShell, currentPage } from '../../src/ui/shell.js';
 import { grid, initGrid, loadGrid, selectCell } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { newRouteState } from '../../src/ui/route-state.js';
@@ -80,6 +80,68 @@ describe('the power toolbox', () => {
     expect(activeTool()).toBe('');
     press('i', { altKey: true });
     expect(activeTool()).toBe('intervals');
+  });
+
+  it('the tool is called Tidsforskyver (Time shifter); the jog is its dial', () => {
+    expect(tool('jog').textContent).toContain('Tidsforskyver');
+  });
+
+  it('dragging the jog down (or the down arrow, or the wheel down) makes times later', () => {
+    selectCell(0, 0);
+    tool('jog').click();
+    const dial = /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-body .jd'));
+    dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(grid.cols[0].cells[0].time).toBe('0701');
+    dial.querySelector('svg')?.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true }));
+    expect(grid.cols[0].cells[0].time).toBe('0702');
+    dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    expect(grid.cols[0].cells[0].time).toBe('0701');
+  });
+
+  it('the readout counts the current selection only: a new selection fades it out and starts again', () => {
+    vi.useFakeTimers();
+    try {
+      selectCell(0, 0);
+      tool('jog').click();
+      const dial = /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-body .jd'));
+      dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      const read = () => /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-read'));
+      expect(read().textContent).toBe('+1 min');
+      selectCell(1, 0);
+      expect(read().classList.contains('pt-fade')).toBe(true);
+      vi.advanceTimersByTime(1100);
+      expect(read().textContent).toBe('0 min');
+      dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      expect(read().textContent).toBe('+1 min');
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('while a tool is on, the rest of the page is locked (body class) and the page keys do nothing', () => {
+    tool('jog').click();
+    expect(document.body.classList.contains('pt-on')).toBe(true);
+    expect(document.body.classList.contains('pt-jog')).toBe(true);
+    press('2', { altKey: true });
+    expect(currentPage()).toBe('edit');
+    press('Escape');
+    expect(document.body.classList.contains('pt-on')).toBe(false);
+  });
+
+  it('Esc puts everything back: the end jogs of the blocks go away', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', note: '', dates: [], uid: crypto.randomUUID(), block: { every: 60, span: 120 }, cells: [cell('0700'), cell('0710')] }] });
+    tool('intervals').click();
+    expect(document.querySelector('.g-dc-cell .jd')).not.toBeNull();
+    press('Escape');
+    expect(document.querySelector('.g-dc-cell .jd')).toBeNull();
+  });
+
+  it('the jog\'s dot is the same size whatever the dial\'s size', async () => {
+    const { jogDial } = await import('../../src/ui/jog/jogDial.js');
+    const dotPx = (/** @type {number} */ size) => {
+      const el = jogDial({ size, detents: true, onNudge: () => {} });
+      return Number(el.querySelector('.jd-dot')?.getAttribute('r')) * size / 100;
+    };
+    expect(dotPx(18)).toBeCloseTo(dotPx(44), 2);
+    expect(dotPx(18)).toBeGreaterThanOrEqual(2.5);
   });
 
   it('the context menu no longer has the jog', () => {
