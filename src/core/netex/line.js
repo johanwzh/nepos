@@ -171,12 +171,14 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     // fixed line where every trip is booked is delivered: the line's booking on every trip without its own
                     const fspEls = bookingElements(col.booking ?? rs.booking, '          ');
                     const fsp = fspEls ? `\n        <FlexibleServiceProperties id="${cs}:FlexibleServiceProperties:${uuid5(`${sjId}|booking`)}" version="1">\n${fspEls}\n        </FlexibleServiceProperties>` : '';
-                    sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>${sjPriv}
+                    // Its days: a day type with the explicit dates, unless the line writes DatedServiceJourneys (never both: SERVICE_JOURNEY_14)
+                    const dayTypeXml = rs.dsj ? '' : `\n        <dayTypes>\n          <DayTypeRef ref="${data.dayTypeFor(days)}" version="1"/>\n        </dayTypes>`;
+                    sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>${sjPriv}${dayTypeXml}
         <JourneyPatternRef ref="${jpId}" version="1"/>${sjTrain}
         <passingTimes>${ptXml}
         </passingTimes>${fsp}
       </ServiceJourney>`);
-                    for (const d of days) dsjs.push(`      <DatedServiceJourney id="${cs}:DatedServiceJourney:${uuid5(`${sjId}|${d}`)}" version="1"${pubAttr}>
+                    if (rs.dsj) for (const d of days) dsjs.push(`      <DatedServiceJourney id="${cs}:DatedServiceJourney:${uuid5(`${sjId}|${d}`)}" version="1"${pubAttr}>
         <ServiceJourneyRef ref="${sjId}" version="1"/>
         <OperatingDayRef ref="${cs}:OperatingDay:${isoDate(d)}"/>
       </DatedServiceJourney>`);
@@ -201,8 +203,9 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                         const toSjId = variantSjId(sjIdOf(grid.cols[targetC], di, per, targetC), tgtVariant);
                         const staySeated = type==='stayseated' ? '\n        <StaySeated>true</StaySeated>' : '';
                         const guaranteed = type==='guaranteed'  ? '\n        <Guaranteed>true</Guaranteed>' : '';
+                        const maxWait = type==='guaranteed' && cell.interchange.maxWait ? `\n        <MaximumWaitTime>PT${cell.interchange.maxWait}M</MaximumWaitTime>` : '';
                         ixs.push({ fromSjId: sjId, toSjId, xml: `      <!-- interchange from col ${ci} to col ${targetC} -->
-      <ServiceJourneyInterchange id="${cs}:ServiceJourneyInterchange:${sjId.split(':').pop()}-${ri}-${targetC}-${targetR}" version="1">${staySeated}${guaranteed}
+      <ServiceJourneyInterchange id="${cs}:ServiceJourneyInterchange:${sjId.split(':').pop()}-${ri}-${targetC}-${targetR}" version="1">${staySeated}${guaranteed}${maxWait}
         <FromPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(srcStop.stopId)}"/>
         <ToPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(tgtStop.stopId)}"/>
         <FromJourneyRef ref="${sjId}" version="1"/>

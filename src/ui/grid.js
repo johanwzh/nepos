@@ -432,6 +432,17 @@ function unpackBlock() {
   insertColumnsAfter(grid.cols.indexOf(parent), trips);
 }
 
+/**
+ * The maximum wait time of a guaranteed interchange, in whole minutes 1–60 (Antu: above 0, at most an hour); null when
+ * cancelled or not a number. @param {number} now
+ */
+function askMaxWait(now) {
+  const answer = prompt(t('ixWaitPrompt'), String(now));
+  if (answer === null) return null;
+  const m = Math.round(Number(answer.trim()));
+  return m >= 1 && m <= 60 ? m : null;
+}
+
 /** A parent, band or end column: no interchanges this round (power tools spec). @param {number} ci */
 const inBlock = (ci) => !!grid.cols[ci]?.block || !!grid.cols[ci]?.virt;
 /** The working-copy index of a stored column (the problems count stored columns). @param {number} n */
@@ -706,7 +717,11 @@ function completeIx(tr, tc) {
   if (inBlock(c) || inBlock(tc)) { exitIx(); showMessage(t('ivNoIx')); return; } // not with a block (this round)
   if (r !== tr || c !== tc) {
     const cell = grid.cols[c].cells[r];
-    if (cell) cell.interchange = { targetC: tc, targetR: tr, type };
+    if (cell) {
+      cell.interchange = { targetC: tc, targetR: tr, type };
+      // A guarantee needs how long the trip waits (user 2026-10-24): asked at once
+      if (type === 'guaranteed') { const w = askMaxWait(5); if (w) cell.interchange.maxWait = w; }
+    }
   }
   exitIx();
 }
@@ -1992,6 +2007,7 @@ function showCtx(x, y, isDC = false) {
     $('gc-ix-g').className = 'gci' + (ixOk ? '' : ' dis');
     $('gc-ix-s').className = 'gci' + (ixOk ? '' : ' dis');
     $('gc-ix-del').className = 'gci red' + (withIx ? '' : ' dis');
+    $('gc-ix-wait').className = 'gci' + (withIx && cell.interchange.type === 'guaranteed' ? '' : ' dis');
     // Boarding restrictions: ticked when every timed cell in the selection has it
     const timedSel = timedInSelection();
     const sfx = timedSel.map((c) => c.suffix || '');
@@ -2313,6 +2329,13 @@ export function initGrid() {
   });
   $('gc-extrap-fwd').addEventListener('click', () => extrapolate('fwd'));
   $('gc-extrap-bwd').addEventListener('click', () => extrapolate('bwd'));
+  $('gc-ix-wait').addEventListener('click', () => {
+    hideCtx();
+    const ix = grid.cols[ctxC]?.cells[ctxR]?.interchange;
+    if (!ix || ix.type !== 'guaranteed' || grid.readOnly) return;
+    const w = askMaxWait(ix.maxWait ?? 5);
+    if (w) { ix.maxWait = w; render(); }
+  });
   $('gc-ix-g').addEventListener('click', () => { hideCtx(); if (hasTime(ctxR, ctxC) && !inBlock(ctxC)) enterIx(ctxR, ctxC, 'guaranteed'); });
   $('gc-ix-s').addEventListener('click', () => { hideCtx(); if (hasTime(ctxR, ctxC)) enterIx(ctxR, ctxC, 'stayseated'); });
   $('gc-ix-del').addEventListener('click', () => {

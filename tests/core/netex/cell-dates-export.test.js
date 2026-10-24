@@ -15,7 +15,7 @@ const t = (/** @type {string[]} */ extra = []) => [
   '#TRL;0;NSR:Quay:1;Alfa;0;-1;-1;-1;0;-1', '#TRC;0;0700;0;0;0;0;0', '#TRL;1;NSR:Quay:2;Beta;0;-1;-1;-1;0;-1', '#TRC;0;0710;0;0;0;0;0',
   '#TRL;2;NSR:Quay:3;Ceta S;0;-1;-1;-1;0;-1', '#TRC;0;0720;0;0;0;0;0', '#DSK;0;0;;1', '#DSK;0;1;;3', ...extra,
 ].join('\r\n') + '\r\n';
-const build = (/** @type {string[]} */ extra = []) => buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs: parseERN(t(extra)) }], orgs: [], brandings: [], calendars: CAL, timestamp: 'x' })[1].xml;
+const build = (/** @type {string[]} */ extra = []) => buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs: { ...parseERN(t(extra)), dsj: true } }], orgs: [], brandings: [], calendars: CAL, timestamp: 'x' })[1].xml;
 const WEEKEND_OFF = ['#UNT;0;1;20260110;16384;20260111;16384;0;0;'];
 const count = (/** @type {string} */ xml, /** @type {string} */ s) => xml.split(s).length - 1;
 /** The ServiceJourney with this ID, and the days it runs. */

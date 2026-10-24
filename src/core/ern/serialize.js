@@ -32,6 +32,7 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     if (rs.brandingId) lines.push(`#MRK;${esc(rs.brandingId)}`);
     // The line flags (navigation spec §4) are always written.
     lines.push(`#EKS;${rs.exported === false ? 0 : 1}`, `#OFF;${rs.isPublic === false ? 0 : 1}`);
+    if (rs.dsj) lines.push('#DSJ;1'); // the line's trips as DatedServiceJourneys, not day types (user 2026-10-24)
     const sek = rs.sek || [];
     if (sek.length > 0) {
         sek.forEach(s => {
@@ -177,6 +178,8 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
             grid.cols.forEach((col, ci) => notesOf(col, ci, -1));
             grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => notesOf(col.cells[ri], ci, ri)));
             grid.cols.forEach((col, ci) => bookingOf(col.booking, ci, -1));
+            // A guaranteed interchange's maximum wait time, in minutes, at its cell (#MVT)
+            grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => { const ix = col.cells[ri]?.interchange; if (ix?.maxWait) lines.push(`#MVT;${ci};${ri};${ix.maxWait}`); }));
             grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => bookingOf(col.cells[ri]?.booking, ci, ri)));
             lines.push(...(dskLines.get(grid) ?? []));
         }

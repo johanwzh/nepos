@@ -21,7 +21,7 @@ const memo = new Map();
 /** @param {string} text */
 function summarise(text) {
   let name = '', publicCode = '', privateCode = '', mode = '', submode = '', brandingId = '', ern = 0, sawRut = false, inTables = false;
-  let exported = true, isPublic = true;
+  let exported = true, isPublic = true, dsj = false;
   /** @type {string[]} */ const calendarIds = [];
   /** @type {string[]} */ const authorities = [];
   /** @type {string[]} */ const operators = [];
@@ -35,6 +35,7 @@ function summarise(text) {
     else if ((f[0] === '#MRK' || f[0] === '#BRA') && !brandingId) brandingId = f[1] ?? '';
     else if (f[0] === '#EKS') exported = (f[1] ?? '').trim() !== '0';
     else if (f[0] === '#OFF') isPublic = (f[1] ?? '').trim() !== '0';
+    else if (f[0] === '#DSJ') dsj = (f[1] ?? '').trim() === '1';
     else if (f[0] === '#SEK') {
       const id = (f[1] ?? '').trim();
       if (!id || id === '-1') continue;
@@ -43,5 +44,5 @@ function summarise(text) {
     }
   }
   if (!mode && ern) ({ mode, submode } = modeFromErn(ern));
-  return { name, publicCode, privateCode, mode, submode, brandingId, exported, isPublic, calendarIds, orgIds: [...authorities, ...operators] };
+  return { name, publicCode, privateCode, mode, submode, brandingId, exported, isPublic, dsj, calendarIds, orgIds: [...authorities, ...operators] };
 }

@@ -53,7 +53,7 @@ describe('line flags #EKS and #OFF', () => {
   });
 
   it('marks a line that is not public as restricted in NeTEx', () => {
-    const build = (/** @type {string} */ text) => buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r', rs: parseERN(text) }], orgs: [], brandings: [], calendars, timestamp: '2026-10-14T00:00:00' })[1].xml;
+    const build = (/** @type {string} */ text) => buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r', rs: { ...parseERN(text), dsj: true } }], orgs: [], brandings: [], calendars, timestamp: '2026-10-14T00:00:00' })[1].xml;
     const restricted = build(file(['#OFF;0']));
     expect(restricted).toMatch(/<Line [^>]*publication="restricted"/);
     expect(restricted.match(/<ServiceJourney [^>]*publication="restricted"/g)).toHaveLength(1);

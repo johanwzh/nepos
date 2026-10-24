@@ -14,7 +14,7 @@ import { ERN_MODES } from './ern/modes.js';
 import { expandRoute } from './blocks.js';
 import { linkPairs } from './link-pairs.js';
 import { isExportable } from './link-state.js';
-import { normalizeBooking } from './booking.js';
+import { normalizeBooking, bookingProblems } from './booking.js';
 
 /** Every code the check can give; each has a text 'chk:<code>' in both languages. */
 export const CHECK_CODES = [
@@ -188,6 +188,8 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
         if (col.block && !col.cells.some(timed)) { addIssue('error', 'block-empty', { ...r, where: { ...where, column: ci + 1 } }); return; }
         if (!col.cells.some(timed)) return;
         const at = { ...where, column: (col.parentCi ?? ci) + 1 };
+        // A guarantee says little without how long the trip waits (user 2026-10-24; Antu INTERCHANGE_2/3)
+        if (col.cells.some((/** @type {any} */ c) => c?.interchange?.type === 'guaranteed' && !c.interchange.maxWait)) addIssue('warning', 'ix-no-wait', { ...r, where: at });
         // A block's trips share their parent's problems: each is said once
         const add = (/** @type {'error' | 'warning'} */ level, /** @type {string} */ c, /** @type {any} */ extra) => {
           const key = `${level}|${c}|${JSON.stringify(extra)}`;
@@ -216,7 +218,7 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
           const cell = col.cells[ri];
           if (!timed(cell)) return;
           const m = minutes(cell);
-          if (prev >= 0 && m < prev) add('warning', 'col-decreasing', { ...r, where: at, detail: `${stop.name} ${cell.time}` });
+          if (prev >= 0 && m < prev) add('error', 'col-decreasing', { ...r, where: at, detail: `${stop.name} ${cell.time}` });
           prev = m;
         });
       });
@@ -280,6 +282,12 @@ function checkBookings(code, rs, add) {
     if (noContact(col.booking) || (col.cells ?? []).some((/** @type {any} */ c) => noContact(c?.booking))) found = true;
   }
   if (found) add('warning', 'booking-no-contact', { route: code });
+  // What Antu refuses (BookWhen / LatestBookingTime / MinimumBookingPeriod) and a way to book without its contact
+  /** @type {Set<string>} */
+  const said = new Set();
+  const all = [rs.booking];
+  for (const grid of Object.values(rs.grids ?? {})) for (const col of /** @type {any} */ (grid).cols ?? []) { all.push(col.booking); for (const c of col.cells ?? []) all.push(c?.booking); }
+  for (const b of all) for (const p of bookingProblems(b)) if (!said.has(p)) { said.add(p); add('error', p, { route: code }); }
 }
 
 /** The "not one of the stops this trip goes on to" warning: off for now (user 2026-10-20). */

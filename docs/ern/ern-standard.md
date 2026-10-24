@@ -289,6 +289,16 @@ Trip record. One per trip: a column in the table. A trip's `#UID` follows direct
 | 4 | int | An abstract comfort factor. |
 | 5 | int | Replacement transport type, when the trip is a replacement service: `1` = bus, `5` = express boat, `7` = ferry, `18` = combi boat, `19` = taxi. Optional. |
 
+### #DSJ
+
+Dated journeys record (2.x). How the line's dates are delivered in NeTEx: `1` = a DatedServiceJourney for every trip on
+every day it runs (for operators that sell or book single departures); missing or `0` = day types with an explicit list
+of dates (one DayTypeAssignment per date, shared by every trip with the same dates). At most one per file.
+
+| Field | Type | Description |
+|---|---|---|
+| 0 | int | `1` = DatedServiceJourneys; `0` = day types. |
+
 ### #INT
 
 Interval record (2.x). A virtual-interval block on a trip: the trip is the first of a clock-face series, and the table
@@ -304,6 +314,17 @@ know `#INT` sees only the first trip.
 
 Every trip of the series is the first trip moved by n × the interval (n = 1, 2, … up to field 2), with everything else
 the same. Example: a trip at 06:05, every 30 minutes, the last at 22:35: `#INT;4;30;990`.
+
+### #MVT
+
+Maximum wait time record (2.x). How long a trip with a guaranteed interchange (`#TRC` mask bit 10) waits for the
+feeding trip, at most. One per guaranteed interchange; it belongs to the time cell at its position.
+
+| Field | Type | Description |
+|---|---|---|
+| 0 | int | X position (its column). |
+| 1 | int | Y position (its row). |
+| 2 | int | Minutes, 1–60. |
 
 ### #TUT
 
@@ -1151,7 +1172,9 @@ What the record codes stand for, in alphabetical order. Most are Norwegian; a (?
 | `#BOD` | bookingdata | Booking data |
 | `#BOF` | bookingfotnote | Booking note |
 | `#DAG` | dag | Days |
+| `#DSJ` | dated service journeys | Dates as DatedServiceJourneys |
 | `#INT` | intervall | Interval (virtual-interval block) |
+| `#MVT` | maks ventetid | Maximum wait time of a guaranteed interchange |
 | `#DSK` | destinasjonskobling | Destination link |
 | `#DSS` | destinasjonsskilt | Destination sign |
 | `#DST` | destinasjon | Destination |

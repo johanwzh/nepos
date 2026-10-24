@@ -68,6 +68,19 @@ describe('a/p and x on a time', () => {
     expect(marks(0, 0)).toBe(''); // a bookable trip puts no x on its times
   });
 
+  it('a guaranteed interchange asks for its maximum wait time, and the menu can change it (user 2026-10-24)', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [] }, { dayCode: 'D', cells: [cell('0715'), cell('0725')], note: '', dates: [] }] });
+    const answers = ['5', '8'];
+    window.prompt = () => answers.shift() ?? null;
+    td(1, 0).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById('gc-ix-g')).click();
+    td(0, 1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+    expect(grid.cols[0].cells[1].interchange).toMatchObject({ type: 'guaranteed', maxWait: 5 });
+    td(1, 0).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById('gc-ix-wait')).click();
+    expect(grid.cols[0].cells[1].interchange.maxWait).toBe(8);
+  });
+
   it('the note row: F8 sets the trip booking, shown as an icon next to the dates', () => {
     loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [] }] });
     const fnCell = /** @type {HTMLElement} */ (document.querySelector('.g-fn-cell[data-ci="0"]'));

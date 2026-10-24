@@ -40,12 +40,22 @@ export function openBookingForm({ booking, x, y, title, onApply }) {
   };
   body.innerHTML = text('phone', t('bkPhone')) + text('email', t('bkEmail')) + text('url', t('bkUrl'), 'https://')
     + text('details', t('bkDetails'))
-    + select('access', t('bkAccess'), BOOKING_ACCESS) + select('bookWhen', t('bkBookWhen'), BOOK_WHEN)
+    + select('access', t('bkAccess'), BOOKING_ACCESS)
     + chips('methods', t('bkMethods'), BOOKING_METHODS) + chips('buyWhen', t('bkBuyWhen'), BUY_WHEN)
-    + `<label class="bk-row"><span>${esc(t('bkLatest'))}</span><input class="bk-latest" value="${esc(b.latest ? `${b.latest.slice(0, 2)}:${b.latest.slice(2)}` : '')}" placeholder="18:00" autocomplete="off"></label>`
-    + duration('minAhead', t('bkMinAhead')) + duration('maxAhead', t('bkMaxAhead'))
+    // The deadline (Antu, Uttu): by a time (when to book + the latest time) or at least some time before departure
+    + `<div class="bk-row"><span>${esc(t('bkDeadline'))}</span><span class="bk-modes">${(/** @type {[string, string][]} */ ([['time', 'bkModeTime'], ['ahead', 'bkModeAhead']])).map(([v, k]) =>
+      `<label><input type="radio" name="bk-mode" class="bk-mode" value="${v}"${(b.minAhead ? 'ahead' : 'time') === v ? ' checked' : ''}> ${esc(t(k))}</label>`).join('')}</span></div>`
+    + `<div class="bk-row-latest">${select('bookWhen', t('bkBookWhen'), BOOK_WHEN)}<label class="bk-row"><span>${esc(t('bkLatest'))}</span><input class="bk-latest" value="${esc(b.latest ? `${b.latest.slice(0, 2)}:${b.latest.slice(2)}` : '')}" placeholder="18:00" autocomplete="off"></label></div>`
+    + `<div class="bk-row-min">${duration('minAhead', t('bkMinAhead'))}</div>` + duration('maxAhead', t('bkMaxAhead'))
     + text('note', t('bkNote'));
   for (const chip of body.querySelectorAll('.bk-chip')) chip.addEventListener('click', () => chip.classList.toggle('on'));
+  const mode = () => /** @type {HTMLInputElement | null} */ (body.querySelector('.bk-mode:checked'))?.value ?? 'time';
+  const showMode = () => {
+    /** @type {HTMLElement} */ (body.querySelector('.bk-row-latest')).hidden = mode() !== 'time';
+    /** @type {HTMLElement} */ (body.querySelector('.bk-row-min')).hidden = mode() !== 'ahead';
+  };
+  for (const r of body.querySelectorAll('.bk-mode')) r.addEventListener('change', showMode);
+  showMode();
   const val = (/** @type {string} */ sel) => /** @type {HTMLInputElement} */ (body.querySelector(sel)).value;
   const on = (/** @type {string} */ k) => [...body.querySelectorAll(`.bk-${k} .bk-chip.on`)].map((c) => /** @type {HTMLElement} */ (c).dataset.v ?? '');
   openFloatBox({
@@ -53,8 +63,8 @@ export function openBookingForm({ booking, x, y, title, onApply }) {
     onApply: () => {
       onApply(normalizeBooking({
         contact: b.contact, phone: val('.bk-phone'), email: val('.bk-email'), url: val('.bk-url'), details: val('.bk-details'),
-        access: val('.bk-access'), bookWhen: val('.bk-bookWhen'), methods: on('methods'), buyWhen: on('buyWhen'),
-        latest: latestOf(val('.bk-latest')), minAhead: joinDuration(val('.bk-minAhead-n'), val('.bk-minAhead-u')),
+        access: val('.bk-access'), bookWhen: mode() === 'time' ? val('.bk-bookWhen') : '', methods: on('methods'), buyWhen: on('buyWhen'),
+        latest: mode() === 'time' ? latestOf(val('.bk-latest')) : '', minAhead: mode() === 'ahead' ? joinDuration(val('.bk-minAhead-n'), val('.bk-minAhead-u')) : '',
         maxAhead: joinDuration(val('.bk-maxAhead-n'), val('.bk-maxAhead-u')), note: val('.bk-note').replace(/[\r\n]+/g, ' '),
       }));
     },

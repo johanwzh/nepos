@@ -148,7 +148,7 @@ function keyRecords(text) {
     else if (record === '#KAL') where = `P${per}`;
     else if (record === '#TAB') { tab++; row = -1; where = `P${per}T${tab}`; }
     else if ((record === '#BOD' || record === '#BOF') && norm.split(';')[1] === '-1') where = 'P0T0'; // the line's booking goes into the first table
-    else if (record === '#TUR' || record === '#FOT' || record === '#UNT' || record === '#DSK' || record === '#BOD' || record === '#BOF' || record === '#INT') where = `P${per}T${tab}`;
+    else if (record === '#TUR' || record === '#FOT' || record === '#UNT' || record === '#DSK' || record === '#BOD' || record === '#BOF' || record === '#INT' || record === '#MVT') where = `P${per}T${tab}`;
     else if (record === '#TRL') { row++; where = `P${per}T${tab}R${row}`; }
     else if (record === '#TRC') where = `P${per}T${tab}R${row}`;
     out.push({ line: i + 1, key: `${where}|${norm}`, record });

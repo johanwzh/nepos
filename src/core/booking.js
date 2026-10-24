@@ -11,10 +11,13 @@
 
 /** #BOD field 9, bits 0–4 in this order. */
 export const BOOKING_METHODS = ['callDriver', 'callOffice', 'online', 'phoneAtStop', 'text'];
-/** #BOD field 10, bits 0–4 in this order. */
-export const BUY_WHEN = ['onReservation', 'beforeBoarding', 'afterBoarding', 'onCheckOut', 'noTicketRequired'];
+/**
+ * #BOD field 10, bits 0–3 in this order. Bit 4 (noTicketRequired) is not offered: the Nordic profile does not accept it
+ * yet (backlog 75). */
+export const BUY_WHEN = ['onReservation', 'beforeBoarding', 'afterBoarding', 'onCheckOut'];
 export const BOOKING_ACCESS = ['public', 'authorisedPublic', 'staff'];
-export const BOOK_WHEN = ['timeOfTravelOnly', 'dayOfTravelOnly', 'untilPreviousDay', 'advanceAndDayOfTravel'];
+/** The values the Nordic profile allows (BOOKING_3); timeOfTravelOnly is not one of them. */
+export const BOOK_WHEN = ['dayOfTravelOnly', 'untilPreviousDay', 'advanceAndDayOfTravel'];
 
 const TEXT_FIELDS = ['contact', 'phone', 'email', 'url', 'details', 'latest', 'minAhead', 'maxAhead', 'note'];
 
@@ -34,6 +37,28 @@ export function normalizeBooking(b) {
   const buy = BUY_WHEN.filter((m) => b.buyWhen?.includes(m));
   if (buy.length) out.buyWhen = buy;
   return Object.keys(out).length ? out : null;
+}
+
+/** Which ways to book need which contact (user 2026-10-24): a phone for calls and text, a web address for online. */
+const METHOD_NEEDS = /** @type {Record<string, 'phone' | 'url'>} */ ({ callOffice: 'phone', callDriver: 'phone', text: 'phone', online: 'url' });
+
+/**
+ * What Antu (and Uttu) would refuse in a booking: "when to book" without a latest time or the other way round
+ * ('booking-latest'), both "when to book" and "at least before" ('booking-both'), neither ('booking-neither'), and a
+ * way to book without its contact ('booking-method-phone', 'booking-method-url').
+ * @param {any} booking @returns {string[]}
+ */
+export function bookingProblems(booking) {
+  const b = normalizeBooking(booking);
+  if (!b) return [];
+  const out = [];
+  if (!!b.bookWhen !== !!b.latest) out.push('booking-latest');
+  if (b.bookWhen && b.minAhead) out.push('booking-both');
+  if (!b.bookWhen && !b.minAhead) out.push('booking-neither');
+  for (const need of /** @type {const} */ (['phone', 'url'])) {
+    if (!b[need] && (b.methods ?? []).some((m) => METHOD_NEEDS[m] === need)) out.push(`booking-method-${need}`);
+  }
+  return out;
 }
 
 /** Stable text for a booking ('' for none): pattern keys, note-letter grouping, comparing. @param {any} b */

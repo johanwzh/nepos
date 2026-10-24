@@ -109,6 +109,16 @@ describe('Linjer on the shared list frame', () => {
     expect(names()).toEqual(['Alta']);
   });
 
+  it('sets DatedServiceJourneys on the selected lines (default: day types with dates), shown as a tag (user 2026-10-24)', () => {
+    setPage('lines');
+    click(rows()[0]);
+    expect([...field('lt-dsj').querySelectorAll('option')].map((o) => o.textContent).slice(1)).toEqual(['Dagtyper (datoliste)', 'Hver avgang (DatedServiceJourney)']);
+    field('lt-dsj').value = '1';
+    field('lt-dsj').dispatchEvent(new Event('change'));
+    expect(app.drafts.get('b')?.dsj).toBe(true);
+    expect(rows()[0].textContent).toContain('DSJ');
+  });
+
   it('sets "Eksporter ikke" on the selected lines, unsaved, and then shows them as drafts', () => {
     setPage('lines');
     click(rows()[0]);

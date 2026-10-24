@@ -3,6 +3,8 @@ import { xe, pubDelivery, compositeFrame } from './xml.js';
 import { stopLocalId, quayRef } from '../quays.js';
 import { decodePolyline } from '../../shapes/geometry.js';
 import { authorityNetworkLocalId } from '../orgs.js';
+import { uuid5 } from '../uuid5.js';
+import { isoDate } from '../calendars.js';
 
 /**
  * The ServiceLinks the line files use (2.3, Lasse's spec): the routed shape as a gml:LineString in lat lon order,
@@ -109,16 +111,17 @@ ${psaXml}
       </stopAssignments>
     </ServiceFrame>`;
 
-    // ServiceCalendarFrame: only the OperatingDays the DatedServiceJourneys refer to (timetable
-    // structure spec §7) — no DayTypes, OperatingPeriods or DayTypeAssignments.
-    const odXml = [...operDays.keys()].sort().map((k) => {
+    // ServiceCalendarFrame: day types as lists of dates (one DayTypeAssignment per date, no periods or weekdays; user
+    // 2026-10-24) for the lines that use them, and the OperatingDays the DatedServiceJourneys of the other lines refer to
+    const dsjDays = data.dsjDays ?? new Set(operDays.keys());
+    const dts = [...(data.dayTypes ?? new Map()).values()];
+    const dtXml = dts.map((dt) => `      <DayType id="${dt.id}" version="1"/>`).join('\n');
+    const dtaXml = dts.flatMap((dt) => dt.dates.map((d, i) => `      <DayTypeAssignment id="${cs}:DayTypeAssignment:${uuid5(`${dt.id}|${d}`)}" version="1" order="${i + 1}">\n        <Date>${isoDate(d)}</Date>\n        <DayTypeRef ref="${dt.id}" version="1"/>\n      </DayTypeAssignment>`)).join('\n');
+    const odXml = [...operDays.keys()].filter((k) => dsjDays.has(k)).sort().map((k) => {
         const od = operDays.get(k);
         return `      <OperatingDay id="${od.ntxId}" version="1">\n        <CalendarDate>${od.date}</CalendarDate>\n      </OperatingDay>`;
     }).join('\n');
-    const calFrame = odXml ? `    <ServiceCalendarFrame id="${cs}:ServiceCalendarFrame:shared" version="1">
-      <operatingDays>
-${odXml}
-      </operatingDays>
+    const calFrame = odXml || dtXml ? `    <ServiceCalendarFrame id="${cs}:ServiceCalendarFrame:shared" version="1">${dtXml ? `\n      <dayTypes>\n${dtXml}\n      </dayTypes>` : ''}${odXml ? `\n      <operatingDays>\n${odXml}\n      </operatingDays>` : ''}${dtaXml ? `\n      <dayTypeAssignments>\n${dtaXml}\n      </dayTypeAssignments>` : ''}
     </ServiceCalendarFrame>` : '';
 
     const frames = [resFrame, svcFrame, calFrame].filter(Boolean);

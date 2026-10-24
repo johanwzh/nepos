@@ -46,7 +46,7 @@ describe('trip numbers', () => {
     const line = buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs }], orgs: [], brandings: [],
       calendars: [{ id: 'h1', name: 'Vår', ranges: [['20260101', '20260630']] }], timestamp: '2026-10-14T00:00:00' })[1].xml;
     const sj = line.slice(line.indexOf(`<ServiceJourney id="TST:ServiceJourney:${U[0]}"`));
-    expect(sj.slice(0, sj.indexOf('</ServiceJourney>'))).toMatch(/<PrivateCode>101<\/PrivateCode>\s*<JourneyPatternRef/);
+    expect(sj.slice(0, sj.indexOf('</ServiceJourney>'))).toMatch(/<PrivateCode>101<\/PrivateCode>\s*(<dayTypes>[\s\S]*?<\/dayTypes>\s*)?<JourneyPatternRef/); // day types between (2.4)
     const other = line.slice(line.indexOf(`<ServiceJourney id="TST:ServiceJourney:${U[1]}"`));
     expect(other.slice(0, other.indexOf('</ServiceJourney>'))).not.toContain('<PrivateCode>');
   });

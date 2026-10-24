@@ -20,9 +20,27 @@ describe('the booking form', () => {
     q('.bk-chip[data-v="callOffice"]').click();
     setVal('.bk-bookWhen', 'untilPreviousDay');
     setVal('.bk-latest', '18:00');
+    q('.fb-apply').click();
+    expect(got).toEqual({ phone: '22', email: 'a@b.no', methods: ['callOffice', 'online'], bookWhen: 'untilPreviousDay', latest: '1800' });
+  });
+
+  it('the deadline is either "by a time" (when to book + latest time) or "at least … before departure", never both (Antu, Uttu)', () => {
+    /** @type {any} */ let got;
+    openBookingForm({ booking: { phone: '1', bookWhen: 'untilPreviousDay', latest: '1800' }, x: 0, y: 0, onApply: (b) => { got = b; } });
+    expect(/** @type {HTMLInputElement} */ (q('.bk-mode[value="time"]')).checked).toBe(true);
+    expect(/** @type {HTMLElement} */ (q('.bk-row-min')).hidden).toBe(true);
+    const ahead = /** @type {HTMLInputElement} */ (q('.bk-mode[value="ahead"]'));
+    ahead.checked = true; ahead.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(/** @type {HTMLElement} */ (q('.bk-row-latest')).hidden).toBe(true);
     setVal('.bk-minAhead-n', '2'); setVal('.bk-minAhead-u', 'H');
     q('.fb-apply').click();
-    expect(got).toEqual({ phone: '22', email: 'a@b.no', methods: ['callOffice', 'online'], bookWhen: 'untilPreviousDay', latest: '1800', minAhead: 'PT2H' });
+    expect(got).toEqual({ phone: '1', minAhead: 'PT2H' });
+  });
+
+  it('offers only the Nordic values: no "at the time of travel", no "no ticket needed"', () => {
+    openBookingForm({ booking: null, x: 0, y: 0, onApply: () => {} });
+    expect([...document.querySelectorAll('.bk-bookWhen option')].map((o) => /** @type {HTMLOptionElement} */ (o).value)).toEqual(['', 'dayOfTravelOnly', 'untilPreviousDay', 'advanceAndDayOfTravel']);
+    expect(document.querySelector('.bk-chip[data-v="noTicketRequired"]')).toBeNull();
   });
 
   it('has no contact-person field and keeps a contact it was given', () => {

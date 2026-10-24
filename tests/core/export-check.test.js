@@ -92,7 +92,7 @@ describe('checkForExport', () => {
     it('warns about a time earlier than the stop before it', () => {
       const rs = route();
       grid0(rs).cols[0].cells[1].time = '0650';
-      expect(codes(check(rs))).toEqual(['warning:col-decreasing']);
+      expect(codes(check(rs))).toEqual(['error:col-decreasing']); // an error in Antu (TIMETABLED_PASSING_TIME_NON_INCREASING_TIME), so here too (user 2026-10-24)
     });
   });
 

@@ -14,7 +14,7 @@ import { validBlock } from '../blocks.js';
  */
 export function parseERN(text, { lang: _lang = 'en' } = {}) {
     const rs = {
-        routeName:'', publicCode:'', privateCode:'', mode:'', submode:'', brandingId:'', exported:true, isPublic:true, transportMode:6, kom:'', komOther:[], sek:[],
+        routeName:'', publicCode:'', privateCode:'', mode:'', submode:'', brandingId:'', exported:true, isPublic:true, dsj:false, transportMode:6, kom:'', komOther:[], sek:[],
         // Table sets (#TRA) with their periods (#PER + #KAL), one grid per period (timetable
         // structure spec §1–§4). Grids are keyed `${periodId}:${tableSetId}`.
         tableSets:[], periods:[], activeSet:null, activePer:null,
@@ -69,12 +69,13 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         }
         const grid = { stops: stopsCopy, cols: gCols2, tripRow: _tripRow, labelRow: _labelRow, vehicleRow: _vehicleRow };
         // Notes and dates from #FOT/#UNT: on the column (row -1) or on a cell that has a time
-        _pendingNotes.forEach(({ ci, ri, note, date, booking }) => {
+        _pendingNotes.forEach(({ ci, ri, note, date, booking, maxWait }) => {
             if (ci < 0 || ci >= grid.cols.length) return;
             const target = ri === -1 ? grid.cols[ci] : (ri >= 0 && ri < grid.stops.length ? grid.cols[ci].cells[ri] : null);
             if (!target) return;
             if (note != null) target.note = note;
             if (date) (target.dates ??= []).push(date);
+            if (maxWait && target.interchange) target.interchange.maxWait = maxWait;
             if (booking) { const b = normalizeBooking({ ...(target.booking ?? {}), ...booking }); if (b) target.booking = b; }
         });
         rs.grids[key] = grid;
@@ -129,6 +130,14 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
             case '#EKS': // Eksporteres (navigation spec §4); only 0 means no
                 rs.exported = (f[1]||'').trim() !== '0';
                 break;
+            case '#DSJ': // the line's trips as DatedServiceJourneys (2.4)
+                rs.dsj = (f[1]||'').trim() === '1';
+                break;
+            case '#MVT': { // a guaranteed interchange's maximum wait time, minutes (2.4)
+                const m = parseInt(f[3]);
+                if (m > 0) _pendingNotes.push({ ci: buildXtoIdx()[parseInt(f[1])] ?? parseInt(f[1]), ri: parseInt(f[2]), maxWait: m });
+                break;
+            }
             case '#OFF': // Offentlig
                 rs.isPublic = (f[1]||'').trim() !== '0';
                 break;

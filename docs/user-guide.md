@@ -70,7 +70,9 @@ Fanen **Linjer** viser alle linjene. Til venstre er verktøykassen:
 
 - **Finn** — søk, og filtrer på kalender, transportmåte, organisasjon og status.
 - **Verktøy** — **+ Ny linje**, **Rediger**, **Dupliser**, **Slett**, og under *Endre valgte* kan du
-  sette merkevare, organisasjoner, kalender og flaggene for flere linjer samtidig.
+  sette merkevare, organisasjoner, kalender og flaggene for flere linjer samtidig. **Datoer i NeTEx…** velger hvordan
+  linjens dager leveres: **dagtyper** med en liste over datoene (vanlig, små filer) eller **hver avgang**
+  (DatedServiceJourney) for selskaper som selger eller tar bestilling på enkeltavganger. Linjer med det siste merkes DSJ.
 
 Klikk for å velge, Shift- og Ctrl-klikk for å velge flere. Dobbeltklikk eller **Enter** åpner linjen.
 Kolonneoverskriftene sorterer. Stripen til venstre på hver rad viser om linjen er gyldig nå (grønn),
@@ -177,7 +179,8 @@ På en tid:
 - **Kun avstigning / Kun påstigning / Ingen begrensning**, og **Stopper ved behov / bestilling…** (F8).
 - (Tidsforskyveren er nå et kraftverktøy: se under.)
 - **Merknad** (eller F7) og **Datoer for tiden…**.
-- **Korrespondanse** (garantert eller bli sittende) til en annen tur.
+- **Korrespondanse** (garantert eller bli sittende) til en annen tur. En garantert korrespondanse spør om **maks
+  ventetid** (1–60 minutter); **Maks ventetid…** på høyreklikk endrer den.
 
 På en dagkode:
 
@@ -191,8 +194,10 @@ På en dagkode:
 - **x på en tid** er *stopper ved behov* eller en *bestilling*. Velg tidene og trykk **F8** (eller høyreklikk →
   Stopper ved behov / bestilling…): velg **Ingen**, **Stopper ved behov** eller **Bestilling…**. Ett valg gjelder alle
   valgte tider.
-- **Bestillingen** har telefon, e-post, nettside, detaljer, hvem som kan bestille, når, hvordan (flere), når billetten
-  kjøpes (flere), siste bestillingstid, minst og høyst hvor lenge før, og en bestillingsmerknad.
+- **Bestillingen** har telefon, e-post, nettside, detaljer, hvem som kan bestille, hvordan (flere), når billetten
+  kjøpes (flere), en **frist** og en bestillingsmerknad. Fristen er enten **innen et klokkeslett** (når bestille og siste
+  bestillingstid) eller **minst … før avgang** — aldri begge, slik Entur krever. Bestilling på telefon eller SMS trenger et
+  telefonnummer, på nett en nettadresse; eksportkontrollen sier fra ellers.
 - **Hele turen:** velg turen i merknadsraden og trykk F8. Turen får ☎ ved siden av 📅. En tur kan ha bestilling, men
   ikke «stopper ved behov».
 - **Hele linjen:** ☎-knappen til høyre i linjens merknadslinje.

@@ -48,6 +48,7 @@ function status(r) {
   const parts = [`<span class="lv-tag ${v}">${esc(text)}</span>`];
   if (!r.exported) parts.push(`<span class="lv-tag draft">${esc(t('lvDraft'))}</span>`);
   if (!r.isPublic) parts.push(`<span class="lv-tag closed">${esc(t('pubClosed'))}</span>`);
+  if (r.dsj) parts.push(`<span class="lv-tag dsj" title="${esc(t('dsjOn'))}">DSJ</span>`);
   if (r.unsaved) parts.push('<span class="lv-unsaved">●</span>');
   if (r.damaged) parts.push(`<span class="lv-problems bad">⚠ ${esc(t('statusDamaged'))}</span>`);
   else if (r.errors || r.warnings) parts.push(`<span class="lv-problems${r.errors ? ' bad' : ''}">⚠ ${r.errors + r.warnings}</span>`);
@@ -120,6 +121,7 @@ function renderBatch(box, sel) {
   box.innerHTML = `<div class="lv-h lv-h-sub">${esc(t('lvBatch'))}</div><div id="lt-orgs" class="lt-orgs"></div>
     <select id="lt-brand"${none ? ' disabled' : ''}></select>
     <select id="lt-exp"${none ? ' disabled' : ''}><option value="">${esc(t('ltSetExport'))}</option><option value="0">${esc(t('exportIn'))}</option><option value="1">${esc(t('exportOut'))}</option></select>
+    <select id="lt-dsj"${none ? ' disabled' : ''}><option value="">${esc(t('ltSetDsj'))}</option><option value="0">${esc(t('dsjOff'))}</option><option value="1">${esc(t('dsjOn'))}</option></select>
     <select id="lt-pub"${none ? ' disabled' : ''}><option value="">${esc(t('ltSetPublic'))}</option><option value="0">${esc(t('pubOpen'))}</option><option value="1">${esc(t('pubClosed'))}</option></select>
     <button class="lv-tool" id="lt-cal"${none ? ' disabled' : ''}>${esc(t('ltReplaceCalendar'))}</button>`;
   const field = (/** @type {string} */ id) => /** @type {HTMLInputElement & HTMLSelectElement} */ (box.querySelector('#' + id));
@@ -137,6 +139,11 @@ function renderBatch(box, sel) {
       if (v) batch(sel, (rs) => { rs[prop] = v !== '1'; }); // '1' sets the flag: not exported / not public
     });
   }
+  // How the line's dates are delivered (user 2026-10-24): day types with explicit dates, or a DatedServiceJourney per departure
+  field('lt-dsj').addEventListener('change', () => {
+    const v = field('lt-dsj').value;
+    if (v) batch(sel, (rs) => { rs.dsj = v === '1'; });
+  });
   field('lt-brand').addEventListener('change', () => {
     const v = field('lt-brand').value;
     if (v) batch(sel, (rs) => { rs.brandingId = v === '-' ? '' : v; });

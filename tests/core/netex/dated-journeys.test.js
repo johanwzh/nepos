@@ -13,7 +13,7 @@ const route = (/** @type {string} */ dayCode, extraPeriod = '') => [
   '#TRL;1;NSR:Quay:2;B;34;0;-1;-1;34;-1', '#TRC;0;0010;1;0;0;0;0',
   extraPeriod,
 ].filter(Boolean).join('\r\n') + '\r\n';
-const build = (/** @type {string} */ text) => buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r', rs: parseERN(text) }], orgs: [], brandings: [], calendars, timestamp: '2026-10-14T00:00:00' });
+const build = (/** @type {string} */ text) => buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r', rs: { ...parseERN(text), dsj: true } }], orgs: [], brandings: [], calendars, timestamp: '2026-10-14T00:00:00' });
 
 describe('dated service journeys', () => {
   it('writes one DSJ per operating day of the column, on the day the trip starts', () => {
