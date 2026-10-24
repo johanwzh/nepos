@@ -4,6 +4,32 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 ## 2.4.0 — not released yet
 
+- **Booking and request stops:** a time can carry a request stop or a booking (the **x**), set from the new x window
+  (F8, or right-click → Stopper ved behov / bestilling…) on one or many selected times; x is never typed. The booking
+  form has phone, e-mail, web, who can book, when to book, how (several), when to buy (several), latest booking time,
+  how long before at least and at most, and a booking note. A whole trip gets its booking in the note row (F8 there; ☎
+  beside 📅), the whole line in the line details (☎ at the end of the line's note). Each level is complete on its own;
+  a new one starts as a copy of the level above. In NeTEx: BookingArrangements and RequestStop on the stop point,
+  FlexibleServiceProperties on the trip. The line's booking is written on every trip for now, until Entur says how a
+  fixed line where every trip is booked should be delivered.
+- **a/p and x together** on one time (alighting only and on request, for example). Typing `ap` is refused: that is `|`.
+- **Note letters:** a time's note and dates show as a letter beside it (b, c, d … skipping a, p and x), the same note
+  the same letter, in place of the small triangle. No hover texts in the timetable any more: the bar under it shows
+  the selected time's note, dates, boarding rule, request stop and booking in full.
+- **Copying carries everything:** Ctrl+C / Ctrl+V inside Nepos copies the whole cell (time, a/p, x and booking, note,
+  dates). **Ctrl+Shift+V = paste special:** choose times, alighting/boarding, booking/request stop and/or note and
+  dates (in the note row: note, dates, booking). Text from other programs still brings times and a/p only.
+- **Power tools:** a toolbox at the bottom of the line navigator, always there. Turning a tool on (Alt+J, Alt+I) changes
+  what the mouse and keys do; Esc turns it off. **The jog** (time shift) lives here now, no longer on the right-click
+  menu.
+- **Virtual intervals** (power tool): drag a trip to the right to repeat it every 60, 30, 20, 15, 12 or 10 minutes (one
+  more column per step), or further for every 6–1 minutes; drop at one step to type the interval and last departure.
+  The table shows the first trip, one column per minute of the hour (`35`, `05`) and the last trip; the export writes
+  every trip in full. The last trip's own jog moves the end by the interval. Everything follows the first trip; a
+  block is locked and framed, and **Unpack block** turns it into ordinary columns. Copy at intervals stays for other
+  intervals (40 minutes) and suggests the new tool when it fits. Stored as one ERN record, `#INT`.
+- **Delete several columns or rows at once:** select a run of day codes or stops (Shift+click or Shift+arrows), then the
+  × on one of them (or Delete in the day-code row). One question for all.
 - **Oversikt, the project's first page:** what needs you today, in plain sentences: a line that stops running within 30
   days, a line with errors (grouped by kind), lines changed since their last export. Under "Snart": lines ending within
   Entur's 120 days, lines not exported for half a year, warnings. Then every line's validity against the 30, 60, 90 and

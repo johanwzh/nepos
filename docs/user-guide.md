@@ -130,7 +130,8 @@ turen kjører.
   du under **Ressurser**. En tur som kopieres med intervall, får ikke med seg kjøretøyet.
 - Dagkoder ryddes selv: DX76 blir DX67, 1234567 blir D. Ctrl+C / Ctrl+V kopierer en dagkode til en annen kolonne.
 - **Flere kolonner:** Shift+klikk eller Shift+piltast i dagkode-raden velger flere kolonner. F7 (eller høyreklikk →
-  merknad) gir alle samme merknad, og Ctrl+V limer en dagkode inn i alle.
+  merknad) gir alle samme merknad, og Ctrl+V limer en dagkode inn i alle. **×** på en av dem, eller **Delete**, sletter
+  alle (Nepos spør én gang). Det samme med flere stopp: Shift+klikk eller Shift+piltast i stoppkolonnen, så **×**.
 - **Merknadsraden** (prikkene og 📅 over dagkodene) kan velges: klikk en celle, Shift+klikk for flere, dobbeltklikk eller
   Enter for merknaden. Ctrl+C kopierer kolonnens merknad og datoer, Ctrl+V setter dem på de valgte kolonnene.
 - Stoppkolonnen og radene øverst står fast når du blar, og cellen du står i holdes alltid synlig.
@@ -140,8 +141,11 @@ turen kjører.
 ### Skrive tider
 
 Velg en celle og skriv tiden (`0715` eller `715`), Enter. `|` betyr at turen passerer stoppet uten å
-stoppe. Etter tiden kan du skrive `a` (bare avstigning), `p` (bare påstigning) eller `x` (stopper ved
-behov) — eller sette det fra høyreklikkmenyen for alle valgte celler.
+stoppe. Etter tiden kan du skrive `a` (bare avstigning) eller `p` (bare påstigning) — eller sette det fra
+høyreklikkmenyen for alle valgte celler. **Stopper ved behov** og **bestilling** (x) skrives aldri: se under.
+
+Ved en tid står opptil tre merker: a/p, x og én **bokstav** for tidens merknad og datoer (b, c, d … — a, p og x
+hoppes over; samme merknad gir samme bokstav). Linjen under tabellen viser alt om tiden du står i.
 
 Velg et område med **Shift + piltaster** eller ved å **dra med musen**. **Ctrl+C / Ctrl+V** kopierer
 og limer inn tider, også fra og til regneark. Limer du inn flere kolonner eller rader enn tabellen har,
@@ -152,6 +156,10 @@ skilt med komma eller semikolon, eller rett fra et JSON-svar. Nepos tar ut alle 
 og fyller stoppene fra den valgte raden og nedover, som i Excel; rader legges til ved behov.
 
 **Merknad på flere tider:** velg tidene og trykk F7 (eller høyreklikk → merknad).
+
+**Kopiere:** Ctrl+C / Ctrl+V i Nepos tar med hele cellen — tid, a/p, x og bestilling, merknad og datoer.
+**Ctrl+Shift+V** (lim inn utvalgt) lar deg velge hva som limes inn: tider, av-/påstigning, bestilling/forespørsel,
+merknad og datoer. I merknadsraden: merknad, datoer, bestilling. Nepos husker valget.
 
 **Problemer:** nede til venstre står «⚠ 2 feil · 1 advarsel» når linjen mangler noe. Klikk for å gå til
 det første problemet — feltet merkes («Må fylles inn») — og klikk igjen for det neste.
@@ -164,9 +172,8 @@ På en tid:
   avstanden mellom stoppene. Står du i én celle, gjelder det hele kolonnen; har du valgt et område,
   bare mellom tidene i området. Skriv første og siste tid (eller tidene ved hovedstoppene), interpoler,
   og rett det som må rettes.
-- **⇅ Forskyv tider…** — et lite hjul som flytter de valgte tidene ett minutt per hakk (Shift: ti).
-  Det blir stående åpent mens du velger andre celler; lukk med ✕ eller Esc.
-- **Kun avstigning / Kun påstigning / Stopper ved behov / Ingen begrensning**.
+- **Kun avstigning / Kun påstigning / Ingen begrensning**, og **Stopper ved behov / bestilling…** (F8).
+- (Joggen som forskyver tider er nå et kraftverktøy: se under.)
 - **Merknad** (eller F7) og **Datoer for tiden…**.
 - **Korrespondanse** (garantert eller bli sittende) til en annen tur.
 
@@ -176,6 +183,34 @@ På en dagkode:
   kolonner den lager. Kopier som starter etter midnatt får dagkoden flyttet en dag.
 - **Sorter kolonnene** etter avgang, eller etter dagkode og så avgang.
 - **Merknad** og **Datoer for turen…**.
+
+### Bestilling og stopper ved behov
+
+- **x på en tid** er *stopper ved behov* eller en *bestilling*. Velg tidene og trykk **F8** (eller høyreklikk →
+  Stopper ved behov / bestilling…): velg **Ingen**, **Stopper ved behov** eller **Bestilling…**. Ett valg gjelder alle
+  valgte tider.
+- **Bestillingen** har telefon, e-post, nettside, detaljer, hvem som kan bestille, når, hvordan (flere), når billetten
+  kjøpes (flere), siste bestillingstid, minst og høyst hvor lenge før, og en bestillingsmerknad.
+- **Hele turen:** velg turen i merknadsraden og trykk F8. Turen får ☎ ved siden av 📅. En tur kan ha bestilling, men
+  ikke «stopper ved behov».
+- **Hele linjen:** ☎-knappen til høyre i linjens merknadslinje.
+- Hvert nivå er komplett i seg selv; et nytt starter som en kopi av nivået over. En bestillingstur eller -linje gir
+  ingen x på tidene.
+
+### Kraftverktøy
+
+Nederst i linjenavigatoren står **kraftverktøyene**. Å se dem endrer ingenting; slår du et verktøy på (klikk, eller
+**Alt+J** / **Alt+I**), virker bare det verktøyet i tabellen — skriving, innliming og menyer er av. **Esc** slår det av.
+
+- **Jogg** — et hjul som flytter de valgte tidene ett minutt per hakk (Shift: ti). Velg andre celler mens den står på.
+- **Virtuelle intervall** — dra en tur mot høyre for å gjenta den. Ett steg: en dialog der du skriver intervallet og
+  siste avgang. To steg: hver time; tre: hver halvtime; så hvert 20., 15., 12. og 10. minutt. Drar du lenger, spør Nepos
+  hvor ofte (hvert 6.–1. minutt). Tabellen viser første tur, én kolonne per minutt i timen og siste tur, for eksempel
+  **06:05 | 35 05 | 08:05** for hver halvtime fra 06:05 til 08:05. Joggen i siste turs dagkode-celle flytter siste
+  avgang med intervallet. Alt følger første tur: endrer du den, endres hele blokken. Blokken er låst og har en svak
+  ramme; dra den tilbake til første tur for å fjerne den, eller **Pakk ut blokk** for å gjøre den til vanlige kolonner.
+  Eksporten skriver alle turene. Intervaller som ikke går opp i en time (40 minutter), lager du med **Kopier med
+  intervall**. En tur med korrespondanse kan ikke bli en blokk ennå.
 
 ### Merknader og datoer
 
