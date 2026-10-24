@@ -1,4 +1,4 @@
-import { ROUTES_DIR, BACKUPS_DIR, backupStamp, uniqueBackupPath } from './layout.js';
+import { ROUTES_DIR, BACKUPS_DIR, backupStamp, uniqueBackupPath, pruneBackups } from './layout.js';
 import { encodeWin1252, decodeWin1252 } from '../core/ern/win1252.js';
 import { compareRouteCodes } from '../core/route-codes.js';
 
@@ -37,6 +37,7 @@ export async function writeRoute(fs, code, text, { now = new Date() } = {}) {
   const existing = await fs.readBytes(path);
   if (existing !== null && existing.length > 0) {
     await fs.writeBytes(await uniqueBackupPath(fs, `${BACKUPS_DIR}/${code}.${backupStamp(now)}`, '.txt'), existing);
+    await pruneBackups(fs, code); // the 10 newest per line (user 2026-10-24)
   }
   await fs.writeBytes(path, encodeWin1252(text));
 }

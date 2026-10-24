@@ -16,7 +16,9 @@ maskin. Ingenting sendes noe sted før du selv eksporterer og leverer filene.
 Alt Nepos lagrer, ligger i én mappe du velger selv:
 
 - `data/` — linjene (ERN-filer), kalendere, merkevarer og organisasjoner. Det er denne delen du
-  deler med andre eller tar sikkerhetskopi av.
+  deler med andre eller tar sikkerhetskopi av. Hver gang en linje lagres, legges den forrige versjonen i
+  `data/backups/`; de 10 nyeste per linje beholdes. En slettet linje og kopiene fra formatoppgraderinger
+  blir aldri ryddet bort.
 - `private/` — dine egne innstillinger (språk, fargetema). Deles ikke.
 - `exports/` — NeTEx-filene, én undermappe for hver eksport.
 

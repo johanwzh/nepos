@@ -2,7 +2,7 @@
 // (fromQuay|toQuay|profile), shared by every line in the project. A 2.2 project has no file: no links yet.
 // An unreadable file does not stop the project opening; it is kept as a backup when the file is next written.
 import { readText, writeJson } from './fs.js';
-import { SHAPES_FILE, BACKUPS_DIR, backupStamp, uniqueBackupPath } from './layout.js';
+import { SHAPES_FILE, BACKUPS_DIR, backupStamp, uniqueBackupPath, pruneBackups } from './layout.js';
 
 /** @typedef {import('../core/link-state.js').SavedShape} SavedShape */
 
@@ -33,7 +33,7 @@ export async function readShapes(fs) {
 export async function writeShapes(fs, shapes, { previousError = '' } = {}) {
   if (previousError === 'unreadable') {
     const old = await fs.readBytes(SHAPES_FILE);
-    if (old) await fs.writeBytes(await uniqueBackupPath(fs, `${BACKUPS_DIR}/shapes-${backupStamp(new Date())}`, '.json'), old);
+    if (old) { await fs.writeBytes(await uniqueBackupPath(fs, `${BACKUPS_DIR}/shapes-${backupStamp(new Date())}`, '.json'), old); await pruneBackups(fs, 'shapes'); }
   }
   /** @type {Record<string, SavedShape>} */
   const out = {};

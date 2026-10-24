@@ -34,3 +34,31 @@ export async function uniqueBackupPath(fs, base, ext) {
   for (let n = 2; (await fs.readBytes(candidate)) !== null; n++) candidate = `${base}-${n}${ext}`;
   return candidate;
 }
+
+/** How many save backups of one line (or of the shapes) are kept (user 2026-10-24). */
+export const BACKUP_KEEP = 10;
+
+/**
+ * Keep the BACKUP_KEEP newest save backups of a line (`<code>.<stamp>[-n].txt`) or, for 'shapes', of the shapes
+ * (`shapes-<stamp>[-n].json`) in data/backups/; delete the rest. Never touched: a deleted line's backup
+ * (`.deleted.txt`), format-upgrade copies (folders) and repair backups (other names).
+ * @param {import('./fs.js').ProjectFs} fs
+ * @param {string} prefix a line's code, or 'shapes'
+ * @returns {Promise<number>} how many were deleted
+ */
+export async function pruneBackups(fs, prefix, keep = BACKUP_KEEP) {
+  const esc = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = prefix === 'shapes'
+    ? /^shapes-(\d{4}-\d{2}-\d{2}T\d{6})(?:-(\d+))?\.json$/
+    : new RegExp(`^${esc}\\.(\\d{4}-\\d{2}-\\d{2}T\\d{6})(?:-(\\d+))?\\.txt$`);
+  const found = [];
+  for (const entry of await fs.list(BACKUPS_DIR)) {
+    if (entry.kind !== 'file') continue;
+    const m = re.exec(entry.name);
+    if (m) found.push({ name: entry.name, stamp: m[1], n: Number(m[2] ?? 1) });
+  }
+  found.sort((a, b) => (a.stamp < b.stamp ? 1 : a.stamp > b.stamp ? -1 : b.n - a.n)); // newest first
+  const old = found.slice(keep);
+  for (const f of old) await fs.remove(`${BACKUPS_DIR}/${f.name}`);
+  return old.length;
+}

@@ -28,6 +28,8 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   every trip in full. The last trip's own jog moves the end by the interval. Everything follows the first trip; a
   block is locked and framed, and **Unpack block** turns it into ordinary columns. Copy at intervals stays for other
   intervals (40 minutes) and suggests the new tool when it fits. Stored as one ERN record, `#INT`.
+- **Save backups rotate:** `data/backups/` keeps the 10 newest backups of each line (and of the map's shapes); a
+  deleted line's backup and format-upgrade copies are never removed.
 - **Delete several columns or rows at once:** select a run of day codes or stops (Shift+click or Shift+arrows), then the
   × on one of them (or Delete in the day-code row). One question for all.
 - **Oversikt, the project's first page:** what needs you today, in plain sentences: a line that stops running within 30
