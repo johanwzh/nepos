@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // The Virtual intervals tool (power tools spec 2026-10-24): drag a column right; step 1 opens a dialog, 2–7 make a band
 // of 1–6 columns, more asks how often; the end column's jog moves the last departure by the interval; Unpack.
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
 import { initShell } from '../../src/ui/shell.js';
@@ -88,6 +88,41 @@ describe('the Virtual intervals tool', () => {
     /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="3"] .jd')).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     selectCell(1, 0); // a redraw
     expect(`${dot()?.getAttribute('cx')},${dot()?.getAttribute('cy')}`).not.toBe(before);
+  });
+
+  it('band and end cells show the first trip\'s marks: a/p, x and the note letter', () => {
+    const cols = saved();
+    Object.assign(cols[0].cells[1], { suffix: 'p', req: true, note: 'Merk' });
+    cols[0].block = { every: 30, span: 120 };
+    loadGrid({ stops: [stop('A'), stop('B')], cols });
+    const marks = (/** @type {number} */ c) => td(1, c).querySelector('.g-m')?.textContent;
+    expect(marks(0)).toBe('pxb');
+    expect(marks(1)).toBe('pxb');
+    expect(marks(3)).toBe('pxb');
+    expect(td(1, 1).querySelector('.g-t')?.textContent).toBe('55');
+  });
+
+  it('the day-code row shows the block as a line, ending at the end column', () => {
+    drag(0, 0, 3);
+    setTool('');
+    expect(document.querySelector('.g-dc-cell[data-ci="0"]')?.classList.contains('g-blk-dc-start')).toBe(true);
+    expect(document.querySelector('.g-dc-cell[data-ci="1"]')?.classList.contains('g-blk-dc')).toBe(true);
+    expect(document.querySelector('.g-dc-cell[data-ci="3"]')?.classList.contains('g-blk-dc-end')).toBe(true);
+  });
+
+  it('the redraw after the end jog waits while the dial is still held', () => {
+    vi.useFakeTimers();
+    try {
+      drag(0, 0, 3);
+      const dial = /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="3"] .jd'));
+      document.body.classList.add('scrubbing'); // the mouse holds the dial
+      dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      vi.advanceTimersByTime(2000);
+      expect(dial.isConnected).toBe(true);
+      document.body.classList.remove('scrubbing');
+      vi.advanceTimersByTime(1000);
+      expect(dial.isConnected).toBe(false); // redrawn once let go
+    } finally { vi.useRealTimers(); }
   });
 
   it('dropping at step 1 opens the dialog: OK makes the block, an off-band last departure is refused', () => {

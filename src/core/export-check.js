@@ -169,6 +169,20 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
 
       /** @type {Set<string>} */
       const said = new Set();
+      // Two trips with the same times at the same stops on a shared day (user 2026-10-24): easy with blocks, e.g. a
+      // block every 30 min over a real 07:05, or a 1 and a D that meet on Mondays. A warning: the user decides.
+      /** @type {Map<string, { ci: number, days: Set<string> }[]>} */
+      const seen = new Map();
+      grid.cols.forEach((/** @type {any} */ col, /** @type {number} */ ci) => {
+        const calls = journeyStops(grid, col);
+        if (calls.length < 2) return;
+        const key = calls.map((c) => `${c.stopId}@${c.depCell.dayOffset || 0}:${c.depCell.time}`).join('|');
+        const days = new Set(tripDays(periodDays, col));
+        const list = seen.get(key) ?? [];
+        if (list.some((o) => [...days].some((d) => o.days.has(d)))) add('warning', 'trip-duplicate', { ...r, where: { ...where, column: (col.parentCi ?? ci) + 1 } });
+        list.push({ ci, days });
+        seen.set(key, list);
+      });
       grid.cols.forEach((/** @type {any} */ col, /** @type {number} */ ci) => {
         // A block waiting for times (its parent has none left) is an error on the parent
         if (col.block && !col.cells.some(timed)) { addIssue('error', 'block-empty', { ...r, where: { ...where, column: ci + 1 } }); return; }

@@ -83,3 +83,21 @@ describe('blocks in the export', () => {
     expect(check(rs).some((i) => i.code === 'block-empty' && i.level === 'error' && i.where?.column === 1)).toBe(true);
   });
 });
+
+describe('overlapping trips (user 2026-10-24)', () => {
+  it('warns when two trips run the same times on a shared day: a block over a real column', () => {
+    const { rs, grid } = gridOf(miniErn({ times: [['0605', '0615', '0625'], ['0705', '0715', '0725']] }));
+    grid.cols[0].block = { every: 30, span: 120 }; // 06:35, 07:05, … — the second column is 07:05 too
+    const issues = check(rs).filter((i) => i.code === 'trip-duplicate');
+    expect(issues).toHaveLength(1);
+    expect(issues[0].level).toBe('warning');
+  });
+
+  it('does not warn when they share no day (1 and 2)', () => {
+    const { rs, grid } = gridOf(miniErn({ times: [['0605', '0615', '0625'], ['0705', '0715', '0725']] }));
+    grid.cols[0].block = { every: 30, span: 120 };
+    grid.cols[0].dayCode = '1';
+    grid.cols[1].dayCode = '2';
+    expect(check(rs).some((i) => i.code === 'trip-duplicate')).toBe(false);
+  });
+});

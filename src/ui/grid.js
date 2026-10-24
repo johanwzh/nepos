@@ -223,14 +223,15 @@ function keepMarks(prev, p) {
 /** @param {any} cell @param {boolean} isEdit @param {string} buf */
 /**
  * A band column's cell: the minutes past the hour; a collapsed band says "every N min" on its first time.
- * @param {any} col @param {number} ri
+ * @param {any} col @param {number} ri @param {string} [letter] the first trip's note letter
  */
-function bandHTML(col, ri) {
+function bandHTML(col, ri, letter = '') {
   const cell = col.cells[ri];
   if (!cell?.time) return '';
   if (cell.time === '|') return '<span class="g-t">|</span><span class="g-m"></span>';
   if (col.every) return col.cells.findIndex((/** @type {any} */ c) => c?.time && c.time !== '|') === ri ? `<span class="g-band-every">${esc(t('bandEvery', col.every))}</span>` : '';
-  return `<span class="g-t">${cell.time.slice(2)}</span><span class="g-m"></span>`;
+  // The minutes past the hour, with the first trip's marks (a/p, x, note letter; user 2026-10-24)
+  return cellHTML({ ...cell, time: cell.time.slice(2), dayOffset: 0 }, false, '', letter);
 }
 
 /** The faint frame round a block: parent, band and end (power tools spec 2026-10-24). @param {HTMLElement} td @param {number} ci */
@@ -445,6 +446,13 @@ const locked = (ci) => !!grid.cols[ci]?.virt;
 /** The note letters of the table drawn last ('ci:ri' → letter). @type {Map<string, string>} */
 let letters = new Map();
 
+/** The redraw once the jog rests — not while a dial is still held, which the redraw would take from under the mouse. */
+function restRender() {
+  if (document.body.classList.contains('scrubbing')) { jogTimer = setTimeout(restRender, JOG_REST); return; }
+  jogTimer = null;
+  render();
+}
+
 function patchTimes(r0, r1, c0, c1) {
   for (let c = c0; c <= c1; c++) {
     if (!grid.cols[c]) continue;
@@ -456,7 +464,7 @@ function patchTimes(r0, r1, c0, c1) {
     }
   }
   clearTimeout(jogTimer);
-  jogTimer = setTimeout(render, JOG_REST);
+  jogTimer = setTimeout(restRender, JOG_REST);
 }
 
 /** @type {Map<string, string>} the targets for the render running now */
@@ -1240,8 +1248,8 @@ function renderDayCodeRow(tbl) {
     td.dataset.ci = String(ci);
     const isSel = inDC && !inFN && inDcRange(ci) && !dcEdit, isEdit = inDC && ci === dcCol && dcEdit;
     if (isEdit) { td.classList.add('dc-edit'); td.innerHTML = esc(dcBuf) + '▌'; }
-    else if (col.virt) { td.textContent = ''; td.classList.add('g-locked'); if (col.virt === 'end' && activeTool() === 'intervals' && !grid.readOnly) td.appendChild(endJog(col)); }
-    else { td.textContent = col.dayCode; if (isSel) td.classList.add('dc-sel'); }
+    else if (col.virt) { td.textContent = ''; td.classList.add('g-locked', col.virt === 'end' ? 'g-blk-dc-end' : 'g-blk-dc'); if (col.virt === 'end' && activeTool() === 'intervals' && !grid.readOnly) td.appendChild(endJog(col)); }
+    else { td.textContent = col.dayCode; if (isSel) td.classList.add('dc-sel'); if (col.block) td.classList.add('g-blk-dc-start'); }
     td.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
       // The day code stands for its column: with Virtual intervals on it drags like the times (user 2026-10-24)
@@ -1344,7 +1352,7 @@ function renderStopRow(tbl, stop, ri, linked) {
     if (isDecreasing(ri, ci) && !ixMode) td.classList.add('is-dec');
     if (isRange && !ixMode) td.classList.add('in-range');
     if (isSel && editing) { td.classList.add('is-edit'); td.innerHTML = cellHTML(cell, true, editBuf); }
-    else { td.innerHTML = col.virt && ivDrag && ri !== topRow(col) ? '' : col.virt === 'band' ? bandHTML(col, ri) : cellHTML(cell, false, '', letters.get(`${ci}:${ri}`)); if (isSel && !ixMode) td.classList.add('is-anchor'); }
+    else { td.innerHTML = col.virt && ivDrag && ri !== topRow(col) ? '' : col.virt === 'band' ? bandHTML(col, ri, letters.get(`${parentIndex(ci)}:${ri}`)) : cellHTML(cell, false, '', letters.get(`${col.virt ? parentIndex(ci) : ci}:${ri}`)); if (isSel && !ixMode) td.classList.add('is-anchor'); }
     blockFrame(td, ci);
     if (ivDrag && ((ivDrag.steps === 1 && col.uid === ivDrag.uid) || (ivDrag.steps > DRAG_INTERVALS.length + 1 && col.virt === 'end' && col.of === ivDrag.uid))) td.classList.add('g-blk-pending');
     td.addEventListener('mousedown', (e) => {
