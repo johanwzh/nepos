@@ -29,6 +29,7 @@ import { destColumnsOpen, onDestToggle, destCellInfo, renderDestCell, openDestEd
 import { vehicleShown } from '../core/vehicles.js';
 import { openXWindow } from './x-window.js';
 import { openBookingForm } from './booking-form.js';
+import { openPasteSpecial } from './paste-special.js';
 
 /** The grid being edited: one period × direction of the open route. */
 export const grid = {
@@ -89,7 +90,7 @@ function openColNotes() {
   openFnEditor('col', 0, a, cells.length > 1 ? cells : undefined);
 }
 /** The note and dates copied last in the note row */
-let fnClip = /** @type {{ note: string, dates: any[] } | null} */ (null);
+let fnClip = /** @type {{ note: string, dates: any[], booking: any } | null} */ (null);
 /** The trip-number row: selected (its column is dcCol), being typed in */
 let inTN = false, tnEdit = false, tnBuf = '';
 let inStopCol = false;
@@ -1293,11 +1294,23 @@ function onKeyDown(e) {
   if ((e.ctrlKey || e.metaKey) && inDC && inFN && grid.cols[dcCol]) {
     const k = e.key.toLowerCase();
     const [a, b] = dcRange();
-    if (k === 'c') { e.preventDefault(); const col = grid.cols[a]; fnClip = { note: col.note ?? '', dates: structuredClone(col.dates ?? []) }; void navigator.clipboard?.writeText(fnClip.note).catch(() => {}); return; }
+    if (k === 'c') { e.preventDefault(); const col = grid.cols[a]; fnClip = { note: col.note ?? '', dates: structuredClone(col.dates ?? []), booking: copyOf(col.booking) }; void navigator.clipboard?.writeText(fnClip.note).catch(() => {}); return; }
     if (k === 'v' && !grid.readOnly && fnClip) {
       e.preventDefault();
-      for (let ci = a; ci <= b; ci++) { grid.cols[ci].note = fnClip.note; grid.cols[ci].dates = structuredClone(fnClip.dates); }
-      render(); return;
+      const clip = fnClip;
+      /** @param {Set<string>} parts */
+      const put = (parts) => {
+        for (let ci = a; ci <= b; ci++) {
+          const col = grid.cols[ci];
+          if (parts.has('note')) col.note = clip.note;
+          if (parts.has('dates')) col.dates = structuredClone(clip.dates);
+          if (parts.has('booking')) { if (clip.booking) col.booking = copyOf(clip.booking); else delete col.booking; }
+        }
+        render();
+      };
+      if (e.shiftKey) { const at = document.querySelector(`.g-fn-cell[data-ci="${a}"]`)?.getBoundingClientRect(); openPasteSpecial({ kind: 'note-row', x: at?.left ?? 200, y: (at?.bottom ?? 120) + 4, onApply: put }); }
+      else put(new Set(['note', 'dates', 'booking']));
+      return;
     }
     return;
   }
@@ -1313,6 +1326,13 @@ function onKeyDown(e) {
   }
   if ((e.ctrlKey || e.metaKey) && !editing && !dcEdit && !inStopCol && !inDC && !inTN && !tnEdit && !inLB) {
     if (e.key === 'c') { e.preventDefault(); copySelection(); return; }
+    // Paste special (booking spec 2026-10-22): which parts of the cells copied inside Nepos
+    if (e.key.toLowerCase() === 'v' && e.shiftKey && !grid.readOnly && cellClip) {
+      e.preventDefault();
+      const at = document.querySelector(`[data-r="${ancR}"][data-c="${ancC}"]`)?.getBoundingClientRect();
+      openPasteSpecial({ kind: 'cell', x: at?.left ?? 200, y: (at?.bottom ?? 120) + 4, onApply: (parts) => pasteCells(parts) });
+      return;
+    }
     if (e.key === 'x' && !grid.readOnly) { e.preventDefault(); copySelection().then(() => { clearSelection(); render(); }); return; }
   }
   if (grid.readOnly) { keyReadOnly(e); return; }
@@ -1467,12 +1487,57 @@ function keyDayCodeEdit(e) {
 async function copySelection() {
   const { r1, r2, c1, c2 } = rect();
   const lines = [];
+  /** @type {any[][]} */
+  const cells = [];
   for (let r = r1; r <= r2; r++) {
     const row = [];
-    for (let c = c1; c <= c2; c++) { const cell = grid.cols[c]?.cells[r]; row.push(cell ? cell.time + (cell.suffix || '') : ''); }
+    /** @type {any[]} */
+    const whole = [];
+    for (let c = c1; c <= c2; c++) { const cell = grid.cols[c]?.cells[r]; row.push(cell ? cell.time + (cell.suffix || '') : ''); whole.push(copyOf(cell)); }
     lines.push(row.join('\t'));
+    cells.push(whole);
   }
+  // Inside Nepos the whole cell comes along (booking spec 2026-10-22); the text is for other programs
+  cellClip = { text: lines.join('\n'), cells };
   try { await navigator.clipboard.writeText(lines.join('\n')); } catch { /* clipboard not available */ }
+}
+
+/** The cells copied last with Ctrl+C, whole (time, a/p, x, booking, note, dates), and the text that went with them. */
+let cellClip = /** @type {{ text: string, cells: any[][] } | null} */ (null);
+/** @param {string} s */
+const sameText = (s) => !!cellClip && s.replace(/\r\n/g, '\n').replace(/\n+$/, '') === cellClip.text.replace(/\n+$/, '');
+
+/**
+ * Put the copied cells at the selection's corner, only the given parts: times (time and day offset), boarding (a/p),
+ * booking (x: request stop or booking), notes (note and dates). Parts other than times go only onto times.
+ * @param {Set<string>} parts
+ */
+function pasteCells(parts) {
+  const clip = cellClip;
+  if (!clip || grid.readOnly) return;
+  clip.cells.forEach((row, dr) => row.forEach((src, dc) => {
+    const r = ancR + dr, c = ancC + dc;
+    if (r >= grid.stops.length || c >= grid.cols.length) return;
+    const col = grid.cols[c];
+    if (parts.has('times')) {
+      if (!src?.time) { col.cells[r] = null; return; }
+      const prev = col.cells[r];
+      col.cells[r] = { ...(prev && prev.time !== '|' && src.time !== '|' ? prev : {}), time: src.time, dayOffset: src.dayOffset || 0, suffix: prev?.suffix ?? '', interchange: null };
+      if (src.time === '|') { col.cells[r] = { time: '|', dayOffset: 0, suffix: '', interchange: null }; return; }
+    }
+    const cell = col.cells[r];
+    if (!cell?.time || cell.time === '|') return;
+    if (parts.has('boarding')) cell.suffix = src?.suffix ?? '';
+    if (parts.has('booking')) {
+      if (src?.req) cell.req = true; else delete cell.req;
+      if (src?.booking) cell.booking = copyOf(src.booking); else delete cell.booking;
+    }
+    if (parts.has('notes')) {
+      if (src?.note) cell.note = src.note; else delete cell.note;
+      if (src?.dates?.length) cell.dates = copyOf(src.dates); else delete cell.dates;
+    }
+  }));
+  render();
 }
 
 /** The day code copied last with Ctrl+C in the day-code row. */
@@ -1500,6 +1565,8 @@ function onPaste(e) {
   const text = e.clipboardData?.getData('text');
   if (!text) return;
   e.preventDefault();
+  // What Nepos copied itself: the whole cells
+  if (!inStopCol && sameText(text)) { pasteCells(new Set(['times', 'boarding', 'booking', 'notes'])); return; }
   if (inStopCol) {
     // A list of stops (user 2026-10-18): every Quay ID in the text, in order, from any text, CSV or sloppy JSON
     const ids = text.match(/NSR:Quay:\d+/g) ?? [];

@@ -1420,3 +1420,6 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 .bk-dur { display: flex; gap: 4px; } .bk-dur input { width: 5em; }
 
 .kom-booking { margin-left: auto; padding: 1px 8px; border: 1px solid var(--border, #ccc); border-radius: 10px; background: none; cursor: pointer; font-size: 12px; white-space: nowrap; }
+
+.ps { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
+.ps-part { display: flex; align-items: center; gap: 6px; cursor: pointer; }
