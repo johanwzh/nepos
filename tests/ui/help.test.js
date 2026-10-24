@@ -5,6 +5,7 @@ import { loadAppMarkup } from './dom-setup.js';
 import { initShell } from '../../src/ui/shell.js';
 import { initHelp, showVersionHistory, showGitHub, changelogSections } from '../../src/ui/help.js';
 import { VERSION } from '../../src/version.js';
+import CHANGELOG from '../../CHANGELOG.md?raw';
 
 beforeEach(() => { loadAppMarkup(); initShell(); initHelp(); });
 
@@ -37,10 +38,12 @@ describe('version history', () => {
     expect(s[0].html).toContain('<p>The first version tested against Entur.</p>');
   });
 
-  it('shows the app\'s own changelog in the Help window, with the running version first', () => {
+  it('shows the app\'s own changelog in the Help window, newest released version first', () => {
     showVersionHistory();
     const body = /** @type {HTMLElement} */ (document.getElementById('help-body'));
-    expect(body.querySelector('h3')?.textContent).toContain(VERSION);
+    // Local main runs the next version before it is released (user 2026-10-24): the newest dated section comes first
+    const newest = changelogSections(CHANGELOG, VERSION)[0];
+    expect(body.querySelector('h3')?.textContent).toContain(newest.version);
     expect(body.textContent).not.toContain('not released yet');
   });
 

@@ -15,6 +15,11 @@ each time; nothing is pushed until every line is done or does not apply.
 Rule: small fixes and tweaks = x.x.**+1**; new features = x.**+1**.0; major revamps and breaking changes = **+1**.0.0.
 Pick the level from the biggest change since the last push.
 
+**The local `main` always runs the version it will become (user 2026-10-24).** As soon as the first change of the next
+version lands on local `main`, bump the three files below and open its changelog section as "not released yet", so the
+app shows which version is being tested. If a later change raises the level (a fix version gets a new feature), bump
+again. At release only the date goes into the changelog heading — check the version is still right.
+
 - [ ] `package.json` → `"version"`
 - [ ] `package-lock.json` → `"version"` (twice: the top and `packages[""]`)
 - [ ] `src/version.js` → `VERSION` (shown in the app next to the logo)
