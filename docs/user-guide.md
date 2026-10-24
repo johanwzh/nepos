@@ -175,7 +175,7 @@ På en tid:
   bare mellom tidene i området. Skriv første og siste tid (eller tidene ved hovedstoppene), interpoler,
   og rett det som må rettes.
 - **Kun avstigning / Kun påstigning / Ingen begrensning**, og **Stopper ved behov / bestilling…** (F8).
-- (Joggen som forskyver tider er nå et kraftverktøy: se under.)
+- (Tidsforskyveren er nå et kraftverktøy: se under.)
 - **Merknad** (eller F7) og **Datoer for tiden…**.
 - **Korrespondanse** (garantert eller bli sittende) til en annen tur.
 
@@ -202,9 +202,9 @@ På en dagkode:
 ### Kraftverktøy
 
 Nederst i linjenavigatoren står **kraftverktøyene**. Å se dem endrer ingenting; slår du et verktøy på (klikk, eller
-**Alt+J** / **Alt+I**), virker bare det verktøyet i tabellen — skriving, innliming og menyer er av. **Esc** slår det av.
+**Alt+J** / **Alt+I**), virker bare det verktøyet i tabellen — skriving, innliming og menyer er av, og resten av siden er dempet og låst (bare Lagre og Forkast virker). **Esc** slår det av. Med verktøyet av ser en blokk ut som vanlige kolonner, svakt skravert der du ikke kan skrive; med Virtuelle intervall på lyser alle blokkene opp.
 
-- **Jogg** — et hjul som flytter de valgte tidene ett minutt per hakk (Shift: ti). Velg andre celler mens den står på.
+- **Tidsforskyver** — et hjul (joggen) som flytter de valgte tidene ett minutt per hakk (Shift: ti): dra **ned** for senere, opp for tidligere (også hjulet og piltastene). Tallet (+8 min) gjelder de valgte tidene; velger du andre, toner det ut og starter på 0.
 - **Virtuelle intervall** — dra en tur mot høyre for å gjenta den. Ett steg: en dialog der du skriver intervallet og
   siste avgang. To steg: hver time; tre: hver halvtime; så hvert 20., 15., 12. og 10. minutt. Drar du lenger, spør Nepos
   hvor ofte (hvert 6.–1. minutt). Tabellen viser første tur, én kolonne per minutt i timen og siste tur, for eksempel

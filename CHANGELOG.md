@@ -20,8 +20,8 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   dates). **Ctrl+Shift+V = paste special:** choose times, alighting/boarding, booking/request stop and/or note and
   dates (in the note row: note, dates, booking). Text from other programs still brings times and a/p only.
 - **Power tools:** a toolbox at the bottom of the line navigator, always there. Turning a tool on (Alt+J, Alt+I) changes
-  what the mouse and keys do; Esc turns it off. **The jog** (time shift) lives here now, no longer on the right-click
-  menu.
+  what the mouse and keys do and locks the rest of the page (Save and Discard still work); Esc turns it off. **Time
+  shifter** (the jog, no longer on the right-click menu): drag down for later times; its +N counts the current selection.
 - **Virtual intervals** (power tool): drag a trip to the right to repeat it every 60, 30, 20, 15, 12 or 10 minutes (one
   more column per step), or further for every 6–1 minutes; drop at one step to type the interval and last departure.
   The table shows the first trip, one column per minute of the hour (`35`, `05`) and the last trip; the export writes
