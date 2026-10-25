@@ -69,7 +69,7 @@ describe('the power toolbox', () => {
     const dial = /** @type {HTMLElement} */ (document.querySelector('.ts-box .jd'));
     expect(dial).not.toBeNull();
     expect(dial.closest('#power-tools')).toBeNull();
-    expect(Number(dial.querySelector('svg')?.getAttribute('width'))).toBeGreaterThanOrEqual(96);
+    expect(Number(dial.querySelector('svg')?.getAttribute('width'))).toBeGreaterThanOrEqual(56); // sized to the space above the timetable (user 2026-10-25)
     dial.focus();
     dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(grid.cols[0].cells.map((c) => c.time)).toEqual(['0701', '0711']);
@@ -126,6 +126,13 @@ describe('the power toolbox', () => {
     expect(currentPage()).toBe('edit');
     press('Escape');
     expect(document.body.classList.contains('pt-on')).toBe(false);
+  });
+
+  it('the box has a ✕ that turns the tool off', () => {
+    tool('jog').click();
+    /** @type {HTMLElement} */ (document.querySelector('.ts-box .ts-x')).click();
+    expect(activeTool()).toBe('');
+    expect(document.querySelector('.ts-box')).toBeNull();
   });
 
   it('the box goes when the tool is turned off', () => {

@@ -61,6 +61,22 @@ export function setJogHandler(fn) { jogHandler = fn; }
 /** @param {() => void} fn */
 export function setUnpackHandler(fn) { unpackHandler = fn; }
 
+/**
+ * Where the Tidsforskyver goes: the band between the top of the calendar row and the top of the timetable, centred over
+ * the timetable's width; the dial as big as the band allows. Without a laid-out page (tests): a default size.
+ * @returns {{ dial: number, left?: number, top?: number, height?: number }}
+ */
+function placeAbove() {
+  const top = document.getElementById('cal-bar')?.getBoundingClientRect();
+  const tbl = document.getElementById('tbl-wrap')?.getBoundingClientRect();
+  const main = document.getElementById('edit-main')?.getBoundingClientRect();
+  if (!top || !tbl || !main || !main.width || tbl.top - top.top < 40) return { dial: 64 };
+  const height = Math.round(tbl.top - top.top - 6);
+  const dial = Math.max(40, Math.min(96, height - 12));
+  const width = 380;
+  return { dial, height, top: Math.round(top.top), left: Math.round(main.left + main.width / 2 - width / 2) };
+}
+
 /** Turn a tool on ('' turns all off). @param {ToolName} name */
 export function setTool(name) {
   if (active === name) return;
@@ -87,9 +103,11 @@ function draw() {
     read.textContent = '0 min';
     jogRead = read;
     total = 0;
-    // The dial opens big in the middle of the page (user 2026-10-25): near the panel's edge there was no room to drag
+    // The dial opens above the timetable, over the calendar row and the timeline (locked while a tool is on), never on
+    // the timetable itself (user 2026-10-25); near the panel's edge there was no room to drag
+    const band = placeAbove();
     const dial = jogDial({
-      size: 120, detents: true, pxPerNotch: 9, downward: true, angleRef: jogAngle,
+      size: band.dial, detents: true, pxPerNotch: 9, downward: true, angleRef: jogAngle,
       onNudge: (/** @type {1 | -1} */ dir, /** @type {boolean} */ coarse) => {
         const d = dir * (coarse ? 10 : 1);
         clearTimeout(fadeTimer);
@@ -104,15 +122,22 @@ function draw() {
     hint.textContent = t('ptJogHint');
     const ts = document.createElement('div');
     ts.className = 'ts-box';
+    const text = document.createElement('div');
+    text.className = 'ts-text';
     const head = document.createElement('div');
     head.className = 'ts-head';
     head.textContent = t('ptJog');
-    ts.append(head, dial, read, hint);
-    // The dial's keys stay with it; the box is placed over the middle of the timetable
-    ts.addEventListener('keydown', (e) => e.stopPropagation());
+    text.append(head, read, hint);
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'ts-x';
+    x.title = 'Esc';
+    x.textContent = '✕';
+    x.addEventListener('click', () => setTool(''));
+    ts.append(dial, text, x);
+    ts.addEventListener('keydown', (e) => e.stopPropagation()); // the dial's keys stay with it
     document.body.appendChild(ts);
-    const area = document.getElementById('edit-main')?.getBoundingClientRect();
-    if (area && area.width) { ts.style.left = `${area.left + area.width / 2}px`; ts.style.top = `${area.top + area.height / 2}px`; }
+    if (band.left != null) { ts.style.left = `${band.left}px`; ts.style.top = `${band.top}px`; ts.style.height = `${band.height}px`; }
     tsBox = ts;
   } else if (active === 'intervals') {
     const hint = document.createElement('div');
