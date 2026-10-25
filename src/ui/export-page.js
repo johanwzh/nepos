@@ -131,7 +131,7 @@ function renderStatus() {
 
 /** @param {import('../core/export-check.js').CheckIssue} i */
 function issueLine(i) {
-  const place = [i.route ? lineLabel(i.route) : '', i.where?.tableSet, i.where?.period, i.where?.column ? t('columnLabel', i.where.column) : '']
+  const place = [i.route ? lineLabel(i.route) : '', i.where?.tableSet, i.where?.period, i.where?.column ? t('columnLabel', i.where.column) : '', i.code.startsWith('booking-') && i.detail === 'line' ? t('bkLine') : '']
     .filter(Boolean).join(' · ');
   return `<div class="n2-issue ${i.level}">
     <span class="n2-issue-ico">${i.level === 'error' ? '✖' : '⚠'}</span>

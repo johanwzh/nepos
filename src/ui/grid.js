@@ -770,7 +770,8 @@ function destRect() {
 
 /** A destination cell after each trip's time cell, in every row. @param {HTMLTableElement} tbl */
 function addDestColumns(tbl) {
-  const infos = grid.cols.map((col) => destCellInfo(grid, col));
+  // A block's band and end columns show their first trip's destination (user 2026-10-25)
+  const infos = grid.cols.map((col, ci) => destCellInfo(grid, col.virt ? grid.cols[parentIndex(ci)] ?? col : col));
   const sel = destRect();
   let ri = -1;
   for (const tr of [...tbl.rows]) {
@@ -785,6 +786,7 @@ function addDestColumns(tbl) {
       td.dataset.dr = String(r);
       td.dataset.dc = String(ci);
       renderDestCell(td, infos[ci]?.[r]);
+      if (locked(ci)) td.classList.add('g-locked');
       if (!infos[ci]?.[r]?.served) td.classList.add('dest-off');
       if (inDest && r === destR && ci === destC) td.classList.add('dest-sel');
       else if (inDest && r >= sel.r0 && r <= sel.r1 && ci >= sel.c0 && ci <= sel.c1) td.classList.add('dest-range');
@@ -860,6 +862,7 @@ function destAction(fn) {
 
 /** The editing box for the destination starting at a cell. @param {number} r @param {number} ci @param {string} [initial] typed first character */
 function openDestEditorAt(r, ci, initial) {
+  if (locked(ci)) return; // a block's band and end follow their first trip
   if (grid.stops[r]?.isDwellArr && grid.stops[r + 1]) r += 1; // a waiting stop's destination is on its departure row
   if (grid.readOnly || !canSetDestAt(r, ci)) return;
   const rc = document.querySelector(`.cw-dest[data-dr="${r}"][data-dc="${ci}"]`)?.getBoundingClientRect();

@@ -104,3 +104,21 @@ describe('dates: day types with explicit dates, or DatedServiceJourneys per line
     expect(U).toHaveLength(3);
   });
 });
+
+describe('where a booking problem is (user 2026-10-25: "an inexplicable error about some phone number")', () => {
+  it('a time\'s booking: its column and row', () => {
+    const { rs, grid } = gridOf(miniErn());
+    grid.cols[1].cells[2].booking = { url: 'u', minAhead: 'PT1H', methods: ['text'] };
+    const i = check(rs).find((x) => x.code === 'booking-method-phone');
+    expect(i?.where).toMatchObject({ column: 2, row: 2 });
+  });
+
+  it('a trip\'s booking: its column; the line\'s: said as the line\'s', () => {
+    const { rs, grid } = gridOf(miniErn());
+    grid.cols[2].booking = { phone: '1' };
+    rs.booking = { url: 'u', minAhead: 'PT1H', methods: ['callOffice'] };
+    const issues = check(rs);
+    expect(issues.find((x) => x.code === 'booking-neither')?.where).toMatchObject({ column: 3 });
+    expect(issues.find((x) => x.code === 'booking-method-phone')?.detail).toBe('line');
+  });
+});

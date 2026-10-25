@@ -62,12 +62,14 @@ describe('the power toolbox', () => {
     expect(/** @type {HTMLElement} */ (document.getElementById('grid-ctx')).style.display).not.toBe('block');
   });
 
-  it('the jog: its dial is in the panel and moves the selected times', () => {
+  it('the jog: a big dial in a box in the middle of the page (not in the panel), moving the selected times', () => {
     selectCell(0, 0);
     press('ArrowDown', { shiftKey: true });
     tool('jog').click();
-    const dial = /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-body .jd'));
+    const dial = /** @type {HTMLElement} */ (document.querySelector('.ts-box .jd'));
     expect(dial).not.toBeNull();
+    expect(dial.closest('#power-tools')).toBeNull();
+    expect(Number(dial.querySelector('svg')?.getAttribute('width'))).toBeGreaterThanOrEqual(96);
     dial.focus();
     dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(grid.cols[0].cells.map((c) => c.time)).toEqual(['0701', '0711']);
@@ -89,7 +91,7 @@ describe('the power toolbox', () => {
   it('dragging the jog down (or the down arrow, or the wheel down) makes times later', () => {
     selectCell(0, 0);
     tool('jog').click();
-    const dial = /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-body .jd'));
+    const dial = /** @type {HTMLElement} */ (document.querySelector('.ts-box .jd'));
     dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     expect(grid.cols[0].cells[0].time).toBe('0701');
     dial.querySelector('svg')?.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true }));
@@ -103,9 +105,9 @@ describe('the power toolbox', () => {
     try {
       selectCell(0, 0);
       tool('jog').click();
-      const dial = /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-body .jd'));
+      const dial = /** @type {HTMLElement} */ (document.querySelector('.ts-box .jd'));
       dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
-      const read = () => /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-read'));
+      const read = () => /** @type {HTMLElement} */ (document.querySelector('.ts-box .pt-read'));
       expect(read().textContent).toBe('+1 min');
       selectCell(1, 0);
       expect(read().classList.contains('pt-fade')).toBe(true);
@@ -124,6 +126,13 @@ describe('the power toolbox', () => {
     expect(currentPage()).toBe('edit');
     press('Escape');
     expect(document.body.classList.contains('pt-on')).toBe(false);
+  });
+
+  it('the box goes when the tool is turned off', () => {
+    tool('jog').click();
+    expect(document.querySelector('.ts-box')).not.toBeNull();
+    press('Escape');
+    expect(document.querySelector('.ts-box')).toBeNull();
   });
 
   it('Esc puts everything back: the end jogs of the blocks go away', () => {

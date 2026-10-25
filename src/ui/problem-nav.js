@@ -96,6 +96,8 @@ export function goToProblem(issue) {
   if (c === 'no-operator') { focus('ef-pick-operator', fill); markHere(document.querySelector('#ef-pick-operator .org-pick-btn'), fill); return; }
   if (c.startsWith('org-')) { markHere(document.getElementById('ef-pick-authority') ?? document.getElementById('ef-pick-operator'), fix); return; }
   if (c === 'branding-missing') { focus('rh-branding', fix); return; }
+  // The line's booking: its button at the end of the line's note bar
+  if (c.startsWith('booking-') && issue.detail === 'line') { const el = /** @type {HTMLElement | null} */ (document.querySelector('#kom-bar .kom-booking')); el?.focus(); markHere(el, fix); return; }
   goToPlace(issue);
   if (c === 'table-set-name') { const w = /** @type {any} */ (issue.where); if (w?.setId != null) openEditDialog(w.setId); return; }
   if (c === 'no-period' || c === 'no-calendar' || c.startsWith('calendar-')) { markHere(document.getElementById('cal-add') ?? document.querySelector('.cal-chip'), c === 'no-calendar' ? fill : fix); return; }
@@ -110,7 +112,7 @@ export function goToProblem(issue) {
     if (ri >= 0) { selectStopCell(ri); markHere(document.querySelector(`.g-td-name[data-ri="${ri}"]`), c === 'stop-missing' ? fill : fix); }
     return;
   }
-  if (c === 'speed-over' && issue.where?.row != null) {
+  if ((c === 'speed-over' || c.startsWith('booking-')) && issue.where?.row != null) {
     selectCell(issue.where.row, col);
     markHere(document.querySelector(`#tbl td[data-r="${issue.where.row}"][data-c="${col}"]`), fix);
     return;

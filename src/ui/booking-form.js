@@ -2,7 +2,7 @@
 // Choices with several answers (how to book, when to buy) are chips; single choices are dropdowns. Not modelled on Nplan.
 import { t } from '../i18n/strings.js';
 import { openFloatBox } from './float-box.js';
-import { normalizeBooking, BOOKING_METHODS, BUY_WHEN, BOOKING_ACCESS, BOOK_WHEN } from '../core/booking.js';
+import { normalizeBooking, bookingProblems, BOOKING_METHODS, BUY_WHEN, BOOKING_ACCESS, BOOK_WHEN } from '../core/booking.js';
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -19,6 +19,21 @@ export const joinDuration = (n, unit) => (/^\d+$/.test(n.trim()) && Number(n) > 
 export function latestOf(s) {
   const m = /^(\d{1,2})[:.]?(\d{2})$/.exec(s.trim());
   return m && Number(m[1]) <= 23 && Number(m[2]) <= 59 ? m[1].padStart(2, '0') + m[2] : '';
+}
+
+/** What is wrong with a booking in the form: Antu's rules, plus a booking nobody can be reached for. @param {any} b */
+function problemsOf(b) {
+  if (!b) return [];
+  return [...(!b.phone && !b.email && !b.url ? ['booking-no-contact'] : []), ...bookingProblems(b)];
+}
+
+/** The fields a problem is about. @param {string} p @param {string} mode 'time' | 'ahead' */
+function fieldsOf(p, mode) {
+  if (p === 'booking-no-contact') return ['.bk-phone', '.bk-email', '.bk-url'];
+  if (p === 'booking-method-phone') return ['.bk-phone'];
+  if (p === 'booking-method-url') return ['.bk-url'];
+  if (p === 'booking-latest' || p === 'booking-neither') return mode === 'ahead' ? ['.bk-minAhead-n'] : ['.bk-bookWhen', '.bk-latest'];
+  return [];
 }
 
 /**
@@ -58,16 +73,32 @@ export function openBookingForm({ booking, x, y, title, onApply }) {
   showMode();
   const val = (/** @type {string} */ sel) => /** @type {HTMLInputElement} */ (body.querySelector(sel)).value;
   const on = (/** @type {string} */ k) => [...body.querySelectorAll(`.bk-${k} .bk-chip.on`)].map((c) => /** @type {HTMLElement} */ (c).dataset.v ?? '');
-  openFloatBox({
-    x, y, title: title ?? t('bkTitle'), body, cls: 'bk-box',
-    onApply: () => {
-      onApply(normalizeBooking({
-        contact: b.contact, phone: val('.bk-phone'), email: val('.bk-email'), url: val('.bk-url'), details: val('.bk-details'),
-        access: val('.bk-access'), bookWhen: mode() === 'time' ? val('.bk-bookWhen') : '', methods: on('methods'), buyWhen: on('buyWhen'),
-        latest: mode() === 'time' ? latestOf(val('.bk-latest')) : '', minAhead: mode() === 'ahead' ? joinDuration(val('.bk-minAhead-n'), val('.bk-minAhead-u')) : '',
-        maxAhead: joinDuration(val('.bk-maxAhead-n'), val('.bk-maxAhead-u')), note: val('.bk-note').replace(/[\r\n]+/g, ' '),
-      }));
-    },
+  /** The booking as the form has it now (null: nothing filled in). */
+  const current = () => normalizeBooking({
+    contact: b.contact, phone: val('.bk-phone'), email: val('.bk-email'), url: val('.bk-url'), details: val('.bk-details'),
+    access: val('.bk-access'), bookWhen: mode() === 'time' ? val('.bk-bookWhen') : '', methods: on('methods'), buyWhen: on('buyWhen'),
+    latest: mode() === 'time' ? latestOf(val('.bk-latest')) : '', minAhead: mode() === 'ahead' ? joinDuration(val('.bk-minAhead-n'), val('.bk-minAhead-u')) : '',
+    maxAhead: joinDuration(val('.bk-maxAhead-n'), val('.bk-maxAhead-u')), note: val('.bk-note').replace(/[\r\n]+/g, ' '),
   });
+  const errs = document.createElement('div');
+  errs.className = 'bk-errs';
+  body.appendChild(errs);
+  const fb = openFloatBox({
+    x, y, title: title ?? t('bkTitle'), body, cls: 'bk-box',
+    onApply: () => { if (problemsOf(current()).length) return false; onApply(current()); },
+  });
+  // The form checks itself while it is filled in (user 2026-10-25): what Entur's validator would refuse is marked at its
+  // field and said under the form, and Apply waits until it is right. An empty form is fine: no booking.
+  const check = () => {
+    const mine = problemsOf(current());
+    for (const el of body.querySelectorAll('.bk-bad')) el.classList.remove('bk-bad');
+    for (const p of mine) for (const sel of fieldsOf(p, mode())) body.querySelector(sel)?.classList.add('bk-bad');
+    errs.innerHTML = mine.map((p) => `<div>${esc(t(`chk:${p}`))}</div>`).join('');
+    fb.setApplyEnabled(!mine.length);
+  };
+  body.addEventListener('input', check);
+  body.addEventListener('change', check);
+  body.addEventListener('click', check); // the chips (their own toggle runs first)
+  check();
   /** @type {HTMLInputElement | null} */ (body.querySelector('.bk-phone'))?.focus();
 }

@@ -57,13 +57,13 @@ describe('a/p and x on a time', () => {
   });
 
   it('F8 booking starts as a copy of the trip booking and shows x on the time', () => {
-    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [], booking: { phone: '77' } }] });
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [], booking: { phone: '77', minAhead: 'PT1H' } }] });
     selectCell(1, 0);
     press('F8');
     /** @type {HTMLElement} */ (document.querySelector('.xw-choice[data-v="booking"]')).click();
     expect(/** @type {HTMLInputElement} */ (document.querySelector('.bk-phone')).value).toBe('77');
     /** @type {HTMLElement} */ (document.querySelector('.fb-apply')).click();
-    expect(grid.cols[0].cells[1].booking).toEqual({ phone: '77' });
+    expect(grid.cols[0].cells[1].booking).toEqual({ phone: '77', minAhead: 'PT1H' });
     expect(marks(1, 0)).toBe('x');
     expect(marks(0, 0)).toBe(''); // a bookable trip puts no x on its times
   });
@@ -89,8 +89,13 @@ describe('a/p and x on a time', () => {
     expect(document.querySelector('.xw-choice')).toBeNull(); // a trip has no request stop
     const phone = /** @type {HTMLInputElement} */ (document.querySelector('.bk-phone'));
     phone.value = '55';
+    const ahead = /** @type {HTMLInputElement} */ (document.querySelector('.bk-mode[value="ahead"]'));
+    ahead.checked = true; ahead.dispatchEvent(new Event('change', { bubbles: true }));
+    /** @type {HTMLInputElement} */ (document.querySelector('.bk-minAhead-n')).value = '1';
+    /** @type {HTMLSelectElement} */ (document.querySelector('.bk-minAhead-u')).value = 'H';
+    phone.dispatchEvent(new Event('input', { bubbles: true }));
     /** @type {HTMLElement} */ (document.querySelector('.fb-apply')).click();
-    expect(grid.cols[0].booking).toEqual({ phone: '55' });
+    expect(grid.cols[0].booking).toEqual({ phone: '55', minAhead: 'PT1H' });
     expect(document.querySelector('.g-fn-cell[data-ci="0"] .bk-col-mark')).not.toBeNull();
   });
 

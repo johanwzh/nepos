@@ -1477,3 +1477,18 @@ body.pt-intervals .g-dc-cell.g-blk-dc-end::before { left: calc(50% - 22px); }
 .bk-row-latest, .bk-row-min { display: flex; flex-direction: column; gap: 6px; }
 .bk-row-latest[hidden], .bk-row-min[hidden] { display: none; }
 .lv-tag.dsj { opacity: .8; }
+
+/* The Tidsforskyver's dial: a box in the middle of the page (user 2026-10-25) */
+.ts-box { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 60; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 22px 16px; min-width: 200px; background: var(--bg-raised, #fff); border: 1px solid var(--border, #ccc); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+.ts-head { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; opacity: .75; }
+.ts-box .pt-read { font-size: 18px; font-variant-numeric: tabular-nums; }
+.ts-box .pt-hint { text-align: center; }
+
+/* The booking form (2.4): inputs like the app's others, the fields to fix, and what to fix (user 2026-10-25) */
+.bk-form input, .bk-form select { height: 28px; padding: 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); color: var(--text); font: inherit; box-sizing: border-box; }
+.bk-form .bk-row > input, .bk-form .bk-row > select { width: 100%; }
+.bk-form input::placeholder { color: var(--muted, #8a8f99); opacity: .6; }
+.bk-form .bk-modes input[type="radio"] { height: auto; }
+.bk-form .bk-bad { border-color: var(--danger, #d23c3c); box-shadow: 0 0 0 1px var(--danger, #d23c3c); }
+.bk-errs { color: var(--danger, #d23c3c); font-size: 12px; display: flex; flex-direction: column; gap: 2px; min-height: 0; }
+.bk-chip { color: var(--text); }

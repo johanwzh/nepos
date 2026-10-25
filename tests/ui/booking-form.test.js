@@ -17,11 +17,12 @@ describe('the booking form', () => {
     expect(/** @type {HTMLInputElement} */ (q('.bk-phone')).value).toBe('22');
     expect(q('.bk-chip[data-v="online"]').classList.contains('on')).toBe(true);
     setVal('.bk-email', 'a@b.no');
+    setVal('.bk-url', 'https://b.no');
     q('.bk-chip[data-v="callOffice"]').click();
     setVal('.bk-bookWhen', 'untilPreviousDay');
     setVal('.bk-latest', '18:00');
     q('.fb-apply').click();
-    expect(got).toEqual({ phone: '22', email: 'a@b.no', methods: ['callOffice', 'online'], bookWhen: 'untilPreviousDay', latest: '1800' });
+    expect(got).toEqual({ phone: '22', email: 'a@b.no', url: 'https://b.no', methods: ['callOffice', 'online'], bookWhen: 'untilPreviousDay', latest: '1800' });
   });
 
   it('the deadline is either "by a time" (when to book + latest time) or "at least … before departure", never both (Antu, Uttu)', () => {
@@ -45,10 +46,10 @@ describe('the booking form', () => {
 
   it('has no contact-person field and keeps a contact it was given', () => {
     /** @type {any} */ let got;
-    openBookingForm({ booking: { contact: 'Kari', phone: '1' }, x: 0, y: 0, onApply: (b) => { got = b; } });
+    openBookingForm({ booking: { contact: 'Kari', phone: '1', minAhead: 'PT1H' }, x: 0, y: 0, onApply: (b) => { got = b; } });
     expect(document.querySelector('.bk-contact')).toBeNull();
     q('.fb-apply').click();
-    expect(got).toEqual({ contact: 'Kari', phone: '1' });
+    expect(got).toEqual({ contact: 'Kari', phone: '1', minAhead: 'PT1H' });
   });
 
   it('gives null when everything is cleared', () => {
@@ -71,11 +72,11 @@ describe('the x window', () => {
 
   it('booking opens the form as a copy of the level above', () => {
     /** @type {any} */ let got;
-    openXWindow({ req: true, booking: null, startFrom: { phone: '33' }, x: 0, y: 0, onApply: (r) => { got = r; } });
+    openXWindow({ req: true, booking: null, startFrom: { phone: '33', minAhead: 'PT1H' }, x: 0, y: 0, onApply: (r) => { got = r; } });
     q('.xw-choice[data-v="booking"]').click();
     expect(/** @type {HTMLInputElement} */ (q('.bk-phone')).value).toBe('33');
     q('.fb-apply').click();
-    expect(got).toEqual({ req: false, booking: { phone: '33' } });
+    expect(got).toEqual({ req: false, booking: { phone: '33', minAhead: 'PT1H' } });
   });
 
   it('none clears both', () => {
@@ -83,5 +84,24 @@ describe('the x window', () => {
     openXWindow({ req: true, booking: { phone: '1' }, startFrom: null, x: 0, y: 0, onApply: (r) => { got = r; } });
     q('.xw-choice[data-v="none"]').click();
     expect(got).toEqual({ req: false, booking: null });
+  });
+});
+
+describe('the booking form checks itself while you fill it in (user 2026-10-25)', () => {
+  const apply = () => /** @type {HTMLButtonElement} */ (q('.fb-apply'));
+  it('Apply waits until the booking is valid, and says what is missing where', () => {
+    openBookingForm({ booking: null, x: 0, y: 0, onApply: () => {} });
+    expect(apply().disabled).toBe(false); // nothing yet: no booking, which is fine
+    q('.bk-chip[data-v="callOffice"]').click();
+    expect(apply().disabled).toBe(true);
+    expect(q('.bk-phone').classList.contains('bk-bad')).toBe(true);
+    expect(q('.bk-errs').textContent).toMatch(/telefonnummer/);
+    setVal('.bk-phone', '22 22 22 22');
+    expect(q('.bk-phone').classList.contains('bk-bad')).toBe(false);
+    expect(apply().disabled).toBe(true); // still no deadline
+    setVal('.bk-bookWhen', 'untilPreviousDay');
+    setVal('.bk-latest', '18:00');
+    expect(apply().disabled).toBe(false);
+    expect(q('.bk-errs').textContent).toBe('');
   });
 });

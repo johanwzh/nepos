@@ -276,18 +276,28 @@ function checkVehicles(code, rs, vehicles, add) {
  * line. @param {string} code @param {any} rs @param {(level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void} add
  */
 function checkBookings(code, rs, add) {
-  const noContact = (/** @type {any} */ b) => { const n = normalizeBooking(b); return !!n && !n.phone && !n.email && !n.url; };
-  let found = noContact(rs.booking);
-  for (const grid of Object.values(rs.grids ?? {})) for (const col of /** @type {any} */ (grid).cols ?? []) {
-    if (noContact(col.booking) || (col.cells ?? []).some((/** @type {any} */ c) => noContact(c?.booking))) found = true;
+  // Where each booking is (user 2026-10-25): the line's, a trip's (its column) or a time's (its column and row), so the
+  // problem list can take the user to it
+  /** @type {{ booking: any, where?: any, detail?: string }[]} */
+  const all = [{ booking: rs.booking, detail: 'line' }];
+  for (const set of rs.tableSets ?? []) for (const per of (rs.periods ?? []).filter((/** @type {any} */ p) => p.setId === set.id)) {
+    const grid = rs.grids?.[`${per.id}:${set.id}`];
+    if (!grid) continue;
+    const at = { tableSet: set.name, period: '', setId: set.id, periodId: per.id };
+    grid.cols.forEach((/** @type {any} */ col, /** @type {number} */ ci) => {
+      if (col.virt) return;
+      all.push({ booking: col.booking, where: { ...at, column: ci + 1 } });
+      (col.cells ?? []).forEach((/** @type {any} */ c, /** @type {number} */ ri) => all.push({ booking: c?.booking, where: { ...at, column: ci + 1, row: ri } }));
+    });
   }
-  if (found) add('warning', 'booking-no-contact', { route: code });
-  // What Antu refuses (BookWhen / LatestBookingTime / MinimumBookingPeriod) and a way to book without its contact
-  /** @type {Set<string>} */
-  const said = new Set();
-  const all = [rs.booking];
-  for (const grid of Object.values(rs.grids ?? {})) for (const col of /** @type {any} */ (grid).cols ?? []) { all.push(col.booking); for (const c of col.cells ?? []) all.push(c?.booking); }
-  for (const b of all) for (const p of bookingProblems(b)) if (!said.has(p)) { said.add(p); add('error', p, { route: code }); }
+  for (const { booking, where, detail } of all) {
+    const n = normalizeBooking(booking);
+    if (!n) continue;
+    const extra = { route: code, ...(where ? { where } : {}), ...(detail ? { detail } : {}) };
+    if (!n.phone && !n.email && !n.url) add('warning', 'booking-no-contact', extra);
+    // What Antu refuses (BookWhen / LatestBookingTime / MinimumBookingPeriod) and a way to book without its contact
+    for (const p of bookingProblems(n)) add('error', p, extra);
+  }
 }
 
 /** The "not one of the stops this trip goes on to" warning: off for now (user 2026-10-20). */

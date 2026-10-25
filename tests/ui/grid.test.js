@@ -262,7 +262,7 @@ describe('nudging times with the jog, a power tool (user test 2026-10-17; power 
     at(0, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
     document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     setTool('jog');
-    return /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-body .jd'));
+    return /** @type {HTMLElement} */ (document.querySelector('.ts-box .jd'));
   };
   const key = (/** @type {Element} */ el, /** @type {string} */ k, shiftKey = false) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey, bubbles: true, cancelable: true }));
   const times = () => grid.cols[0].cells.map((c) => c.time);
@@ -272,7 +272,7 @@ describe('nudging times with the jog, a power tool (user test 2026-10-17; power 
     key(jog, 'ArrowDown');
     key(jog, 'ArrowDown', true);
     expect(times()).toEqual(['0711', '0745']);
-    expect(document.querySelector('#power-tools .pt-read')?.textContent).toBe('+11 min');
+    expect(document.querySelector('.ts-box .pt-read')?.textContent).toBe('+11 min');
   });
 
   it('stays open as a tool while the selection changes, and acts on the new selection', () => {

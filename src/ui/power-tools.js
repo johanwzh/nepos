@@ -24,6 +24,8 @@ let fadeTimer = null;
 let lastSelection = '';
 /** The jog's turn: a spinner, not a value — it never jumps back (user 2026-10-24). */
 const jogAngle = { value: 0 };
+/** The Tidsforskyver's box in the middle of the page, while the tool is on. @type {HTMLElement | null} */
+let tsBox = null;
 
 /**
  * The grid's selection now (user 2026-10-24: the readout counts one selection; a new one fades it out over about a
@@ -77,14 +79,17 @@ function draw() {
   const body = /** @type {HTMLElement} */ (box.querySelector('.pt-body'));
   body.replaceChildren();
   jogRead = null;
+  tsBox?.remove();
+  tsBox = null;
   if (active === 'jog') {
     const read = document.createElement('span');
     read.className = 'pt-read';
     read.textContent = '0 min';
     jogRead = read;
     total = 0;
+    // The dial opens big in the middle of the page (user 2026-10-25): near the panel's edge there was no room to drag
     const dial = jogDial({
-      size: 44, detents: true, pxPerNotch: 9, downward: true, angleRef: jogAngle,
+      size: 120, detents: true, pxPerNotch: 9, downward: true, angleRef: jogAngle,
       onNudge: (/** @type {1 | -1} */ dir, /** @type {boolean} */ coarse) => {
         const d = dir * (coarse ? 10 : 1);
         clearTimeout(fadeTimer);
@@ -97,7 +102,18 @@ function draw() {
     const hint = document.createElement('div');
     hint.className = 'pt-hint';
     hint.textContent = t('ptJogHint');
-    body.append(dial, read, hint);
+    const ts = document.createElement('div');
+    ts.className = 'ts-box';
+    const head = document.createElement('div');
+    head.className = 'ts-head';
+    head.textContent = t('ptJog');
+    ts.append(head, dial, read, hint);
+    // The dial's keys stay with it; the box is placed over the middle of the timetable
+    ts.addEventListener('keydown', (e) => e.stopPropagation());
+    document.body.appendChild(ts);
+    const area = document.getElementById('edit-main')?.getBoundingClientRect();
+    if (area && area.width) { ts.style.left = `${area.left + area.width / 2}px`; ts.style.top = `${area.top + area.height / 2}px`; }
+    tsBox = ts;
   } else if (active === 'intervals') {
     const hint = document.createElement('div');
     hint.className = 'pt-hint';

@@ -146,7 +146,7 @@ describe('a block in the grid', () => {
   it('review I-3: the jog on a band or end cell moves the parent, and so the block', () => {
     selectCell(0, 4);
     setTool('jog');
-    const dial = /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-body .jd'));
+    const dial = /** @type {HTMLElement} */ (document.querySelector('.ts-box .jd'));
     dial.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     setTool('');
     expect(gridData().cols[1].cells[0].time).toBe('0606');
@@ -162,6 +162,22 @@ describe('a block in the grid', () => {
     selectCell(1, 2 + 3);
     press('Enter'); press('Escape');
     expect(gridData().cols[2].cells[1].time).toBe('0910');
+  });
+
+  it('a block\'s destination cells show the first trip\'s destination, locked (user 2026-10-25)', async () => {
+    const { toggleDestColumns } = await import('../../src/ui/dest-columns.js');
+    const cols = gridData().cols;
+    cols[1].dest = { text: 'Torshov', vias: [] };
+    loadGrid({ stops: [{ ...stop('A'), stopId: 'NSR:Quay:1' }, { ...stop('B'), stopId: 'NSR:Quay:2' }], cols });
+    toggleDestColumns();
+    const dest = (/** @type {number} */ c) => /** @type {HTMLElement} */ (document.querySelector(`.cw-dest[data-dr="0"][data-dc="${c}"]`));
+    expect(dest(2).textContent).toContain('Torshov');
+    expect(dest(2).classList.contains('g-locked')).toBe(true);
+    expect(dest(1).classList.contains('g-locked')).toBe(false);
+    dest(2).dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    press('Enter');
+    expect(document.querySelector('.float-box')).toBeNull();
+    toggleDestColumns();
   });
 
   it('a parent with no times keeps its block, waiting for times', () => {
