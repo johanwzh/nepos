@@ -175,15 +175,21 @@ describe('the note and the grid edges', () => {
     const btn = /** @type {HTMLElement} */ (document.querySelector('#kom-bar .kom-booking'));
     expect(btn.textContent).toContain('Ingen bestilling');
     btn.click();
+    const bk = /** @type {HTMLInputElement} */ (document.querySelector('.bk-kind[value="booking"]'));
+    bk.checked = true; bk.dispatchEvent(new Event('change', { bubbles: true }));
+    /** @type {HTMLElement} */ (document.querySelector('.bk-access .bk-chip[data-v="public"]')).click();
+    /** @type {HTMLElement} */ (document.querySelector('.bk-methods .bk-chip[data-v="callOffice"]')).click();
     const phone = /** @type {HTMLInputElement} */ (document.querySelector('.bk-phone'));
     phone.value = '815';
     const ahead = /** @type {HTMLInputElement} */ (document.querySelector('.bk-mode[value="ahead"]'));
     ahead.checked = true; ahead.dispatchEvent(new Event('change', { bubbles: true }));
-    /** @type {HTMLInputElement} */ (document.querySelector('.bk-minAhead-n')).value = '1';
-    /** @type {HTMLSelectElement} */ (document.querySelector('.bk-minAhead-u')).value = 'D';
+    /** @type {HTMLElement} */ (document.querySelector('.bk-dur[data-k="minAhead"] .bk-dur-read')).click();
+    const dur = /** @type {HTMLInputElement} */ (document.querySelector('.bk-dur-input'));
+    dur.value = '1d';
+    dur.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     phone.dispatchEvent(new Event('input', { bubbles: true }));
     /** @type {HTMLElement} */ (document.querySelector('.fb-apply')).click();
-    expect(app.routeState.booking).toEqual({ phone: '815', minAhead: 'P1D' });
+    expect(app.routeState.booking).toEqual({ access: 'public', methods: ['callOffice'], phone: '815', minAhead: 'P1D' });
     expect(/** @type {HTMLElement} */ (document.querySelector('#kom-bar .kom-booking')).textContent).toContain('815');
   });
 

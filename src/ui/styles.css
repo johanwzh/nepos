@@ -1496,3 +1496,16 @@ body.pt-intervals .g-dc-cell.g-blk-dc-end::before { left: calc(50% - 22px); }
 .bk-form .bk-bad { border-color: var(--danger, #d23c3c); box-shadow: 0 0 0 1px var(--danger, #d23c3c); }
 .bk-errs { color: var(--danger, #d23c3c); font-size: 12px; display: flex; flex-direction: column; gap: 2px; min-height: 0; }
 .bk-chip { color: var(--text); }
+
+/* One dialog for x (user 2026-10-26): Ingen / Stopper ved behov / Bestilling, then the booking's fields */
+.bk-kinds { display: flex; gap: 16px; flex-wrap: wrap; padding-bottom: 6px; border-bottom: 1px solid var(--border, #ccc); margin-bottom: 4px; }
+.bk-kind-row { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.bk-kind-row.off { opacity: .45; cursor: not-allowed; }
+.bk-form input.bk-kind, .bk-form input.bk-mode { height: auto; }
+.bk-fields { display: flex; flex-direction: column; gap: 6px; }
+.bk-fields[hidden] { display: none; }
+.bk-fields > [data-step] { display: flex; flex-direction: column; gap: 6px; }
+.bk-dur { display: flex; align-items: center; gap: 8px; border-radius: 4px; }
+.bk-dur-read { min-width: 7em; padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); cursor: text; font-variant-numeric: tabular-nums; }
+.bk-form .bk-dur-input { width: 9em; }
+.bk-dur.bk-bad .bk-dur-read { border-color: var(--danger, #d23c3c); box-shadow: 0 0 0 1px var(--danger, #d23c3c); }

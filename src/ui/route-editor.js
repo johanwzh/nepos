@@ -429,7 +429,7 @@ function renderCommentBar() {
     e.stopPropagation();
     if (isReadOnly()) return;
     const at = bk.getBoundingClientRect();
-    openBookingForm({ booking: rs.booking ?? null, title: t('bkLine'), x: at.left, y: at.bottom + 4, onApply: (nb) => {
+    openBookingForm({ booking: rs.booking ?? null, allowReq: false, title: t('bkLine'), x: at.left, y: at.bottom + 4, onApply: ({ booking: nb }) => {
       if (nb) rs.booking = nb; else delete rs.booking;
       markDirty();
       renderCommentBar();

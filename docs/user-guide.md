@@ -192,12 +192,13 @@ På en dagkode:
 ### Bestilling og stopper ved behov
 
 - **x på en tid** er *stopper ved behov* eller en *bestilling*. Velg tidene og trykk **F8** (eller høyreklikk →
-  Stopper ved behov / bestilling…): velg **Ingen**, **Stopper ved behov** eller **Bestilling…**. Ett valg gjelder alle
-  valgte tider.
-- **Bestillingen** har telefon, e-post, nettside, detaljer, hvem som kan bestille, hvordan (flere), når billetten
-  kjøpes (flere), en **frist** og en bestillingsmerknad. Fristen er enten **innen et klokkeslett** (når bestille og siste
-  bestillingstid) eller **minst … før avgang** — aldri begge, slik Entur krever. Bestilling på telefon eller SMS trenger et
-  telefonnummer, på nett en nettadresse; eksportkontrollen sier fra ellers.
+  Stopper ved behov / bestilling…). Én dialog: **Ingen** (fjerner det som er der), **Stopper ved behov** eller **Bestilling**.
+  Den åpner på det tiden har, så å rette en bestilling er F8, rett, Bruk. Ett valg gjelder alle valgte tider.
+- **Bestillingen** fylles ut ovenfra og ned: **hvem kan bestille**, **hvordan** (minst én måte), **kontakt** (bare det
+  måtene trenger: telefon for å ringe og SMS, nettadresse for nett), **frist** og en valgfri merknad. Fristen er **innen et
+  klokkeslett** (når bestille og siste bestillingstid) eller **minst … før avgang**; **høyst før** kan settes i tillegg.
+  Tider som «1 d 4 t» settes med hjulet (Shift: timer) eller ved å klikke og skrive. Skjemaet sier fra om ett steg om
+  gangen, og **Bruk** venter til bestillingen er i orden.
 - **Hele turen:** velg turen i merknadsraden og trykk F8. Turen får ☎ ved siden av 📅. En tur kan ha bestilling, men
   ikke «stopper ved behov».
 - **Hele linjen:** ☎-knappen til høyre i linjens merknadslinje.

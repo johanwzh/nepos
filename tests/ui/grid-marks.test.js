@@ -51,19 +51,22 @@ describe('a/p and x on a time', () => {
     selectCell(0, 0);
     press('ArrowDown', { shiftKey: true });
     press('F8');
-    /** @type {HTMLElement} */ (document.querySelector('.xw-choice[data-v="req"]')).click();
+    const req = /** @type {HTMLInputElement} */ (document.querySelector('.bk-kind[value="req"]'));
+    req.checked = true; req.dispatchEvent(new Event('change', { bubbles: true }));
+    /** @type {HTMLElement} */ (document.querySelector('.fb-apply')).click();
     expect(grid.cols[0].cells.map((c) => !!c.req)).toEqual([true, true]);
     expect(marks(0, 0)).toBe('x');
   });
 
   it('F8 booking starts as a copy of the trip booking and shows x on the time', () => {
-    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [], booking: { phone: '77', minAhead: 'PT1H' } }] });
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [], booking: { access: 'public', phone: '77', methods: ['callOffice'], minAhead: 'PT1H' } }] });
     selectCell(1, 0);
     press('F8');
-    /** @type {HTMLElement} */ (document.querySelector('.xw-choice[data-v="booking"]')).click();
+    const bk = /** @type {HTMLInputElement} */ (document.querySelector('.bk-kind[value="booking"]'));
+    bk.checked = true; bk.dispatchEvent(new Event('change', { bubbles: true }));
     expect(/** @type {HTMLInputElement} */ (document.querySelector('.bk-phone')).value).toBe('77');
     /** @type {HTMLElement} */ (document.querySelector('.fb-apply')).click();
-    expect(grid.cols[0].cells[1].booking).toEqual({ phone: '77', minAhead: 'PT1H' });
+    expect(grid.cols[0].cells[1].booking).toEqual({ access: 'public', phone: '77', methods: ['callOffice'], minAhead: 'PT1H' });
     expect(marks(1, 0)).toBe('x');
     expect(marks(0, 0)).toBe(''); // a bookable trip puts no x on its times
   });
@@ -86,16 +89,22 @@ describe('a/p and x on a time', () => {
     const fnCell = /** @type {HTMLElement} */ (document.querySelector('.g-fn-cell[data-ci="0"]'));
     fnCell.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
     press('F8');
-    expect(document.querySelector('.xw-choice')).toBeNull(); // a trip has no request stop
+    expect(/** @type {HTMLInputElement} */ (document.querySelector('.bk-kind[value="req"]')).disabled).toBe(true); // a trip has no request stop
+    const bk = /** @type {HTMLInputElement} */ (document.querySelector('.bk-kind[value="booking"]'));
+    bk.checked = true; bk.dispatchEvent(new Event('change', { bubbles: true }));
+    /** @type {HTMLElement} */ (document.querySelector('.bk-access .bk-chip[data-v="public"]')).click();
+    /** @type {HTMLElement} */ (document.querySelector('.bk-methods .bk-chip[data-v="callOffice"]')).click();
     const phone = /** @type {HTMLInputElement} */ (document.querySelector('.bk-phone'));
     phone.value = '55';
     const ahead = /** @type {HTMLInputElement} */ (document.querySelector('.bk-mode[value="ahead"]'));
     ahead.checked = true; ahead.dispatchEvent(new Event('change', { bubbles: true }));
-    /** @type {HTMLInputElement} */ (document.querySelector('.bk-minAhead-n')).value = '1';
-    /** @type {HTMLSelectElement} */ (document.querySelector('.bk-minAhead-u')).value = 'H';
+    /** @type {HTMLElement} */ (document.querySelector('.bk-dur[data-k="minAhead"] .bk-dur-read')).click();
+    const dur = /** @type {HTMLInputElement} */ (document.querySelector('.bk-dur-input'));
+    dur.value = '1t';
+    dur.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     phone.dispatchEvent(new Event('input', { bubbles: true }));
     /** @type {HTMLElement} */ (document.querySelector('.fb-apply')).click();
-    expect(grid.cols[0].booking).toEqual({ phone: '55', minAhead: 'PT1H' });
+    expect(grid.cols[0].booking).toEqual({ access: 'public', methods: ['callOffice'], phone: '55', minAhead: 'PT1H' });
     expect(document.querySelector('.g-fn-cell[data-ci="0"] .bk-col-mark')).not.toBeNull();
   });
 

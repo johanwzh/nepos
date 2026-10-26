@@ -1970,10 +1970,10 @@ function openTripBooking() {
   const [a, b] = dcRange();
   const at = document.querySelector(`.g-fn-cell[data-ci="${a}"]`)?.getBoundingClientRect();
   openBookingForm({
-    booking: grid.cols[a]?.booking ?? app.routeState?.booking ?? null, title: t('bkTrip'),
+    booking: grid.cols[a]?.booking ?? null, startFrom: app.routeState?.booking ?? null, allowReq: false, title: t('bkTrip'),
     x: at?.left ?? 200, y: (at?.bottom ?? 120) + 4,
-    onApply: (booking) => {
-      for (let ci = a; ci <= b; ci++) { const col = grid.cols[ci]; if (!col) continue; if (booking) col.booking = copyOf(booking); else delete col.booking; }
+    onApply: ({ booking }) => {
+      for (let ci = a; ci <= b; ci++) { const col = grid.cols[ci]; if (!col || col.virt) continue; if (booking) col.booking = copyOf(booking); else delete col.booking; }
       render();
     },
   });
