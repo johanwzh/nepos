@@ -56,7 +56,7 @@ export function updateFnPreview(where = null) {
     if (cell?.suffix === 'a') more.push(t('fnAlight'));
     if (cell?.suffix === 'p') more.push(t('fnBoard'));
     if (cell?.req) more.push(t('xwReq'));
-    if (cell?.interchange?.type === 'guaranteed' && cell.interchange.maxWait) more.push(t('fnWait', cell.interchange.maxWait));
+    if (cell?.interchange?.type === 'guaranteed' && cell.interchange.maxWait != null) more.push(t('fnWait', cell.interchange.maxWait));
     const booking = cell?.booking ? bookingSummary(cell.booking, t('bkTitle'))
       : col?.booking ? bookingSummary(col.booking, t('bkTrip'))
       : app.routeState?.booking ? bookingSummary(app.routeState.booking, t('bkLine')) : '';

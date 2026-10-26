@@ -189,7 +189,7 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
         if (!col.cells.some(timed)) return;
         const at = { ...where, column: (col.parentCi ?? ci) + 1 };
         // A guarantee says little without how long the trip waits (user 2026-10-24; Antu INTERCHANGE_2/3)
-        if (col.cells.some((/** @type {any} */ c) => c?.interchange?.type === 'guaranteed' && !c.interchange.maxWait)) addIssue('warning', 'ix-no-wait', { ...r, where: at });
+        if (col.cells.some((/** @type {any} */ c) => c?.interchange?.type === 'guaranteed' && !c.interchange.maxWait)) addIssue('warning', 'ix-no-wait' /* none, or 0 minutes (user 2026-10-26) */, { ...r, where: at });
         // A block's trips share their parent's problems: each is said once
         const add = (/** @type {'error' | 'warning'} */ level, /** @type {string} */ c, /** @type {any} */ extra) => {
           const key = `${level}|${c}|${JSON.stringify(extra)}`;

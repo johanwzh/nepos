@@ -52,6 +52,16 @@ describe('interchanges: the maximum wait time (INTERCHANGE_2, INTERCHANGE_3)', (
     expect(buildLine(withIx(5)).line).toMatch(/<Guaranteed>true<\/Guaranteed>\s*<MaximumWaitTime>PT5M<\/MaximumWaitTime>\s*<FromPointRef/);
   });
 
+  it('a wait of 0 minutes is kept and written, and warned about (user 2026-10-26)', () => {
+    const rs = withIx(undefined);
+    /** @type {any} */ (Object.values(rs.grids)[0]).cols[0].cells[2].interchange.maxWait = 0;
+    expect(codes(check(rs))).toContain('warning:ix-no-wait');
+    expect(buildLine(rs).line).toContain('<MaximumWaitTime>PT0M</MaximumWaitTime>');
+    const text = serializeERN(rs, 'r', OPTS);
+    expect(text).toContain('#MVT;0;2;0');
+    expect(gridOf(text).grid.cols[0].cells[2].interchange.maxWait).toBe(0);
+  });
+
   it('warns about a guaranteed interchange without one', () => {
     expect(codes(check(withIx(undefined)))).toContain('warning:ix-no-wait');
     expect(codes(check(withIx(5)))).not.toContain('warning:ix-no-wait');

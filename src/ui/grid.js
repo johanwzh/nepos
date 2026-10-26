@@ -433,14 +433,15 @@ function unpackBlock() {
 }
 
 /**
- * The maximum wait time of a guaranteed interchange, in whole minutes 1–60 (Antu: above 0, at most an hour); null when
- * cancelled or not a number. @param {number} now
+ * The maximum wait time of a guaranteed interchange, in whole minutes 0–60 (Antu: at most an hour; 0 is allowed but warned
+ * about); null when cancelled or not a number. @param {number} now
  */
 function askMaxWait(now) {
   const answer = prompt(t('ixWaitPrompt'), String(now));
   if (answer === null) return null;
+  if (!answer.trim()) return null;
   const m = Math.round(Number(answer.trim()));
-  return m >= 1 && m <= 60 ? m : null;
+  return m >= 0 && m <= 60 ? m : null;
 }
 
 /** A parent, band or end column: no interchanges this round (power tools spec). @param {number} ci */
@@ -720,7 +721,7 @@ function completeIx(tr, tc) {
     if (cell) {
       cell.interchange = { targetC: tc, targetR: tr, type };
       // A guarantee needs how long the trip waits (user 2026-10-24): asked at once
-      if (type === 'guaranteed') { const w = askMaxWait(5); if (w) cell.interchange.maxWait = w; }
+      if (type === 'guaranteed') { const w = askMaxWait(5); if (w !== null) cell.interchange.maxWait = w; }
     }
   }
   exitIx();
@@ -2343,7 +2344,7 @@ export function initGrid() {
     const ix = grid.cols[ctxC]?.cells[ctxR]?.interchange;
     if (!ix || ix.type !== 'guaranteed' || grid.readOnly) return;
     const w = askMaxWait(ix.maxWait ?? 5);
-    if (w) { ix.maxWait = w; render(); }
+    if (w !== null) { ix.maxWait = w; render(); }
   });
   $('gc-ix-g').addEventListener('click', () => { hideCtx(); if (hasTime(ctxR, ctxC) && !inBlock(ctxC)) enterIx(ctxR, ctxC, 'guaranteed'); });
   $('gc-ix-s').addEventListener('click', () => { hideCtx(); if (hasTime(ctxR, ctxC)) enterIx(ctxR, ctxC, 'stayseated'); });

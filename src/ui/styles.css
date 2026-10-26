@@ -934,7 +934,7 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 .cw-ins   { width: 20px; min-width: 20px; }
 .cw-price { width: 72px; min-width: 72px; }
 .cw-name  { width: 185px; min-width: 185px; }
-.cw-time  { width: 56px; min-width: 56px; }
+.cw-time  { width: 68px; min-width: 68px; max-width: 68px; overflow: hidden; text-overflow: ellipsis; } /* never wider: no shift (user 2026-10-26) */
 
 .g-sticky0     { position: sticky; left: 0px;  z-index: 2; }
 .g-sticky-price{ position: sticky; left: 20px; z-index: 2; }

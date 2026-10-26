@@ -75,7 +75,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
             if (!target) return;
             if (note != null) target.note = note;
             if (date) (target.dates ??= []).push(date);
-            if (maxWait && target.interchange) target.interchange.maxWait = maxWait;
+            if (maxWait != null && target.interchange) target.interchange.maxWait = maxWait;
             if (booking) { const b = normalizeBooking({ ...(target.booking ?? {}), ...booking }); if (b) target.booking = b; }
         });
         rs.grids[key] = grid;
@@ -134,7 +134,7 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 break;
             case '#MVT': { // a guaranteed interchange's maximum wait time, minutes (2.4)
                 const m = parseInt(f[3]);
-                if (m > 0) _pendingNotes.push({ ci: buildXtoIdx()[parseInt(f[1])] ?? parseInt(f[1]), ri: parseInt(f[2]), maxWait: m });
+                if (m >= 0) _pendingNotes.push({ ci: buildXtoIdx()[parseInt(f[1])] ?? parseInt(f[1]), ri: parseInt(f[2]), maxWait: m });
                 break;
             }
             case '#OFF': // Offentlig

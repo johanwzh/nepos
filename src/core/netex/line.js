@@ -201,7 +201,7 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                         const toSjId = variantSjId(sjIdOf(grid.cols[targetC], di, per, targetC), tgtVariant);
                         const staySeated = type==='stayseated' ? '\n        <StaySeated>true</StaySeated>' : '';
                         const guaranteed = type==='guaranteed'  ? '\n        <Guaranteed>true</Guaranteed>' : '';
-                        const maxWait = type==='guaranteed' && cell.interchange.maxWait ? `\n        <MaximumWaitTime>PT${cell.interchange.maxWait}M</MaximumWaitTime>` : '';
+                        const maxWait = type==='guaranteed' && cell.interchange.maxWait != null ? `\n        <MaximumWaitTime>PT${cell.interchange.maxWait}M</MaximumWaitTime>` : '';
                         ixs.push({ fromSjId: sjId, toSjId, xml: `      <!-- interchange from col ${ci} to col ${targetC} -->
       <ServiceJourneyInterchange id="${cs}:ServiceJourneyInterchange:${sjId.split(':').pop()}-${ri}-${targetC}-${targetR}" version="1">${staySeated}${guaranteed}${maxWait}
         <FromPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(srcStop.stopId)}"/>

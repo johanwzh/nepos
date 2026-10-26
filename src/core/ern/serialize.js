@@ -178,7 +178,7 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
             grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => notesOf(col.cells[ri], ci, ri)));
             grid.cols.forEach((col, ci) => bookingOf(col.booking, ci, -1));
             // A guaranteed interchange's maximum wait time, in minutes, at its cell (#MVT)
-            grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => { const ix = col.cells[ri]?.interchange; if (ix?.maxWait) lines.push(`#MVT;${ci};${ri};${ix.maxWait}`); }));
+            grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => { const ix = col.cells[ri]?.interchange; if (ix?.maxWait != null) lines.push(`#MVT;${ci};${ri};${ix.maxWait}`); }));
             grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => bookingOf(col.cells[ri]?.booking, ci, ri)));
             lines.push(...(dskLines.get(grid) ?? []));
         }
