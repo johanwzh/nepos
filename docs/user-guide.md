@@ -196,7 +196,7 @@ På en dagkode:
   Den åpner på det tiden har, så å rette en bestilling er F8, rett, Bruk. Ett valg gjelder alle valgte tider.
 - **Bestillingen** fylles ut ovenfra og ned: **hvem kan bestille**, **hvordan** (minst én måte), **kontakt** (bare det
   måtene trenger: telefon for å ringe og SMS, nettadresse for nett), **frist** og en valgfri merknad. Fristen er **innen et
-  klokkeslett** (når bestille og siste bestillingstid) eller **minst … før avgang**; **høyst før** kan settes i tillegg.
+  klokkeslett** (når bestille og siste bestillingstid) eller **som minst … før avgang**; **som mest før** kan settes i tillegg.
   Tider som «1 d 4 t» settes med hjulet (Shift: timer) eller ved å klikke og skrive. Skjemaet sier fra om ett steg om
   gangen, og **Bruk** venter til bestillingen er i orden.
 - **Hele turen:** velg turen i merknadsraden og trykk F8. Turen får ☎ ved siden av 📅. En tur kan ha bestilling, men

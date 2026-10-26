@@ -65,7 +65,7 @@ describe('the dialog', () => {
     expect(/** @type {HTMLInputElement} */ (q('.bk-phone')).value).toBe('33');
   });
 
-  it('the fields come in the order of what is needed; no Detaljer; Høyst før above Minst før', () => {
+  it('the fields come in the order of what is needed; no Detaljer; Som mest før above Som minst før', () => {
     openBookingForm({ booking: null, x: 0, y: 0, onApply: () => {} });
     kind('booking');
     const order = [...document.querySelectorAll('.bk-fields [data-step]')].map((el) => /** @type {HTMLElement} */ (el).dataset.step);
