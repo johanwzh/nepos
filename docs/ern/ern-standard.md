@@ -289,16 +289,6 @@ Trip record. One per trip: a column in the table. A trip's `#UID` follows direct
 | 4 | int | An abstract comfort factor. |
 | 5 | int | Replacement transport type, when the trip is a replacement service: `1` = bus, `5` = express boat, `7` = ferry, `18` = combi boat, `19` = taxi. Optional. |
 
-### #DSJ
-
-Dated journeys record (2.x). How the line's dates are delivered in NeTEx: `1` = a DatedServiceJourney for every trip on
-every day it runs (for operators that sell or book single departures); missing or `0` = day types with an explicit list
-of dates (one DayTypeAssignment per date, shared by every trip with the same dates). At most one per file.
-
-| Field | Type | Description |
-|---|---|---|
-| 0 | int | `1` = DatedServiceJourneys; `0` = day types. |
-
 ### #INT
 
 Interval record (2.x). A virtual-interval block on a trip: the trip is the first of a clock-face series, and the table
@@ -1172,7 +1162,6 @@ What the record codes stand for, in alphabetical order. Most are Norwegian; a (?
 | `#BOD` | bookingdata | Booking data |
 | `#BOF` | bookingfotnote | Booking note |
 | `#DAG` | dag | Days |
-| `#DSJ` | dated service journeys | Dates as DatedServiceJourneys |
 | `#INT` | intervall | Interval (virtual-interval block) |
 | `#MVT` | maks ventetid | Maximum wait time of a guaranteed interchange |
 | `#DSK` | destinasjonskobling | Destination link |

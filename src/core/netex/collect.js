@@ -75,15 +75,6 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
     };
     const operDays  = new Map();  // YYYYMMDD → {ntxId, date: YYYY-MM-DD}
     const colDays   = new Map();  // column object → its operating days (YYYYMMDD, sorted)
-    const dsjDays   = new Set();  // the days of lines that write DatedServiceJourneys: their OperatingDays
-    /** Day types with explicit dates (user 2026-10-24): one per set of dates, shared by every trip with that set */
-    const dayTypes  = new Map();  // dates joined → { id, dates }
-    /** @param {string[]} days YYYYMMDD, sorted */
-    const dayTypeFor = (days) => {
-        const key = days.join(',');
-        if (!dayTypes.has(key)) dayTypes.set(key, { id: `${cs}:DayType:${uuid5(`dates|${key}`)}`, dates: days });
-        return dayTypes.get(key).id;
-    };
 
     for (const { rs } of routes) {
         for (const per of rs.periods||[]) {
@@ -98,7 +89,6 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
                 const days = tripDays(periodDays, col); // the day code, then the trip's own dates
                 colDays.set(col, days);
                 for (const d of days) if (!operDays.has(d)) operDays.set(d, { ntxId: `${cs}:OperatingDay:${isoDate(d)}`, date: isoDate(d) });
-                if (rs.dsj) for (const d of days) dsjDays.add(d);
             }
         }
     }
@@ -125,5 +115,5 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
         for (const l of found) if (!usedLinks.has(l.key)) usedLinks.set(l.key, l);
         return found.map((l) => l.id);
     }
-    return { cs, routes, orgs, orgFor, orgMode, brandings, usedStops, destDisps, destDispId, operDays, dsjDays, dayTypes, dayTypeFor, colDays, overallFrom, overallTo, usedLinks, linkRefsFor };
+    return { cs, routes, orgs, orgFor, orgMode, brandings, usedStops, destDisps, destDispId, operDays, colDays, overallFrom, overallTo, usedLinks, linkRefsFor };
 }

@@ -84,6 +84,28 @@ describe('a/p and x on a time', () => {
     expect(grid.cols[0].cells[1].interchange.maxWait).toBe(8);
   });
 
+  it('a trip\'s booking from its day code: F8, or right-click → Bestilling for turen (user 2026-10-26)', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [] }] });
+    const dc = /** @type {HTMLElement} */ (document.querySelector('.g-dc-cell[data-ci="0"]'));
+    dc.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    press('F8');
+    expect(document.querySelector('.bk-form')).not.toBeNull();
+    expect(/** @type {HTMLInputElement} */ (document.querySelector('.bk-kind[value="req"]')).disabled).toBe(true);
+    /** @type {HTMLElement} */ (document.querySelector('.fb-cancel')).click();
+    dc.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById('gc-dc-booking')).click();
+    expect(document.querySelector('.bk-form')).not.toBeNull();
+  });
+
+  it('the note bar shows a guaranteed interchange\'s maximum wait time (user 2026-10-26)', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [
+      { dayCode: 'D', cells: [cell('0700'), cell('0710', { interchange: { targetC: 1, targetR: 0, type: 'guaranteed', maxWait: 15 } })], note: '', dates: [] },
+      { dayCode: 'D', cells: [cell('0715'), cell('0725')], note: '', dates: [] },
+    ] });
+    selectCell(1, 0);
+    expect(document.getElementById('fn-preview')?.textContent).toContain('15 min');
+  });
+
   it('the note row: F8 sets the trip booking, shown as an icon next to the dates', () => {
     loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [] }] });
     const fnCell = /** @type {HTMLElement} */ (document.querySelector('.g-fn-cell[data-ci="0"]'));

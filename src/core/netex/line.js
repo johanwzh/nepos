@@ -171,14 +171,12 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     // fixed line where every trip is booked is delivered: the line's booking on every trip without its own
                     const fspEls = bookingElements(col.booking ?? rs.booking, '          ');
                     const fsp = fspEls ? `\n        <FlexibleServiceProperties id="${cs}:FlexibleServiceProperties:${uuid5(`${sjId}|booking`)}" version="1">\n${fspEls}\n        </FlexibleServiceProperties>` : '';
-                    // Its days: a day type with the explicit dates, unless the line writes DatedServiceJourneys (never both: SERVICE_JOURNEY_14)
-                    const dayTypeXml = rs.dsj ? '' : `\n        <dayTypes>\n          <DayTypeRef ref="${data.dayTypeFor(days)}" version="1"/>\n        </dayTypes>`;
-                    sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>${sjPriv}${dayTypeXml}
+                    sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>${sjPriv}
         <JourneyPatternRef ref="${jpId}" version="1"/>${sjTrain}
         <passingTimes>${ptXml}
         </passingTimes>${fsp}
       </ServiceJourney>`);
-                    if (rs.dsj) for (const d of days) dsjs.push(`      <DatedServiceJourney id="${cs}:DatedServiceJourney:${uuid5(`${sjId}|${d}`)}" version="1"${pubAttr}>
+                    for (const d of days) dsjs.push(`      <DatedServiceJourney id="${cs}:DatedServiceJourney:${uuid5(`${sjId}|${d}`)}" version="1"${pubAttr}>
         <ServiceJourneyRef ref="${sjId}" version="1"/>
         <OperatingDayRef ref="${cs}:OperatingDay:${isoDate(d)}"/>
       </DatedServiceJourney>`);

@@ -37,9 +37,6 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   - Times that go backwards are an error, not a warning.
 - **Guaranteed interchanges have a maximum wait time** (1–60 minutes), asked for when you make one and changed from
   the right-click menu. It is exported as MaximumWaitTime; without one the export check warns.
-- **Dates as day types:** a line's trips now refer to day types that list their dates (trips with the same dates
-  share one), instead of a DatedServiceJourney for every trip on every day, which made the files huge. Lines that need
-  dated journeys (booking or sales of single departures) switch them on in the line list (Datoer i NeTEx…).
 - **Save backups rotate:** `data/backups/` keeps the 10 newest backups of each line (and of the map's shapes); a
   deleted line's backup and format-upgrade copies are never removed.
 - **Delete several columns or rows at once:** select a run of day codes or stops (Shift+click or Shift+arrows), then the

@@ -70,9 +70,7 @@ Fanen **Linjer** viser alle linjene. Til venstre er verktøykassen:
 
 - **Finn** — søk, og filtrer på kalender, transportmåte, organisasjon og status.
 - **Verktøy** — **+ Ny linje**, **Rediger**, **Dupliser**, **Slett**, og under *Endre valgte* kan du
-  sette merkevare, organisasjoner, kalender og flaggene for flere linjer samtidig. **Datoer i NeTEx…** velger hvordan
-  linjens dager leveres: **dagtyper** med en liste over datoene (vanlig, små filer) eller **hver avgang**
-  (DatedServiceJourney) for selskaper som selger eller tar bestilling på enkeltavganger. Linjer med det siste merkes DSJ.
+  sette merkevare, organisasjoner, kalender og flaggene for flere linjer samtidig.
 
 Klikk for å velge, Shift- og Ctrl-klikk for å velge flere. Dobbeltklikk eller **Enter** åpner linjen.
 Kolonneoverskriftene sorterer. Stripen til venstre på hver rad viser om linjen er gyldig nå (grønn),
@@ -180,7 +178,8 @@ På en tid:
 - (Tidsforskyveren er nå et kraftverktøy: se under.)
 - **Merknad** (eller F7) og **Datoer for tiden…**.
 - **Korrespondanse** (garantert eller bli sittende) til en annen tur. En garantert korrespondanse spør om **maks
-  ventetid** (1–60 minutter); **Maks ventetid…** på høyreklikk endrer den.
+  ventetid**: hvor lenge turen venter, opptil 1–60 minutter. **Venter opptil…** på høyreklikk endrer den, og linjen under
+  tabellen viser den («Venter opptil 15 minutter»).
 
 På en dagkode:
 

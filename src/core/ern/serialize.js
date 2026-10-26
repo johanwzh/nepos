@@ -32,7 +32,6 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
     if (rs.brandingId) lines.push(`#MRK;${esc(rs.brandingId)}`);
     // The line flags (navigation spec §4) are always written.
     lines.push(`#EKS;${rs.exported === false ? 0 : 1}`, `#OFF;${rs.isPublic === false ? 0 : 1}`);
-    if (rs.dsj) lines.push('#DSJ;1'); // the line's trips as DatedServiceJourneys, not day types (user 2026-10-24)
     const sek = rs.sek || [];
     if (sek.length > 0) {
         sek.forEach(s => {

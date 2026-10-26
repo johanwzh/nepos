@@ -78,6 +78,26 @@ describe('deleting several columns', () => {
   });
 });
 
+describe('deleting several from the menu (user 2026-10-26: easier to find)', () => {
+  it('right-click on selected day codes offers to delete them', () => {
+    down(dc(1));
+    down(dc(2), { shiftKey: true });
+    dc(2).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    const item = /** @type {HTMLElement} */ (document.getElementById('gc-del-cols'));
+    expect(item.className).not.toContain('dis');
+    item.click();
+    expect(times()).toEqual(['0600', '0900']);
+  });
+
+  it('right-click on selected stops offers to delete those rows', () => {
+    down(stopCell(0));
+    down(stopCell(1), { shiftKey: true });
+    stopCell(1).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById('gc-del-rows')).click();
+    expect(gridData().stops.map((s) => s.name)).toEqual(['C']);
+  });
+});
+
 describe('deleting several rows', () => {
   it('Shift+click two stops, then the × on one of them: both rows go, after one question', () => {
     down(stopCell(0));

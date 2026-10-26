@@ -10,7 +10,7 @@ import { normalizeRanges } from '../core/calendars.js';
 /**
  * @typedef {{ code: string, name: string, publicCode: string, privateCode: string, label: string, mode: string, submode: string,
  *   brandingId: string, brand: string, authority: string, operator: string, orgIds: string[], calendarIds: string[],
- *   firstDay: string, lastDay: string, expired: boolean, exported: boolean, isPublic: boolean, dsj: boolean,
+ *   firstDay: string, lastDay: string, expired: boolean, exported: boolean, isPublic: boolean,
  *   unsaved: boolean, damaged: boolean, errors: number, warnings: number }} LineRow
  * @typedef {{ col: string, dir: 1 | -1 }} LineSort
  */
@@ -44,7 +44,7 @@ function liveSummary(code, rs) {
   const sek = /** @type {any[]} */ (rs.sek ?? []);
   return {
     name: rs.routeName ?? '', publicCode: rs.publicCode ?? '', privateCode: rs.privateCode ?? '', mode: rs.mode ?? '', submode: rs.submode ?? '',
-    brandingId: rs.brandingId ?? '', exported: rs.exported !== false, isPublic: rs.isPublic !== false, dsj: !!rs.dsj,
+    brandingId: rs.brandingId ?? '', exported: rs.exported !== false, isPublic: rs.isPublic !== false,
     calendarIds: [...new Set(/** @type {any[]} */ (rs.periods ?? []).flatMap((p) => p.calendarIds ?? []))],
     orgIds: [...sek.filter((s) => s.isAuthority), ...sek.filter((s) => !s.isAuthority)].map((s) => String(s.orgId)).filter((id) => id && id !== '-1'),
   };
@@ -75,7 +75,7 @@ export function lineRows() {
       label: s.publicCode || brand || s.privateCode || s.name || r.code,
       mode: s.mode, submode: s.submode, brandingId: s.brandingId, brand,
       authority: authId ? orgName(authId) : '', operator: operId ? orgName(operId) : '', orgIds: s.orgIds, calendarIds: s.calendarIds,
-      firstDay, lastDay, expired: !!lastDay && lastDay < now, exported: s.exported, isPublic: s.isPublic, dsj: s.dsj,
+      firstDay, lastDay, expired: !!lastDay && lastDay < now, exported: s.exported, isPublic: s.isPublic,
       unsaved: isUnsaved(r.code), damaged: r.status === 'damaged', errors, warnings: issues.length - errors,
     };
   });

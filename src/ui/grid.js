@@ -1340,7 +1340,9 @@ function renderStopRow(tbl, stop, ri, linked) {
       if (ixMode || grid.readOnly) return;
       commitEdit(); commitDayCode();
       if (inStopEdit) commitStopEdit();
-      inStopCol = true; ancR = ri; endR = ri; ctxIsStop = true; ctxStopRow = ri;
+      // Inside the selected stops the run stays (to delete them all); elsewhere this stop alone
+      if (!(inStopCol && ri >= Math.min(ancR, endR) && ri <= Math.max(ancR, endR))) { ancR = ri; endR = ri; }
+      inStopCol = true; ctxIsStop = true; ctxStopRow = ri;
       showCtx(e.clientX, e.clientY);
     });
   }
@@ -1664,6 +1666,7 @@ function keyDayCodeNav(e) {
     case 'ArrowDown': e.preventDefault(); downFromDayCodes(); break;
     case 'Escape': e.preventDefault(); inDC = false; render(); break;
     case 'F7': e.preventDefault(); openColNotes(); break;
+    case 'F8': e.preventDefault(); if (!grid.readOnly) openTripBooking(); break;
     case 'Delete': e.preventDefault(); if (!grid.readOnly) { const run = selectedColRun(); if (run.length > 1) deleteCols(run); else deleteCol(dcCol); } break;
     case 'Enter': e.preventDefault(); dcEdit = true; dcBuf = grid.cols[dcCol].dayCode; render(); break;
     default:
@@ -2003,6 +2006,9 @@ function showCtx(x, y, isDC = false) {
   if (isDC) $('gc-tripno').textContent = t(grid.tripRow ? 'ctxTripHide' : 'ctxTripShow');
   if (isDC) $('gc-labels').textContent = t(grid.labelRow ? 'ctxLabelsHide' : 'ctxLabelsShow');
   if (isDC) $('gc-vehicles').textContent = t(grid.vehicleRow ? 'ctxVehiclesHide' : 'ctxVehiclesShow');
+  // Several selected: delete them all from here too (user 2026-10-26: the × alone was hard to find)
+  $('gc-del-cols').className = 'gci red' + (selectedColRun().length > 1 ? '' : ' dis');
+  $('gc-del-rows').className = 'gci red' + (selectedRowRun().length > 1 ? '' : ' dis');
   if (!isStop && !isDC && ctxC >= 0 && ctxC < grid.cols.length) {
     const cell = grid.cols[ctxC].cells[ctxR];
     const timed = !!(cell && cell.time && cell.time !== '|'), withIx = timed && !!cell.interchange;
@@ -2408,4 +2414,7 @@ export function initGrid() {
   $('gc-dc-dates').addEventListener('click', () => { hideCtx(); openDates('col', 0, ctxDCCol >= 0 ? ctxDCCol : dcCol); });
   $('gc-cell-dates').addEventListener('click', () => { hideCtx(); openDates('cell', ctxR, ctxC); });
   $('gc-dc-note').addEventListener('click', () => { hideCtx(); openColNotes(); });
+  $('gc-dc-booking').addEventListener('click', () => { hideCtx(); if (!grid.readOnly) openTripBooking(); });
+  $('gc-del-cols').addEventListener('click', () => { hideCtx(); const run = selectedColRun(); if (run.length > 1 && !grid.readOnly) deleteCols(run); });
+  $('gc-del-rows').addEventListener('click', () => { hideCtx(); const run = selectedRowRun(); if (run.length > 1 && !grid.readOnly) deleteRows(run); });
 }

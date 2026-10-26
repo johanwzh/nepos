@@ -54,6 +54,8 @@ function normalize(line, dst) {
     }
     case '#BOF': // empty language = Bokmål
       return `#BOF;${f[1]};${f[2]};${f[3] ?? ''};${(f[4] ?? '').trim() || 'nob'}`;
+    case '#DSJ': // from 2.4 test builds: dropped on purpose
+      return null;
     case '#MOD': // renamed in ERN 2.0
       return ['#TRM', ...f.slice(1)].join(';');
     case '#BRA':

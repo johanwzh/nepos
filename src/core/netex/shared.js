@@ -111,17 +111,17 @@ ${psaXml}
       </stopAssignments>
     </ServiceFrame>`;
 
-    // ServiceCalendarFrame: day types as lists of dates (one DayTypeAssignment per date, no periods or weekdays; user
-    // 2026-10-24) for the lines that use them, and the OperatingDays the DatedServiceJourneys of the other lines refer to
-    const dsjDays = data.dsjDays ?? new Set(operDays.keys());
-    const dts = [...(data.dayTypes ?? new Map()).values()];
-    const dtXml = dts.map((dt) => `      <DayType id="${dt.id}" version="1"/>`).join('\n');
-    const dtaXml = dts.flatMap((dt) => dt.dates.map((d, i) => `      <DayTypeAssignment id="${cs}:DayTypeAssignment:${uuid5(`${dt.id}|${d}`)}" version="1" order="${i + 1}">\n        <Date>${isoDate(d)}</Date>\n        <DayTypeRef ref="${dt.id}" version="1"/>\n      </DayTypeAssignment>`)).join('\n');
-    const odXml = [...operDays.keys()].filter((k) => dsjDays.has(k)).sort().map((k) => {
+    // ServiceCalendarFrame: only the OperatingDays the DatedServiceJourneys refer to (timetable
+    // structure spec §7) — no DayTypes, OperatingPeriods or DayTypeAssignments. (2.4 tried day types with explicit
+    // dates; they were no smaller, and Entur handles millions of DatedServiceJourneys: user 2026-10-26.)
+    const odXml = [...operDays.keys()].sort().map((k) => {
         const od = operDays.get(k);
         return `      <OperatingDay id="${od.ntxId}" version="1">\n        <CalendarDate>${od.date}</CalendarDate>\n      </OperatingDay>`;
     }).join('\n');
-    const calFrame = odXml || dtXml ? `    <ServiceCalendarFrame id="${cs}:ServiceCalendarFrame:shared" version="1">${dtXml ? `\n      <dayTypes>\n${dtXml}\n      </dayTypes>` : ''}${odXml ? `\n      <operatingDays>\n${odXml}\n      </operatingDays>` : ''}${dtaXml ? `\n      <dayTypeAssignments>\n${dtaXml}\n      </dayTypeAssignments>` : ''}
+    const calFrame = odXml ? `    <ServiceCalendarFrame id="${cs}:ServiceCalendarFrame:shared" version="1">
+      <operatingDays>
+${odXml}
+      </operatingDays>
     </ServiceCalendarFrame>` : '';
 
     const frames = [resFrame, svcFrame, calFrame].filter(Boolean);

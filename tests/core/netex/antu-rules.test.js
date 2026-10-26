@@ -65,43 +65,15 @@ describe('interchanges: the maximum wait time (INTERCHANGE_2, INTERCHANGE_3)', (
   });
 });
 
-describe('dates: day types with explicit dates, or DatedServiceJourneys per line', () => {
-  it('by default writes one DayType per set of dates, with a DayTypeAssignment per date, and no DatedServiceJourneys', () => {
-    const { rs } = gridOf(miniErn());
-    const { shared, line } = buildLine(rs);
-    expect(line).not.toContain('<DatedServiceJourney ');
-    expect(line.split('<DayTypeRef ').length - 1).toBe(3); // one per trip
-    expect(shared.split('<DayType ').length - 1).toBe(1); // all three run on the same dates
-    expect(shared).toMatch(/<DayTypeAssignment id="TST:DayTypeAssignment:[^"]+" version="1" order="1">\s*<Date>2026-01-01<\/Date>\s*<DayTypeRef ref="TST:DayType:/);
-    expect(shared).not.toContain('<OperatingDay ');
-    // the order in the ServiceJourney: dayTypes before the JourneyPatternRef
-    expect(line).toMatch(/<dayTypes>\s*<DayTypeRef ref="TST:DayType:[^"]+"[^>]*\/>\s*<\/dayTypes>\s*<JourneyPatternRef/);
-  });
-
-  it('with DatedServiceJourneys switched on for the line, writes them as before and no day types', () => {
-    const { rs } = gridOf(miniErn());
-    rs.dsj = true;
+describe('dates: a DatedServiceJourney for every trip on every day, for every line (user 2026-10-26)', () => {
+  it('writes DatedServiceJourneys and OperatingDays, no day types, and ignores a #DSJ from a 2.4 test build', () => {
+    const { rs } = gridOf(miniErn({ extra: ['#DSJ;0'] }));
     const { shared, line } = buildLine(rs);
     expect(line).toContain('<DatedServiceJourney ');
     expect(line).not.toContain('<DayTypeRef ');
     expect(shared).toContain('<OperatingDay ');
     expect(shared).not.toContain('<DayType ');
-  });
-
-  it('keeps the choice in ERN (#DSJ)', () => {
-    const { rs } = gridOf(miniErn());
-    rs.dsj = true;
-    const text = serializeERN(rs, 'r', OPTS);
-    expect(text).toContain('#DSJ;1');
-    expect(gridOf(text).rs.dsj).toBe(true);
-    expect(gridOf(miniErn()).rs.dsj).toBe(false);
-  });
-
-  it('two trips with other dates get two day types', () => {
-    const { rs, grid } = gridOf(miniErn());
-    grid.cols[1].dayCode = '1';
-    expect(buildLine(rs).shared.split('<DayType ').length - 1).toBe(2);
-    expect(U).toHaveLength(3);
+    expect(serializeERN(rs, 'r', OPTS)).not.toContain('#DSJ');
   });
 });
 

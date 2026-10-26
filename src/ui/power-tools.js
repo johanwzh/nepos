@@ -153,8 +153,9 @@ function draw() {
 export function initPowerTools() {
   const box = document.getElementById('power-tools');
   if (box) {
-    box.innerHTML = `<div class="pt-head">${t('ptTitle')}</div><div class="pt-tools">${TOOLS.map((x) =>
-      `<button type="button" class="pt-tool" data-tool="${x.name}" title="Alt+${x.key.toUpperCase()}"><span class="pt-icon">${x.icon}</span> ${t(x.label)}</button>`).join('')}</div><div class="pt-body"></div>`;
+    // data-lk: the labels follow a change of language like the rest of the page (shell.js applyLang)
+    box.innerHTML = `<div class="pt-head" data-lk="ptTitle">${t('ptTitle')}</div><div class="pt-tools">${TOOLS.map((x) =>
+      `<button type="button" class="pt-tool" data-tool="${x.name}" title="Alt+${x.key.toUpperCase()}"><span class="pt-icon">${x.icon}</span> <span data-lk="${x.label}">${t(x.label)}</span></button>`).join('')}</div><div class="pt-body"></div>`;
     for (const btn of box.querySelectorAll('.pt-tool')) {
       btn.addEventListener('click', () => { const name = /** @type {ToolName} */ (/** @type {HTMLElement} */ (btn).dataset.tool); setTool(active === name ? '' : name); });
     }

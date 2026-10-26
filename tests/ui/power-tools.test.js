@@ -161,6 +161,19 @@ describe('the power toolbox', () => {
     expect(dotPx(18)).toBeLessThanOrEqual(1.8); // about 3 px across: an indicator, not an eye (user 2026-10-24)
   });
 
+  it('is called Spesialverktøy, and follows a change of language (user 2026-10-26)', async () => {
+    const { setLang } = await import('../../src/i18n/strings.js');
+    const { applyLang } = await import('../../src/ui/shell.js');
+    expect(document.querySelector('#power-tools .pt-head')?.textContent).toBe('Spesialverktøy');
+    app.settings.lang = 'en';
+    applyLang();
+    expect(document.querySelector('#power-tools .pt-head')?.textContent).toBe('Power tools');
+    expect(tool('jog').textContent).toContain('Time shifter');
+    app.settings.lang = 'no';
+    applyLang();
+    setLang('no');
+  });
+
   it('the context menu no longer has the jog', () => {
     expect(document.getElementById('gc-nudge')).toBeNull();
   });
