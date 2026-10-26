@@ -62,19 +62,16 @@ export function setJogHandler(fn) { jogHandler = fn; }
 export function setUnpackHandler(fn) { unpackHandler = fn; }
 
 /**
- * Where the Tidsforskyver goes: the band between the top of the calendar row and the top of the timetable, centred over
- * the timetable's width; the dial as big as the band allows. Without a laid-out page (tests): a default size.
+ * Where the Tidsforskyver goes (user 2026-10-26): just above the calendar row — over the table-set tabs and the line's
+ * note, locked while a tool is on — centred over the timetable's width. Without a laid-out page (tests): a default size.
  * @returns {{ dial: number, left?: number, top?: number, height?: number }}
  */
 function placeAbove() {
-  const top = document.getElementById('cal-bar')?.getBoundingClientRect();
-  const tbl = document.getElementById('tbl-wrap')?.getBoundingClientRect();
+  const cal = document.getElementById('cal-bar')?.getBoundingClientRect();
   const main = document.getElementById('edit-main')?.getBoundingClientRect();
-  if (!top || !tbl || !main || !main.width || tbl.top - top.top < 40) return { dial: 64 };
-  const height = Math.round(tbl.top - top.top - 6);
-  const dial = Math.max(40, Math.min(96, height - 12));
-  const width = 380;
-  return { dial, height, top: Math.round(top.top), left: Math.round(main.left + main.width / 2 - width / 2) };
+  if (!cal || !main || !main.width) return { dial: 64 };
+  const height = 84, width = 340;
+  return { dial: 64, height, top: Math.max(Math.round(main.top) + 4, Math.round(cal.top - height - 4)), left: Math.round(main.left + main.width / 2 - width / 2) };
 }
 
 /** Turn a tool on ('' turns all off). @param {ToolName} name */

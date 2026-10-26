@@ -1478,12 +1478,13 @@ body.pt-intervals .g-dc-cell.g-blk-dc-end::before { left: calc(50% - 22px); }
 .bk-row-latest[hidden], .bk-row-min[hidden] { display: none; }
 .lv-tag.dsj { opacity: .8; }
 
-/* The Tidsforskyver: a low box above the timetable, over the calendar row (user 2026-10-25) */
-.ts-box { position: fixed; left: 50%; top: 120px; z-index: 60; box-sizing: border-box; width: 380px; display: flex; align-items: center; gap: 14px; padding: 6px 34px 6px 14px; background: var(--bg-raised, #fff); border: 1px solid var(--border, #ccc); border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+/* The Tidsforskyver: a box just above the calendar row, tinted in the accent colour: it is open, look at it (user 2026-10-26) */
+.ts-box { position: fixed; left: 50%; top: 120px; z-index: 60; box-sizing: border-box; width: 340px; display: flex; align-items: center; gap: 14px; padding: 8px 34px 8px 14px; background: color-mix(in srgb, var(--accent, #d63384) 50%, var(--bg-raised, #fff)); border: 2px solid var(--accent, #d63384); border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+.ts-box .jd-rim { stroke: var(--text, #222); }
 .ts-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ts-head { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; opacity: .75; }
 .ts-box .pt-read { font-size: 18px; font-variant-numeric: tabular-nums; }
-.ts-box .pt-hint { font-size: 11px; opacity: .75; }
+.ts-box .pt-hint { font-size: 11px; opacity: .85; white-space: nowrap; }
 .ts-x { position: absolute; top: 4px; right: 6px; border: 0; background: none; color: inherit; cursor: pointer; font-size: 14px; opacity: .7; }
 .ts-x:hover { opacity: 1; }
 
