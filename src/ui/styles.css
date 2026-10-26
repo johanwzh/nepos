@@ -1059,7 +1059,8 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 /* A time and its marks: the time always starts at the same place in the column, the marks (a/p/x, +1, and later
    footnote letters: at most two) get a fixed slot to its right */
 .g-td-time { text-align: left; padding-left: 7px; white-space: nowrap; }
-.g-td-time .g-t { display: inline-block; width: 2.4em; text-align: left; } /* em, not ch: a bold | must not widen the cell */
+.g-td-time .g-t { display: inline-block; text-align: left; } /* as wide as the time: the first mark sits right after it (user 2026-10-26) */
+.g-td-time.is-pipe .g-t { width: 2.4em; }
 .g-td-time .g-m { display: inline-block; width: 2.1em; text-align: left; font-size: 11px; }
 .g-td-time.is-pipe .g-t { text-align: center; }
 
