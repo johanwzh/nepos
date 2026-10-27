@@ -977,3 +977,7 @@ details.n2-group > summary::before { content: '▸'; margin-right: 6px; color: v
 details.n2-group[open] > summary::before { content: '▾'; }
 details.n2-group > div.n2-issue { margin-left: 22px; opacity: .9; }
 .n2-group-count { margin-left: 8px; font-weight: 600; color: var(--text-m); }
+
+.ts-marey-toggle { margin-left: 6px; align-self: center; border: 1px solid var(--border-lt); border-radius: 6px; background: var(--bg-hdr); color: var(--text-m); font-size: 12px; padding: 2px 10px; cursor: pointer; }
+.ts-marey-toggle.on { background: var(--accent-bg); color: var(--text); border-color: var(--accent); }
+.ts-dest-toggle:disabled { opacity: .45; cursor: default; }

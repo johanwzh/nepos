@@ -186,6 +186,10 @@ function draw() {
 export function toggleMarey() {
   state.on = !state.on;
   document.body.classList.toggle('marey-on', state.on);
+  // The buttons next to the table-set tabs follow: this one lit, Destinations resting
+  document.querySelector('.ts-marey-toggle')?.classList.toggle('on', state.on);
+  const dest = /** @type {HTMLButtonElement | null} */ (document.querySelector('.ts-dest-toggle'));
+  if (dest) dest.disabled = state.on;
   if (!state.on) return;
   const { calendarDays, rs } = source();
   const key = `${rs?.routeName ?? ''}|${rs?.activeSet}|${rs?.activePer}`;

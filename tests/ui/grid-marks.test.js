@@ -21,29 +21,29 @@ beforeEach(() => {
   initGrid();
   if (!wired) { initFootnoteEditor(); wired = true; }
   app.routeState = newRouteState('no');
-  loadGrid({ stops: [stop('A'), stop('B')], cols: [
-    { dayCode: 'D', cells: [cell('0700', { suffix: 'a', req: true }), cell('0710', { suffix: 'x' })], note: '', dates: [] },
+  loadGrid({ stops: [stop('S'), stop('A'), stop('B'), stop('E')], cols: [
+    { dayCode: 'D', cells: [cell('0650'), cell('0700', { suffix: 'a', req: true }), cell('0710', { suffix: 'x' }), cell('0720')], note: '', dates: [] },
   ] });
 });
 
 describe('a/p and x on a time', () => {
   it('shows a then x', () => {
-    expect(marks(0, 0)).toBe('ax');
+    expect(marks(1, 0)).toBe('ax');
   });
 
   it('turns a 2.3 x suffix into a request stop on load', () => {
-    expect(grid.cols[0].cells[1]).toMatchObject({ suffix: '', req: true });
-    expect(gridData().cols[0].cells[1].suffix).toBe('');
+    expect(grid.cols[0].cells[2]).toMatchObject({ suffix: '', req: true });
+    expect(gridData().cols[0].cells[2].suffix).toBe('');
   });
 
   it('shows a/p, x and the note letter, with no hover text', () => {
-    loadGrid({ stops: [stop('A'), stop('B')], cols: [
-      { dayCode: 'D', cells: [cell('0605', { suffix: 'a', req: true, note: 'Bytt her' }), cell('0610', { dates: [{ from: '20260101', to: '20260101', on: false }] })], note: '', dates: [] },
+    loadGrid({ stops: [stop('S'), stop('A'), stop('B'), stop('E')], cols: [
+      { dayCode: 'D', cells: [cell('0600'), cell('0605', { suffix: 'a', req: true, note: 'Bytt her' }), cell('0610', { dates: [{ from: '20260101', to: '20260101', on: false }] }), cell('0620')], note: '', dates: [] },
     ] });
-    expect(marks(0, 0)).toBe('axb');
-    expect(marks(1, 0)).toBe('c');
-    expect(td(0, 0).title).toBe('');
+    expect(marks(1, 0)).toBe('axb');
+    expect(marks(2, 0)).toBe('c');
     expect(td(1, 0).title).toBe('');
+    expect(td(2, 0).title).toBe('');
   });
 
   it('F8 sets a request stop on every selected time at once', () => {
@@ -131,17 +131,19 @@ describe('a/p and x on a time', () => {
   });
 
   it('the note bar shows the note, dates, boarding rule, request stop and booking in full', () => {
-    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', note: '', dates: [], booking: { url: 'https://t.no' }, cells: [
+    loadGrid({ stops: [stop('S'), stop('A'), stop('B'), stop('E')], cols: [{ dayCode: 'D', note: '', dates: [], booking: { url: 'https://t.no' }, cells: [
+      cell('0650'),
       cell('0700', { suffix: 'a', req: true, note: 'Bytt her', dates: [{ from: '20260101', to: '20260101', on: false }] }),
       cell('0710', { suffix: 'p', booking: { phone: '22', methods: ['callOffice', 'online'], bookWhen: 'untilPreviousDay', latest: '1800' } }),
+      cell('0720'),
     ] }] });
-    selectCell(0, 0);
+    selectCell(1, 0);
     const bar = () => /** @type {HTMLElement} */ (document.getElementById('fn-preview')).textContent ?? '';
     expect(bar()).toContain('Bytt her');
     expect(bar()).toContain('Kun avstigning');
     expect(bar()).toContain('Stopper ved behov');
     expect(bar()).toContain('1 fjernet');
-    selectCell(1, 0);
+    selectCell(2, 0);
     expect(bar()).toContain('Kun påstigning');
     expect(bar()).toContain('Bestilling');
     expect(bar()).toContain('22');
@@ -178,10 +180,19 @@ describe('a/p and x on a time', () => {
     expect(grid.cols[0].cells[2]).toMatchObject({ time: '0725', suffix: '' });
   });
 
-  it('keeps the request stop when the time is typed again', () => {
+  it('a and p never stay on a trip\'s first or last stop: also when the ends move, and when a file has them (user 2026-10-27)', () => {
+    loadGrid({ stops: [stop('A'), stop('B'), stop('C'), stop('D')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710', { suffix: 'p' }), cell('0720', { suffix: 'a' }), cell('0730', { suffix: 'a' })], note: '', dates: [] }] });
+    expect(grid.cols[0].cells.map((c) => c.suffix)).toEqual(['', 'p', 'a', '']); // tidied on open: a on the last stop
     selectCell(0, 0);
+    press('Delete'); // the trip now starts at B
+    expect(grid.cols[0].cells[1].suffix).toBe('');
+    expect(grid.cols[0].cells[2].suffix).toBe('a');
+  });
+
+  it('keeps the request stop when the time is typed again', () => {
+    selectCell(1, 0);
     for (const k of ['0', '7', '0', '5', 'p']) press(k);
     press('Enter');
-    expect(grid.cols[0].cells[0]).toMatchObject({ time: '0705', suffix: '', req: true }); // the p goes: a first stop has no a or p (2026-10-27)
+    expect(grid.cols[0].cells[1]).toMatchObject({ time: '0705', suffix: 'p', req: true });
   });
 });

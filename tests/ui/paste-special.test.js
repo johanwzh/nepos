@@ -39,8 +39,8 @@ describe('copying inside Nepos', () => {
     press('ArrowDown', { shiftKey: true });
     press('c', { ctrlKey: true });
     selectCell(0, 1);
-    paste('0700a\n0710');
-    expect(grid.cols[1].cells[0]).toMatchObject({ time: '0700', suffix: 'a', req: true, note: 'N' });
+    paste('0700\n0710'); // what Nepos copied: the a on a first stop was dropped when the table opened
+    expect(grid.cols[1].cells[0]).toMatchObject({ time: '0700', suffix: '', req: true, note: 'N' }); // a never on a first stop (2026-10-27)
     expect(grid.cols[1].cells[0].dates).toHaveLength(1);
     expect(grid.cols[1].cells[1]).toMatchObject({ time: '0710', booking: B });
     expect(grid.cols[1].cells[1].booking).not.toBe(grid.cols[0].cells[1].booking);

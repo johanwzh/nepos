@@ -10,6 +10,7 @@ import { DIRECTION_TYPES } from '../core/directions.js';
 import { placeMenu } from './place-menu.js';
 import { switchTableSet, isRouteReadOnly, storeGrid } from './route-editor.js';
 import { toggleDestColumns, destColumnsOpen, onDestToggle } from './dest-columns.js';
+import { toggleMarey, mareyOn } from './marey-view.js';
 
 export function renderTableSetTabs() {
   const el = $('ts-tabs');
@@ -61,7 +62,15 @@ export function renderTableSetTabs() {
   dest.textContent = t('destToggle');
   dest.title = 'Alt+D';
   dest.addEventListener('click', toggleDestColumns);
+  dest.disabled = mareyOn(); // nothing to show while the visual timetable is open
   el.appendChild(dest);
+  // The visual timetable (Marey chart, 2.5), next to it
+  const marey = document.createElement('button');
+  marey.className = `ts-marey-toggle${mareyOn() ? ' on' : ''}`;
+  marey.textContent = t('mrToggle');
+  marey.title = 'Alt+V';
+  marey.addEventListener('click', toggleMarey);
+  el.appendChild(marey);
 }
 
 /** Delete a table set (the active one, after switching to it), asking when it has data. @param {number} setId */

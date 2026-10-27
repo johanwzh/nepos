@@ -193,6 +193,20 @@ describe('the note and the grid edges', () => {
     expect(/** @type {HTMLElement} */ (document.querySelector('#kom-bar .kom-booking')).textContent).toContain('815');
   });
 
+  it('the visual timetable has a button next to Destinations; Destinations rests while it is open (user 2026-10-27)', async () => {
+    await selectRoute('7');
+    (await import('../../src/ui/table-set-tabs.js')).renderTableSetTabs();
+    const btn = () => /** @type {HTMLButtonElement} */ (document.querySelector('.ts-marey-toggle'));
+    const dest = () => /** @type {HTMLButtonElement} */ (document.querySelector('.ts-dest-toggle'));
+    btn().click();
+    expect(document.body.classList.contains('marey-on')).toBe(true);
+    expect(btn().classList.contains('on')).toBe(true);
+    expect(dest().disabled).toBe(true);
+    btn().click();
+    expect(document.body.classList.contains('marey-on')).toBe(false);
+    expect(dest().disabled).toBe(false);
+  });
+
   it('has no extra column: "+ column" sits above the row ×, and the add column and row are tinted', async () => {
     await selectRoute('7');
     const rows = [...document.querySelectorAll('#tbl tr')];

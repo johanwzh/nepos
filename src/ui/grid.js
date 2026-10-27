@@ -136,6 +136,7 @@ export function loadGrid(data, { readOnly = false } = {}) {
   grid.stops = JSON.parse(JSON.stringify(data.stops));
   grid.cols = withBlocks(JSON.parse(JSON.stringify(data.cols)));
   for (const col of grid.cols) for (const c of col.cells ?? []) normalizeCell(c);
+  clearEndMarks(); // before the baseline: tidying an old file is not a change of the user's
   grid.tripRow = !!(/** @type {any} */ (data).tripRow);
   grid.labelRow = !!(/** @type {any} */ (data).labelRow);
   grid.vehicleRow = !!(/** @type {any} */ (data).vehicleRow);
@@ -302,6 +303,19 @@ const JOG_REST = 400;
  * Virtual intervals (power tools spec 2026-10-24): each block's band and end columns are rebuilt from their parent before
  * every drawing, so an edit to the parent shows in the whole block, and a deleted parent takes its block along.
  */
+/**
+ * a and p only on the stops in between (user 2026-10-27): a trip's first and last time lose theirs, however they became
+ * the ends (a deleted first time, a paste, a file from before). Run before every drawing and when a table opens.
+ */
+function clearEndMarks() {
+  for (const col of grid.cols) {
+    if (col.virt) continue;
+    const cells = col.cells ?? [];
+    const timed = cells.map((/** @type {any} */ c, /** @type {number} */ i) => (c?.time && c.time !== '|' ? i : -1)).filter((/** @type {number} */ i) => i >= 0);
+    for (const i of [timed[0], timed[timed.length - 1]]) if (i != null && cells[i].suffix) cells[i].suffix = '';
+  }
+}
+
 function syncBlocks() {
   if (!grid.cols.some((c) => c.block || c.virt)) return;
   grid.cols = withBlocks(withoutBlocks(grid.cols));
@@ -730,6 +744,7 @@ function completeIx(tr, tc) {
 // ─── Render ─────────────────────────────────────────────────────────────────
 export function render() {
   if (!grid.active) return;
+  clearEndMarks();
   syncBlocks();
   notifySelection(`${inDC}|${ancR},${ancC}|${endR},${endC}`);
   letters = noteLetters(grid);

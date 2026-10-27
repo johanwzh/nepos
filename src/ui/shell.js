@@ -355,7 +355,7 @@ export function initShell() {
     // The map is part of the timetable page: Alt+M opens and closes it there.
     if (e.key.toLowerCase() === 'm') { if (curPage === 'edit') { e.preventDefault(); e.stopPropagation(); togglePanel('right'); } return; }
     // The destination columns, likewise (destination displays spec)
-    if (e.key.toLowerCase() === 'd') { if (curPage === 'edit') { e.preventDefault(); e.stopPropagation(); toggleDestColumns(); } return; }
+    if (e.key.toLowerCase() === 'd') { if (curPage === 'edit' && !document.body.classList.contains('marey-on')) { e.preventDefault(); e.stopPropagation(); toggleDestColumns(); } return; }
     // The visual timetable (Marey chart, 2.5): in place of the timetable
     if (e.key.toLowerCase() === 'v') { if (curPage === 'edit' && app.routeState) { e.preventDefault(); e.stopPropagation(); toggleMarey(); } return; }
     const view = byDigit[e.key];

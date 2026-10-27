@@ -93,8 +93,10 @@ describe('the Virtual intervals tool', () => {
   it('band and end cells show the first trip\'s marks: a/p, x and the note letter', () => {
     const cols = saved();
     Object.assign(cols[0].cells[1], { suffix: 'p', req: true, note: 'Merk' });
+    cols[0].cells.push(cell('0640')); // a stop after it: a and p only on the stops in between
     cols[0].block = { every: 30, span: 120 };
-    loadGrid({ stops: [stop('A'), stop('B')], cols });
+    cols.splice(1, 1);
+    loadGrid({ stops: [stop('A'), stop('B'), stop('C')], cols });
     const marks = (/** @type {number} */ c) => td(1, c).querySelector('.g-m')?.textContent;
     expect(marks(0)).toBe('pxb');
     expect(marks(1)).toBe('pxb');
