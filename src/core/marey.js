@@ -112,19 +112,27 @@ export function tripLines(grid, calendarDays, days, y) {
 export function tribes(lines) {
   const first = (/** @type {TripLine} */ l) => l.stops[0].m;
   const key = (/** @type {TripLine} */ l) => l.cells.map((c) => (typeof c === 'number' ? c - first(l) : c === '|' ? '|' : '-')).join(',');
+  // Only a trip over the same stops (stopping and passing at the same rows) with other times breaks a run; a trip over
+  // other stops — a short trip starting in between — belongs to another tribe and does not (user 2026-10-27)
+  const cover = (/** @type {TripLine} */ l) => l.cells.map((c) => (c == null ? '-' : c === '|' ? '|' : 'x')).join('');
   const order = [...lines].sort((a, b) => first(a) - first(b));
+  /** @type {Map<string, { key: string, members: TripLine[] }>} the run going on, for each set of stops */
+  const runs = new Map();
+  /** @type {{ key: string, members: TripLine[] }[]} */
+  const done = [];
+  for (const l of order) {
+    const c = cover(l), k = key(l), run = runs.get(c);
+    if (run && run.key === k) { run.members.push(l); continue; }
+    if (run) done.push(run);
+    runs.set(c, { key: k, members: [l] });
+  }
+  done.push(...runs.values());
   /** @type {Map<string, number>} */
   const colours = new Map();
-  const out = [];
-  for (let a = 0; a < order.length;) {
-    let b = a;
-    while (b + 1 < order.length && key(order[b + 1]) === key(order[a])) b++;
-    if (b > a) {
-      const k = key(order[a]);
-      if (!colours.has(k)) colours.set(k, colours.size);
-      out.push({ members: order.slice(a, b + 1).map((l) => l.n), colour: /** @type {number} */ (colours.get(k)) });
-    }
-    a = b + 1;
-  }
-  return out;
+  return done.filter((r) => r.members.length > 1)
+    .sort((a, b) => first(a.members[0]) - first(b.members[0]))
+    .map((r) => {
+      if (!colours.has(r.key)) colours.set(r.key, colours.size);
+      return { members: r.members.map((l) => l.n), colour: /** @type {number} */ (colours.get(r.key)) };
+    });
 }

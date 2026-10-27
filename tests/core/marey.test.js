@@ -57,4 +57,13 @@ describe('pattern bands', () => {
     const bands = tribes(tripLines(grid, D, ['20270106'], [0, 1]));
     expect(bands.map((b) => [b.members, b.colour])).toEqual([[[0, 1], 0], [[3, 4], 0], [[5, 6], 1]]);
   });
+
+  it('a trip over other stops (a short trip) does not break a run; only a trip over the same stops with other times does (user 2026-10-27)', () => {
+    const three = [stop('A', 'q1'), stop('B', 'q2'), stop('C', 'q3')];
+    const grid = { stops: three, cols: [
+      col(['0235', '0300', '0347']), col(['0305', '0330', '0417']), col(['', '0308', '0323']), // a short trip starting in between
+      col(['0335', '0400', '0447']), col(['0405', '0430', '0517']),
+    ] };
+    expect(tribes(tripLines(grid, D, ['20270106'], [0, 1, 2])).map((b) => b.members)).toEqual([[0, 1, 3, 4]]);
+  });
 });
