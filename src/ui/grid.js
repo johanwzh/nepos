@@ -1457,6 +1457,7 @@ function commitEdit() {
       // A new time keeps the cell's note and dates
       if (prev && p.time !== '|') keepMarks(prev, p);
       grid.cols[ancC].cells[ancR] = p;
+      if (p.suffix && isTripEnd(ancR, ancC)) p.suffix = ''; // a and p only on the stops in between
     }
   }
   editBuf = '';
@@ -1801,6 +1802,8 @@ function onPaste(e) {
   text.replace(/\r?\n$/, '').split(/\r?\n/).forEach((line, dr) => line.split('\t').forEach((v, dc) => { if (v.trim() && parseCellInput(v.trim())) { lastR = Math.max(lastR, dr); lastC = Math.max(lastC, dc); } }));
   const addCols = Math.max(0, ancC + lastC + 1 - grid.cols.length), addRows = Math.max(0, ancR + lastR + 1 - grid.stops.length);
   if (!growGrid(addRows, addCols)) return;
+  /** @type {[number, number][]} */
+  const pasted = [];
   text.split(/\r?\n/).forEach((line, dr) => {
     if (!line) return;
     line.split('\t').forEach((val, dc) => {
@@ -1816,8 +1819,11 @@ function onPaste(e) {
       // A pasted time keeps the cell's note and dates, as a typed one does
       if (prev && p.time !== '|') keepMarks(prev, p);
       grid.cols[c].cells[r] = p;
+      if (p.suffix) pasted.push([r, c]);
     });
   });
+  // a and p only on the stops in between: not on a trip's first or last stop
+  for (const [r, c] of pasted) if (isTripEnd(r, c)) grid.cols[c].cells[r].suffix = '';
   render();
 }
 
@@ -1917,6 +1923,29 @@ function selRect() {
 }
 
 /** The timed cells (not |) in the selection. */
+/**
+ * Whether a time is its trip's first or last stop (the first or last time in the column): there a and p are either
+ * impossible or say nothing — only the stops in between can have them (user 2026-10-27). @param {number} r @param {number} c
+ */
+function isTripEnd(r, c) {
+  const cells = grid.cols[c]?.cells ?? [];
+  const timedAt = (/** @type {number} */ i) => !!cells[i]?.time && cells[i].time !== '|';
+  let first = -1, last = -1;
+  for (let i = 0; i < cells.length; i++) if (timedAt(i)) { if (first < 0) first = i; last = i; }
+  return r === first || r === last;
+}
+
+/** The selected times that can have a or p: not a trip's first or last stop. */
+function markableInSelection() {
+  const { r0, r1, c0, c1 } = selRect();
+  const out = [];
+  for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) {
+    const cell = locked(c) ? null : grid.cols[c]?.cells[r];
+    if (cell && cell.time && cell.time !== '|' && !isTripEnd(r, c)) out.push(cell);
+  }
+  return out;
+}
+
 function timedInSelection() {
   const { r0, r1, c0, c1 } = selRect();
   const out = [];
@@ -2021,10 +2050,13 @@ function showCtx(x, y, isDC = false) {
     // Boarding restrictions: ticked when every timed cell in the selection has it
     const timedSel = timedInSelection();
     const sfx = timedSel.map((c) => c.suffix || '');
+    // a and p: only on the stops in between (a trip's first and last stop are left out)
+    const markable = markableInSelection().map((c) => c.suffix || '');
     for (const [k, key] of /** @type {[string, string][]} */ ([['a', 'ctxSfxA'], ['p', 'ctxSfxP'], ['x', 'ctxSfxX']])) {
-      const on = k === 'x' ? timedSel.length > 0 && timedSel.every((c) => c.req || c.booking) : sfx.length > 0 && sfx.every((v) => v === k);
+      const list = k === 'x' ? sfx : markable;
+      const on = k === 'x' ? timedSel.length > 0 && timedSel.every((c) => c.req || c.booking) : list.length > 0 && list.every((v) => v === k);
       $(`gc-sfx-${k}`).textContent = (on ? '✓ ' : '    ') + t(k === 'x' ? 'ctxXWindow' : key);
-      $(`gc-sfx-${k}`).className = 'gci' + (sfx.length ? '' : ' dis');
+      $(`gc-sfx-${k}`).className = 'gci' + (list.length ? '' : ' dis');
     }
     $('gc-sfx-none').className = 'gci' + (sfx.some((v) => v) ? '' : ' dis');
     // Interpolating: between the times inside the selection (one cell selected: its whole column)
@@ -2323,9 +2355,9 @@ export function initGrid() {
     $(`gc-sfx-${k}`).addEventListener('click', () => {
       hideCtx();
       if (grid.readOnly) return;
-      const cells = timedInSelection();
       if (k === 'x') { openXOnSelection(); return; } // request stop or booking: the x window
-      else for (const cell of cells) cell.suffix = k === 'none' ? '' : k;
+      if (k === 'none') for (const cell of timedInSelection()) cell.suffix = '';
+      else for (const cell of markableInSelection()) cell.suffix = k; // not on a trip's first or last stop
       render();
     });
   }

@@ -162,19 +162,20 @@ describe('boarding restrictions from the right-click menu (user test 2026-10-17)
   const item = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
   beforeEach(() => { initGrid(); });
 
-  it('sets a, p or x on every timed cell in the selection, ticks it, and takes it away again', () => {
+  it('sets a or p on the selected stops in between (not a trip\'s first or last), ticks it, and takes it away again', () => {
+    loadGrid({ stops: [stop('A'), stop('B'), stop('C'), stop('D')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710'), cell('0720'), cell('0730')] }] });
     at(0, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
-    at(1, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
+    at(3, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
     document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     at(1, 0).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
     item('gc-sfx-a').click();
-    expect(grid.cols[0].cells.map((c) => c.suffix)).toEqual(['a', 'a']);
-    expect(grid.cols[0].cells[0].time).toBe('0700'); // the time stays
+    expect(grid.cols[0].cells.map((c) => c.suffix)).toEqual(['', 'a', 'a', '']); // the trip's ends are left out (2026-10-27)
+    expect(grid.cols[0].cells[1].time).toBe('0710'); // the time stays
     at(1, 0).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
     expect(item('gc-sfx-a').textContent).toContain('✓');
     expect(item('gc-sfx-p').textContent).not.toContain('✓');
     item('gc-sfx-none').click();
-    expect(grid.cols[0].cells.map((c) => c.suffix)).toEqual(['', '']);
+    expect(grid.cols[0].cells.map((c) => c.suffix)).toEqual(['', '', '', '']);
   });
 });
 

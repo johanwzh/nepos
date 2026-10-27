@@ -156,10 +156,32 @@ describe('a/p and x on a time', () => {
     expect(document.getElementById('fn-preview')?.textContent).toContain('https://t.no');
   });
 
+  it('a and p only on the stops in between: not on a trip\'s first or last stop (user 2026-10-27)', () => {
+    loadGrid({ stops: [stop('A'), stop('B'), stop('C')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710'), cell('0720')], note: '', dates: [] }] });
+    const ctx = (/** @type {number} */ r) => td(r, 0).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    ctx(0);
+    expect(document.getElementById('gc-sfx-a')?.className).toContain('dis');
+    expect(document.getElementById('gc-sfx-p')?.className).toContain('dis');
+    ctx(1);
+    expect(document.getElementById('gc-sfx-a')?.className).not.toContain('dis');
+    // the whole column selected: only the middle stop gets it
+    selectCell(0, 0);
+    press('ArrowDown', { shiftKey: true });
+    press('ArrowDown', { shiftKey: true });
+    td(1, 0).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    /** @type {HTMLElement} */ (document.getElementById('gc-sfx-p')).click();
+    expect(grid.cols[0].cells.map((c) => c.suffix)).toEqual(['', 'p', '']);
+    // typed on a first or last stop: the time stays, the a or p does not
+    selectCell(2, 0);
+    for (const k of ['0', '7', '2', '5', 'a']) press(k);
+    press('Enter');
+    expect(grid.cols[0].cells[2]).toMatchObject({ time: '0725', suffix: '' });
+  });
+
   it('keeps the request stop when the time is typed again', () => {
     selectCell(0, 0);
     for (const k of ['0', '7', '0', '5', 'p']) press(k);
     press('Enter');
-    expect(grid.cols[0].cells[0]).toMatchObject({ time: '0705', suffix: 'p', req: true });
+    expect(grid.cols[0].cells[0]).toMatchObject({ time: '0705', suffix: '', req: true }); // the p goes: a first stop has no a or p (2026-10-27)
   });
 });
