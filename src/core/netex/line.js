@@ -80,7 +80,11 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     const variantSjId = (base, v) => (v.main ? base : `${cs}:ServiceJourney:${uuid5(`${base}|calls:${v.calls.map((c) => c.ri).join(',')}`)}`);
 
     // One Route per table set (timetable structure spec §7); its JourneyPatterns are the distinct
-    // stop sequences of its trips.
+    // stop sequences of its trips. A pattern another table set already has (the same line in another season) is
+    // shared, not written again: Antu flags identical patterns (user 2026-10-27). A table set left with no pattern of
+    // its own writes no Route.
+    /** @type {Map<string, { jpId: string }>} pattern key (direction, stops, rules, destinations) → the first set's pattern */
+    const sharedJps = new Map();
     for (let di=0; di<(rs.tableSets||[]).length; di++) {
         const set = rs.tableSets[di];
         const setKey = set.uid && UUID_PATTERN.test(set.uid) ? set.uid : `${routeCode}-${di}`;
@@ -123,13 +127,14 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                         + (booked.some(Boolean) ? `|booking:${booked.join(',')}` : '')
                         // trips with other destinations need their own pattern
                         + (callDests.some(Boolean) ? `|dd:${callDests.map((d) => (d ? destKey(d) : '')).join(',')}` : '');
-                    const jpKey = `${di}:${jpStopList.map(s=>s.stopId??s.name).join(':')}${ruled}`;
-                    if (!jpMap.has(jpKey)) {
+                    const jpKey = `${set.direction ?? ''}:${jpStopList.map(s=>s.stopId??s.name).join(':')}${ruled}`;
+                    if (!jpMap.has(jpKey) && !sharedJps.has(jpKey)) {
                         const jpId = `${cs}:JourneyPattern:${uuid5(`${setKey}|${jpStopList.map(s=>s.stopId).join('|')}${ruled}`)}`;
                         jpMap.set(jpKey, { jpId, stopList:jpStopList, routeId, name: `${set.name}-${++jpN}` });
+                        sharedJps.set(jpKey, { jpId });
                     }
                     // The pattern gives the IDs; the times are this trip's own
-                    const { jpId } = jpMap.get(jpKey);
+                    const { jpId } = jpMap.get(jpKey) ?? /** @type {{ jpId: string }} */ (sharedJps.get(jpKey));
                     const stopList = jpStopList;
 
                     // Build ServiceJourney

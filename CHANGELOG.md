@@ -35,6 +35,8 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
     Nordic profile accepts neither yet.
   - A way to book needs its contact: by phone or text needs a phone number, online needs a web address.
   - Times that go backwards are an error, not a warning.
+  - Alighting only (a) on a trip's first stop, or boarding only (p) on its last, is an error: nobody could get on or off.
+  - Identical journey patterns are written once, also across table sets (seasons); the trips keep their IDs.
 - **Guaranteed interchanges have a maximum wait time** (1–60 minutes), asked for when you make one and changed from
   the right-click menu. It is exported as MaximumWaitTime; without one the export check warns.
 - **Save backups rotate:** `data/backups/` keeps the 10 newest backups of each line (and of the map's shapes); a

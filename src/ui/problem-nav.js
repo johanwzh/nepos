@@ -112,7 +112,7 @@ export function goToProblem(issue) {
     if (ri >= 0) { selectStopCell(ri); markHere(document.querySelector(`.g-td-name[data-ri="${ri}"]`), c === 'stop-missing' ? fill : fix); }
     return;
   }
-  if ((c === 'speed-over' || c.startsWith('booking-')) && issue.where?.row != null) {
+  if ((c === 'speed-over' || c === 'stop-no-use' || c.startsWith('booking-')) && issue.where?.row != null) {
     selectCell(issue.where.row, col);
     markHere(document.querySelector(`#tbl td[data-r="${issue.where.row}"][data-c="${col}"]`), fix);
     return;

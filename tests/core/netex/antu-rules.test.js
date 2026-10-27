@@ -104,3 +104,31 @@ describe('where a booking problem is (user 2026-10-25: "an inexplicable error ab
     expect(issues.find((x) => x.code === 'booking-method-phone')?.detail).toBe('line');
   });
 });
+
+describe('from the first Antu run (user 2026-10-27)', () => {
+  /** Two table sets (seasons) with the same trips. */
+  const twoSets = () => {
+    const { rs } = gridOf(miniErn());
+    const g0 = /** @type {any} */ (Object.values(rs.grids)[0]);
+    rs.tableSets.push({ id: 90, name: 'Sommer', uid: '5f0c2e1a-1111-4aaa-8bbb-0000000000ff', direction: rs.tableSets[0].direction });
+    rs.periods.push({ id: 91, setId: 90, calendarIds: [...rs.periods[0].calendarIds] });
+    rs.grids['91:90'] = JSON.parse(JSON.stringify(g0));
+    rs.grids['91:90'].cols.forEach((/** @type {any} */ c, /** @type {number} */ i) => { c.uid = `5f0c2e1a-2222-4aaa-8bbb-00000000000${i}`; });
+    return rs;
+  };
+
+  it('trips in two table sets with the same stops share one journey pattern and one Route (IDENTICAL_STOP_POINTS_IN_JOURNEY_PATTERNS)', () => {
+    const { line } = buildLine(twoSets());
+    expect(line.split('<JourneyPattern ').length - 1).toBe(1);
+    expect(line.split('<Route ').length - 1).toBe(1);
+    expect(line.split('<ServiceJourney ').length - 1).toBe(6);
+  });
+
+  it('warns when a/p leaves a stop with no use: a on the first stop, p on the last (JourneyPattern stop point without boarding or alighting)', () => {
+    const { rs, grid } = gridOf(miniErn());
+    grid.cols[1].cells[0].suffix = 'a';
+    grid.cols[2].cells[2].suffix = 'p';
+    const issues = check(rs).filter((i) => i.code === 'stop-no-use');
+    expect(issues.map((i) => [i.level, i.where?.column, i.where?.row])).toEqual([['error', 2, 0], ['error', 3, 2]]); // not allowed (user 2026-10-27)
+  });
+});

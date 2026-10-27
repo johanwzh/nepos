@@ -188,6 +188,14 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
         if (col.block && !col.cells.some(timed)) { addIssue('error', 'block-empty', { ...r, where: { ...where, column: ci + 1 } }); return; }
         if (!col.cells.some(timed)) return;
         const at = { ...where, column: (col.parentCi ?? ci) + 1 };
+        // a on a trip's first stop or p on its last leaves nobody getting on or off there (Antu: "JourneyPattern stop
+        // point without boarding or alighting"; user 2026-10-27)
+        const calls = journeyStops(grid, col);
+        if (calls.length >= 2 && col.parentCi == null) { // a block's trips: said once, on the first trip
+          if (calls[0].depCell.suffix === 'a') addIssue('error', 'stop-no-use', { ...r, where: { ...at, row: calls[0].ri } });
+          const last = calls[calls.length - 1];
+          if ((last.arrCell ?? last.depCell).suffix === 'p' || last.depCell.suffix === 'p') addIssue('error', 'stop-no-use', { ...r, where: { ...at, row: last.ri } });
+        }
         // A guarantee says little without how long the trip waits (user 2026-10-24; Antu INTERCHANGE_2/3)
         if (col.cells.some((/** @type {any} */ c) => c?.interchange?.type === 'guaranteed' && !c.interchange.maxWait)) addIssue('warning', 'ix-no-wait' /* none, or 0 minutes (user 2026-10-26) */, { ...r, where: at });
         // A block's trips share their parent's problems: each is said once
