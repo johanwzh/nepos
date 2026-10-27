@@ -40,10 +40,10 @@ describe('the visual timetable', () => {
     expect(document.body.classList.contains('marey-on')).toBe(false);
   });
 
-  it('draws the rows, a dashed skip with a tick for a pass, and a band for the two trips that share a pattern', () => {
+  it('draws the rows, a dashed skip (no marker) for a pass, and a band for the two trips that share a pattern', () => {
     altV();
     expect([...document.querySelectorAll('#marey .mr-row-name')].map((t) => t.textContent)).toEqual(['A', 'B', 'C']);
-    expect(document.querySelectorAll('#marey .mr-pass')).toHaveLength(1);
+    expect(document.querySelectorAll('#marey .mr-pass')).toHaveLength(0); // a passed stop has no marker: just the dashed line (user 2026-10-27)
     expect(document.querySelectorAll('#marey .mr-skip')).toHaveLength(1);
     expect(document.querySelectorAll('#marey .mr-tribe')).toHaveLength(1);
   });

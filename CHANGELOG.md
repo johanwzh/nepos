@@ -6,7 +6,7 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 - **Visual timetable (Marey chart):** **Alt+V** shows the open table as a chart in place of the timetable — the rows down
   the side (spaced by distance or evenly), time along the top, every trip a line through its times. A stop a trip passes
-  is a dashed line with a tick; runs of trips with the same pattern share a coloured band, so the trips that differ
+  is a straight dashed line to its next stop, with no marker; runs of trips with the same pattern share a coloured band, so the trips that differ
   stand out; interchanges and how long a trip waits are drawn. Day, week or month, with weekdays to highlight; click a
   trip to pick it out. Scroll to zoom in time, drag to move, double-click a trip to zoom to it. Alt+V again goes back.
 

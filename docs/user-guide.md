@@ -224,7 +224,7 @@ Nederst i linjenavigatoren står **kraftverktøyene**. Å se dem endrer ingentin
 
 **Alt+V** viser tabellen du står i som et diagram (Marey-diagram) i stedet for rutetabellen: radene nedover (etter avstand
 mellom stoppene, eller jevnt), klokken bortover, og hver tur som en linje gjennom tidene sine. Bratt er raskt, flatt er
-venting. Et stopp turen passerer, er en stiplet linje med en strek; turer med samme mønster deler et farget bånd, så de som
+venting. Et stopp turen passerer, har ingen markør: linjen går stiplet rett til neste stopp; turer med samme mønster deler et farget bånd, så de som
 skiller seg ut, synes. Velg dag, uke eller måned, fremhev ukedager, og klikk en tur for å fremheve den. Rull for å zoome,
 dra for å flytte, dobbeltklikk en tur for å zoome til den. **Alt+V** igjen går tilbake.
 

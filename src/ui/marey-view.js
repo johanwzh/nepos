@@ -151,7 +151,6 @@ function draw() {
     const g = el('g', { class: `mr-trip${on ? ' mr-lit' : ''}${hiOn && !on ? ' mr-faded' : ''}` }, plot);
     for (const s of l.segs) el('line', { x1: X(s.a.m), y1: Y(s.a.r), x2: X(s.b.m), y2: Y(s.b.r), class: s.skip ? 'mr-seg-line mr-skip' : 'mr-seg-line' }, g);
     for (const s of l.stops) el('circle', { cx: X(s.m), cy: Y(s.r), r: on ? 3.6 : 3, class: 'mr-dot' }, g);
-    for (const p of l.passes) el('line', { x1: X(p.m), x2: X(p.m), y1: Y(p.r) - 7, y2: Y(p.r) + 7, class: 'mr-pass' }, g);
     const hit = el('polyline', { points: l.stops.map((s) => `${X(s.m)},${Y(s.r)}`).join(' '), class: 'mr-hit' }, g);
     hit.addEventListener('mousemove', (e) => {
       const me = /** @type {MouseEvent} */ (e);
