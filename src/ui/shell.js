@@ -2,6 +2,7 @@
 // bar, the empty-state placeholder, the project name popover and the message dialog.
 // Ported from Nepos 1.5.7 (nepos.html lines 2014–2066, 3407–3568, 3824–3908) and adapted.
 import { toggleDestColumns } from './dest-columns.js';
+import { toggleMarey } from './marey-view.js';
 import { app } from './state.js';
 import { t, setLang } from '../i18n/strings.js';
 import { writeSettings } from '../project/settings.js';
@@ -355,6 +356,8 @@ export function initShell() {
     if (e.key.toLowerCase() === 'm') { if (curPage === 'edit') { e.preventDefault(); e.stopPropagation(); togglePanel('right'); } return; }
     // The destination columns, likewise (destination displays spec)
     if (e.key.toLowerCase() === 'd') { if (curPage === 'edit') { e.preventDefault(); e.stopPropagation(); toggleDestColumns(); } return; }
+    // The visual timetable (Marey chart, 2.5): in place of the timetable
+    if (e.key.toLowerCase() === 'v') { if (curPage === 'edit' && app.routeState) { e.preventDefault(); e.stopPropagation(); toggleMarey(); } return; }
     const view = byDigit[e.key];
     if (view) { e.preventDefault(); e.stopPropagation(); setPage(view); }
   }, true);
