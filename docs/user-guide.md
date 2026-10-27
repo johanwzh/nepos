@@ -132,8 +132,8 @@ turen kjører.
   du under **Ressurser**. En tur som kopieres med intervall, får ikke med seg kjøretøyet.
 - Dagkoder ryddes selv: DX76 blir DX67, 1234567 blir D. Ctrl+C / Ctrl+V kopierer en dagkode til en annen kolonne.
 - **Flere kolonner:** Shift+klikk eller Shift+piltast i dagkode-raden velger flere kolonner. F7 (eller høyreklikk →
-  merknad) gir alle samme merknad, og Ctrl+V limer en dagkode inn i alle. **×** på en av dem, eller **Delete**, sletter
-  alle (Nepos spør én gang). Det samme med flere stopp: Shift+klikk eller Shift+piltast i stoppkolonnen, så **×**.
+  merknad) gir alle samme merknad, og Ctrl+V limer en dagkode inn i alle. **×** på en av dem, **Delete** eller høyreklikk →
+  **Slett de valgte kolonnene** sletter alle (Nepos spør én gang). Det samme med flere stopp: Shift+klikk eller Shift+piltast i stoppkolonnen, så **×**.
 - **Merknadsraden** (prikkene og 📅 over dagkodene) kan velges: klikk en celle, Shift+klikk for flere, dobbeltklikk eller
   Enter for merknaden. Ctrl+C kopierer kolonnens merknad og datoer, Ctrl+V setter dem på de valgte kolonnene.
 - Stoppkolonnen og radene øverst står fast når du blar, og cellen du står i holdes alltid synlig.
@@ -198,7 +198,8 @@ På en dagkode:
   klokkeslett** (når bestille og siste bestillingstid) eller **som minst … før avgang**; **som mest før** kan settes i tillegg.
   Tider som «1 d 4 t» settes med hjulet (Shift: timer) eller ved å klikke og skrive. Skjemaet sier fra om ett steg om
   gangen, og **Bruk** venter til bestillingen er i orden.
-- **Hele turen:** velg turen i merknadsraden og trykk F8. Turen får ☎ ved siden av 📅. En tur kan ha bestilling, men
+- **Hele turen:** velg turens dagkode (eller cellen i merknadsraden) og trykk F8, eller høyreklikk dagkoden →
+  **Bestilling for turen…**. Turen får ☎ ved siden av 📅. En tur kan ha bestilling, men
   ikke «stopper ved behov».
 - **Hele linjen:** ☎-knappen til høyre i linjens merknadslinje.
 - Hvert nivå er komplett i seg selv; et nytt starter som en kopi av nivået over. En bestillingstur eller -linje gir

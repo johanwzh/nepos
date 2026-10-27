@@ -2,61 +2,66 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
-## 2.4.0 — not released yet
+## 2.4.0 — 2026-10-27
 
-- **Booking and request stops:** a time can carry a request stop or a booking (the **x**), set from the new x window
-  (F8, or right-click → Stopper ved behov / bestilling…) on one or many selected times; x is never typed. The booking
-  form has phone, e-mail, web, who can book, when to book, how (several), when to buy (several), latest booking time,
-  how long before at least and at most, and a booking note. A whole trip gets its booking in the note row (F8 there; ☎
-  beside 📅), the whole line in the line details (☎ at the end of the line's note). Each level is complete on its own;
-  a new one starts as a copy of the level above. In NeTEx: BookingArrangements and RequestStop on the stop point,
-  FlexibleServiceProperties on the trip. The line's booking is written on every trip for now, until Entur says how a
-  fixed line where every trip is booked should be delivered.
-- **a/p and x together** on one time (alighting only and on request, for example). Typing `ap` is refused: that is `|`.
-- **Note letters:** a time's note and dates show as a letter beside it (b, c, d … skipping a, p and x), the same note
-  the same letter, in place of the small triangle. No hover texts in the timetable any more: the bar under it shows
-  the selected time's note, dates, boarding rule, request stop and booking in full.
-- **Copying carries everything:** Ctrl+C / Ctrl+V inside Nepos copies the whole cell (time, a/p, x and booking, note,
-  dates). **Ctrl+Shift+V = paste special:** choose times, alighting/boarding, booking/request stop and/or note and
-  dates (in the note row: note, dates, booking). Text from other programs still brings times and a/p only.
-- **Power tools:** a toolbox at the bottom of the line navigator, always there. Turning a tool on (Alt+J, Alt+I) changes
-  what the mouse and keys do and locks the rest of the page (Save and Discard still work); Esc turns it off. **Time
-  shifter** (the jog, no longer on the right-click menu): drag down for later times; its +N counts the current selection.
-- **Virtual intervals** (power tool): drag a trip to the right to repeat it every 60, 30, 20, 15, 12 or 10 minutes (one
-  more column per step), or further for every 6–1 minutes; drop at one step to type the interval and last departure.
-  The table shows the first trip, one column per minute of the hour (`35`, `05`) and the last trip; the export writes
-  every trip in full. The last trip's own jog moves the end by the interval. Everything follows the first trip; a
-  block is locked and framed, and **Unpack block** turns it into ordinary columns. Copy at intervals stays for other
-  intervals (40 minutes) and suggests the new tool when it fits. Stored as one ERN record, `#INT`.
-- **Checked against Entur's validator (Antu) before export:**
-  - A booking's deadline is **by a time** (when to book and the latest booking time) **or at least some time before
-    departure**, never both; the form offers one or the other.
-  - "When to book" no longer offers "at the time of travel", and "no ticket needed" is gone from "when to buy"; the
-    Nordic profile accepts neither yet.
-  - A way to book needs its contact: by phone or text needs a phone number, online needs a web address.
-  - Times that go backwards are an error, not a warning.
-  - Alighting only (a) on a trip's first stop, or boarding only (p) on its last, is an error: nobody could get on or off.
-  - Identical journey patterns are written once, also across table sets (seasons); the trips keep their IDs.
-- **Guaranteed interchanges have a maximum wait time** (1–60 minutes), asked for when you make one and changed from
-  the right-click menu. It is exported as MaximumWaitTime; without one the export check warns.
-- **Save backups rotate:** `data/backups/` keeps the 10 newest backups of each line (and of the map's shapes); a
-  deleted line's backup and format-upgrade copies are never removed.
+**Booking and request stops**
+
+- **Request stop or booking on a time (the x):** select one or many times and press **F8** (or right-click → Request
+  stop / booking…). One dialog: **None**, **Stops on request** or **Booking**, opening on what the time already has, so
+  editing a booking is F8, change, Apply. x is never typed.
+- **For a whole trip and for the line:** F8 on a day code (or right-click → Booking for the trip…), and the ☎ button at
+  the end of the line's note. Each level is complete on its own; a new one starts as a copy of the level above.
+- **The booking form goes top to bottom:** who can book, how (at least one way), the contact those ways need (a phone
+  for calls and text messages, a web address for online), the deadline — **by a time** (when to book and the latest
+  booking time) or **at least … before departure**, with **at most … before** above it — and a note. It checks one step
+  at a time and Apply waits until the booking is right. Durations ("1 d 4 h") are set with a dial (Shift: hours) or
+  typed. Only values Entur's validator accepts are offered.
+- **a/p and x together** on one time. a and p only go on the stops in between: not on a trip's first or last stop.
+- **Note letters:** a time's note and dates show as a letter beside it (b, c, d … skipping a, p and x), the same note the
+  same letter, in place of the small triangle. The bar under the timetable shows the selected time's note, dates,
+  boarding rule, request stop, booking and interchange wait in full; the timetable has no hover texts.
+- **Copying carries everything:** Ctrl+C / Ctrl+V inside Nepos copies the whole cell. **Ctrl+Shift+V = paste special:**
+  choose times, alighting/boarding, booking/request stop and/or note and dates (in the note row: note, dates, booking).
+- In NeTEx: RequestStop and BookingArrangements on the stop point, FlexibleServiceProperties on the trip. The line's
+  booking is written on every trip for now, until Entur says how a fixed line where every trip is booked is delivered.
+
+**Power tools**
+
+- **A toolbox at the bottom of the line panel** (Spesialverktøy / Power tools). Turning a tool on (Alt+J, Alt+I) changes
+  what the mouse and keys do and locks the rest of the page (Save and Discard still work); Esc or ✕ turns it off.
+- **Time shifter** (the jog, no longer on the right-click menu): a box above the calendar row with a dial that moves the
+  selected times — drag down for later, Shift for ten minutes; its +N counts the current selection.
+- **Virtual intervals:** drag a trip (or its day code) to the right to repeat it every 60, 30, 20, 15, 12 or 10 minutes,
+  one more column per step, or further for every 6–1 minutes; drop at one step to type the interval and last
+  departure. The table shows the first trip, one column per minute of the hour (`35`, `05`) with the first trip's marks,
+  and the last trip, whose own dial moves the end by the interval. A block is at least an hour (two hours when hourly),
+  follows its first trip in everything, is locked (also its destinations) and marked by a line in the day-code row;
+  **Unpack block** turns it into ordinary columns. The export writes every trip in full. Copy at intervals stays for
+  other intervals (40 minutes) and suggests the new tool when it fits.
+
+**Checked before export, as Entur's validator (Antu) checks**
+
+- Booking rules (deadline, contact for each way to book); times that go backwards and a/p that leaves a stop with no
+  use are errors; problems say where they are and take you there.
+- **Guaranteed interchanges wait up to 0–60 minutes** ("Waits up to…" on the right-click menu), exported as
+  MaximumWaitTime; 0 or none is a warning.
+- A warning when two trips run the same times at the same stops on a shared day (often a block over another column).
+- Identical journey patterns are written once, also across table sets (seasons); the trips keep their IDs.
+
+**The rest**
+
+- **Oversikt, the project's first page:** what needs you today (lines ending within 30 days, lines with errors, lines
+  changed since export), what is coming (Entur's 120 days, lines not exported for half a year, warnings), every line's
+  validity against 30, 60, 90 and 120 days, and the network of all exported lines on one map. The tab right of Eksport,
+  Alt+6. Exports are remembered (`data/exports.json`).
+- **Problems grouped on the export page:** the same problem on many trips is one row with a count.
 - **Delete several columns or rows at once:** select a run of day codes or stops (Shift+click or Shift+arrows), then the
-  × on one of them (or Delete in the day-code row). One question for all.
-- **Oversikt, the project's first page:** what needs you today, in plain sentences: a line that stops running within 30
-  days, a line with errors (grouped by kind), lines changed since their last export. Under "Snart": lines ending within
-  Entur's 120 days, lines not exported for half a year, warnings. Then every line's validity against the 30, 60, 90 and
-  120-day marks, and the network of all exported lines on one map (each stretch once, thicker where more trips run,
-  red where a line has errors). The tab right of Eksport, Alt+6.
-- **Exports are remembered** (`data/exports.json`): when each line was last exported, and whether it changed since.
-- **Problems grouped on the export page:** the same problem on many trips of a line is one row with a count, which
-  opens to the single problems, so the export button stays within reach.
-- **Help → Delivery to Entur** (was Contact): where to upload the exported files (Entur partner, Timetables), that
-  the project's codespace must match the one Entur gave you, and whom to contact when organisations or stop places
-  are missing.
-- **North up:** the map has a compass button that turns a rotated or tilted map back to north and flat; the map's
-  buttons speak the app's language.
-- **The NeTEx files say where they come from:** the PublicationDelivery Description is "Created with Nepos <version>".
+  × on one of them, Delete, or right-click → Delete the selected columns / rows.
+- **Save backups rotate:** `data/backups/` keeps the 10 newest backups of each line.
+- **Right-click menus** regrouped; "Clear" is "Clear cell". Time cells keep one width, with the marks right after the time.
+- **Help → Delivery to Entur:** where to upload, that the codespace must match, whom to ask when something is missing.
+- **North up:** a compass button on the map; the map's buttons speak the app's language.
+- The NeTEx files say "Created with Nepos 2.4.0".
 
 ## 2.3.0 — 2026-10-20
 
