@@ -45,13 +45,6 @@ describe('trip lines', () => {
     expect(l?.passes).toEqual([{ r: 1, m: 490 }]);
   });
 
-  it('a stop carries its boarding restriction: a = alighting only, p = boarding only', () => {
-    const g = { stops: rows, cols: [col(['0700', '0710', '0720', '0730'])] };
-    g.cols[0].cells[1].suffix = 'a';
-    g.cols[0].cells[2].suffix = 'p';
-    expect(tripLines(g, D, ['20270106'], y)[0].stops.map((s) => s.use)).toEqual(['', 'a', 'p', '']);
-  });
-
   it('starts at its first time and ends at its last', () => {
     expect(tripLines(grid, D, ['20270106'], y).find((x) => x.n === 2)?.stops.map((s) => s.r)).toEqual([1, 2]);
   });

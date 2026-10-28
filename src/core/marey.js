@@ -60,7 +60,7 @@ const minutes = (c) => (c?.time && c.time !== '|' ? (c.dayOffset || 0) * 1440 + 
 
 /**
  * @typedef {{ n: number, gen: boolean, dayCode: string, days: string[], cells: (number | '|' | null)[],
- *   stops: { r: number, m: number, use?: string }[], segs: { a: { r: number, m: number }, b: { r: number, m: number }, skip: boolean }[],
+ *   stops: { r: number, m: number }[], segs: { a: { r: number, m: number }, b: { r: number, m: number }, skip: boolean }[],
  *   passes: { r: number, m: number }[], ix: { r: number, toN: number, toR: number, type: string, maxWait: number | null }[] }} TripLine
  */
 
@@ -81,8 +81,7 @@ export function tripLines(grid, calendarDays, days, y) {
     const runs = tripDays(calendarDays, col).filter((d) => inPeriod.has(d));
     if (!runs.length) return;
     const cells = (col.cells ?? []).map((/** @type {any} */ c) => (c?.time === '|' ? '|' : minutes(c)));
-    // use: 'a' alighting only, 'p' boarding only, '' both
-    const stops = cells.map((m, r) => (typeof m === 'number' ? { r, m, use: col.cells[r]?.suffix || '' } : null)).filter((s) => s !== null);
+    const stops = cells.map((m, r) => (typeof m === 'number' ? { r, m } : null)).filter((s) => s !== null);
     if (stops.length < 2) return;
     const segs = [], passes = [];
     for (let k = 1; k < stops.length; k++) {

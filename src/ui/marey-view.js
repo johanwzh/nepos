@@ -150,14 +150,7 @@ function draw() {
     const on = lit(l);
     const g = el('g', { class: `mr-trip${on ? ' mr-lit' : ''}${hiOn && !on ? ' mr-faded' : ''}` }, plot);
     for (const s of l.segs) el('line', { x1: X(s.a.m), y1: Y(s.a.r), x2: X(s.b.m), y2: Y(s.b.r), class: s.skip ? 'mr-seg-line mr-skip' : 'mr-seg-line' }, g);
-    for (const s of l.stops) {
-      const cx = X(s.m), cy = Y(s.r), r = on ? 3.6 : 3;
-      if (!s.use) { el('circle', { cx, cy, r, class: 'mr-dot' }, g); continue; }
-      // A restriction: a ring with a slash that sticks out down-right (alighting only, a) or up-left (boarding only, p)
-      const d = r * Math.SQRT1_2, out = s.use === 'a' ? [1, 1.9] : [1.9, 1];
-      el('circle', { cx, cy, r, class: 'mr-use' }, g);
-      el('line', { x1: cx - d * out[0], y1: cy - d * out[0], x2: cx + d * out[1], y2: cy + d * out[1], class: 'mr-use-slash' }, g);
-    }
+    for (const s of l.stops) el('circle', { cx: X(s.m), cy: Y(s.r), r: on ? 3.6 : 3, class: 'mr-dot' }, g);
     const hit = el('polyline', { points: l.stops.map((s) => `${X(s.m)},${Y(s.r)}`).join(' '), class: 'mr-hit' }, g);
     hit.addEventListener('mousemove', (e) => {
       const me = /** @type {MouseEvent} */ (e);

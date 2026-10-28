@@ -1544,8 +1544,6 @@ body.marey-on .marey { display: block; }
 .mr-lit .mr-seg-line { stroke-width: 2.8; }
 .mr-skip { stroke-dasharray: 6 5; opacity: .5; }
 .mr-dot { fill: currentColor; }
-.mr-use { fill: var(--bg-panel); stroke: currentColor; stroke-width: 1.3; }
-.mr-use-slash { stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; }
 .mr-hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
 .mr-ix { stroke-width: 2.4; stroke-dasharray: 2 3; }
 .mr-wait { stroke-width: 6; stroke-linecap: round; opacity: .55; }
