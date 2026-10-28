@@ -51,15 +51,38 @@ describe('the power toolbox', () => {
     expect(activeTool()).toBe('');
   });
 
-  it('while a tool is on, typing, Ctrl+V and the context menu do nothing', () => {
+  it('while Virtual intervals is on, typing, Ctrl+V and the context menu do nothing', () => {
     selectCell(0, 0);
-    tool('jog').click();
+    tool('intervals').click();
     for (const k of ['0', '9', '0', '0']) press(k);
     press('Enter');
     expect(grid.cols[0].cells[0].time).toBe('0700');
     const td = /** @type {HTMLElement} */ (document.querySelector('td[data-r="0"][data-c="0"]'));
     td.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
     expect(/** @type {HTMLElement} */ (document.getElementById('grid-ctx')).style.display).not.toBe('block');
+  });
+
+  it('while the Tidsforskyver is on, the cells stay editable: typing and the cell menu work (hypothesis, user 2026-10-28)', () => {
+    selectCell(0, 0);
+    tool('jog').click();
+    for (const k of ['0', '6', '5', '5']) press(k);
+    press('Enter');
+    expect(grid.cols[0].cells[0].time).toBe('0655');
+    expect(activeTool()).toBe('jog');
+    const td = /** @type {HTMLElement} */ (document.querySelector('td[data-r="0"][data-c="0"]'));
+    td.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
+    expect(/** @type {HTMLElement} */ (document.getElementById('grid-ctx')).style.display).toBe('block');
+  });
+
+  it('Esc while typing a time cancels the typing and keeps the Tidsforskyver on', () => {
+    selectCell(0, 0);
+    tool('jog').click();
+    press('0'); press('9');
+    press('Escape');
+    expect(activeTool()).toBe('jog');
+    expect(grid.cols[0].cells[0].time).toBe('0700');
+    press('Escape');
+    expect(activeTool()).toBe('');
   });
 
   it('the jog: a big dial in a box in the middle of the page (not in the panel), moving the selected times', () => {
@@ -176,5 +199,68 @@ describe('the power toolbox', () => {
 
   it('the context menu no longer has the jog', () => {
     expect(document.getElementById('gc-nudge')).toBeNull();
+  });
+});
+
+describe('+ and − step the selected times one minute (user 2026-10-28)', () => {
+  const times = () => grid.cols[0].cells.map((c) => c.time);
+  const td = (/** @type {number} */ r) => /** @type {HTMLElement} */ (document.querySelector(`td[data-r="${r}"][data-c="0"]`));
+
+  it('+ moves the selection a minute later and turns the Tidsforskyver on; its readout counts the steps', () => {
+    selectCell(0, 0);
+    press('ArrowDown', { shiftKey: true });
+    press('+');
+    press('+');
+    expect(times()).toEqual(['0702', '0712']);
+    expect(activeTool()).toBe('jog');
+    expect(document.querySelector('.ts-box .pt-read')?.textContent).toBe('+2 min');
+  });
+
+  it('− moves it a minute earlier', () => {
+    selectCell(1, 0);
+    press('-');
+    expect(times()).toEqual(['0700', '0709']);
+  });
+
+  it('the moved cells flash: one colour for +, another for −', () => {
+    selectCell(1, 0);
+    press('+');
+    expect(td(1).classList.contains('g-flash-up')).toBe(true);
+    press('-');
+    expect(td(1).classList.contains('g-flash-down')).toBe(true);
+    expect(td(1).classList.contains('g-flash-up')).toBe(false);
+    expect(td(0).classList.contains('g-flash-down')).toBe(false);
+  });
+
+  it('past midnight the day offset follows', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', note: '', dates: [], cells: [cell('2350'), cell('2359')] }] });
+    selectCell(1, 0);
+    press('+');
+    expect(grid.cols[0].cells[1]).toMatchObject({ time: '0000', dayOffset: 1 });
+  });
+
+  it('copy a time down and step it: the use case', () => {
+    selectCell(1, 0);
+    press('Delete');
+    selectCell(0, 0);
+    press('c', { ctrlKey: true });
+    selectCell(1, 0);
+    const ev = new Event('paste', { bubbles: true, cancelable: true });
+    /** @type {any} */ (ev).clipboardData = { getData: () => '0700' };
+    document.dispatchEvent(ev);
+    press('+'); press('+'); press('+');
+    expect(times()).toEqual(['0700', '0703']);
+    press('ArrowDown'); // a new selection: the readout starts again
+    expect(activeTool()).toBe('jog');
+  });
+
+  it('does nothing in Virtual intervals, or with Ctrl (browser zoom)', () => {
+    selectCell(0, 0);
+    press('+', { ctrlKey: true });
+    expect(times()).toEqual(['0700', '0710']);
+    tool('intervals').click();
+    press('+');
+    expect(times()).toEqual(['0700', '0710']);
+    expect(activeTool()).toBe('intervals');
   });
 });

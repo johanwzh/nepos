@@ -18,7 +18,10 @@ import { interpolateTime, extrapolateTime, speedUnit, toKmh, interpolateSpan, fi
 import { openDayCodeHelper } from './day-code-helper.js';
 import { sortColumns } from '../core/column-sort.js';
 import { openCopyInterval } from './copy-interval.js';
-import { activeTool, setJogHandler, onToolChange, setUnpackHandler, notifySelection } from './power-tools.js';
+import { activeTool, setJogHandler, onToolChange, setUnpackHandler, notifySelection, jogStep, setEscGuard } from './power-tools.js';
+
+/** The tools that lock the cells: all but the Tidsforskyver, which leaves them editable (hypothesis, user 2026-10-28). */
+const toolLocksCells = () => !!activeTool() && activeTool() !== 'jog';
 import { withBlocks, withoutBlocks, freeUid, DRAG_INTERVALS, blockTrips, canBeBlock, dragResult, snapSpan, firstDeparture, MIN_SPAN, MAX_SPAN, minSpan } from '../core/blocks.js';
 import { DRAG_STEP_PX, openBlockDialog, openHowOften } from './interval-tool.js';
 import { jogDial } from './jog/jogDial.js';
@@ -477,6 +480,25 @@ function restRender() {
   if (document.body.classList.contains('scrubbing')) { jogTimer = setTimeout(restRender, JOG_REST); return; }
   jogTimer = null;
   render();
+}
+
+/** The cells the last jog step moved. @type {{ r0: number, r1: number, c0: number, c1: number } | null} */
+let lastMoved = null;
+
+/** A short flash on the times the last step moved, so a + or − is seen. @param {string} cls */
+function flashMoved(cls) {
+  if (!lastMoved) return;
+  const { r0, r1, c0, c1 } = lastMoved;
+  lastMoved = null;
+  for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) {
+    const td = /** @type {HTMLElement | null} */ (document.querySelector(`#tbl td[data-r="${r}"][data-c="${c}"]`));
+    const cell = grid.cols[c]?.cells[r];
+    if (!td || !cell?.time || cell.time === '|') continue;
+    td.classList.remove('g-flash-up', 'g-flash-down');
+    void td.offsetWidth; // restart the animation
+    td.classList.add(cls);
+    td.addEventListener('animationend', () => td.classList.remove(cls), { once: true });
+  }
 }
 
 function patchTimes(r0, r1, c0, c1) {
@@ -1513,7 +1535,7 @@ function onKeyDown(e) {
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   // While a power tool is on, only that tool works: no typing, pasting or editing keys (selecting still works)
-  if (activeTool() && toolBlocksKey(e)) { e.preventDefault(); return; }
+  if (toolLocksCells() && toolBlocksKey(e)) { e.preventDefault(); return; }
   if (ixMode) { if (e.key === 'Escape') { e.preventDefault(); exitIx(); } return; }
   if ($('grid-ctx').style.display === 'block') { if (e.key === 'Escape') hideCtx(); return; }
   if (inDest) { keyDest(e); return; }
@@ -1641,6 +1663,14 @@ function keyNav(e) {
     case 'Enter': e.preventDefault(); startEdit(''); break;
     case 'Delete': case 'Backspace': e.preventDefault(); clearSelection(); render(); break;
     case '|': e.preventDefault(); grid.cols[ancC].cells[ancR] = { time: '|', dayOffset: 0, suffix: '', interchange: null }; render(); break;
+    // + and − step the selection a minute, through the Tidsforskyver (user 2026-10-28)
+    case '+': case '-':
+      if (e.ctrlKey || e.metaKey || e.altKey || grid.readOnly || activeTool() === 'intervals') break;
+      e.preventDefault();
+      lastMoved = null; // only what this step moves flashes
+      jogStep(e.key === '+' ? 1 : -1);
+      flashMoved(e.key === '+' ? 'g-flash-up' : 'g-flash-down');
+      break;
     default:
       if (e.key.length === 1 && /\d/.test(e.key) && !e.ctrlKey && !e.metaKey) { e.preventDefault(); startEdit(e.key); }
   }
@@ -1795,7 +1825,7 @@ function pasteStop(id) {
 
 /** Paste uses the paste event, so the browser never asks for clipboard permission. @param {ClipboardEvent} e */
 function onPaste(e) {
-  if (!grid.active || grid.readOnly || currentPage() !== 'edit' || inStopEdit || activeTool()) return;
+  if (!grid.active || grid.readOnly || currentPage() !== 'edit' || inStopEdit || toolLocksCells()) return;
   // Only into the times: never while the day-code or trip-number row has the keyboard
   if (inDC || dcEdit || inTN || tnEdit || inLB || inDest || document.querySelector('.float-box')) return;
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;
@@ -2042,7 +2072,7 @@ function interpolationFills() {
 
 /** @param {number} x @param {number} y @param {boolean} [isDC] */
 function showCtx(x, y, isDC = false) {
-  if (activeTool()) return; // no menus while a power tool is on
+  if (toolLocksCells()) return; // no menus while a power tool is on (the Tidsforskyver leaves them)
   const isStop = ctxIsStop && !isDC;
   $('gctx-time').style.display = !isStop && !isDC ? '' : 'none';
   $('gctx-stop').style.display = isStop ? '' : 'none';
@@ -2256,7 +2286,9 @@ export function initGrid() {
       let lo = c0, hi = c1;
       for (const c of targets) { lo = Math.min(lo, c); while (grid.cols[hi + 1]?.virt) hi++; }
       patchTimes(r0, r1, lo, hi);
+      lastMoved = { r0, r1, c0: lo, c1: hi };
     });
+    setEscGuard(() => editing || dcEdit || tnEdit || inStopEdit);
     // Turning a tool off: the redraw the jog was waiting for happens now
     onToolChange(() => {
       commitEdit(); commitDayCode(); commitTripNo(); // a half-typed time lands where it was typed

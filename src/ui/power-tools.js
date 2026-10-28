@@ -1,6 +1,7 @@
 // The power toolbox (power tools spec 2026-10-24): at the bottom of the line navigator panel, always visible, like a
 // Photoshop toolbox. Showing the tools changes nothing; turning a tool on changes the editing context, and while a tool
-// is on only that tool works in the grid (typing, pasting and the menus are off). One tool at a time; Esc turns it off.
+// is on only that tool works in the grid (typing, pasting and the menus are off) — except the Tidsforskyver, which leaves
+// the cells editable (hypothesis, user 2026-10-28: + and − turn it on). One tool at a time; Esc turns it off.
 // Tools: the Jog (time shift, moved here from the context menu) and Virtual intervals.
 import { t } from '../i18n/strings.js';
 import { jogDial } from './jog/jogDial.js';
@@ -48,6 +49,8 @@ let unpackHandler = () => {};
 /** What a jog notch does (the grid moves its selected times). @type {(minutes: number) => void} */
 let jogHandler = () => {};
 let keysWired = false;
+/** True while the grid holds an Esc of its own (a time being typed): Esc cancels that, not the tool. */
+let escGuard = () => false;
 
 /** The tool that is on ('' for none). */
 export const activeTool = () => active;
@@ -61,6 +64,29 @@ export function setJogHandler(fn) { jogHandler = fn; }
 /** @param {() => void} fn */
 export function setUnpackHandler(fn) { unpackHandler = fn; }
 
+/** @param {() => boolean} fn */
+export function setEscGuard(fn) { escGuard = fn; }
+
+/** One step of the Tidsforskyver: counted in its readout, applied by the grid. @param {number} d minutes */
+function step(d) {
+  clearTimeout(fadeTimer);
+  if (jogRead) {
+    jogRead.classList.remove('pt-fade');
+    total += d;
+    jogRead.textContent = `${total > 0 ? '+' : ''}${total} min`;
+  }
+  jogHandler(d);
+}
+
+/**
+ * + and − in the timetable (user 2026-10-28): turn the Tidsforskyver on if it is not, and step the selection a minute.
+ * @param {1 | -1} dir
+ */
+export function jogStep(dir) {
+  if (active !== 'jog') setTool('jog');
+  step(dir);
+}
+
 /**
  * Where the Tidsforskyver goes (user 2026-10-26): just above the calendar row — over the table-set tabs and the line's
  * note, locked while a tool is on — centred over the timetable's width. Without a laid-out page (tests): a default size.
@@ -70,7 +96,7 @@ function placeAbove() {
   const cal = document.getElementById('cal-bar')?.getBoundingClientRect();
   const main = document.getElementById('edit-main')?.getBoundingClientRect();
   if (!cal || !main || !main.width) return { dial: 64 };
-  const height = 84, width = 340;
+  const height = 92, width = 420;
   return { dial: 64, height, top: Math.max(Math.round(main.top) + 4, Math.round(cal.top - height - 4)), left: Math.round(main.left + main.width / 2 - width / 2) };
 }
 
@@ -105,14 +131,7 @@ function draw() {
     const band = placeAbove();
     const dial = jogDial({
       size: band.dial, detents: true, pxPerNotch: 9, downward: true, angleRef: jogAngle,
-      onNudge: (/** @type {1 | -1} */ dir, /** @type {boolean} */ coarse) => {
-        const d = dir * (coarse ? 10 : 1);
-        clearTimeout(fadeTimer);
-        read.classList.remove('pt-fade');
-        total += d;
-        read.textContent = `${total > 0 ? '+' : ''}${total} min`;
-        jogHandler(d);
-      },
+      onNudge: (/** @type {1 | -1} */ dir, /** @type {boolean} */ coarse) => step(dir * (coarse ? 10 : 1)),
     });
     const hint = document.createElement('div');
     hint.className = 'pt-hint';
@@ -167,7 +186,7 @@ export function initPowerTools() {
   keysWired = true;
   document.addEventListener('keydown', (e) => {
     if (currentPage() !== 'edit' || document.querySelector('dialog[open]')) return;
-    if (e.key === 'Escape' && active && !document.querySelector('.float-box')) { e.preventDefault(); e.stopPropagation(); setTool(''); return; }
+    if (e.key === 'Escape' && active && !document.querySelector('.float-box') && !escGuard()) { e.preventDefault(); e.stopPropagation(); setTool(''); return; }
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
     const x = TOOLS.find((tool) => tool.key === e.key.toLowerCase());
     if (x) { e.preventDefault(); e.stopPropagation(); setTool(active === x.name ? '' : x.name); }
