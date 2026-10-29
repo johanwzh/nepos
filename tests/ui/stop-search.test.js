@@ -143,6 +143,23 @@ describe('the stop search window (stop picking 2)', () => {
     expect(document.querySelector('.ss-place')).toBeNull();
   });
 
+  it('an answer for older text is ignored once the user types on (review)', async () => {
+    holdSearch = true;
+    await typeSearch(1, 'Gref');
+    input().value = 'Grefsen st';
+    input().dispatchEvent(new Event('input', { bubbles: true }));
+    pending.forEach((r) => r([hit(STASJON)]));
+    await settle();
+    expect(box().querySelector('.ss-place')).toBeNull();
+  });
+
+  it('a page switch closes the window (review)', async () => {
+    await typeSearch(1, 'Grefsen');
+    setPage('lines');
+    expect(box()).toBeNull();
+    setPage('edit');
+  });
+
   it('if the Quays lookup fails, the stop places show with no platforms and nothing breaks', async () => {
     quaysFail = true;
     await typeSearch(1, 'Grefsen');

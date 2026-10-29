@@ -327,6 +327,14 @@ describe('recording stops by clicking Quays on the map', () => {
     }
   });
 
+  it('Registrer stopp turns itself off where it cannot work: no line open (review)', () => {
+    clearGrid();
+    refreshAll();
+    setTool('record');
+    expect(activeTool()).toBe('');
+    expect(pickerState().recording).toBe(false);
+  });
+
   it('fills a new line\'s empty rows first, and Ctrl+Z empties a filled row again', async () => {
     await newRoute();
     await settle();

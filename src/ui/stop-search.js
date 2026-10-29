@@ -8,6 +8,8 @@ import { NSR_QUAY_PATTERN, NSR_STOP_PLACE_PATTERN, modeMatches } from '../core/q
 import { grid, focusGrid } from './grid.js';
 import { pickerServices, pickerOpts, modeOk, quayInfoOf, useQuay, useQuayId, showPlaceOnMap, lineErnMode } from './stop-picker.js';
 import { modeIconSvg } from './mode-icons.js';
+import { onRefresh, currentPage } from './shell.js';
+import { app } from './state.js';
 
 /** How many hits get their Quays looked up (one NSR call). */
 const TOP = 8;
@@ -17,9 +19,10 @@ const TOP = 8;
  * @typedef {{ place: StopPlace | null, quays: StopPlace['quays'] | null }} Branch  quays null: the lookup failed
  */
 
-/** @type {{ el: HTMLElement, ri: number, branches: Branch[], direct: string | null, kb: number, seq: number, timer: any } | null} */
+/** @type {{ el: HTMLElement, ri: number, route: string | null, branches: Branch[], direct: string | null, kb: number, seq: number, timer: any } | null} */
 let open = null;
 let seq = 0;
+let wired = false;
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -48,13 +51,18 @@ function onOutside(e) {
 export function openStopSearch(ri, text) {
   closeStopSearch();
   if (grid.readOnly || !grid.stops[ri]) return;
+  if (!wired) {
+    wired = true;
+    // Another page or another line: the window belongs to a stop cell that is gone (review)
+    onRefresh(() => { if (open && (currentPage() !== 'edit' || app.activeRoute !== open.route)) closeStopSearch(); });
+  }
   const el = document.createElement('div');
   el.className = 'float-box ss-box';
   el.innerHTML = `<div class="fb-head"><b></b><button class="fb-x" title="Esc">✕</button></div>
     <div class="fb-body"><input type="text" class="ss-q" autocomplete="off" spellcheck="false"><div class="ss-status"></div><div class="ss-tree"></div></div>`;
   /** @type {HTMLElement} */ (el.querySelector('.fb-head b')).textContent = t(grid.stops[ri].stopId ? 'spReplace' : 'spFind', ri + 1);
   document.body.appendChild(el);
-  open = { el, ri, branches: [], direct: null, kb: -1, seq: ++seq, timer: null };
+  open = { el, ri, route: app.activeRoute, branches: [], direct: null, kb: -1, seq: ++seq, timer: null };
   place();
   const q = /** @type {HTMLInputElement} */ (el.querySelector('.ss-q'));
   q.value = text;
@@ -62,7 +70,8 @@ export function openStopSearch(ri, text) {
   q.focus();
   q.setSelectionRange(text.length, text.length);
   el.addEventListener('keydown', onKey);
-  q.addEventListener('input', () => { if (!open) return; open.kb = -1; clearTimeout(open.timer); open.timer = setTimeout(() => { void search(); }, 350); });
+  // New text: an answer for the old text must never be drawn (review)
+  q.addEventListener('input', () => { if (!open) return; open.seq = ++seq; open.kb = -1; clearTimeout(open.timer); open.timer = setTimeout(() => { void search(); }, 350); });
   el.querySelector('.fb-x')?.addEventListener('click', () => { closeStopSearch(); focusGrid(); });
   el.addEventListener('mousedown', (e) => {
     const row = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('.ss-quay'));

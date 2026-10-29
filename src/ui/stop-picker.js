@@ -149,7 +149,7 @@ let recorded = [];
 
 /** @param {boolean} on */
 export function setRecording(on) {
-  if (on && (!grid.active || grid.readOnly)) return;
+  if (on && (!grid.active || grid.readOnly)) { setTool(''); return; } // the tool must not stay on where it cannot work
   state.recording = on;
   recorded = [];
   if (on) openPanel('right');
