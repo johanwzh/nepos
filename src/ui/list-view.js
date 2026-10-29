@@ -21,7 +21,9 @@ import { addDays } from '../core/calendars.js';
  *             matches?: (row: any, state: Record<string, any>) => boolean,
  *             tools: Tool[], renderExtraTools?: (box: HTMLElement, sel: string[]) => void,
  *             onEdit: (id: string) => void, onDelete?: (ids: string[]) => void, empty?: () => string,
- *             defaultSort?: { col: string, dir: 1 | -1 } }} ListSpec
+ *             defaultSort?: { col: string, dir: 1 | -1 }, footer?: ListFooter }} ListSpec
+ * @typedef {{ count: () => number, save: () => Promise<unknown>, discard: () => void, kind: () => string }} ListFooter
+ *   the bar under the list (2.5): save or throw away this list's own unsaved changes
  */
 
 /** Days before the end that count as "ends soon" (the amber strip). */
@@ -77,6 +79,8 @@ export function createListView(root, spec) {
       <section class="lv-main" tabindex="0">
         <div class="lv-head" style="grid-template-columns:${grid}"></div>
         <div class="lv-body"></div>
+        ${spec.footer ? `<div class="lv-foot"><span class="ef-spacer"></span><span class="lv-foot-state ef-state"></span>
+          <button class="lv-foot-discard ef-discard">${esc(t('lvDiscardAll'))}</button><button class="lv-foot-save ef-save-btn">${esc(t('lvSaveAll'))}</button></div>` : ''}
       </section>
     </div>`;
     root.dataset.lv = spec.id;
@@ -115,6 +119,16 @@ export function createListView(root, spec) {
       if (row && !/** @type {HTMLElement} */ (e.target).closest('a, button, input, select')) spec.onEdit(/** @type {string} */ (row.dataset.id));
     });
     body.addEventListener('scroll', () => { st.scroll = body.scrollTop; });
+    const foot = spec.footer;
+    if (foot) {
+      root.querySelector('.lv-foot-save')?.addEventListener('click', () => { void foot.save().then(() => render()); });
+      root.querySelector('.lv-foot-discard')?.addEventListener('click', () => {
+        const n = foot.count();
+        if (!n || !confirm(t('lvDiscardConfirm', n, foot.kind()))) return;
+        foot.discard();
+        render();
+      });
+    }
     root.addEventListener('keydown', onKey);
     // the toolkit's width can be tweaked
     const pane = /** @type {HTMLElement} */ (root.querySelector('.lv-pane'));
@@ -211,6 +225,20 @@ export function createListView(root, spec) {
     }).join('') || `<div class="lv-empty">${esc(spec.empty?.() ?? t('noMatches'))}</div>`;
     body.scrollTop = st.scroll;
     showSelection();
+    showFooter();
+  }
+
+  /** The bar's state: enabled while the list has unsaved changes. */
+  function showFooter() {
+    if (!spec.footer) return;
+    const n = spec.footer.count();
+    const state = root.querySelector('.lv-foot-state');
+    if (state) state.textContent = n ? `● ${t('unsavedChanges')}` : '';
+    for (const sel of ['.lv-foot-save', '.lv-foot-discard']) {
+      const b = /** @type {HTMLButtonElement | null} */ (root.querySelector(sel));
+      if (b) b.disabled = !n;
+    }
+    root.querySelector('.lv-foot-save')?.classList.toggle('dirty', n > 0);
   }
 
   /** Mark the selected rows and set the tools, without rebuilding the rows. */

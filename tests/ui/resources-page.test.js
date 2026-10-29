@@ -397,3 +397,25 @@ describe('Ressurser: Ctrl+S (user 2026-10-21)', () => {
     expect(app.resourceDrafts.size).toBe(0);
   });
 });
+
+describe('the save / discard bar on Ressurser (2.5)', () => {
+  it('is enabled with a draft, and Save empties the drafts', async () => {
+    app.resourceDrafts.set('b:TST:Branding:x', { ...BRANDING, name: 'Ekspressen 2' });
+    setPage('edit');
+    setPage('assets');
+    const save = /** @type {HTMLButtonElement} */ (q('.lv-foot-save'));
+    expect(save.disabled).toBe(false);
+    save.click();
+    await vi.waitFor(() => expect(app.resourceDrafts.size).toBe(0));
+    expect(app.brandings[0].name).toBe('Ekspressen 2');
+  });
+
+  it('Discard changes in list throws the resource drafts away', () => {
+    app.resourceDrafts.set('b:TST:Branding:x', { ...BRANDING, name: 'Ekspressen 2' });
+    setPage('edit');
+    setPage('assets');
+    q('.lv-foot-discard').click();
+    expect(app.resourceDrafts.size).toBe(0);
+    expect(app.brandings[0].name).toBe('Ekspressen');
+  });
+});

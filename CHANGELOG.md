@@ -4,6 +4,12 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 ## 2.5.0 — not released yet
 
+- **Switches on Linjer:** **Offentlig** and **Eksporteres** are switches on every row, saved at once (export settings,
+  not edits of the line: only those two records of the file change, and no backup is made). Unsaved timetable edits
+  stay unsaved and carry the new value. On a selected row, a switch sets every selected line. The dropdowns in
+  Verktøy and the "Utkast" / "Lukket rute" tags are gone; a line not exported is still hatched.
+- **Save / discard under the lists:** Linjer, Kalendere and Ressurser have a bar with **Save all in list** and
+  **Discard changes in list**, for that list's own unsaved changes only.
 - **Map layers:** a switch at the top right of the map: **Map** (OpenFreeMap, as before), **OpenStreetMap** (the
   standard map, darkened in dark mode) or **Aerial** (Esri imagery). Remembered in your personal settings; hidden when
   the project settings name a map style of their own.

@@ -70,7 +70,14 @@ Fanen **Linjer** viser alle linjene. Til venstre er verktøykassen:
 
 - **Finn** — søk, og filtrer på kalender, transportmåte, organisasjon og status.
 - **Verktøy** — **+ Ny linje**, **Rediger**, **Dupliser**, **Slett**, og under *Endre valgte* kan du
-  sette merkevare, organisasjoner, kalender og flaggene for flere linjer samtidig.
+  sette merkevare, organisasjoner og kalender for flere linjer samtidig.
+
+**Offentlig** og **Eksporteres** er brytere på hver rad. De lagres med en gang — de er innstillinger for eksporten,
+ikke endringer i linjen, så ulagrede endringer i rutetabellen forblir ulagrede (og får den nye verdien). Står raden
+blant de valgte, settes alle de valgte linjene. En linje som ikke eksporteres, er skravert.
+
+Under listen lagrer **Lagre alle i listen** og forkaster **Forkast endringer i listen** listens egne ulagrede endringer
+— på Linjer bare linjene, på Kalendere bare kalenderne og på Ressurser bare ressursene.
 
 Klikk for å velge, Shift- og Ctrl-klikk for å velge flere. Dobbeltklikk eller **Enter** åpner linjen.
 Kolonneoverskriftene sorterer. Stripen til venstre på hver rad viser om linjen er gyldig nå (grønn),

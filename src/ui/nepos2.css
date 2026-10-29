@@ -598,6 +598,8 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .lv-head .sorted[data-dir="-1"]::after { content: ' ▼'; font-size: 8px; }
 /* Rows are picked, not their text: Shift/Ctrl-click must not mark text too (Ctrl+C copies the rows) */
 .lv-body { flex: 1; overflow-y: auto; user-select: none; }
+/* Save / discard this list's own unsaved changes (2.5), like the editor's footer */
+.lv-foot { flex: none; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-top: 1px solid var(--border-lt); background: var(--bg-panel); }
 .lv-row { padding: 8px 14px 6px 14px; border-bottom: 1px solid var(--border-lt); border-left: 4px solid transparent; cursor: default; }
 .lv-row:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
 .lv-row.selected { background: var(--accent-bg); }
@@ -626,7 +628,7 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .lv-problems { font-size: 11px; color: #b26a00; }
 .lv-problems.bad { color: var(--g-dec-c); }
 /* The Offentlig / Eksporteres switches on the Linjer rows (2.5), saved at once */
-.lv-switch { position: relative; width: 30px; height: 16px; padding: 0; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-raised); cursor: pointer; vertical-align: middle; }
+.lv-switch { position: relative; width: 30px; height: 16px; min-width: 0; min-height: 0; padding: 0; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-raised); cursor: pointer; vertical-align: middle; }
 .lv-switch::after { content: ''; position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; border-radius: 50%; background: var(--text-m); transition: left .12s; }
 .lv-switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
 .lv-switch[aria-checked="true"]::after { left: 15px; background: var(--accent-text, #fff); }

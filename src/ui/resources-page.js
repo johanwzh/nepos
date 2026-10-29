@@ -260,6 +260,13 @@ export async function saveAllResources() {
   renderResourcesPage();
 }
 
+/** Throw away every unsaved resource edit (the caller has asked); a new one that was never saved goes too. */
+export function discardAllResources() {
+  drafts().clear();
+  if (app.resourceSelected && !resource(app.resourceSelected)) app.resourceSelected = null;
+  renderResourcesPage();
+}
+
 /** @param {string} id */
 async function save(id) {
   const kind = tagKindOf(id);
@@ -351,6 +358,7 @@ function makeView(host) {
     onEdit: (id) => open(id),
     onDelete: (ids) => { if (ids.length && deletable(ids)) deleteSome(ids); },
     empty: () => t(allResources().length ? 'noMatches' : 'rsNone'),
+    footer: { count: unsavedResourceCount, save: saveAllResources, discard: discardAllResources, kind: () => t('lvKindResources') },
   });
 }
 

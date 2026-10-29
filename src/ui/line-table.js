@@ -10,7 +10,8 @@ import { modeIconSvg } from './mode-icons.js';
 import { modeLabel } from '../i18n/modes.js';
 import { lineRows } from './line-rows.js';
 import { editLines, setOrg, duplicateLines, deleteLines } from './line-batch.js';
-import { selectRoute, newRoute } from './route-editor.js';
+import { selectRoute, newRoute, saveAllRoutes, discardLineChanges } from './route-editor.js';
+import { unsavedCodes } from './drafts.js';
 import { createOrgPicker } from './org-picker.js';
 import { replaceCalendarInState } from '../core/calendar-replace.js';
 import { unionDays } from '../core/calendars.js';
@@ -192,7 +193,7 @@ export function initLineTable() {
       { key: 'valid', label: () => t('ltCol_valid'), width: '170px', sort: (r) => r.days[0] ?? '', cell: (r) => (r.days.length ? `${day(r.days[0])} – ${day(r.days[r.days.length - 1])}` : ''), text: (r) => (r.days.length ? `${day(r.days[0])} – ${day(r.days[r.days.length - 1])}` : '') },
       { key: 'public', label: () => t('ltCol_public'), width: '72px', sort: (r) => (r.isPublic ? 1 : 0), cell: (r) => flagSwitch(r, 'isPublic'), text: (r) => t(r.isPublic ? 'pubOpen' : 'pubClosed') },
       { key: 'exported', label: () => t('ltCol_exported'), width: '72px', sort: (r) => (r.exported ? 1 : 0), cell: (r) => flagSwitch(r, 'exported'), text: (r) => t(r.exported ? 'exportIn' : 'exportOut') },
-      { key: 'status', label: () => t('ltCol_status'), width: '220px', sort: (r) => `${r.exported ? 1 : 0}${validityOf(r.days, todayYmd())}`, cell: status },
+      { key: 'status', label: () => t('ltCol_status'), width: '180px', sort: (r) => `${r.exported ? 1 : 0}${validityOf(r.days, todayYmd())}`, cell: status },
     ],
     band: (r) => r.days,
     rowClass: (r) => (r.exported ? '' : 'lv-draft'),
@@ -208,6 +209,7 @@ export function initLineTable() {
     onEdit: editLine,
     onDelete: async (sel) => { await deleteLines(sel); render(); },
     empty: () => t(app.routes.length ? 'noMatches' : 'ltNoLines'),
+    footer: { count: () => unsavedCodes().length, save: () => saveAllRoutes(), discard: discardLineChanges, kind: () => t('lvKindLines') },
   });
   // a flag switch: the selected lines when its row is selected, else its own line; saved at once
   el.addEventListener('click', (e) => {

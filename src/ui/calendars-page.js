@@ -16,6 +16,7 @@ import { createListView, validityOf } from './list-view.js';
 import { selectRoute, switchTableSet } from './route-editor.js';
 import { norwegianHolidays } from '../core/holidays.js';
 import { lineRows } from './line-rows.js';
+import { unsavedCalendarCount, saveAllCalendars, discardAllCalendars } from './calendar-drafts.js';
 
 /** @typedef {import('../core/calendars.js').Calendar} Calendar */
 
@@ -264,6 +265,7 @@ function makeView(host) {
     onEdit: (id) => open(id),
     onDelete: (ids) => { void deleteCalendars(ids); },
     empty: () => t(allCalendars().length ? 'noMatches' : 'calNone'),
+    footer: { count: unsavedCalendarCount, save: saveAllCalendars, discard: discardAllCalendars, kind: () => t('lvKindCalendars') },
   });
   // Linjer: a line's chip opens it in the timetable, at the first table using the calendar
   host.addEventListener('click', (e) => {

@@ -237,3 +237,26 @@ describe('public and export flags in plain words (42)', () => {
     await vi.waitFor(() => expect(rows()[0].querySelector('.lv-switch[data-flag="isPublic"]')?.getAttribute('aria-checked')).toBe('false'));
   });
 });
+
+describe('the save / discard bar on Linjer (2.5)', () => {
+  it("a bar saves and discards the list's own changes", async () => {
+    setPage('lines');
+    const save = /** @type {HTMLButtonElement} */ (document.querySelector('#line-table .lv-foot-save'));
+    expect(save.disabled).toBe(true);
+    click(rows()[0]);
+    field('lt-brand').value = '-'; field('lt-brand').dispatchEvent(new Event('change'));
+    expect(save.disabled).toBe(false);
+    click(save);
+    await vi.waitFor(() => expect(app.drafts.size).toBe(0));
+  });
+
+  it('Discard changes in list on Linjer leaves unsaved calendars alone', () => {
+    app.calendarDrafts.set('cal-new', { id: 'cal-new', name: 'Ny 2', ranges: [] });
+    setPage('lines');
+    click(rows()[0]);
+    field('lt-brand').value = '-'; field('lt-brand').dispatchEvent(new Event('change'));
+    click(/** @type {HTMLElement} */ (document.querySelector('#line-table .lv-foot-discard')));
+    expect(app.drafts.size).toBe(0);
+    expect(app.calendarDrafts.size).toBe(1);
+  });
+});

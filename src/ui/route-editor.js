@@ -208,6 +208,11 @@ export function discardAllChanges() {
   const n = unsavedCodes().length + unsavedCalendarCount();
   if (!n || !confirm(t('discardAllConfirm', n))) return;
   discardAllCalendars();
+  discardLineChanges();
+}
+
+/** Throw away the lines' unsaved changes (not calendars or resources; the caller has asked): the open line is read again. */
+export function discardLineChanges() {
   app.drafts.clear();
   const entry = activeEntry();
   if (entry) {

@@ -293,3 +293,16 @@ describe('the editor\'s navigator follows the list', () => {
     expect(wrap.lastElementChild?.classList.contains('ce-switch')).toBe(true);
   });
 });
+
+describe('the save / discard bar on Kalendere (2.5)', () => {
+  it('is enabled with a draft, and Save empties the drafts', async () => {
+    app.calendars = [{ id: 'c1', name: 'Vinter', ranges: [['20261201', '20261231']] }];
+    app.calendarDrafts.set('c1', { id: 'c1', name: 'Vinter 2', ranges: [['20261201', '20261231']] });
+    setPage('calendars');
+    const save = /** @type {HTMLButtonElement} */ (q('.lv-foot-save'));
+    expect(save.disabled).toBe(false);
+    save.click();
+    await vi.waitFor(() => expect(app.calendarDrafts.size).toBe(0));
+    expect((await saved())[0].name).toBe('Vinter 2');
+  });
+});
