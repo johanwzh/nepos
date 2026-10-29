@@ -2,16 +2,20 @@
 // Photoshop toolbox. Showing the tools changes nothing; turning a tool on changes the editing context, and while a tool
 // is on only that tool works in the grid (typing, pasting and the menus are off) — except the Tidsforskyver, which leaves
 // the cells editable (hypothesis, user 2026-10-28: + and − turn it on). One tool at a time; Esc turns it off.
-// Tools: the Jog (time shift, moved here from the context menu) and Virtual intervals.
+// Tools: the Jog (time shift, moved here from the context menu), Virtual intervals, Registrer stopp (2.5: clicks on the
+// map's Quays fill the stop rows; the map pane stays usable) and Optimalisering (2.5: a placeholder, disabled).
 import { t } from '../i18n/strings.js';
 import { jogDial } from './jog/jogDial.js';
 import { currentPage } from './shell.js';
 
-/** @typedef {'' | 'jog' | 'intervals'} ToolName */
+/** @typedef {'' | 'jog' | 'intervals' | 'record' | 'optimize'} ToolName */
 
-const TOOLS = /** @type {{ name: ToolName, icon: string, label: string, key: string }[]} */ ([
+const TOOLS = /** @type {{ name: ToolName, icon: string, label: string, key: string, disabled?: boolean }[]} */ ([
   { name: 'jog', icon: '⇅', label: 'ptJog', key: 'j' },
   { name: 'intervals', icon: '⋯', label: 'ptIntervals', key: 'i' },
+  { name: 'record', icon: '⊕', label: 'ptRecord', key: 'r' },
+  // Where the passing-seconds tools will live (backlog 87): shown, not wired
+  { name: 'optimize', icon: '⚙', label: 'ptOptimize', key: '', disabled: true },
 ]);
 
 /** @type {ToolName} */
@@ -102,7 +106,7 @@ function placeAbove() {
 
 /** Turn a tool on ('' turns all off). @param {ToolName} name */
 export function setTool(name) {
-  if (active === name) return;
+  if (active === name || TOOLS.find((x) => x.name === name)?.disabled) return;
   active = name;
   // While a tool is on, only the grid and the toolbox respond: the rest of the page is dimmed and locked (CSS)
   document.body.classList.toggle('pt-on', !!name);
@@ -120,6 +124,12 @@ function draw() {
   jogRead = null;
   tsBox?.remove();
   tsBox = null;
+  if (active === 'record') {
+    const hint = document.createElement('span');
+    hint.className = 'pt-hint';
+    hint.textContent = t('mapRecordHint');
+    body.append(hint);
+  }
   if (active === 'jog') {
     const read = document.createElement('span');
     read.className = 'pt-read';
@@ -174,7 +184,7 @@ export function initPowerTools() {
   if (box) {
     // data-lk: the labels follow a change of language like the rest of the page (shell.js applyLang)
     box.innerHTML = `<div class="pt-head" data-lk="ptTitle">${t('ptTitle')}</div><div class="pt-tools">${TOOLS.map((x) =>
-      `<button type="button" class="pt-tool" data-tool="${x.name}" title="Alt+${x.key.toUpperCase()}"><span class="pt-icon">${x.icon}</span> <span data-lk="${x.label}">${t(x.label)}</span></button>`).join('')}</div><div class="pt-body"></div>`;
+      `<button type="button" class="pt-tool" data-tool="${x.name}"${x.disabled ? ` disabled title="${t('ptLater')}"` : ` title="Alt+${x.key.toUpperCase()}"`}><span class="pt-icon">${x.icon}</span> <span data-lk="${x.label}">${t(x.label)}</span></button>`).join('')}</div><div class="pt-body"></div>`;
     for (const btn of box.querySelectorAll('.pt-tool')) {
       btn.addEventListener('click', () => { const name = /** @type {ToolName} */ (/** @type {HTMLElement} */ (btn).dataset.tool); setTool(active === name ? '' : name); });
     }
@@ -188,7 +198,7 @@ export function initPowerTools() {
     if (currentPage() !== 'edit' || document.querySelector('dialog[open]')) return;
     if (e.key === 'Escape' && active && !document.querySelector('.float-box') && !escGuard()) { e.preventDefault(); e.stopPropagation(); setTool(''); return; }
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
-    const x = TOOLS.find((tool) => tool.key === e.key.toLowerCase());
+    const x = TOOLS.find((tool) => tool.key && !tool.disabled && tool.key === e.key.toLowerCase());
     if (x) { e.preventDefault(); e.stopPropagation(); setTool(active === x.name ? '' : x.name); }
   }, true);
 }

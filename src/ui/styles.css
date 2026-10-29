@@ -1454,6 +1454,8 @@ body.pt-intervals .g-td-time.g-blk-r { box-shadow: inset -2px 0 0 var(--accent, 
 .iv-drop-hint { position: fixed; z-index: 50; padding: 3px 8px; border-radius: 6px; font-size: 12px; background: var(--bg-raised, #fff); border: 1px dashed var(--accent, #9db8e8); pointer-events: none; }
 /* A power tool on: only the grid's times and the toolbox respond; Save and Discard stay (user 2026-10-24) */
 body.pt-on :is(#menubar, #tabbar, #route-hdr, #kom-bar, #ts-tabs, #cal-bar, #cal-timeline, #panel-right, #map-strip, #panel-left .route-list, #fn-preview, #speed-strip, #edit-footer > :not(#ef-save):not(#ef-discard):not(#ef-state)) { opacity: .4; pointer-events: none; }
+/* Registrer stopp works on the map: the map pane stays usable while it is on (stop picking 2) */
+body.pt-record :is(#panel-right, #map-strip) { opacity: 1; pointer-events: auto; }
 body.pt-on #tbl :is(.g-row-ins, .g-row-bot, .g-td-name, .g-td-btn, .g-td-ins, .g-dc-cell, .g-fn-cell, .g-lb-cell, .g-tn-cell, .cw-dest, .cw-ins) { pointer-events: none; opacity: .55; }
 body.pt-on #tbl .g-dc-cell .jd { pointer-events: auto; }
 body.pt-intervals #tbl .g-dc-cell { pointer-events: auto; opacity: 1; cursor: grab; }

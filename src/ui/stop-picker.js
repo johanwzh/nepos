@@ -10,7 +10,8 @@ import { getStopPlace, getStopPlaces, lookupQuays } from '../services/nsr.js';
 import { modeMatches } from '../core/quays.js';
 import { grid, selectedStopRow, selectedRowIndex, setStopOnRow, clearStopOnRow, setStopTypeHandler, onGridRender, appendStopRow, removeStopRow, addStopRowAt, flashStopCell } from './grid.js';
 import { quayInfo } from './quays.js';
-import { openStopSearch } from './stop-search.js';
+import { openStopSearch, closeStopSearch } from './stop-search.js';
+import { onToolChange, setTool } from './power-tools.js';
 
 /**
  * @typedef {import('../services/nsr.js').QuayInfo} QuayInfo
@@ -139,9 +140,9 @@ async function openPlace(id) {
 }
 
 // ─── Recording stops (user test 2026-10-16) ─────────────────────────────────
-// "Registrer stopp": every Quay clicked on the map goes into the next empty stop row, or a new row
-// at the bottom. Ctrl+Z takes back the last one recorded in this run; Esc or the button
-// ends it. The map never moves by itself while recording.
+// "Registrer stopp" (a power tool since 2.5): every Quay clicked on the map goes into the next empty stop row, or a
+// new row at the bottom. Ctrl+Z takes back the last one recorded in this run; Esc or the tool's button ends it. The
+// map never moves by itself while recording.
 
 /** @type {{ stop: any, appended: boolean }[]} what this run recorded, newest last */
 let recorded = [];
@@ -239,14 +240,7 @@ export function useQuayId(ri, quayId) {
 }
 
 function render() {
-  const rec = $('map-rec');
-  if (rec) {
-    if (state.recording && (!grid.active || grid.readOnly)) { state.recording = false; recorded = []; }
-    rec.classList.toggle('on', state.recording);
-    rec.textContent = t(state.recording ? 'mapRecording' : 'mapRecord');
-    /** @type {HTMLButtonElement} */ (rec).disabled = !grid.active || grid.readOnly;
-    $('map-rec-hint').hidden = !state.recording;
-  }
+  if (state.recording && (!grid.active || grid.readOnly)) { state.recording = false; recorded = []; setTool(''); }
   state.ernMode = lineErnMode();
   state.onlyMode = true; // never a stop of another mode than the line's (user test 2026-10-16)
   // Tøm stopp works on the selected row in any column
@@ -263,7 +257,6 @@ export function initStopPicker() {
   seq++;
   // Typing in a stop cell: the search window at the cell (never the map pane)
   setStopTypeHandler((text) => { const ri = selectedStopRow(); if (ri != null) openStopSearch(ri, text); });
-  $('map-rec')?.addEventListener('click', () => setRecording(!state.recording));
   state.recording = false;
   recorded = [];
   $('sp-clear')?.addEventListener('click', () => { const ri = selectedRowIndex(); if (ri != null) { clearStopOnRow(ri); render(); } });
@@ -271,13 +264,17 @@ export function initStopPicker() {
   onRefresh(followRow);
   if (!keysWired) {
     keysWired = true;
-    // Recording: Ctrl+Z takes back the last stop, Esc ends it. Text fields keep their own keys.
+    // Registrer stopp follows its power tool; turning it on closes the search window (Esc ends it: the toolbox)
+    onToolChange((name) => {
+      if (name === 'record') closeStopSearch();
+      if ((name === 'record') !== state.recording) setRecording(name === 'record');
+    });
+    // Recording: Ctrl+Z takes back the last stop. Text fields keep their own keys.
     document.addEventListener('keydown', (e) => {
       if (!state.recording || document.querySelector('dialog[open]')) return;
       const el = document.activeElement;
       if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) return;
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setRecording(false); }
-      else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); e.stopPropagation(); undoRecorded(); }
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); e.stopPropagation(); undoRecorded(); }
     }, true);
   }
 }

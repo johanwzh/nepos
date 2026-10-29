@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // The power toolbox (power tools spec 2026-10-24): at the bottom of the line navigator panel, always visible; turning a
 // tool on changes the editing context, and while a tool is on only that tool works. The jog lives here now.
+import { readFileSync } from 'node:fs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
@@ -28,10 +29,10 @@ beforeEach(() => {
 });
 
 describe('the power toolbox', () => {
-  it('sits at the bottom of the line navigator panel with the jog and virtual intervals, none on', () => {
+  it('sits at the bottom of the line navigator panel with its tools, none on', () => {
     const box = /** @type {HTMLElement} */ (document.getElementById('power-tools'));
     expect(box.closest('#panel-left')).not.toBeNull();
-    expect([...box.querySelectorAll('.pt-tool')].map((b) => /** @type {HTMLElement} */ (b).dataset.tool)).toEqual(['jog', 'intervals']);
+    expect([...box.querySelectorAll('.pt-tool')].map((b) => /** @type {HTMLElement} */ (b).dataset.tool)).toEqual(['jog', 'intervals', 'record', 'optimize']);
     expect(activeTool()).toBe('');
   });
 
@@ -262,5 +263,21 @@ describe('+ and − step the selected times one minute (user 2026-10-28)', () =>
     press('+');
     expect(times()).toEqual(['0700', '0710']);
     expect(activeTool()).toBe('intervals');
+  });
+});
+
+describe('Registrer stopp and Optimalisering in the toolbox (stop picking 2, 2.5)', () => {
+  it('Registrer stopp is a power tool (Alt+R); Optimalisering is there, disabled', () => {
+    expect(/** @type {HTMLButtonElement} */ (tool('optimize')).disabled).toBe(true);
+    tool('optimize').click();
+    expect(activeTool()).toBe('');
+    press('r', { altKey: true });
+    expect(activeTool()).toBe('record');
+    expect(document.body.classList.contains('pt-record')).toBe(true);
+  });
+
+  it('while recording, the map pane is not locked', () => {
+    const css = readFileSync('src/ui/styles.css', 'utf8');
+    expect(css).toMatch(/body\.pt-record :is\(#panel-right, #map-strip\) \{ opacity: 1; pointer-events: auto; \}/);
   });
 });

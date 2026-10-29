@@ -12,6 +12,7 @@ import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
 import { setQuayLookup } from '../../src/ui/quays.js';
 import { initStopPicker, setPickerServices, setPickerMap } from '../../src/ui/stop-picker.js';
 import { createMemoryFs } from '../../src/project/fs.js';
+import { initPowerTools, setTool, activeTool } from '../../src/ui/power-tools.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
 
@@ -64,6 +65,8 @@ beforeEach(async () => {
   if (!wired) { initGrid(); initFootnoteEditor(); wired = true; }
   initRouteEditor();
   initStopPicker();
+  initPowerTools();
+  setTool('');
   pending = []; holdSearch = false; quaysFail = false;
   setPickerMap({ show: () => {}, onPick: () => {}, view: () => null, onViewChange: () => {}, zoomTo: () => {} });
   setPickerServices({
@@ -148,6 +151,14 @@ describe('the stop search window (stop picking 2)', () => {
     expect(box().querySelector('.ss-none')).not.toBeNull();
     key('ArrowDown'); key('Enter');
     expect(grid.stops[1].stopId).toBeNull();
+  });
+
+  it('turning on Registrer stopp closes an open search window', async () => {
+    await typeSearch(1, 'Grefsen');
+    setTool('record');
+    expect(box()).toBeNull();
+    expect(activeTool()).toBe('record');
+    setTool('');
   });
 
   it('a pasted Quay ID and a stop place ID still work', async () => {

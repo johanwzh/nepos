@@ -11,6 +11,7 @@ import { setQuayLookup, quayInfo } from '../../src/ui/quays.js';
 import { initStopPicker, setPickerServices, setPickerMap, pickerState } from '../../src/ui/stop-picker.js';
 import { initStopCard, setStopCardServices } from '../../src/ui/stop-card.js';
 import { createMemoryFs } from '../../src/project/fs.js';
+import { initPowerTools, setTool, activeTool } from '../../src/ui/power-tools.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
 
@@ -55,6 +56,8 @@ beforeEach(async () => {
   initRouteEditor();
   initStopPicker();
   initStopCard();
+  initPowerTools();
+  setTool('');
   setStopCardServices({ getStopPlace: async (id) => (id === JBT.stopPlaceId ? JBT_PLACE : null) });
   pending = [];
   holdSearch = false;
@@ -268,9 +271,9 @@ describe('the stop at the selected row, at the top of the map pane', () => {
     expect(card().textContent).toContain('ikke koblet til et stopp');
   });
 
-  it('keeps Registrer stopp and Tøm stopp at the bottom of the pane', () => {
+  it('keeps Tøm stopp at the bottom of the pane; Registrer stopp is a power tool now', () => {
     const tools = /** @type {HTMLElement} */ (document.querySelector('#panel-right .map-tools'));
-    expect(tools.querySelector('#map-rec')).not.toBeNull();
+    expect(document.getElementById('map-rec')).toBeNull();
     expect(tools.querySelector('#sp-clear')).not.toBeNull();
     expect(/** @type {HTMLElement} */ (document.getElementById('map-inner')).compareDocumentPosition(tools) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -280,7 +283,6 @@ describe('recording stops by clicking Quays on the map', () => {
   /** @type {(kind: 'place' | 'quay', id: string) => void} */ let pick = () => {};
   /** @type {() => void} */ let changed = () => {};
   let moves = 0;
-  const rec = () => /** @type {HTMLElement} */ (document.getElementById('map-rec'));
   const ctrlZ = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true, cancelable: true }));
   /** Recording on, the map at zoom 16 over the big stop place, its Quays loaded. */
   async function startRecording() {
@@ -288,7 +290,7 @@ describe('recording stops by clicking Quays on the map', () => {
     setPickerMap({ show: (m) => { lastModel = m; }, onPick: (fn) => { pick = fn; }, view: () => ({ lat: 59.93, lon: 10.7, radiusKm: 0.3, zoom: 16 }),
       onViewChange: (fn) => { changed = fn; }, zoomTo: () => { moves++; } });
     moves = 0;
-    rec().click();
+    setTool('record');
     changed();
     await vi.advanceTimersByTimeAsync(600);
   }
@@ -298,7 +300,7 @@ describe('recording stops by clicking Quays on the map', () => {
     try {
       await startRecording();
       expect(pickerState().recording).toBe(true);
-      expect(rec().classList.contains('on')).toBe(true);
+      expect(activeTool()).toBe('record');
       expect(lastModel.browseQuays.map((/** @type {any} */ p) => p.id)).toEqual([BIG_PLACE.id]);
       // the test line has no empty stop row: each Quay goes into a new row at the bottom, no Bruk
       pick('quay', 'NSR:Quay:61');
@@ -314,7 +316,7 @@ describe('recording stops by clicking Quays on the map', () => {
       expect(moves).toBe(0); // the map never moves by itself
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
       expect(pickerState().recording).toBe(false);
-      expect(rec().classList.contains('on')).toBe(false);
+      expect(activeTool()).toBe('');
     } finally {
       vi.useRealTimers();
     }
@@ -332,7 +334,7 @@ describe('recording stops by clicking Quays on the map', () => {
       ctrlZ(); ctrlZ();
       expect(grid.stops.map((s) => s.stopId)).toEqual(['NSR:Quay:61', 'NSR:Quay:62', null]);
       expect(grid.stops[2].name).toBe('');
-      rec().click(); // the button turns it off too
+      /** @type {HTMLElement} */ (document.querySelector('#power-tools .pt-tool[data-tool="record"]')).click(); // the tool's button turns it off too
       expect(pickerState().recording).toBe(false);
     } finally {
       vi.useRealTimers();
