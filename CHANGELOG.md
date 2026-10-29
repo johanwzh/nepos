@@ -4,11 +4,16 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 ## 2.5.0 — not released yet
 
+- **Small fixes from the first look:** time cells never show "…" (a pipe cell and a cell being typed in did); with a
+  power tool on, the frozen rows at the top of the timetable stay solid (the rows below shone through) and the last of
+  them has a bottom edge; the speed strip's average sits in the top right corner; the disabled tool's text follows
+  the language.
 - **Stop picking 2:** typing a stop name in a stop cell opens a small **search window at the cell** (the map pane no
   longer takes the keyboard). The hits are a tree — each stop place with its platforms (platform and private code)
   under it — and only a platform is ever picked, so it can't be forgotten: arrows, Enter, and the cell flashes. On the
-  map, **a click on a platform puts it on the selected stop row** at once; **Shift+click** adds a row below,
-  **Alt+Shift+click** above; right-click has the same. Platforms are **pins** (the tip is the place) and show one zoom
+  map, **a click on a platform puts it on the selected stop row** at once; **Shift+click** adds a row below;
+  right-click also has Add above (Alt+Shift switches keyboard layout on Windows). The platform marked in the window —
+  with the arrows or the mouse — is marked on the map; a platform without codes has a dot. Platforms are **pins** (the tip is the place) and show one zoom
   step further out. **Registrer stopp** moved to Spesialverktøy (Alt+R), where a greyed **Optimalisering** shows where
   later tools will go. The stop card shows NSR's facts as symbols with a short word.
 - **The speed strip reads better:** the dashed limit line is gone (the colour warns); a line marks **the trip's own

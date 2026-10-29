@@ -140,7 +140,11 @@ export function createMapView(el, { style, dark = false }) {
           box.addEventListener('mouseenter', () => popup.setLngLat([m.lon, m.lat]).setHTML(/** @type {string} */ (m.tooltip)).addTo(map));
           box.addEventListener('mouseleave', () => popup.remove());
         }
-        if (m.onClick) box.addEventListener('click', (e) => { e.stopPropagation(); m.onClick?.(e); });
+        if (m.onClick) {
+          box.addEventListener('click', (e) => { e.stopPropagation(); m.onClick?.(e); });
+          // Shift+mousedown would start MapLibre's box zoom, which eats the Shift+click (user 2026-10-30)
+          box.addEventListener('mousedown', (e) => { if (e.shiftKey) e.stopPropagation(); });
+        }
         if (m.onContext) box.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); m.onContext?.(e); });
         const marker = new maplibregl.Marker({ element: box, anchor: m.anchor ?? 'center' }).setLngLat([m.lon, m.lat]).addTo(map);
         if (m.z) marker.getElement().style.zIndex = String(m.z);

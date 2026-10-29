@@ -32,6 +32,7 @@ export const isStopSearchOpen = () => !!open;
 /** Close the window without picking (Esc, a click on the map, a power tool turned on). */
 export function closeStopSearch() {
   if (!open) return;
+  showPlaceOnMap(null, null); // no platform marked on the map any more
   clearTimeout(open.timer);
   open.el.remove();
   open = null;
@@ -73,6 +74,13 @@ export function openStopSearch(ri, text) {
   // New text: an answer for the old text must never be drawn (review)
   q.addEventListener('input', () => { if (!open) return; open.seq = ++seq; open.kb = -1; clearTimeout(open.timer); open.timer = setTimeout(() => { void search(); }, 350); });
   el.querySelector('.fb-x')?.addEventListener('click', () => { closeStopSearch(); focusGrid(); });
+  // Hovering a platform marks it, as the arrows do (user 2026-10-30)
+  el.addEventListener('mouseover', (e) => {
+    const row = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('.ss-quay'));
+    if (!row || !open) return;
+    const i = quayRows().indexOf(row);
+    if (i !== open.kb) { open.kb = i; markKb(); }
+  });
   el.addEventListener('mousedown', (e) => {
     const row = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('.ss-quay'));
     if (!row || !open) return;
@@ -111,8 +119,9 @@ function markKb() {
   rows.forEach((r, i) => r.classList.toggle('kb', i === open?.kb));
   const row = rows[open.kb];
   row?.scrollIntoView?.({ block: 'nearest' });
-  const place = open.branches.find((b) => b.quays?.some((q) => q.quayId === row?.dataset.quay))?.place;
-  if (place) showPlaceOnMap(place);
+  const branch = open.branches.find((b) => b.quays?.some((q) => q.quayId === row?.dataset.quay));
+  const quay = branch?.quays?.find((q) => q.quayId === row?.dataset.quay);
+  if (branch?.place && quay) showPlaceOnMap(branch.place, quayInfoOf(branch.place, quay));
 }
 
 /** The marked Quay goes on the row; the window closes. */
@@ -207,6 +216,7 @@ function draw() {
       const last = i === /** @type {any[]} */ (b.quays).length - 1;
       parts.push(`<div class="ss-quay" data-quay="${esc(q.quayId)}"><span class="ss-line">${last ? '└' : '├'}</span>`
         + `${q.publicCode ? `<span class="g-plat">${esc(q.publicCode)}</span>` : ''}${q.privateCode ? `<span class="g-priv">${esc(q.privateCode)}</span>` : ''}`
+        + `${q.publicCode || q.privateCode ? '' : '<span class="ss-nocode"></span>'}`
         + `<span class="ss-desc">${esc(q.description)}</span><code>${esc(q.quayId)}</code></div>`);
     });
   }

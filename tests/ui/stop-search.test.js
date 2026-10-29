@@ -10,7 +10,7 @@ import { initGrid, grid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
 import { setQuayLookup } from '../../src/ui/quays.js';
-import { initStopPicker, setPickerServices, setPickerMap } from '../../src/ui/stop-picker.js';
+import { initStopPicker, setPickerServices, setPickerMap, pickerState } from '../../src/ui/stop-picker.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { initPowerTools, setTool, activeTool } from '../../src/ui/power-tools.js';
 import { createProject } from '../../src/project/create.js';
@@ -27,7 +27,8 @@ const ROUTE = [
 const JBT = { quayId: 'NSR:Quay:7203', publicCode: 'A', stopPlaceId: 'NSR:StopPlace:4000', stopPlaceName: 'Jernbanetorget', mode: 'bus', lat: 59.91, lon: 10.75 };
 const STASJON = { id: 'NSR:StopPlace:1', name: 'Grefsen stasjon', description: 'Oslo', mode: 'bus', quays: [
   { quayId: 'NSR:Quay:A', publicCode: 'A', privateCode: '12', description: 'mot sentrum', lat: 59.94, lon: 10.78 },
-  { quayId: 'NSR:Quay:B', publicCode: 'B', description: '', lat: 59.94, lon: 10.79 }] };
+  { quayId: 'NSR:Quay:B', publicCode: 'B', description: '', lat: 59.94, lon: 10.79 },
+  { quayId: 'NSR:Quay:C', publicCode: '', description: '', lat: 59.94, lon: 10.8 }] };
 const STADION = { id: 'NSR:StopPlace:2', name: 'Grefsen stadion', description: 'Oslo', mode: 'bus', quays: [
   { quayId: 'NSR:Quay:S1', publicCode: '1', description: '', lat: 59.95, lon: 10.77 }] };
 const RAIL = { id: 'NSR:StopPlace:3', name: 'Grefsen tog', description: '', mode: 'rail', quays: [{ quayId: 'NSR:Quay:R', publicCode: '1', description: '', lat: 59.94, lon: 10.78 }] };
@@ -98,7 +99,7 @@ describe('the stop search window (stop picking 2)', () => {
 
   it('shows the hits as a tree: stop places as headings, their Quays with platform and private code', async () => {
     await typeSearch(1, 'Grefsen');
-    expect([...box().querySelectorAll('.ss-place, .ss-quay')].map((e) => e.className.split(' ')[0])).toEqual(['ss-place', 'ss-quay', 'ss-quay', 'ss-place', 'ss-quay']);
+    expect([...box().querySelectorAll('.ss-place, .ss-quay')].map((e) => e.className.split(' ')[0])).toEqual(['ss-place', 'ss-quay', 'ss-quay', 'ss-quay', 'ss-place', 'ss-quay']);
     expect(box().querySelector('.ss-quay .g-plat')?.textContent).toBe('A');
     expect(box().querySelector('.ss-quay .g-priv')?.textContent).toBe('12');
     expect(box().textContent).not.toContain('Grefsen tog'); // another mode is never offered
@@ -115,8 +116,28 @@ describe('the stop search window (stop picking 2)', () => {
 
   it('a click on a Quay picks it too', async () => {
     await typeSearch(1, 'Grefsen');
-    /** @type {HTMLElement} */ (box().querySelectorAll('.ss-quay')[2]).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    /** @type {HTMLElement} */ (box().querySelectorAll('.ss-quay')[3]).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
     expect(grid.stops[1].stopId).toBe('NSR:Quay:S1');
+  });
+
+  it('a platform with neither a public nor a private code gets a dot', async () => {
+    await typeSearch(1, 'Grefsen');
+    const c = /** @type {HTMLElement} */ (box().querySelector('.ss-quay[data-quay="NSR:Quay:C"]'));
+    expect(c.querySelector('.ss-nocode')).not.toBeNull();
+    expect(box().querySelector('.ss-quay[data-quay="NSR:Quay:A"] .ss-nocode')).toBeNull();
+  });
+
+  it('the marked platform is the map\'s marked pin; hovering marks it like the arrows', async () => {
+    await typeSearch(1, 'Grefsen');
+    key('ArrowDown');
+    expect(pickerState().candidate?.quayId).toBe('NSR:Quay:A');
+    const b = /** @type {HTMLElement} */ (box().querySelector('.ss-quay[data-quay="NSR:Quay:S1"]'));
+    b.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    expect(b.classList.contains('kb')).toBe(true);
+    expect(pickerState().candidate?.quayId).toBe('NSR:Quay:S1');
+    key('Enter');
+    expect(grid.stops[1].stopId).toBe('NSR:Quay:S1');
+    expect(pickerState().candidate).toBeNull();
   });
 
   it('Esc closes without picking', async () => {

@@ -300,7 +300,8 @@ Kartet åpnes med **Alt+M** eller fanen **Kart** til venstre for rutetabellen.
   velge. En Quay- eller StopPlace-ID kan limes inn i søket.
 - På kartet vises plattformene som nåler (spissen er plattformens plass) når du zoomer inn. Står du i en
   stoppcelle, setter et **klikk** på en plattform den på raden med en gang. **Shift+klikk** legger den til på en ny
-  rad under, **Alt+Shift+klikk** på en ny rad over; høyreklikk gir de samme valgene. Et klikk på kartet lukker
+  rad under; høyreklikk gir også **Legg til over**. Plattformen du står på i søkevinduet (piltaster eller musen),
+  er markert på kartet. En plattform uten kode har en prikk i listen. Et klikk på kartet lukker
   søkevinduet — søk i listen, og velg på kartet.
 - **Registrer stopp** er et kraftverktøy (Spesialverktøy, **Alt+R**): klikk plattformene langs ruten i rekkefølge
   — hver legges i neste tomme rad eller nederst. **Ctrl+Z** angrer det siste, **Esc** avslutter. Kartet kan brukes

@@ -17,9 +17,9 @@ import { onToolChange, setTool } from './power-tools.js';
  * @typedef {import('../services/nsr.js').QuayInfo} QuayInfo
  * @typedef {import('../services/nsr.js').StopPlace} StopPlace
  * @typedef {import('../services/geocoder.js').StopPlaceHit} StopPlaceHit
- * @typedef {{ row: number | null, current: QuayInfo | null, candidate: null, hits: StopPlaceHit[],
+ * @typedef {{ row: number | null, current: QuayInfo | null, candidate: QuayInfo | null, hits: StopPlaceHit[],
  *             place: StopPlace | null, browse: StopPlaceHit[], browseQuays: StopPlace[], onlyMode: boolean, ernMode: number, recording: boolean }} PickerState
- *   candidate and hits stay empty since 2.5 (the map model still reads them)
+ *   candidate: the Quay marked in the search window (its pin is marked); hits stay empty since 2.5
  * @typedef {'use' | 'above' | 'below'} QuayAction
  * @typedef {{ show(state: PickerState): void, onPick(fn: (kind: 'place' | 'quay', id: string, action?: QuayAction) => void): void,
  *             view(): { lat: number, lon: number, radiusKm: number, zoom: number } | null,
@@ -124,9 +124,13 @@ function followRow() {
 /** @param {StopPlace} place @param {any} quay @returns {QuayInfo} */
 export const quayInfoOf = (place, quay) => ({ quayId: quay.quayId, publicCode: quay.publicCode, privateCode: quay.privateCode ?? '', stopPlaceId: place.id, stopPlaceName: place.name, mode: place.mode, lat: quay.lat, lon: quay.lon });
 
-/** The search window's highlighted Quay: the map (if open) shows its stop place. @param {StopPlace} place */
-export function showPlaceOnMap(place) {
-  state.place = place;
+/**
+ * The search window's marked Quay: the map (if open) shows its stop place, with that Quay's pin marked; (null, null)
+ * when the window closes. @param {StopPlace | null} place @param {QuayInfo | null} quay
+ */
+export function showPlaceOnMap(place, quay) {
+  if (place) state.place = place;
+  state.candidate = /** @type {any} */ (quay);
   render();
 }
 

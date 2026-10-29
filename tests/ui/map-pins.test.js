@@ -1,7 +1,7 @@
 // Quays as pins on the map (stop picking 2, 2.5): the tip is the Quay's coordinate; a platform code sits in a bigger
 // round head, a Quay without one gets a smaller hollow pin; the row's own Quay is highlighted.
 import { describe, it, expect } from 'vitest';
-import { quayPin } from '../../src/ui/map-pins.js';
+import { quayPin, pickAction } from '../../src/ui/map-pins.js';
 
 describe('Quay pins', () => {
   it('a Quay with a platform code: a pin with the code in its head, anchored at its tip', () => {
@@ -20,5 +20,17 @@ describe('Quay pins', () => {
 
   it('the row\'s own Quay is highlighted', () => {
     expect(quayPin({ lat: 60, lon: 10, label: 'A', state: 'current' }).cls).toContain('pm-pin-current');
+  });
+});
+
+describe('first look at 2.5 (user 2026-10-30)', () => {
+  it('the platform marked in the search window is a marked pin', () => {
+    expect(quayPin({ lat: 60, lon: 10, label: 'A', state: 'candidate' }).cls).toContain('pm-pin-marked');
+  });
+
+  it('click: on the row; Shift+click: a new row below; Alt is not used (Alt+Shift switches keyboard layout)', () => {
+    expect(pickAction({ shiftKey: false, altKey: false })).toBe('use');
+    expect(pickAction({ shiftKey: true, altKey: false })).toBe('below');
+    expect(pickAction({ shiftKey: true, altKey: true })).toBe('below');
   });
 });

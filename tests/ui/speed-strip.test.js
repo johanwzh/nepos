@@ -102,6 +102,8 @@ describe('the speed strip, 2.5: the trip’s average, possible-speed bands, the 
     // 55.6 km in 13 minutes
     expect(strip().querySelector('.sp-avg-t')?.textContent).toBe('⌀ 257 km/t');
     expect(strip().querySelector('.sp-avg')).not.toBeNull();
+    // in the top right corner, wherever the line is (user 2026-10-30: it got mashed up by the arcs at the end)
+    expect(strip().querySelector('.sp-avg-t')?.getAttribute('y')).toBe('10');
   });
 
   it('a band round each arc; capped inside the strip', () => {

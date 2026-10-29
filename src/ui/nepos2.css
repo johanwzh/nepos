@@ -310,6 +310,10 @@ dialog.n2-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .pm-pin-current .pm-pin-body { fill: #fff; stroke: var(--accent); stroke-width: 2.5; }
 .pm-pin-current text { fill: var(--accent); }
 .pm-pin-current .pm-pin-hole { fill: var(--accent); }
+/* The platform marked in the search window: a ring round the pin, on top */
+.pm-pin-marked { z-index: 950 !important; filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 2.5px var(--text)); }
+.pm-pin-marked .pm-pin-body { stroke: var(--text); stroke-width: 2.5; }
+.ss-nocode { display: inline-block; width: 6px; height: 6px; margin: 0 4px; border-radius: 50%; background: var(--text-f); }
 .pm-line { border-radius: 50%; background: rgba(120,120,120,.6); color: #fff; font: 600 10px/1 system-ui, sans-serif; }
 .pm-current { border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--accent); }
 .pm-candidate { border-radius: 50%; background: #fff; border: 3px dashed var(--accent); }
@@ -736,7 +740,7 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .sp-base { stroke: var(--border); stroke-width: 1; }
 /* 2.5: the trip's own average; the speeds the minutes allow (a faint lens round each arc); the hovered km/h */
 .sp-avg { stroke: var(--text-m); stroke-width: 1; pointer-events: none; }
-.sp-avg-t { fill: var(--text-m); font-size: 10px; pointer-events: none; }
+.sp-avg-t { fill: var(--text-m); font-size: 10px; pointer-events: none; paint-order: stroke; stroke: var(--bg-panel); stroke-width: 3px; } /* top right, wherever the line is (user 2026-10-30) */
 .sp-band { stroke: none; opacity: .15; pointer-events: none; fill: var(--accent); }
 .sp-band.warn { fill: #ef9f27; }
 .sp-band.over, .sp-band.zero { fill: var(--g-dec-c); }

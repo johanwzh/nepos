@@ -184,7 +184,7 @@ export function initPowerTools() {
   if (box) {
     // data-lk: the labels follow a change of language like the rest of the page (shell.js applyLang)
     box.innerHTML = `<div class="pt-head" data-lk="ptTitle">${t('ptTitle')}</div><div class="pt-tools">${TOOLS.map((x) =>
-      `<button type="button" class="pt-tool" data-tool="${x.name}"${x.disabled ? ` disabled title="${t('ptLater')}"` : ` title="Alt+${x.key.toUpperCase()}"`}><span class="pt-icon">${x.icon}</span> <span data-lk="${x.label}">${t(x.label)}</span></button>`).join('')}</div><div class="pt-body"></div>`;
+      `<button type="button" class="pt-tool" data-tool="${x.name}"${x.disabled ? ` disabled data-lk-title="ptLater" title="${t('ptLater')}"` : ` title="Alt+${x.key.toUpperCase()}"`}><span class="pt-icon">${x.icon}</span> <span data-lk="${x.label}">${t(x.label)}</span></button>`).join('')}</div><div class="pt-body"></div>`;
     for (const btn of box.querySelectorAll('.pt-tool')) {
       btn.addEventListener('click', () => { const name = /** @type {ToolName} */ (/** @type {HTMLElement} */ (btn).dataset.tool); setTool(active === name ? '' : name); });
     }

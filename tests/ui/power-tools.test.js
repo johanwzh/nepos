@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell, currentPage } from '../../src/ui/shell.js';
+import { applyLang, initShell, currentPage } from '../../src/ui/shell.js';
 import { grid, initGrid, loadGrid, selectCell } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { newRouteState } from '../../src/ui/route-state.js';
@@ -279,5 +279,16 @@ describe('Registrer stopp and Optimalisering in the toolbox (stop picking 2, 2.5
   it('while recording, the map pane is not locked', () => {
     const css = readFileSync('src/ui/styles.css', 'utf8');
     expect(css).toMatch(/body\.pt-record :is\(#panel-right, #map-strip\) \{ opacity: 1; pointer-events: auto; \}/);
+  });
+});
+
+describe('the disabled tool follows the language (user 2026-10-30)', () => {
+  it('says "Coming later" in English', () => {
+    app.settings = { ...app.settings, lang: 'en' };
+    applyLang();
+    expect(tool('optimize').title).toBe('Coming later');
+    app.settings = { ...app.settings, lang: 'no' };
+    applyLang();
+    expect(tool('optimize').title).toBe('Kommer senere');
   });
 });

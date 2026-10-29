@@ -67,7 +67,7 @@ function render() {
   if (p.avg != null) {
     const y = BASE - height(p.avg);
     parts.push(`<line class="sp-avg" x1="${PAD}" x2="${W - PAD}" y1="${y}" y2="${y}"></line>
-      <text class="sp-avg-t" x="${W - PAD}" y="${Math.max(9, y - 2)}" text-anchor="end">${esc(t('spdAvg', fmt(p.avg, 0)))}</text>`);
+      <text class="sp-avg-t" x="${W - PAD}" y="10" text-anchor="end">${esc(t('spdAvg', fmt(p.avg, 0)))}</text>`);
   }
   peak = (li) => {
     const leg = p.legs[li];

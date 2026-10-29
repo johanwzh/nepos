@@ -2,6 +2,13 @@
 // bottom). A platform code sits in a bigger round head; a Quay without one gets a smaller, hollow pin. The row's own
 // Quay is the same pin, highlighted.
 
+/**
+ * What a click on a Quay pin does (stop picking 2): on the row; Shift: a new row below. A new row above is on the
+ * right-click menu only — Alt+Shift switches the keyboard layout on Windows (user 2026-10-30).
+ * @param {{ shiftKey: boolean, altKey: boolean }} ev @returns {'use' | 'below'}
+ */
+export const pickAction = (ev) => (ev.shiftKey ? 'below' : 'use');
+
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -11,7 +18,7 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
  */
 export function quayPin(m) {
   const code = String(m.label ?? '').trim();
-  const cls = ['pm-pin', code ? 'pm-pin-code' : '', m.state === 'current' ? 'pm-pin-current' : ''].filter(Boolean).join(' ');
+  const cls = ['pm-pin', code ? 'pm-pin-code' : '', m.state === 'current' ? 'pm-pin-current' : '', m.state === 'candidate' ? 'pm-pin-marked' : ''].filter(Boolean).join(' ');
   const z = m.state ? 900 : 500;
   if (code) {
     // A 22 px round head with the code, its point 8 px below

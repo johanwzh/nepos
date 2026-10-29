@@ -103,6 +103,10 @@ export function applyLang() {
     const value = t(/** @type {HTMLElement} */ (el).dataset.lk);
     if (typeof value === 'string') el.textContent = value;
   });
+  document.querySelectorAll('[data-lk-title]').forEach((el) => {
+    const value = t(/** @type {HTMLElement} */ (el).dataset.lkTitle);
+    if (typeof value === 'string') /** @type {HTMLElement} */ (el).title = value;
+  });
   applyTheme();
 }
 
