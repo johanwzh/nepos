@@ -10,6 +10,7 @@ import { isValidDayCode } from '../core/ern/validate.js';
 import { canonicalDayCode } from '../core/day-codes.js';
 import { parseCellInput, normalizeCell } from '../core/grid-input.js';
 import { noteLetters } from '../core/note-letters.js';
+import { dayLines } from '../core/day-lines.js';
 import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
@@ -261,7 +262,6 @@ function cellHTML(cell, isEdit, buf, letter = '') {
   if (cell.req || cell.booking) m += '<span class="g-sfx-x">x</span>';
   // The note letter, in place of the old triangle (booking spec 2026-10-22)
   if (letter) m += `<span class="g-fn-l">${letter}</span>`;
-  if (cell.dayOffset > 0) m += `<span class="g-day-off">+${cell.dayOffset}</span>`;
   return slots(esc(cell.time), m);
 }
 /** @param {number} r @param {number} c */
@@ -501,6 +501,19 @@ function flashMoved(cls) {
   }
 }
 
+/**
+ * A line on the top edge of a time where the trip's date changes, with the jump when it is more than one day
+ * (docs/superpowers/specs/2026-10-29-day-shift-lines-design.md). @param {number} ci
+ */
+function paintDayLines(ci) {
+  const lines = dayLines(grid.cols[ci]?.cells ?? []);
+  for (const td of /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(`#tbl td.g-td-time[data-c="${ci}"]`))) {
+    const jump = lines.get(Number(td.dataset.r)) ?? 0;
+    td.classList.toggle('g-day-line', jump > 0);
+    if (jump > 1) td.dataset.jump = String(jump); else delete td.dataset.jump;
+  }
+}
+
 function patchTimes(r0, r1, c0, c1) {
   for (let c = c0; c <= c1; c++) {
     if (!grid.cols[c]) continue;
@@ -510,6 +523,7 @@ function patchTimes(r0, r1, c0, c1) {
       if (r <= r1) td.innerHTML = cellHTML(grid.cols[c].cells[r], false, '', letters.get(`${c}:${r}`));
       td.classList.toggle('is-dec', isDecreasing(r, c));
     }
+    paintDayLines(c);
   }
   clearTimeout(jogTimer);
   jogTimer = setTimeout(restRender, JOG_REST);
@@ -789,6 +803,7 @@ export function render() {
   if (grid.vehicleRow) renderLabelRow(tbl, 'vehicle');
   if (grid.tripRow) renderTripRow(tbl);
   grid.stops.forEach((stop, ri) => renderStopRow(tbl, stop, ri, linked));
+  grid.cols.forEach((_, ci) => paintDayLines(ci));
   renderBottomRow(tbl);
   if (destColumnsOpen()) {
     addDestColumns(tbl);

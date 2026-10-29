@@ -268,6 +268,16 @@ describe('nudging times with the jog, a power tool (user test 2026-10-17; power 
   const key = (/** @type {Element} */ el, /** @type {string} */ k, shiftKey = false) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey, bubbles: true, cancelable: true }));
   const times = () => grid.cols[0].cells.map((c) => c.time);
 
+  it('the jog moves the line across midnight at once', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('2350'), cell('2359')] }] });
+    const jog = open(); // selects row 0 — select row 1 instead:
+    at(1, 0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    key(jog, 'ArrowDown');
+    expect(grid.cols[0].cells[1]).toMatchObject({ time: '0000', dayOffset: 1 });
+    expect(at(1, 0).classList.contains('g-day-line')).toBe(true); // before the jog rests
+  });
+
   it('only ever moves the selected cells, one minute a notch (Shift: ten)', () => {
     const jog = open(); // one cell selected: only that cell
     key(jog, 'ArrowDown');
@@ -584,14 +594,30 @@ describe('a note on several cells at once (47)', () => {
 });
 
 describe('times aligned, with room for marks (35)', () => {
-  it('puts the time and its marks (a/p/x, +1) in two parts, so every time starts at the same place', () => {
+  it('puts the time and its marks (a/p/x) in two parts; no +1 text', () => {
     loadGrid({ stops: [stop('A'), stop('B'), stop('C')], cols: [{ dayCode: 'D', cells: [cell('0700'), { ...cell('0010'), suffix: 'p', dayOffset: 1 }, { ...cell('0020'), dayOffset: 1 }] }] });
     const td = (/** @type {number} */ r) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="0"]`));
     expect(td(0).querySelector('.g-t')?.textContent).toBe('0700');
     expect(td(0).querySelector('.g-m')?.textContent).toBe('');
     expect(td(1).querySelector('.g-t')?.textContent).toBe('0010');
-    expect(td(1).querySelector('.g-m')?.textContent).toBe('p+1');
-    expect(td(1).textContent).toBe('0010p+1');
+    expect(td(1).querySelector('.g-m')?.textContent).toBe('p');
+    expect(td(1).textContent).toBe('0010p');
+    expect(td(1).classList.contains('g-day-line')).toBe(true);
+    expect(td(1).dataset.jump).toBeUndefined();
+    expect(td(2).classList.contains('g-day-line')).toBe(false);
+  });
+
+  it('a jump of more than one day carries its number', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('2350'), { ...cell('0150'), dayOffset: 2 }] }] });
+    const td = /** @type {HTMLElement} */ (document.querySelector('[data-r="1"][data-c="0"]'));
+    expect(td.classList.contains('g-day-line')).toBe(true);
+    expect(td.dataset.jump).toBe('2');
+  });
+
+  it('a decreasing time stays red next to a line', () => {
+    loadGrid({ stops: [stop('A'), stop('B'), stop('C')], cols: [{ dayCode: 'D', cells: [cell('2350'), { ...cell('0010'), dayOffset: 1 }, { ...cell('0005'), dayOffset: 1 }] }] });
+    const td = /** @type {HTMLElement} */ (document.querySelector('[data-r="2"][data-c="0"]'));
+    expect(td.classList.contains('is-dec')).toBe(true);
   });
 });
 

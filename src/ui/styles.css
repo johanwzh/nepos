@@ -27,6 +27,7 @@
     --g-sel:    #c8e4ff;
     --g-rng:    #d8ecff;
     --g-dec-bg: #fde8e8;
+    --g-day-line: #7b1fa2;
     --g-dec-c:  #aa0000;
 
     /* Interchange colours */
@@ -57,6 +58,7 @@
     --g-sel:    #1e3a58;
     --g-rng:    #162d46;
     --g-dec-bg: #3d1818;
+    --g-day-line: #ce93d8;
     --g-dec-c:  #ff7070;
 
     /* Interchange colours – dark */
@@ -1055,7 +1057,9 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 .g-td-time.is-anchor.is-dec { background: var(--g-dec-bg) !important; }
 
 .g-sfx-a, .g-sfx-p, .g-sfx-x { color: #cc0000; }
-.g-day-off { color: var(--text-f); font-size: 9px; vertical-align: super; line-height: 0; }
+/* A line where the trip's date changes; the jump when more than one day (spec 2026-10-29-day-shift-lines) */
+.g-td-time.g-day-line::before { content: ''; position: absolute; left: 0; right: 0; top: -1px; height: 3px; background: var(--g-day-line); pointer-events: none; }
+.g-td-time.g-day-line[data-jump]::after { content: '+' attr(data-jump); position: absolute; left: 1px; top: -1px; padding: 0 2px; font-size: 9px; line-height: 10px; color: var(--bg-panel); background: var(--g-day-line); border-radius: 0 0 3px 0; pointer-events: none; }
 /* A time and its marks: the time always starts at the same place in the column, the marks (a/p/x, +1, and later
    footnote letters: at most two) get a fixed slot to its right */
 .g-td-time { text-align: left; padding-left: 7px; white-space: nowrap; }
