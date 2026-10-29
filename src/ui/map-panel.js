@@ -11,6 +11,7 @@ import { styleUrlFor } from '../core/map-style.js';
 import { pickerState, setPickerMap } from './stop-picker.js';
 import { pickerMapModel } from '../core/picker-map-model.js';
 import { modeIconSvg } from './mode-icons.js';
+import { quayPin } from './map-pins.js';
 import { placeMenu } from './place-menu.js';
 import { createMapView } from './map-view.js';
 import { linkFeatures, onLinksChanged, blockLink, routeAgain, linesUsing, linkFor, linkBudgetLeft } from './link-router.js';
@@ -127,7 +128,7 @@ function drawPicker() {
     if (m.kind === 'line') return { ...base, cls: 'pm-line', html: String(m.n), size: 18, tooltip: esc(m.label) };
     if (m.kind === 'current') return { ...base, cls: 'pm-current', html: '', size: 18, z: 800, tooltip: esc(m.label) };
     if (m.kind === 'candidate') return { ...base, cls: 'pm-candidate', html: '', size: 26, z: 1000, tooltip: esc(m.label) };
-    if (m.kind === 'quay') return { ...base, cls: `pm-quay${m.state ? ` pm-quay-${m.state}` : ''}`, html: esc(m.label || '·'), size: 22, z: m.state ? 900 : 500,
+    if (m.kind === 'quay') return { ...quayPin({ lat: m.lat, lon: m.lon, label: m.label, state: m.state ?? '' }),
       onClick: () => onPick('quay', m.id), onContext: (/** @type {MouseEvent} */ ev) => quayMenu(m.id, ev) };
     return { ...base, cls: m.kind === 'place' ? 'pm-place' : 'pm-place pm-browse', html: modeIconSvg(m.mode ?? '', ''), size: 26, tooltip: esc(m.label),
       onClick: () => onPick('place', m.id) };

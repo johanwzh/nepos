@@ -6,8 +6,9 @@ import { t } from '../i18n/strings.js';
 
 /** @typedef {[number, number]} LonLat */
 /**
- * @typedef {{ lon: number, lat: number, html: string, cls: string, size: number, tooltip?: string, z?: number,
- *             onClick?: () => void, onContext?: (ev: MouseEvent) => void }} MapMarker
+ * @typedef {{ lon: number, lat: number, html: string, cls: string, size: number, height?: number, tooltip?: string, z?: number,
+ *             anchor?: 'center' | 'bottom', onClick?: (ev: MouseEvent) => void, onContext?: (ev: MouseEvent) => void }} MapMarker
+ *   anchor 'bottom': the marker's bottom edge is the point (a pin's tip, 2.5)
  * @typedef {{ lon: number, lat: number, r: number, tooltip: string }} MapDot
  */
 
@@ -132,16 +133,16 @@ export function createMapView(el, { style, dark = false }) {
         const box = document.createElement('div');
         box.className = `pm ${m.cls}`;
         box.style.width = `${m.size}px`;
-        box.style.height = `${m.size}px`;
+        box.style.height = `${m.height ?? m.size}px`;
         box.innerHTML = m.html;
         if (m.z) box.style.zIndex = String(m.z);
         if (m.tooltip) {
           box.addEventListener('mouseenter', () => popup.setLngLat([m.lon, m.lat]).setHTML(/** @type {string} */ (m.tooltip)).addTo(map));
           box.addEventListener('mouseleave', () => popup.remove());
         }
-        if (m.onClick) box.addEventListener('click', (e) => { e.stopPropagation(); m.onClick?.(); });
+        if (m.onClick) box.addEventListener('click', (e) => { e.stopPropagation(); m.onClick?.(e); });
         if (m.onContext) box.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); m.onContext?.(e); });
-        const marker = new maplibregl.Marker({ element: box }).setLngLat([m.lon, m.lat]).addTo(map);
+        const marker = new maplibregl.Marker({ element: box, anchor: m.anchor ?? 'center' }).setLngLat([m.lon, m.lat]).addTo(map);
         if (m.z) marker.getElement().style.zIndex = String(m.z);
         return marker;
       });

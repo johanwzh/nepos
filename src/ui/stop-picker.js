@@ -64,7 +64,7 @@ const quayCache = new Map();
 let browseTimer = null;
 let browseSeq = 0;
 
-/** The stop places in view from street level (zoom ≥ 15), and their Quays from zoom 17 (16 while recording). */
+/** The stop places in view from street level (zoom ≥ 15), and their Quays from zoom 16 (15 while recording; 2.5). */
 async function browse() {
   const v = map?.view() ?? null;
   const my = ++browseSeq;
@@ -80,7 +80,7 @@ async function browse() {
   }
   if (my !== browseSeq) return;
   state.browse = hits;
-  if (v.zoom >= (state.recording ? 16 : 17)) {
+  if (v.zoom >= (state.recording ? 15 : 16)) {
     const missing = hits.map((h) => h.id).filter((id) => !quayCache.has(id));
     if (missing.length) {
       try { for (const p of await services.getStopPlaces(missing, opts('nsr'))) quayCache.set(p.id, p); } catch { /* shown without Quays */ }

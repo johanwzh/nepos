@@ -240,7 +240,7 @@ describe('browsing the map', () => {
     }
   });
 
-  it('fetches the Quays of the stop places in view when zoomed in far', async () => {
+  it('fetches the Quays of the stop places in view from zoom 16', async () => {
     vi.useFakeTimers();
     try {
       /** @type {() => void} */
@@ -248,8 +248,13 @@ describe('browsing the map', () => {
       /** @type {string[][]} */
       const asked = [];
       setPickerServices({ nearby: async () => [hit(BIG_PLACE)], getStopPlaces: async (ids) => { asked.push(ids); return [BIG_PLACE]; } });
-      setPickerMap({ show: (m) => { lastModel = m; }, onPick: () => {}, view: () => ({ lat: 59.93, lon: 10.7, radiusKm: 0.1, zoom: 17 }), onViewChange: (fn) => { changed = fn; }, zoomTo: () => {} });
+      let zoom = 15; // one step further out than before 2.5: Quays from 16
+      setPickerMap({ show: (m) => { lastModel = m; }, onPick: () => {}, view: () => ({ lat: 59.93, lon: 10.7, radiusKm: 0.1, zoom }), onViewChange: (fn) => { changed = fn; }, zoomTo: () => {} });
       pickRow(3);
+      changed();
+      await vi.advanceTimersByTimeAsync(600);
+      expect(asked).toEqual([]);
+      zoom = 16;
       changed();
       await vi.advanceTimersByTimeAsync(600);
       expect(asked).toEqual([[BIG_PLACE.id]]);
