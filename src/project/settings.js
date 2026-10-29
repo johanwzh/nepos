@@ -13,13 +13,15 @@ export const DEFAULT_SETTINGS = Object.freeze({
   showPrivateCode: false,
   // The map (2.3): a MapLibre style URL; empty = OpenFreeMap Positron / Dark (core/map-style.js).
   mapStyleUrl: '',
+  /** the map layer when no style URL is set (2.5): today's vector map, OpenStreetMap or aerial */
+  mapLayer: 'vector',
   // Before 2.3: a raster tile URL with {z}/{x}/{y}. A custom one still works, as a raster style.
   tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   tileAttribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 });
 
 /** @type {Record<string, string[]>} */
-const ALLOWED = { lang: ['no', 'en'], theme: ['system', 'light', 'dark'] };
+const ALLOWED = { lang: ['no', 'en'], theme: ['system', 'light', 'dark'], mapLayer: ['vector', 'osm', 'aerial'] };
 
 /**
  * Read a JSON object file. Missing → null; unreadable or not an object → 'unreadable'.
