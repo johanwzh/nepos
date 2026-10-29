@@ -5,6 +5,9 @@
 // - The same stop twice in a row (or two calls a few metres apart) is a layover: no speed.
 // - Times past midnight: a later day (dayOffset) or the clock wrapping round. A time that goes
 //   backwards is flagged; the stops never move backwards on the line.
+// - Seconds are never typed (2.5, user 2026-10-29): a trip's first departure and a departure after a wait or a
+//   layover are taken as :00, every other time as somewhere in its minute (:00–:59). Each leg gets the slowest and
+//   fastest speed those windows allow; the trip gets its own average (km over running minutes, layovers left out).
 import { journeyStops } from './netex/journeys.js';
 
 /** Warning levels, straight-line km/h, per NeTEx mode. */
@@ -31,7 +34,8 @@ const SAME_PLACE_KM = 0.05;
 /**
  * @typedef {{ ri: number, name: string, bold: boolean, x: number, lat: number, lon: number }} ProfilePoint
  * @typedef {{ from: number, to: number, fromName: string, toName: string, minutes: number, km: number,
- *             kmh: number | null, kind: 'ok' | 'warn' | 'over' | 'zero' | 'negative' | 'layover' }} ProfileLeg
+ *             kmh: number | null, kmhMin: number | null, kmhMax: number | null,
+ *             kind: 'ok' | 'warn' | 'over' | 'zero' | 'negative' | 'layover' }} ProfileLeg
  */
 
 /** @param {any} cell */
@@ -51,7 +55,7 @@ function km(a, b) {
  * @param {Map<string, { lat: number | null, lon: number | null } | null>} quayInfo
  * @param {string} mode the line's NeTEx mode
  * @param {Record<string, number> | null} [limits] the project's own levels
- * @returns {{ points: ProfilePoint[], legs: ProfileLeg[], limit: number }}
+ * @returns {{ points: ProfilePoint[], legs: ProfileLeg[], limit: number, avg: number | null }}
  */
 export function speedProfile(grid, col, quayInfo, mode, limits) {
   const limit = speedLimit(mode, limits);
@@ -72,11 +76,19 @@ export function speedProfile(grid, col, quayInfo, mode, limits) {
     const kmh = !layover && minutes > 0 ? dist / (minutes / 60) : null;
     const kind = layover ? 'layover' : minutes < 0 ? 'negative' : minutes === 0 ? 'zero'
       : /** @type {number} */ (kmh) > limit ? 'over' : /** @type {number} */ (kmh) > limit * NEAR ? 'warn' : 'ok';
-    legs.push({ from: a.ri, to: b.ri, fromName: a.name, toName: b.name, minutes, km: dist, kmh, kind });
+    // The departure is pinned at :00 at the trip's start and after a wait or a layover; else it is a window
+    const pinned = i === 1 || (a.arrCell != null && a.arr !== a.dep) || legs[i - 2]?.kind === 'layover';
+    const lo = Math.max(1, minutes * 60 - (pinned ? 0 : 59)), hi = minutes * 60 + 59;
+    const ranged = !layover && minutes >= 0;
+    legs.push({ from: a.ri, to: b.ri, fromName: a.name, toName: b.name, minutes, km: dist, kmh,
+      kmhMin: ranged ? dist / (hi / 3600) : null, kmhMax: ranged ? dist / (lo / 3600) : null, kind });
     at.push(at[i - 1] + Math.max(0, minutes));
   }
   const total = at[at.length - 1];
   const points = calls.map((c, i) => ({ ri: c.ri, name: c.name, bold: !!grid.stops[c.ri]?.bold, lat: c.lat, lon: c.lon,
     x: total > 0 ? at[i] / total : calls.length > 1 ? i / (calls.length - 1) : 0 }));
-  return { points, legs, limit };
+  const run = legs.filter((l) => l.kind !== 'layover');
+  const runMinutes = run.reduce((n, l) => n + Math.max(0, l.minutes), 0);
+  const avg = runMinutes > 0 ? run.reduce((n, l) => n + l.km, 0) / (runMinutes / 60) : null;
+  return { points, legs, limit, avg };
 }

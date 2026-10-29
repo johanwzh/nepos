@@ -72,3 +72,58 @@ describe("the project's own speed limits (customer 2026-10-19)", () => {
     expect(HIGH_LIMIT).toBe(1.5);
   });
 });
+
+describe("the trip's average and each leg's possible speed (2.5)", () => {
+  // 0.054° of latitude ≈ 6 km
+  const six = new Map([['A', at(60, 10)], ['B', at(60.054, 10)], ['C', at(60.108, 10)], ['D', at(60.162, 10)]]);
+  // A 0700 → B 0706, B waits 0706/0710, B 0710 → C 0722, C 0722 → D 0730
+  const grid = { stops: [stop('A', 'A'), stop('B', 'B', { isDwellArr: true }), stop('B', 'B'), stop('C', 'C'), stop('D', 'D')],
+    cols: [{ cells: [cell('0700'), cell('0706'), cell('0710'), cell('0722'), cell('0730')] }] };
+  const p = speedProfile(grid, grid.cols[0], six, 'bus');
+  const km = p.legs[0].km;
+
+  it("the trip's own average: km over running minutes, layovers left out", () => {
+    const total = p.legs.reduce((n, l) => n + l.km, 0);
+    expect(p.avg).toBeCloseTo(total / (26 / 60), 6);
+    const lay = { stops: [stop('A', 'A'), stop('B', 'B'), stop('B', 'B'), stop('C', 'C')], cols: [{ cells: [cell('0700'), cell('0706'), cell('0716'), cell('0722')] }] };
+    const q = speedProfile(lay, lay.cols[0], six, 'bus');
+    expect(q.avg).toBeCloseTo((q.legs[0].km + q.legs[2].km) / (12 / 60), 6);
+  });
+
+  it('a speed range from the minute windows: the first departure is pinned at :00', () => {
+    expect(p.legs[0].kmhMin).toBeCloseTo(km / (419 / 3600), 6);
+    expect(p.legs[0].kmhMax).toBeCloseTo(km / (360 / 3600), 6);
+  });
+
+  it('a departure after a wait is pinned; one inside a run is a window', () => {
+    // B departs 0710 after waiting from 0706: pinned. 12 min: 720 … 779 s
+    expect(p.legs[1].kmhMax).toBeCloseTo(p.legs[1].km / (720 / 3600), 6);
+    expect(p.legs[1].kmhMin).toBeCloseTo(p.legs[1].km / (779 / 3600), 6);
+    // C departs 0722 inside the run: a window. 8 min: 421 … 539 s
+    expect(p.legs[2].kmhMax).toBeCloseTo(p.legs[2].km / (421 / 3600), 6);
+    expect(p.legs[2].kmhMin).toBeCloseTo(p.legs[2].km / (539 / 3600), 6);
+  });
+
+  it('a departure after a layover leg is pinned; layovers have no range', () => {
+    const lay = { stops: [stop('A', 'A'), stop('B', 'B'), stop('B', 'B'), stop('C', 'C')], cols: [{ cells: [cell('0700'), cell('0706'), cell('0716'), cell('0722')] }] };
+    const q = speedProfile(lay, lay.cols[0], six, 'bus');
+    expect(q.legs[1]).toMatchObject({ kind: 'layover', kmhMin: null, kmhMax: null });
+    expect(q.legs[2].kmhMax).toBeCloseTo(q.legs[2].km / (360 / 3600), 6);
+  });
+
+  it('a 0-minute leg has a range but no exact speed; no average when there is no running time', () => {
+    const zero = { stops: [stop('A', 'A'), stop('B', 'B')], cols: [{ cells: [cell('0700'), cell('0700')] }] };
+    const q = speedProfile(zero, zero.cols[0], six, 'bus');
+    expect(q.legs[0].kmh).toBe(null);
+    expect(q.legs[0].kmhMin).toBeCloseTo(q.legs[0].km / (59 / 3600), 6);
+    expect(q.legs[0].kmhMax).toBeCloseTo(q.legs[0].km / (1 / 3600), 6);
+    expect(q.avg).toBe(null);
+  });
+
+  it('past midnight: 2358 → 0003+1 is 5 minutes, and the range follows', () => {
+    const night = { stops: [stop('A', 'A'), stop('B', 'B')], cols: [{ cells: [cell('2358'), cell('0003', 1)] }] };
+    const q = speedProfile(night, night.cols[0], six, 'bus');
+    expect(q.legs[0].minutes).toBe(5);
+    expect(q.legs[0].kmhMax).toBeCloseTo(q.legs[0].km / (300 / 3600), 6);
+  });
+});
