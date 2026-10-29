@@ -129,7 +129,9 @@ function drawPicker() {
     if (m.kind === 'current') return { ...base, cls: 'pm-current', html: '', size: 18, z: 800, tooltip: esc(m.label) };
     if (m.kind === 'candidate') return { ...base, cls: 'pm-candidate', html: '', size: 26, z: 1000, tooltip: esc(m.label) };
     if (m.kind === 'quay') return { ...quayPin({ lat: m.lat, lon: m.lon, label: m.label, state: m.state ?? '' }),
-      onClick: () => onPick('quay', m.id), onContext: (/** @type {MouseEvent} */ ev) => quayMenu(m.id, ev) };
+      // Click = pick (stop picking 2): on the row; Shift: a new row below; Alt+Shift: above
+      onClick: (/** @type {MouseEvent} */ ev) => onPick('quay', m.id, ev?.shiftKey ? (ev.altKey ? 'above' : 'below') : 'use'),
+      onContext: (/** @type {MouseEvent} */ ev) => quayMenu(m.id, ev) };
     return { ...base, cls: m.kind === 'place' ? 'pm-place' : 'pm-place pm-browse', html: modeIconSvg(m.mode ?? '', ''), size: 26, tooltip: esc(m.label),
       onClick: () => onPick('place', m.id) };
   }));

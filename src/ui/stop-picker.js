@@ -1,24 +1,25 @@
-// Stop picking in the map pane (stop picking spec): the pane follows the selected stop cell; the
-// user searches by name or ID (or browses the map), a Quay becomes the candidate, and only Bruk
-// (or Enter) puts it into that row. Services and the map are injectable for tests.
+// Stop picking (stop picking spec; stop picking 2, 2.5): typing in a stop cell opens the search window at the cell
+// (stop-search.js); the map pane follows the selected stop cell and a click on a Quay picks it at once — click: on
+// the row, Shift+click: a new row below, Alt+Shift+click: a new row above; right-click: a menu. The changed stop cell
+// flashes. Map picking only works while a stop cell is selected. Services and the map are injectable for tests.
 import { app } from './state.js';
 import { $, openPanel, onRefresh } from './shell.js';
-import { t, getLang } from '../i18n/strings.js';
+import { t } from '../i18n/strings.js';
 import { searchStopPlaces, nearbyStopPlaces } from '../services/geocoder.js';
 import { getStopPlace, getStopPlaces, lookupQuays } from '../services/nsr.js';
-import { NSR_QUAY_PATTERN, NSR_STOP_PLACE_PATTERN, modeMatches } from '../core/quays.js';
-import { ERN_MODES } from '../core/ern/modes.js';
-import { grid, selectedStopRow, selectedRowIndex, setStopOnRow, clearStopOnRow, focusGrid, setStopTypeHandler, onGridRender, appendStopRow, removeStopRow, addStopRowAt } from './grid.js';
+import { modeMatches } from '../core/quays.js';
+import { grid, selectedStopRow, selectedRowIndex, setStopOnRow, clearStopOnRow, setStopTypeHandler, onGridRender, appendStopRow, removeStopRow, addStopRowAt, flashStopCell } from './grid.js';
 import { quayInfo } from './quays.js';
+import { openStopSearch } from './stop-search.js';
 
 /**
  * @typedef {import('../services/nsr.js').QuayInfo} QuayInfo
  * @typedef {import('../services/nsr.js').StopPlace} StopPlace
  * @typedef {import('../services/geocoder.js').StopPlaceHit} StopPlaceHit
- * @typedef {{ row: number | null, current: QuayInfo | null, candidate: QuayInfo | null, hits: StopPlaceHit[],
- *             place: StopPlace | null, direct: { quayId: string, info: QuayInfo | null | undefined } | null,
- *             browse: StopPlaceHit[], browseQuays: StopPlace[], onlyMode: boolean, ernMode: number, recording: boolean }} PickerState
- * @typedef {'use' | 'above' | 'below'} QuayAction  from the map's right-click menu
+ * @typedef {{ row: number | null, current: QuayInfo | null, candidate: null, hits: StopPlaceHit[],
+ *             place: StopPlace | null, browse: StopPlaceHit[], browseQuays: StopPlace[], onlyMode: boolean, ernMode: number, recording: boolean }} PickerState
+ *   candidate and hits stay empty since 2.5 (the map model still reads them)
+ * @typedef {'use' | 'above' | 'below'} QuayAction
  * @typedef {{ show(state: PickerState): void, onPick(fn: (kind: 'place' | 'quay', id: string, action?: QuayAction) => void): void,
  *             view(): { lat: number, lon: number, radiusKm: number, zoom: number } | null,
  *             onViewChange(fn: () => void): void, zoomTo(lat: number, lon: number, zoom: number): void }} PickerMap
@@ -29,6 +30,8 @@ let services = { search: searchStopPlaces, getStopPlace, lookupQuays, nearby: ne
 export function setPickerServices(s) {
   services = { ...services, ...s };
 }
+/** The Entur adapters (the search window uses them too). */
+export const pickerServices = () => services;
 
 /** @type {PickerMap | null} */
 let map = null;
@@ -37,15 +40,15 @@ export function setPickerMap(m) {
   map = m;
   m?.onPick((kind, id, action) => {
     if (kind === 'place') { if (!state.recording) void openPlace(id); }
-    else if (action && !state.recording) actOnQuay(id, action);
-    else pickQuay(id);
+    else if (state.recording) recordQuay(id);
+    else actOnQuay(id, action ?? 'use');
   });
   m?.onViewChange(() => onViewChange());
 }
 
 /** @type {(() => void)[]} */
 const viewListeners = [];
-/** Task 3 hooks browsing in here. @param {() => void} fn */
+/** @param {() => void} fn */
 export function onPickerViewChange(fn) {
   viewListeners.push(fn);
 }
@@ -75,7 +78,7 @@ async function browse() {
   const key = `${v.lat.toFixed(3)},${v.lon.toFixed(3)},${v.radiusKm.toFixed(2)}`;
   let hits = browseCache.get(key);
   if (!hits) {
-    try { hits = await services.nearby({ lat: v.lat, lon: v.lon, radiusKm: v.radiusKm }, opts('geocoder')); } catch { return; }
+    try { hits = await services.nearby({ lat: v.lat, lon: v.lon, radiusKm: v.radiusKm }, pickerOpts('geocoder')); } catch { return; }
     browseCache.set(key, hits);
   }
   if (my !== browseSeq) return;
@@ -83,7 +86,7 @@ async function browse() {
   if (v.zoom >= (state.recording ? 15 : 16)) {
     const missing = hits.map((h) => h.id).filter((id) => !quayCache.has(id));
     if (missing.length) {
-      try { for (const p of await services.getStopPlaces(missing, opts('nsr'))) quayCache.set(p.id, p); } catch { /* shown without Quays */ }
+      try { for (const p of await services.getStopPlaces(missing, pickerOpts('nsr'))) quayCache.set(p.id, p); } catch { /* shown without Quays */ }
       for (const id of missing) if (!quayCache.has(id)) quayCache.set(id, null);
     }
     if (my !== browseSeq) return;
@@ -93,127 +96,51 @@ async function browse() {
 }
 
 /** @type {PickerState} */
-const state = { row: null, current: null, candidate: null, hits: [], place: null, direct: null, browse: [], browseQuays: [], onlyMode: true, ernMode: 0, recording: false };
+const state = { row: null, current: null, candidate: null, hits: [], place: null, browse: [], browseQuays: [], onlyMode: true, ernMode: 0, recording: false };
 export const pickerState = () => state;
 let seq = 0;
-/** @type {any} */
-let timer = null;
 
-/** @param {string} s */
-const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const opts = (/** @type {'geocoder' | 'nsr'} */ which) => ({
+export const pickerOpts = (/** @type {'geocoder' | 'nsr'} */ which) => ({
   baseUrl: which === 'geocoder' ? app.settings.geocoderUrl : app.settings.stopPlacesUrl,
   clientName: app.settings.clientName || 'nepos-online',
 });
-const modeName = (/** @type {number} */ ernMode) => {
-  const m = /** @type {any} */ (ERN_MODES)[ernMode];
-  return m ? String(m[getLang()] ?? m.en).toLowerCase() : '';
-};
+/** The open line's ERN mode (0: none). */
+export const lineErnMode = () => app.routeState?.transportMode ?? 0;
 /** @param {string} id */
 const known = (id) => quayInfo.get(id) ?? null;
 
-/** @param {string} text */
-function setStatus(text) {
-  $('sp-status').textContent = text;
-}
-
-/** A new row (or none): forget the search for the old one; late answers are ignored. */
+/** A new row (or none): the map shows that row's stop; an open stop place is forgotten. */
 function followRow() {
   const row = grid.active && !grid.readOnly ? selectedStopRow() : null;
   if (row === state.row) { render(); return; }
   state.row = row;
-  if (row != null) openPanel('right'); // picking a stop happens in the map pane
-  if (keepView) { state.candidate = null; render(); return; }
+  if (keepView) { render(); return; }
   seq++;
-  clearTimeout(timer);
-  state.hits = []; state.place = null; state.direct = null; state.candidate = null;
-  if ($('sp-q')) $('sp-q').value = '';
-  setStatus('');
+  state.place = null;
   render();
-}
-
-/** Typing in a selected stop cell: the text goes to the search box (spec §2). @param {string} text */
-export function pickerType(text) {
-  openPanel('right');
-  followRow();
-  const q = /** @type {HTMLInputElement} */ ($('sp-q'));
-  q.value = text;
-  q.focus();
-  q.setSelectionRange(text.length, text.length);
-  schedule();
-}
-
-function schedule() {
-  clearTimeout(timer);
-  timer = setTimeout(() => { void search(); }, 350);
-}
-
-/** Search by name, or look up a pasted ID. */
-async function search() {
-  clearTimeout(timer);
-  const text = /** @type {HTMLInputElement} */ ($('sp-q')).value.trim();
-  const my = ++seq;
-  const current = () => my === seq;
-  state.hits = []; state.place = null; state.direct = null; state.candidate = null;
-  if (!text) { setStatus(''); render(); return; }
-  try {
-    if (NSR_QUAY_PATTERN.test(text)) {
-      state.direct = { quayId: text, info: undefined };
-      render();
-      let info;
-      try { info = (await services.lookupQuays([text], opts('nsr'))).get(text) ?? null; } catch { info = undefined; }
-      if (!current() || !state.direct) return;
-      state.direct.info = info;
-      if (info) state.candidate = info;
-      render();
-      return;
-    }
-    setStatus(t('wsSearching'));
-    if (NSR_STOP_PLACE_PATTERN.test(text)) {
-      const place = await services.getStopPlace(text, opts('nsr'));
-      if (!current()) return;
-      if (!place) { setStatus(t('wsNotFound', text)); render(); return; }
-      setStatus('');
-      showPlace(place);
-      return;
-    }
-    const hits = await services.search(text, opts('geocoder'));
-    if (!current()) return;
-    state.hits = hits;
-    kbIndex = -1;
-    setStatus(hits.length ? '' : t('wsNoResults'));
-    render();
-  } catch (e) {
-    if (current()) setStatus(t('wsFailed', /** @type {Error} */ (e).message));
-  }
 }
 
 /** @param {StopPlace} place @param {any} quay @returns {QuayInfo} */
 export const quayInfoOf = (place, quay) => ({ quayId: quay.quayId, publicCode: quay.publicCode, privateCode: quay.privateCode ?? '', stopPlaceId: place.id, stopPlaceName: place.name, mode: place.mode, lat: quay.lat, lon: quay.lon });
 
-/** A stop place with one Quay: that Quay is the candidate; with several: list them. @param {StopPlace} place */
-function showPlace(place) {
+/** The search window's highlighted Quay: the map (if open) shows its stop place. @param {StopPlace} place */
+export function showPlaceOnMap(place) {
   state.place = place;
-  kbIndex = state.hits.length ? 1 : 0; // its first platform is ready for Enter (after the Back row)
-  state.candidate = place.quays.length === 1 ? quayInfoOf(place, place.quays[0]) : null;
-  if (!place.quays.length) setStatus(t('wsNoQuays'));
   render();
 }
 
-/** @param {string} id */
+/** A stop place marker clicked on the map: its Quays. @param {string} id */
 async function openPlace(id) {
-  clearTimeout(timer);
   const my = ++seq;
-  const place = state.browseQuays.find((p) => p.id === id) ?? await services.getStopPlace(id, opts('nsr')).catch(() => null);
-  if (my !== seq) return;
-  if (!place) { setStatus(t('wsNotFound', id)); return; }
-  setStatus('');
-  showPlace(place);
+  const place = state.browseQuays.find((p) => p.id === id) ?? await services.getStopPlace(id, pickerOpts('nsr')).catch(() => null);
+  if (my !== seq || !place) return;
+  state.place = place;
+  render();
 }
 
 // ─── Recording stops (user test 2026-10-16) ─────────────────────────────────
 // "Registrer stopp": every Quay clicked on the map goes into the next empty stop row, or a new row
-// at the bottom. No Bruk. Ctrl+Z takes back the last one recorded in this run; Esc or the button
+// at the bottom. Ctrl+Z takes back the last one recorded in this run; Esc or the button
 // ends it. The map never moves by itself while recording.
 
 /** @type {{ stop: any, appended: boolean }[]} what this run recorded, newest last */
@@ -226,7 +153,7 @@ export function setRecording(on) {
   recorded = [];
   if (on) openPanel('right');
   render();
-  onViewChange(); // browse with the recording rules (no row needed, Quays from zoom 16)
+  onViewChange(); // browse with the recording rules (no row needed, Quays from zoom 15)
 }
 
 /** The first stop row with nothing in it (no stop, no name, no times), or -1. */
@@ -236,20 +163,16 @@ function emptyRow() {
 
 /** @param {string} quayId */
 function recordQuay(quayId) {
-  for (const place of [state.place, ...state.browseQuays]) {
-    const quay = place?.quays.find((q) => q.quayId === quayId);
-    if (!place || !quay) continue;
-    if (state.onlyMode && state.ernMode && place.mode && !modeMatches(state.ernMode, place.mode)) return; // the mode filter applies
-    let ri = emptyRow();
-    const appended = ri < 0;
-    if (appended) ri = appendStopRow();
-    const info = quayInfoOf(place, quay);
-    setStopOnRow(ri, { quayId: info.quayId, name: info.stopPlaceName, info });
-    recorded.push({ stop: grid.stops[ri], appended });
-    /** @type {any} */ (document.querySelector(`.g-td-name[data-ri="${ri}"]`))?.scrollIntoView?.({ block: 'nearest' });
-    render();
-    return;
-  }
+  const info = findQuay(quayId);
+  if (!info) return;
+  let ri = emptyRow();
+  const appended = ri < 0;
+  if (appended) ri = appendStopRow();
+  setStopOnRow(ri, { quayId: info.quayId, name: info.stopPlaceName, info });
+  recorded.push({ stop: grid.stops[ri], appended });
+  /** @type {any} */ (document.querySelector(`.g-td-name[data-ri="${ri}"]`))?.scrollIntoView?.({ block: 'nearest' });
+  flashStopCell(ri);
+  render();
 }
 
 /** Ctrl+Z while recording: take back the last recorded stop (rows changed since are skipped). */
@@ -266,20 +189,9 @@ function undoRecorded() {
 }
 
 /** Is a stop place of this mode allowed on the line? (Never another mode than the line's.) @param {string} mode */
-const modeOk = (mode) => !state.ernMode || !mode || modeMatches(state.ernMode, mode);
+export const modeOk = (mode) => !lineErnMode() || !mode || modeMatches(lineErnMode(), mode);
 
-/** A Quay clicked on the map or in the list becomes the candidate. @param {string} quayId */
-function pickQuay(quayId) {
-  if (state.recording) { recordQuay(quayId); return; }
-  const place = [state.place, ...state.browseQuays].find((p) => p?.quays.some((q) => q.quayId === quayId));
-  if (place && !modeOk(place.mode)) return;
-  for (const place of [state.place, ...state.browseQuays]) {
-    const quay = place?.quays.find((q) => q.quayId === quayId);
-    if (place && quay) { state.candidate = quayInfoOf(place, quay); render(); return; }
-  }
-}
-
-/** The Quay (with its stop place) among those shown, or null. @param {string} quayId */
+/** The Quay (with its stop place) among those shown on the map, or null (also for another mode). @param {string} quayId */
 function findQuay(quayId) {
   for (const place of [state.place, ...state.browseQuays]) {
     const quay = place?.quays.find((q) => q.quayId === quayId);
@@ -288,15 +200,23 @@ function findQuay(quayId) {
   return null;
 }
 
-/**
- * Bruk / Legg til over / Legg til under, for a Quay from the map. A new row is added beside a whole
- * dwell stop (never between its two rows) and becomes the selected row.
- * @param {string} quayId @param {QuayAction} action
- */
+/** A Quay clicked on the map, while a stop cell is selected. @param {string} quayId @param {QuayAction} action */
 function actOnQuay(quayId, action) {
   const info = findQuay(quayId);
-  if (state.row == null || !info || grid.readOnly) return;
-  let ri = state.row;
+  if (state.row == null || !info) return;
+  useQuay(state.row, info, action);
+}
+
+let keepView = false;
+
+/**
+ * Put a Quay on a stop row (use), or on a new row above or below it. A new row goes beside a whole dwell stop (never
+ * between its two rows) and becomes the selected row; a dwell stop gets the Quay on both rows. The cell flashes: a
+ * click in one place changed another (2.5).
+ * @param {number} ri @param {QuayInfo} info @param {QuayAction} action
+ */
+export function useQuay(ri, info, action) {
+  if (grid.readOnly || !grid.stops[ri] || !modeOk(info.mode)) return;
   if (action !== 'use') {
     const top = grid.stops[ri - 1]?.isDwellArr ? ri - 1 : ri;
     const bottom = grid.stops[ri]?.isDwellArr ? ri + 1 : ri;
@@ -306,76 +226,19 @@ function actOnQuay(quayId, action) {
     keepView = false;
   }
   setStopOnRow(ri, { quayId: info.quayId, name: info.stopPlaceName, info });
-  state.candidate = null;
+  flashStopCell(ri);
   render();
 }
 
-let keepView = false;
-
-/** Bruk: the candidate goes into the row. */
-function apply() {
-  if (state.row == null || !state.candidate || !modeOk(state.candidate.mode)) return;
-  const c = state.candidate;
-  setStopOnRow(state.row, { quayId: c.quayId, name: c.stopPlaceName, info: c });
-  done();
-}
-
-/** "Bruk ID-en likevel": a Quay ID NSR does not know (or did not answer for). */
-function applyDirect() {
-  if (state.row == null || !state.direct) return;
-  const d = state.direct;
-  if (d.info && !modeOk(d.info.mode)) { setStatus(t('wsOtherMode')); return; }
-  setStopOnRow(state.row, { quayId: d.quayId, name: d.info?.stopPlaceName ?? '', info: d.info });
-  done();
-}
-
-function done() {
-  state.hits = []; state.place = null; state.direct = null; state.candidate = null;
-  $('sp-q').value = '';
-  setStatus('');
-  focusGrid();
+/** A pasted Quay ID NSR does not know (or did not answer for): used anyway. @param {number} ri @param {string} quayId */
+export function useQuayId(ri, quayId) {
+  if (grid.readOnly || !grid.stops[ri]) return;
+  setStopOnRow(ri, { quayId, name: '', info: null });
+  flashStopCell(ri);
   render();
-}
-
-/** @param {string} html @param {() => void} onClick @param {string} [cls] */
-/** The result row marked for the keyboard (arrows or Tab in the search box, then Enter); -1: none */
-let kbIndex = -1;
-
-/** The rows the keyboard can pick in the search list. */
-const pickable = () => /** @type {HTMLElement[]} */ ([...($('sp-list')?.querySelectorAll('.sp-row:not(.sp-off)') ?? [])]);
-
-/** Mark the keyboard's row. */
-function markKb() {
-  const rows = pickable();
-  if (kbIndex >= rows.length) kbIndex = rows.length - 1;
-  rows.forEach((r, i) => r.classList.toggle('kb', i === kbIndex));
-  rows[kbIndex]?.scrollIntoView?.({ block: 'nearest' });
-}
-
-function row(html, onClick, cls = 'sp-row') {
-  const div = document.createElement('div');
-  div.className = cls;
-  div.innerHTML = html;
-  div.addEventListener('click', onClick);
-  return div;
-}
-
-/** Under the map: the Quay clicked on the map (viewed), and what can be done with it. */
-function renderViewed() {
-  const c = state.candidate;
-  const box = $('map-viewed');
-  if (!box) return;
-  // Only while a stop cell is selected: that is when the map shows platforms to act on
-  /** @type {HTMLElement} */ (box.parentElement).hidden = state.row == null || state.recording;
-  box.textContent = c ? `${c.stopPlaceName} · ${t('wsQuay', c.publicCode)}` : t('mapViewedNone');
-  box.classList.toggle('none', !c);
-  const can = !!c && state.row != null && !state.recording && !grid.readOnly;
-  for (const id of ['map-use', 'map-above', 'map-below']) /** @type {HTMLButtonElement} */ ($(id)).disabled = !can;
 }
 
 function render() {
-  const pane = $('sp');
-  if (!pane) return;
   const rec = $('map-rec');
   if (rec) {
     if (state.recording && (!grid.active || grid.readOnly)) { state.recording = false; recorded = []; }
@@ -384,93 +247,26 @@ function render() {
     /** @type {HTMLButtonElement} */ (rec).disabled = !grid.active || grid.readOnly;
     $('map-rec-hint').hidden = !state.recording;
   }
-  const active = state.row != null && grid.stops[state.row];
-  pane.hidden = !active;
-  state.ernMode = app.routeState?.transportMode ?? 0;
+  state.ernMode = lineErnMode();
   state.onlyMode = true; // never a stop of another mode than the line's (user test 2026-10-16)
-  // Tøm stopp (at the bottom of the pane) works on the selected row in any column
+  // Tøm stopp works on the selected row in any column
   const sel = selectedRowIndex();
-  /** @type {HTMLButtonElement} */ ($('sp-clear')).disabled = sel == null || !grid.stops[sel]?.stopId || grid.readOnly;
-  if (!active) { state.current = null; renderViewed(); map?.show(state); return; }
-
-  const stop = grid.stops[/** @type {number} */ (state.row)];
-  state.current = stop.stopId ? known(String(stop.stopId)) : null;
-  // What the search is for: finding a stop for an empty row, or replacing the row's stop
-  $('sp-head').textContent = t(stop.stopId ? 'spReplace' : 'spFind', /** @type {number} */ (state.row) + 1);
-  const mode = modeName(state.ernMode);
-  $('sp-q').placeholder = t('wsPlaceholder');
-
-  const list = $('sp-list');
-  list.innerHTML = '';
-  if (state.direct && !state.direct.info) {
-    const note = state.direct.info === null ? t('wsNotSeen') : t('wsUnchecked');
-    list.appendChild(row(`${esc(t('spUseIdAnyway', state.direct.quayId))}<small>${esc(note)}</small>`, applyDirect));
-  } else if (state.place) {
-    const place = state.place;
-    if (state.hits.length) list.appendChild(row(esc(t('wsBack')), () => { state.place = null; state.candidate = null; render(); }, 'sp-row sp-back'));
-    const otherMode = !modeOk(place.mode);
-    const head = document.createElement('div');
-    head.className = 'sp-place';
-    head.innerHTML = `${esc(place.name)}<small>${esc(place.description)}${otherMode ? ` · <span class="n2-ws-warn">${esc(t('wsOtherMode'))}</span>` : ''}</small>`;
-    list.appendChild(head);
-    for (const quay of place.quays) {
-      const r = row(`${esc(t('wsQuay', quay.publicCode))}<small>${esc(quay.quayId)}${quay.description ? ` · ${esc(quay.description)}` : ''}</small>`,
-        () => { if (!otherMode) { state.candidate = quayInfoOf(place, quay); apply(); } }, otherMode ? 'sp-row sp-off' : 'sp-row');
-      if (state.candidate?.quayId === quay.quayId) r.classList.add('on');
-      list.appendChild(r);
-    }
-  } else {
-    const shown = mode ? state.hits.filter((h) => !h.modes.length || h.modes.some((m) => modeMatches(state.ernMode, m))) : state.hits;
-    const hidden = state.hits.length - shown.length;
-    if (hidden && !$('sp-status').textContent) setStatus(t('wsHidden', hidden));
-    for (const h of shown) {
-      const detail = [h.description, h.context, h.modes.join(', ')].filter(Boolean).join(' · ');
-      list.appendChild(row(`${esc(h.name)}<small>${esc(detail)}</small>`, () => { void openPlace(h.id); }));
-    }
-  }
-
-  markKb();
-  renderViewed();
+  const clear = /** @type {HTMLButtonElement | null} */ ($('sp-clear'));
+  if (clear) clear.disabled = sel == null || !grid.stops[sel]?.stopId || grid.readOnly;
+  const stop = state.row != null ? grid.stops[state.row] : null;
+  state.current = stop?.stopId ? known(String(stop.stopId)) : null;
   map?.show(state);
 }
 
 export function initStopPicker() {
   state.row = null;
   seq++;
-  setStopTypeHandler(pickerType);
-  const q = /** @type {HTMLInputElement} */ ($('sp-q'));
-  q.addEventListener('keydown', (e) => {
-    e.stopPropagation(); // the grid and the shell must not see typing in the search box
-    if (e.key === 'Escape') { e.preventDefault(); focusGrid(); return; }
-    // Arrows (or Tab, while there are results) move through the list; Enter picks the marked row
-    const rows = pickable();
-    const down = e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey), up = e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey);
-    if ((down || up) && rows.length) {
-      e.preventDefault();
-      kbIndex = down ? Math.min(rows.length - 1, kbIndex + 1) : Math.max(0, kbIndex - 1);
-      markKb();
-      return;
-    }
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    if (kbIndex >= 0 && rows[kbIndex]) { rows[kbIndex].click(); return; }
-    if (state.candidate) apply();
-    else if (state.direct && q.value.trim() === state.direct.quayId && state.direct.info !== undefined) applyDirect();
-    else void search();
-  });
-  q.addEventListener('input', () => {
-    // New text: the old candidate must never be applied by an Enter before the search answers.
-    kbIndex = -1;
-    if (state.candidate || state.direct) { state.candidate = null; state.direct = null; render(); }
-    schedule();
-  });
-  $('map-rec').addEventListener('click', () => setRecording(!state.recording));
-  for (const [id, action] of /** @type {[string, QuayAction][]} */ ([['map-use', 'use'], ['map-above', 'above'], ['map-below', 'below']])) {
-    $(id).addEventListener('click', () => { if (state.candidate) actOnQuay(state.candidate.quayId, action); });
-  }
+  // Typing in a stop cell: the search window at the cell (never the map pane)
+  setStopTypeHandler((text) => { const ri = selectedStopRow(); if (ri != null) openStopSearch(ri, text); });
+  $('map-rec')?.addEventListener('click', () => setRecording(!state.recording));
   state.recording = false;
   recorded = [];
-  $('sp-clear').addEventListener('click', () => { const ri = selectedRowIndex(); if (ri != null) { clearStopOnRow(ri); render(); } });
+  $('sp-clear')?.addEventListener('click', () => { const ri = selectedRowIndex(); if (ri != null) { clearStopOnRow(ri); render(); } });
   onGridRender(followRow);
   onRefresh(followRow);
   if (!keysWired) {
@@ -482,16 +278,6 @@ export function initStopPicker() {
       if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) return;
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setRecording(false); }
       else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); e.stopPropagation(); undoRecorded(); }
-    }, true);
-    // Capture phase: before the grid, which would otherwise start editing the row's name.
-    document.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' || !state.candidate || state.row == null || $('sp')?.hidden) return;
-      const el = document.activeElement;
-      if (el === $('sp-q') || document.querySelector('dialog[open]')) return; // the box handles its own Enter
-      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) return;
-      e.preventDefault();
-      e.stopPropagation();
-      apply();
     }, true);
   }
 }

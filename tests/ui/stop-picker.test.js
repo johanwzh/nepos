@@ -43,13 +43,6 @@ const settle = async () => { for (let i = 0; i < 6; i++) await flush(); };
 const nameCell = (/** @type {number} */ ri) => /** @type {HTMLElement} */ (document.querySelector(`.g-td-name[data-ri="${ri}"]`));
 const pickRow = (/** @type {number} */ ri) => nameCell(ri).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
 const press = (/** @type {string} */ key, target = /** @type {EventTarget} */ (document)) => target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
-const q = () => /** @type {HTMLInputElement} */ (document.getElementById('sp-q'));
-const rows = () => /** @type {HTMLElement[]} */ ([...document.querySelectorAll('#sp-list .sp-row')]);
-async function search(/** @type {string} */ text) {
-  q().value = text;
-  press('Enter', q());
-  await settle();
-}
 
 let wired = false;
 beforeEach(async () => {
@@ -81,110 +74,76 @@ beforeEach(async () => {
   await settle();
 });
 
-describe('stop picking in the map pane', () => {
-  it('opens the map when a stop cell is selected', () => {
-    expect(panelOpen('right')).toBe(false);
-    pickRow(0);
-    expect(panelOpen('right')).toBe(true);
-  });
-
-  it('follows the selected stop cell, and says what the search is for: find a stop, or replace one', () => {
-    pickRow(0);
-    expect(document.getElementById('sp').hidden).toBe(false);
-    expect(document.getElementById('sp-head').textContent).toBe('Bytt stoppet på rad 1');
-    pickRow(3);
-    expect(document.getElementById('sp-head').textContent).toBe('Finn og velg stopp for rad 4');
-  });
-
-  it('has no "only this mode" choice: a stop of another mode than the line is never offered', async () => {
-    expect(document.getElementById('sp-only-mode')).toBeNull();
-    setPickerServices({ search: async () => [{ ...hit(RAIL_PLACE), modes: ['rail'] }, hit(SKOYEN_PLACE)], getStopPlace: async (id) => (id === RAIL_PLACE.id ? RAIL_PLACE : SKOYEN_PLACE) });
-    pickRow(3);
-    await search('Skøyen');
-    expect(rows().map((r) => r.textContent)).not.toContain(expect.stringContaining('stasjon'));
-    expect(rows().some((r) => r.textContent?.includes('stasjon'))).toBe(false);
-  });
-
-  it('opens the pane when typing in a stop cell and searches for the text, leaving the row alone', async () => {
-    expect(panelOpen('right')).toBe(false);
-    pickRow(3);
-    press('S');
-    expect(panelOpen('right')).toBe(true);
-    expect(q().value).toBe('S');
-    expect(grid.stops[3].name).toBe('Uten ID');
-  });
-
-  it('search, open the stop place, click the platform: it is in the row, no Bruk step', async () => {
-    pickRow(3);
-    await search('Skøyen');
-    rows()[0].click();
-    await settle();
-    expect(grid.stops[3].stopId).toBe(null);
-    expect(document.getElementById('sp-card')).toBeNull();
-    rows().find((r) => r.textContent?.includes('Plattform B'))?.click();
-    expect(grid.stops[3].stopId).toBe('NSR:Quay:55');
-    expect(grid.stops[3].name).toBe('Skøyen');
-    expect(quayInfo.get('NSR:Quay:55')?.stopPlaceName).toBe('Skøyen');
-  });
-
-  it('lists the Quays of a stop place with several; a click puts one in the row', async () => {
-    pickRow(3);
-    await search('Stor');
-    rows()[0].click();
-    await settle();
-    expect(rows().map((r) => r.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('B')]));
-    rows()[rows().length - 1].click();
-    expect(grid.stops[3].stopId).toBe('NSR:Quay:62');
-  });
-
-  it('a Quay clicked on the map is only viewed; Bruk, Legg til over and Legg til under act on it', async () => {
-    /** @type {(kind: 'place' | 'quay', id: string, action?: string) => void} */ let pick = () => {};
+describe('stop picking on the map (stop picking 2: click = pick)', () => {
+  /** @type {(kind: 'place' | 'quay', id: string, action?: any) => void} */ let pick = () => {};
+  /** The map has Storsenter's Quays on it (a stop place marker was clicked). */
+  async function openStorsenter() {
     setPickerMap({ show: (m) => { lastModel = m; }, onPick: (fn) => { pick = fn; }, view: () => null, onViewChange: () => {}, zoomTo: () => {} });
-    pickRow(3);
-    await search('Stor');
-    rows()[0].click(); // the stop place is open: its Quays are on the map
+    pick('place', BIG_PLACE.id);
     await settle();
+  }
+
+  it('selecting a stop cell does not open the map pane', () => {
+    expect(panelOpen('right')).toBe(false);
+    pickRow(0);
+    expect(panelOpen('right')).toBe(false);
+  });
+
+  it('a click on a Quay puts it on the selected stop row at once, and the cell flashes', async () => {
+    pickRow(3);
+    await openStorsenter();
     pick('quay', 'NSR:Quay:61');
-    expect(grid.stops[3].stopId).toBe(null); // viewed, not used
-    expect(document.getElementById('map-viewed')?.textContent).toContain('Storsenter');
-    /** @type {HTMLElement} */ (document.getElementById('map-use')).click();
     expect(grid.stops[3].stopId).toBe('NSR:Quay:61');
-    pick('quay', 'NSR:Quay:62', 'below'); // the map's right-click menu
+    expect(grid.stops[3].name).toBe('Storsenter');
+    expect(quayInfo.get('NSR:Quay:61')?.stopPlaceName).toBe('Storsenter');
+    expect(nameCell(3).classList.contains('g-flash-pick')).toBe(true);
+  });
+
+  it('a click on a row that already has a stop replaces it', async () => {
+    pickRow(0);
+    await openStorsenter();
+    pick('quay', 'NSR:Quay:62');
+    expect(grid.stops[0].stopId).toBe('NSR:Quay:62');
+  });
+
+  it('Shift+click adds a row below with the Quay; Alt+Shift+click above', async () => {
+    pickRow(3);
+    await openStorsenter();
+    pick('quay', 'NSR:Quay:61');
+    pick('quay', 'NSR:Quay:62', 'below');
     expect(grid.stops.map((s) => s.stopId)).toEqual(['NSR:Quay:7203', 'NSR:Quay:11972', 'NSR:Quay:11972', 'NSR:Quay:61', 'NSR:Quay:62']);
     // the new row is now the selected one: "above" goes above it
     pick('quay', 'NSR:Quay:61', 'above');
     expect(grid.stops.map((s) => s.stopId)).toEqual(['NSR:Quay:7203', 'NSR:Quay:11972', 'NSR:Quay:11972', 'NSR:Quay:61', 'NSR:Quay:61', 'NSR:Quay:62']);
   });
 
+  it('with a time cell selected, a Quay click does nothing', async () => {
+    pickRow(3);
+    await openStorsenter();
+    const time = /** @type {HTMLElement} */ (document.querySelector('[data-r="3"][data-c="0"]'));
+    time.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    pick('quay', 'NSR:Quay:61', 'below');
+    pick('quay', 'NSR:Quay:61');
+    expect(grid.stops.map((s) => s.stopId)).toEqual(['NSR:Quay:7203', 'NSR:Quay:11972', 'NSR:Quay:11972', null]);
+  });
+
   it('gives both rows of a dwell stop the Quay, also when picked on the arrival row', async () => {
     pickRow(1);
-    await search('Skøyen');
-    rows()[0].click();
-    await settle();
-    rows().find((r) => r.textContent?.includes('Plattform B'))?.click();
-    expect(grid.stops[1].stopId).toBe('NSR:Quay:55');
-    expect(grid.stops[2].stopId).toBe('NSR:Quay:55');
+    await openStorsenter();
+    pick('quay', 'NSR:Quay:62');
+    expect(grid.stops[1].stopId).toBe('NSR:Quay:62');
+    expect(grid.stops[2].stopId).toBe('NSR:Quay:62');
   });
 
-  it('ignores an answer that arrives after the user moved to another row', async () => {
-    holdSearch = true;
-    pickRow(0);
-    q().value = 'Skøyen';
-    press('Enter', q());
+  it('never picks a Quay of another mode than the line', async () => {
     pickRow(3);
-    pending.forEach((r) => r([hit(SKOYEN_PLACE)]));
+    setPickerMap({ show: (m) => { lastModel = m; }, onPick: (fn) => { pick = fn; }, view: () => null, onViewChange: () => {}, zoomTo: () => {} });
+    setPickerServices({ getStopPlace: async () => RAIL_PLACE });
+    pick('place', RAIL_PLACE.id);
     await settle();
-    expect(rows()).toHaveLength(0);
-    expect(grid.stops[0].stopId).toBe('NSR:Quay:7203');
-  });
-
-  it('offers to use a pasted Quay ID NSR does not know', async () => {
-    pickRow(3);
-    await search('NSR:Quay:999');
-    expect(rows()[0].textContent).toContain('NSR:Quay:999');
-    rows()[0].click();
-    expect(grid.stops[3].stopId).toBe('NSR:Quay:999');
-    expect(quayInfo.get('NSR:Quay:999')).toBe(null);
+    pick('quay', 'NSR:Quay:99');
+    expect(grid.stops[3].stopId).toBe(null);
   });
 
   it('removes the stop but keeps the name as a label', () => {
@@ -194,19 +153,17 @@ describe('stop picking in the map pane', () => {
     expect(grid.stops[0].name).toBe('Jernbanetorget');
   });
 
-  it('has no stop items in the right-click menu any more', () => {
+  it('has no stop items in the right-click menu, and no search box or Bruk buttons in the pane', () => {
     expect(document.getElementById('gc-stopid')).toBeNull();
     expect(document.getElementById('gc-findstop')).toBeNull();
     expect(document.getElementById('ws-dlg')).toBeNull();
+    expect(document.getElementById('sp-q')).toBeNull();
+    expect(document.getElementById('map-use')).toBeNull();
   });
 
-  it('gives the map the current row and candidate', async () => {
+  it('gives the map the current row', () => {
     pickRow(3);
-    await search('Skøyen');
-    rows()[0].click();
-    await settle();
     expect(lastModel.row).toBe(3);
-    expect(lastModel.candidate?.quayId).toBe('NSR:Quay:55');
   });
 });
 
@@ -311,16 +268,6 @@ describe('the stop at the selected row, at the top of the map pane', () => {
     expect(card().textContent).toContain('ikke koblet til et stopp');
   });
 
-  it('shows Bruk / Legg til over / under only while a stop cell is selected', () => {
-    const bar = () => /** @type {HTMLElement} */ (document.querySelector('.map-viewbar'));
-    pickRow(3);
-    expect(bar().hidden).toBe(false);
-    const time = /** @type {HTMLElement} */ (document.querySelector('[data-r="0"][data-c="0"]'));
-    time.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
-    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-    expect(bar().hidden).toBe(true);
-  });
-
   it('keeps Registrer stopp and Tøm stopp at the bottom of the pane', () => {
     const tools = /** @type {HTMLElement} */ (document.querySelector('#panel-right .map-tools'));
     expect(tools.querySelector('#map-rec')).not.toBeNull();
@@ -394,58 +341,8 @@ describe('recording stops by clicking Quays on the map', () => {
 });
 
 describe('stop picking review fixes', () => {
-  it('applies the candidate on Enter after a click, wherever the keyboard is (review I1)', async () => {
-    pickRow(3);
-    await search('Skøyen');
-    rows()[0].click();
-    await settle();
-    q().blur();
-    press('Enter');
-    expect(grid.stops[3].stopId).toBe('NSR:Quay:55');
-  });
-
-  it('gives the keyboard back to the grid when the grid is clicked (review I1)', async () => {
-    pickRow(3);
-    q().focus();
-    expect(document.activeElement).toBe(q());
-    pickRow(0);
-    expect(document.activeElement).not.toBe(q());
-  });
-
-  it('never applies an old candidate after new text is typed (review I2)', async () => {
-    pickRow(3);
-    await search('Skøyen');
-    rows()[0].click();
-    await settle();
-    q().value = 'Lysaker';
-    q().dispatchEvent(new Event('input'));
-    press('Enter', q());
-    expect(grid.stops[3].stopId).toBe(null);
-  });
-
   it('points unlinked stops at the map pane, not the removed menu item', () => {
     expect(nameCell(3).title).not.toContain('Finn stopp');
     expect(nameCell(3).title).toContain('F6');
-  });
-});
-
-describe('the search list with the keyboard (user 2026-10-18)', () => {
-  it('moves through the results with the arrows (or Tab) and picks with Enter', async () => {
-    pickRow(3);
-    await search('Storsenter');
-    expect(rows()).toHaveLength(1);
-    press('ArrowDown', q());
-    expect(rows()[0].classList.contains('kb')).toBe(true);
-    press('Enter', q());
-    await settle();
-    // The stop place is open: its first platform is ready for Enter, Tab moves on
-    const quays = rows().filter((r) => !r.classList.contains('sp-back'));
-    expect(quays).toHaveLength(2);
-    expect(quays[0].classList.contains('kb')).toBe(true);
-    q().dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
-    expect(rows().filter((r) => !r.classList.contains('sp-back'))[1].classList.contains('kb')).toBe(true);
-    press('Enter', q());
-    await settle();
-    expect(grid.stops[3].stopId).toBe('NSR:Quay:62');
   });
 });

@@ -1558,5 +1558,8 @@ body.marey-on .marey { display: block; }
 /* + and − in the timetable (user 2026-10-28): a short flash on the moved times, one colour each way */
 #tbl td.g-flash-up { animation: g-flash-up .45s ease-out; }
 #tbl td.g-flash-down { animation: g-flash-down .45s ease-out; }
+/* A stop cell set from the search window or the map (stop picking 2) */
+#tbl td.g-flash-pick { animation: g-flash-pick .45s ease-out; }
+@keyframes g-flash-pick { from { background: color-mix(in srgb, var(--accent) 55%, transparent); } }
 @keyframes g-flash-up { from { background: rgba(46, 160, 67, .55); } }
 @keyframes g-flash-down { from { background: rgba(214, 69, 65, .55); } }

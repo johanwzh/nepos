@@ -1007,3 +1007,21 @@ details.n2-group > div.n2-issue { margin-left: 22px; opacity: .9; }
 .ts-marey-toggle { margin-left: 6px; align-self: center; border: 1px solid var(--border-lt); border-radius: 6px; background: var(--bg-hdr); color: var(--text-m); font-size: 12px; padding: 2px 10px; cursor: pointer; }
 .ts-marey-toggle.on { background: var(--accent-bg); color: var(--text); border-color: var(--accent); }
 .ts-dest-toggle:disabled { opacity: .45; cursor: default; }
+
+/* The stop search window at the stop cell (stop picking 2, 2.5): stop places as headings, their Quays as a tree */
+.ss-box { width: 380px; }
+.ss-box .fb-body { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
+.ss-q { width: 100%; box-sizing: border-box; }
+.ss-status { color: var(--text-f); font-size: 12px; }
+.ss-status:empty { display: none; }
+.ss-tree { overflow-y: auto; max-height: 320px; }
+.ss-place { display: flex; align-items: baseline; gap: 6px; padding: 5px 4px 2px; }
+.ss-place small { color: var(--text-f); }
+.ss-mode svg { width: 14px; height: 14px; vertical-align: -2px; }
+.ss-quay { display: flex; align-items: center; gap: 4px; padding: 3px 4px; cursor: pointer; border-radius: 3px; }
+.ss-quay:hover { background: var(--accent-bg); }
+.ss-quay.kb { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--accent-bg); }
+.ss-line { color: var(--text-f); font-family: monospace; width: 1.2em; }
+.ss-desc { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-m); font-size: 12px; }
+.ss-quay code { color: var(--text-f); font-size: 10px; }
+.ss-none { padding: 2px 4px 2px 22px; color: var(--text-f); font-style: italic; font-size: 12px; }

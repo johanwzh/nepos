@@ -529,6 +529,19 @@ function patchTimes(r0, r1, c0, c1) {
   jogTimer = setTimeout(restRender, JOG_REST);
 }
 
+/**
+ * The stop name cell flashes when its stop was set from somewhere else (the search window, the map): a click in one
+ * place changed another (stop picking 2, 2.5). @param {number} ri
+ */
+export function flashStopCell(ri) {
+  const td = /** @type {HTMLElement | null} */ (document.querySelector(`#tbl .g-td-name[data-ri="${ri}"]`));
+  if (!td) return;
+  td.classList.remove('g-flash-pick');
+  void td.offsetWidth; // restart the animation
+  td.classList.add('g-flash-pick');
+  td.addEventListener('animationend', () => td.classList.remove('g-flash-pick'), { once: true });
+}
+
 /** @type {Map<string, string>} the targets for the render running now */
 let targetsNow = new Map();
 
