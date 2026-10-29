@@ -1,9 +1,10 @@
 // The Linjer page (Alt+2), on the shared list frame (list-view.js): every line with its timeline
 // band (all its valid days), a validity strip, and drafts (not exported) hatched. Finn: search and
 // filters; Verktøy: + Ny linje, Rediger, Dupliser, the batch edits, Slett. Rediger (or double-click,
-// or Enter) opens the line in Rediger rutetabell. Batch edits leave the lines unsaved (§2).
+// or Enter) opens the line in Rediger rutetabell. Batch edits leave the lines unsaved (§2); the Offentlig and
+// Eksporteres switches on the rows are saved at once (line-flags.js, 2.5).
 import { app } from './state.js';
-import { $, onRefresh, onLinesChanged, showMessage, currentPage, setPage } from './shell.js';
+import { $, onRefresh, onLinesChanged, showMessage, currentPage, setPage, runAction } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { modeIconSvg } from './mode-icons.js';
 import { modeLabel } from '../i18n/modes.js';
@@ -15,6 +16,7 @@ import { replaceCalendarInState } from '../core/calendar-replace.js';
 import { unionDays } from '../core/calendars.js';
 import { createListView, validityOf } from './list-view.js';
 import { todayYmd } from './validity-bar.js';
+import { toggleLineFlag } from './line-flags.js';
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -39,19 +41,23 @@ function rows() {
   return lineRows().map((r) => ({ ...r, days: daysOf(r.calendarIds) }));
 }
 
-/** The status tag: validity, draft, unsaved, problems. @param {Row} r */
+/** The status tag: validity, unsaved, problems (export and public are the switches). @param {Row} r */
 function status(r) {
   const now = todayYmd();
   const v = validityOf(r.days, now);
   const text = v === 'valid' ? t('lvValid') : v === 'future' ? t('lvFrom', day(r.days[0])) : v === 'expired' ? t('lineExpired')
     : v === 'none' ? t('calNoDates') : t('lvEndsIn', daysBetween(now, r.days[r.days.length - 1]));
   const parts = [`<span class="lv-tag ${v}">${esc(text)}</span>`];
-  if (!r.exported) parts.push(`<span class="lv-tag draft">${esc(t('lvDraft'))}</span>`);
-  if (!r.isPublic) parts.push(`<span class="lv-tag closed">${esc(t('pubClosed'))}</span>`);
   if (r.unsaved) parts.push('<span class="lv-unsaved">●</span>');
   if (r.damaged) parts.push(`<span class="lv-problems bad">⚠ ${esc(t('statusDamaged'))}</span>`);
   else if (r.errors || r.warnings) parts.push(`<span class="lv-problems${r.errors ? ' bad' : ''}">⚠ ${r.errors + r.warnings}</span>`);
   return parts.join(' ');
+}
+
+/** A switch for a line flag, saved at once (disabled for a damaged file). @param {Row} r @param {'exported' | 'isPublic'} flag */
+function flagSwitch(r, flag) {
+  const on = !!r[flag];
+  return `<button class="lv-switch" role="switch" aria-checked="${on}" data-flag="${flag}"${r.damaged ? ' disabled' : ''} title="${esc(t(flag === 'exported' ? (on ? 'exportIn' : 'exportOut') : (on ? 'pubOpen' : 'pubClosed')))}"></button>`;
 }
 
 /** @param {{ edited: string[], skipped: string[] }} result */
@@ -114,13 +120,11 @@ function matches(r, st) {
   return true;
 }
 
-/** The batch edits (the Verktøy section): organisations, merkevare, flags, calendar. @param {HTMLElement} box @param {string[]} sel */
+/** The batch edits (the Verktøy section): organisations, merkevare, calendar. @param {HTMLElement} box @param {string[]} sel */
 function renderBatch(box, sel) {
   const none = !sel.length;
   box.innerHTML = `<div class="lv-h lv-h-sub">${esc(t('lvBatch'))}</div><div id="lt-orgs" class="lt-orgs"></div>
     <select id="lt-brand"${none ? ' disabled' : ''}></select>
-    <select id="lt-exp"${none ? ' disabled' : ''}><option value="">${esc(t('ltSetExport'))}</option><option value="0">${esc(t('exportIn'))}</option><option value="1">${esc(t('exportOut'))}</option></select>
-    <select id="lt-pub"${none ? ' disabled' : ''}><option value="">${esc(t('ltSetPublic'))}</option><option value="0">${esc(t('pubOpen'))}</option><option value="1">${esc(t('pubClosed'))}</option></select>
     <button class="lv-tool" id="lt-cal"${none ? ' disabled' : ''}>${esc(t('ltReplaceCalendar'))}</button>`;
   const field = (/** @type {string} */ id) => /** @type {HTMLInputElement & HTMLSelectElement} */ (box.querySelector('#' + id));
   fillSelect(field('lt-brand'), [['', t('ltSetBranding')], ['-', t('brandingNone')],
@@ -130,12 +134,6 @@ function renderBatch(box, sel) {
     orgs.appendChild(createOrgPicker({ role, currentId: '', currentName: '', projectCompanies: app.orgs,
       registerCompanies: app.orgRegister?.companies ?? [], invalid: '', disabled: none,
       onPick: (company) => batch(sel, (rs) => setOrg(rs, role, company)) }));
-  }
-  for (const [id, prop] of /** @type {[string, string][]} */ ([['lt-exp', 'exported'], ['lt-pub', 'isPublic']])) {
-    field(id).addEventListener('change', () => {
-      const v = field(id).value;
-      if (v) batch(sel, (rs) => { rs[prop] = v !== '1'; }); // '1' sets the flag: not exported / not public
-    });
   }
   field('lt-brand').addEventListener('change', () => {
     const v = field('lt-brand').value;
@@ -192,6 +190,8 @@ export function initLineTable() {
       { key: 'operator', label: () => t('ltCol_operator'), sort: (r) => r.operator, cell: (r) => esc(r.operator), text: (r) => r.operator },
       { key: 'calendars', label: () => t('ltCol_calendars'), width: 'minmax(0, 1.2fr)', cell: (r) => r.calendarIds.map((id) => `<button class="lt-calchip" data-cal="${esc(id)}">${esc(calName(id))}</button>`).join(''), text: (r) => r.calendarIds.map(calName).join(', ') },
       { key: 'valid', label: () => t('ltCol_valid'), width: '170px', sort: (r) => r.days[0] ?? '', cell: (r) => (r.days.length ? `${day(r.days[0])} – ${day(r.days[r.days.length - 1])}` : ''), text: (r) => (r.days.length ? `${day(r.days[0])} – ${day(r.days[r.days.length - 1])}` : '') },
+      { key: 'public', label: () => t('ltCol_public'), width: '72px', sort: (r) => (r.isPublic ? 1 : 0), cell: (r) => flagSwitch(r, 'isPublic'), text: (r) => t(r.isPublic ? 'pubOpen' : 'pubClosed') },
+      { key: 'exported', label: () => t('ltCol_exported'), width: '72px', sort: (r) => (r.exported ? 1 : 0), cell: (r) => flagSwitch(r, 'exported'), text: (r) => t(r.exported ? 'exportIn' : 'exportOut') },
       { key: 'status', label: () => t('ltCol_status'), width: '220px', sort: (r) => `${r.exported ? 1 : 0}${validityOf(r.days, todayYmd())}`, cell: status },
     ],
     band: (r) => r.days,
@@ -208,6 +208,17 @@ export function initLineTable() {
     onEdit: editLine,
     onDelete: async (sel) => { await deleteLines(sel); render(); },
     empty: () => t(app.routes.length ? 'noMatches' : 'ltNoLines'),
+  });
+  // a flag switch: the selected lines when its row is selected, else its own line; saved at once
+  el.addEventListener('click', (e) => {
+    const sw = /** @type {HTMLButtonElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('.lv-switch'));
+    const code = /** @type {HTMLElement | null} */ (sw?.closest('.lv-row'))?.dataset.id;
+    if (!sw || sw.disabled || !code || !view) return;
+    const flag = /** @type {'exported' | 'isPublic'} */ (sw.dataset.flag);
+    const sel = view.selected();
+    const codes = sel.includes(code) ? sel : [code];
+    const value = sw.getAttribute('aria-checked') !== 'true';
+    void runAction(async () => reportSkipped(await toggleLineFlag(codes, flag, value)));
   });
   // a calendar chip opens that calendar in Kalendere
   el.addEventListener('click', (e) => {

@@ -16,7 +16,7 @@ import { writeRoute } from '../../src/project/routes.js';
 import { writeCalendars } from '../../src/project/calendars-store.js';
 
 const route = (/** @type {string} */ code, /** @type {string} */ pub, /** @type {string} */ name, cal = 'cal-new') => [
-  '#LEV;Test;TST', `#RUT;-1;${pub};${name};;1;`, '#SEK;NOG:Operator:bbbbbbbbbb2;B;0;1;0;0', '#CUR;neposcoin;1', '#TRA;A - B',
+  '#LEV;Test;TST', `#RUT;-1;${pub};${name};;1;`, '#EKS;1', '#OFF;1', '#SEK;NOG:Operator:bbbbbbbbbb2;B;0;1;0;0', '#CUR;neposcoin;1', '#TRA;A - B',
   '#PER;;;;;;', `#KAL;${cal}`, '#TAB;0;;;;', '#TUR;0;D;0;0;0;0',
   '#TRL;0;NSR:Quay:1;A;34;0;-1;-1;34;-1', '#TRC;0;0700;0;0;0;0;0',
   '#TRL;1;NSR:Quay:2;B;34;0;-1;-1;34;-1', '#TRC;0;0710;0;0;0;0;0',
@@ -109,14 +109,59 @@ describe('Linjer on the shared list frame', () => {
     expect(names()).toEqual(['Alta']);
   });
 
-  it('sets "Eksporter ikke" on the selected lines, unsaved, and then shows them as drafts', () => {
+  const sw = (/** @type {number} */ i, /** @type {string} */ flag) => /** @type {HTMLElement} */ (rows()[i].querySelector(`.lv-switch[data-flag="${flag}"]`));
+  const fileOf = (/** @type {string} */ code) => /** @type {any} */ (app.routes.find((r) => r.code === code)).text;
+
+  it('a switch saves at once: only the flag changes in the file, nothing unsaved', async () => {
+    setPage('lines');
+    const before = fileOf('b');
+    click(sw(0, 'exported'));
+    await vi.waitFor(() => expect(fileOf('b')).toContain('#EKS;0'));
+    expect(fileOf('b')).toBe(before.replace('#EKS;1', '#EKS;0'));
+    expect(app.drafts.has('b')).toBe(false);
+    expect(rows()[0].classList.contains('lv-draft')).toBe(true);
+    expect(sw(0, 'exported').getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('on a selected row, sets every selected line', async () => {
+    setPage('lines');
+    click(rows()[0]); click(rows()[1], { shiftKey: true });
+    click(sw(1, 'isPublic'));
+    await vi.waitFor(() => expect(fileOf('a')).toContain('#OFF;0'));
+    expect(fileOf('b')).toContain('#OFF;0');
+    expect(fileOf('c')).toContain('#OFF;1');
+  });
+
+  it('the open line keeps its unsaved timetable edits, which now carry the flag', async () => {
+    await selectRoute('a');
+    app.routeState.routeName = 'Endret'; app.dirty = true;
+    setPage('lines');
+    click(sw(1, 'exported')); // row 1 = line a (sorted by public code: 2, 10, 33)
+    await vi.waitFor(() => expect(fileOf('a')).toContain('#EKS;0'));
+    expect(fileOf('a')).not.toContain('Endret');
+    expect(app.dirty).toBe(true);
+    expect(app.routeState.exported).toBe(false);
+  });
+
+  it('a damaged line is left alone and named; the others are set', async () => {
+    const entry = /** @type {any} */ (app.routes.find((r) => r.code === 'c'));
+    app.routes = app.routes.map((r) => (r.code === 'c' ? { ...entry, status: 'damaged' } : r));
+    setPage('lines');
+    expect(/** @type {HTMLButtonElement} */ (sw(2, 'exported')).disabled).toBe(true);
+    click(rows()[0]); click(rows()[2], { shiftKey: true });
+    click(sw(0, 'exported'));
+    await vi.waitFor(() => expect(fileOf('a')).toContain('#EKS;0'));
+    expect(fileOf('b')).toContain('#EKS;0');
+    expect(fileOf('c')).toContain('#EKS;1');
+    expect(document.getElementById('msg-text')?.textContent).toContain(': c'); // named by its file code, as the other batch edits do
+  });
+
+  it('the Verktøy pane has no export/public dropdowns any more; the status has no Utkast / Lukket tags', () => {
     setPage('lines');
     click(rows()[0]);
-    field('lt-exp').value = '1';
-    field('lt-exp').dispatchEvent(new Event('change'));
-    expect(app.drafts.get('b')?.exported).toBe(false);
-    expect(rows()[0].classList.contains('lv-draft')).toBe(true);
-    expect(rows()[0].textContent).toContain('Utkast');
+    expect(document.getElementById('lt-exp')).toBeNull();
+    expect(document.getElementById('lt-pub')).toBeNull();
+    expect(rows()[0].querySelector('.lv-tag.draft, .lv-tag.closed')).toBeNull();
   });
 
   it('looks the same after a visit to another page', () => {
@@ -180,20 +225,15 @@ describe('the timetable\'s navigator follows Linjer', () => {
 describe('public and export flags in plain words (42)', () => {
   const optionTexts = (/** @type {string} */ id) => [...field(id).options].map((o) => o.textContent);
 
-  it('offers "Åpen rute" / "Lukket rute" and "Eksporteres" / "Eksporteres ikke"', () => {
+  it('offers "Åpen rute" / "Lukket rute" and "Eksporteres" / "Eksporteres ikke" in the filters', () => {
     setPage('lines');
-    click(rows()[0]);
-    expect(optionTexts('lt-pub').slice(1)).toEqual(['Åpen rute', 'Lukket rute']);
-    expect(optionTexts('lt-exp').slice(1)).toEqual(['Eksporteres', 'Eksporteres ikke']);
     expect(optionTexts('lt-f-pub').slice(1)).toEqual(['Åpen rute', 'Lukket rute']);
     expect(optionTexts('lt-f-exp').slice(1)).toEqual(['Eksporteres', 'Eksporteres ikke']);
   });
 
-  it('shows a closed line in the list', () => {
+  it('shows a closed line in the list: its Offentlig switch is off', async () => {
     setPage('lines');
-    click(rows()[0]);
-    field('lt-pub').value = '1';
-    field('lt-pub').dispatchEvent(new Event('change'));
-    expect(rows()[0].textContent).toContain('Lukket rute');
+    click(/** @type {HTMLElement} */ (rows()[0].querySelector('.lv-switch[data-flag="isPublic"]')));
+    await vi.waitFor(() => expect(rows()[0].querySelector('.lv-switch[data-flag="isPublic"]')?.getAttribute('aria-checked')).toBe('false'));
   });
 });
