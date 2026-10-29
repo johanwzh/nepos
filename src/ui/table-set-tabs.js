@@ -25,7 +25,8 @@ export function renderTableSetTabs() {
     tab.className = `ts-tab${set.id === rs.activeSet ? ' active' : ''}`;
     tab.dataset.set = String(set.id);
     const name = document.createElement('span');
-    name.className = 'ts-name';
+    // A table set needs a name: unnamed (only a new line's) is red, like "No calendar" (user 2026-10-29)
+    name.className = `ts-name${set.name ? '' : ' ts-unnamed'}`;
     name.textContent = set.name || t('tableSetUnnamed');
     // The whole tab is the surface, the direction part too (user 2026-10-19)
     tab.addEventListener('click', () => { if (set.id !== rs.activeSet) switchTableSet(set.id); });

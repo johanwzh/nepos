@@ -9,6 +9,7 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   is a straight dashed line to its next stop, with no marker; runs of trips with the same pattern share a coloured band, so the trips that differ
   stand out; interchanges and how long a trip waits are drawn. Day, week or month, with weekdays to highlight; click a
   trip to pick it out. Scroll to zoom in time, drag to move, double-click a trip to zoom to it. Alt+V again goes back.
+- **An unnamed table set is red** (only a new line has one), like "No calendar".
 - **+ and − step times a minute:** with times selected, **+** moves them a minute later and **−** a minute earlier, with a
   short flash (one colour each way); past midnight the day offset follows. Copy a time to the next row and press + a
   few times — a whole trip from copy/paste. + and − turn on the Tidsforskyver, and while it is on the cells stay

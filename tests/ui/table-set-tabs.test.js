@@ -44,6 +44,14 @@ describe('table-set tabs', () => {
     expect(grid.stops.map((/** @type {any} */ s) => s.name)).toEqual(['Florø', 'Ukjent brygge', 'Bergen']);
   });
 
+  it('an unnamed table set says so in red, like "No calendar" (user 2026-10-29)', () => {
+    app.routeState.tableSets[0].name = '';
+    refreshAll();
+    const name = /** @type {HTMLElement} */ (tabs()[0].querySelector('.ts-name'));
+    expect(name.classList.contains('ts-unnamed')).toBe(true);
+    expect(tabs()[1].querySelector('.ts-name')?.classList.contains('ts-unnamed')).toBe(false);
+  });
+
   it('adds a table set through the dialog, with the stops reversed', () => {
     /** @type {HTMLElement} */ (document.querySelector('.ts-add')).click();
     expect(/** @type {any} */ (document.getElementById('ts-dlg')).open).toBe(true);
