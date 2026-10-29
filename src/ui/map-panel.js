@@ -2,7 +2,7 @@
 // Positron in light mode and Dark in dark mode). Positions come from the NSR lookups; stops without one are listed
 // under the map. Created only when the panel is first opened.
 import { app } from './state.js';
-import { $, onRefresh, currentPage, panelOpen, onPanelToggle } from './shell.js';
+import { $, onRefresh, currentPage, panelOpen, onPanelToggle, runAction, persistSettings } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { grid, selectedColumn, selectedRowIndex, onGridRender } from './grid.js';
 import { quayInfo, onQuaysLoaded } from './quays.js';
@@ -207,7 +207,27 @@ function refitAfterSlide() {
   setTimeout(() => { lastKey = ''; schedule(); }, 250);
 }
 
+/** The map layer switch (2.5): today's map, OpenStreetMap, aerial; hidden when the settings name a style of their own. */
+function renderLayerSwitch() {
+  const el = $('map-layers');
+  if (!el) return;
+  el.hidden = !!app.settings.mapStyleUrl;
+  const now = app.settings.mapLayer || 'vector';
+  el.innerHTML = /** @type {const} */ (['vector', 'osm', 'aerial']).map((l) =>
+    `<button type="button" data-layer="${l}"${l === now ? ' class="on"' : ''}>${esc(t(l === 'vector' ? 'mapLayerVector' : l === 'osm' ? 'mapLayerOsm' : 'mapLayerAerial'))}</button>`).join('');
+}
+
 export function initMapPanel() {
+  renderLayerSwitch();
+  $('map-layers')?.addEventListener('click', (e) => {
+    const b = /** @type {HTMLElement} */ (e.target).closest('[data-layer]');
+    const layer = /** @type {HTMLElement | null} */ (b)?.dataset.layer;
+    if (!layer || layer === (app.settings.mapLayer || 'vector')) return;
+    app.settings.mapLayer = layer;
+    renderLayerSwitch();
+    runAction(persistSettings);
+    ensureMap(); // the view refills the trip on style.load
+  });
   setPickerMap({
     show: () => schedule(),
     onPick: (fn) => { onPick = fn; },
@@ -224,4 +244,5 @@ export function initMapPanel() {
   onQuaysLoaded(schedule);
   onLinksChanged(schedule);
   onRefresh(schedule); // page changes, theme, language, another route
+  onRefresh(renderLayerSwitch);
 }

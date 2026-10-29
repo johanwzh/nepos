@@ -290,9 +290,13 @@ Kartet åpnes med **Alt+M** eller fanen **Kart** til venstre for rutetabellen.
 
 Nepos tilbyr bare stopp med samme transportmåte som linjen.
 
+**Kartlag:** øverst til høyre på kartet velger du **Kart** (OpenFreeMap, som før), **OpenStreetMap** (mørknet i
+mørk modus) eller **Flyfoto** (Esri). Valget huskes for deg. Har prosjektinnstillingene en egen kartstil, vises ikke
+valget.
+
 ### Strekninger på kartet
 
-Kartet bruker OpenFreeMap (lyst eller mørkt etter Nepos' utseende). Turen tegnes som rette linjer mellom
+Kartet bruker OpenFreeMap (lyst eller mørkt etter Nepos' utseende), eller kartlaget du har valgt. Turen tegnes som rette linjer mellom
 stoppene.
 
 ---

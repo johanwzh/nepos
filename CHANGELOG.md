@@ -4,6 +4,9 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 ## 2.5.0 — not released yet
 
+- **Map layers:** a switch at the top right of the map: **Map** (OpenFreeMap, as before), **OpenStreetMap** (the
+  standard map, darkened in dark mode) or **Aerial** (Esri imagery). Remembered in your personal settings; hidden when
+  the project settings name a map style of their own.
 - **A line where the date changes:** no more `+1` in a time cell. Where a trip passes midnight, a thick line runs over
   the first time of the new day (over the first time when the trip starts after midnight); a jump of more than one day
   carries its size (`+2`). The bar under the timetable says "2 days after the day code". **Time cells are narrower**

@@ -3,6 +3,7 @@
 
 export const STRINGS = {
   en: {
+    mapLayerVector: 'Map', mapLayerOsm: 'OpenStreetMap', mapLayerAerial: 'Aerial',
     tabHome: 'Overview', mapNorth: 'North up (and level)', mapZoomIn: 'Zoom in', mapZoomOut: 'Zoom out',
     homeMorning: 'Good morning', homeDay: 'Good afternoon', homeEvening: 'Good evening',
     homeToday: (n) => (n === 1 ? 'One thing needs you today.' : `${n} things need you today.`), homeNothingToday: 'Nothing is urgent today.', homeAllGood: 'Everything looks good.',
@@ -383,6 +384,7 @@ export const STRINGS = {
     wsNotSeen: 'not in NSR yet', wsChecking: 'checking NSR…', wsUnchecked: 'not checked (NSR could not be reached)', wsOtherMode: 'other mode than the line',
   },
   no: {
+    mapLayerVector: 'Kart', mapLayerOsm: 'OpenStreetMap', mapLayerAerial: 'Flyfoto',
     tabHome: 'Oversikt', mapNorth: 'Nord opp (og flatt)', mapZoomIn: 'Zoom inn', mapZoomOut: 'Zoom ut',
     homeMorning: 'God morgen', homeDay: 'God dag', homeEvening: 'God kveld',
     homeToday: (n) => (n === 1 ? 'Én ting trenger deg i dag.' : `${n} ting trenger deg i dag.`), homeNothingToday: 'Ingenting haster i dag.', homeAllGood: 'Alt ser bra ut.',
