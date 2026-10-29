@@ -26,16 +26,16 @@ export async function readRoute(fs, code) {
 }
 
 /**
- * Save a route, backing up the previous version first.
+ * Save a route, backing up the previous version first (not with `backup: false`: the list's flag switches, 2.5).
  * @param {import('./fs.js').ProjectFs} fs
  * @param {string} code
  * @param {string} text ERN text
- * @param {{ now?: Date }} [opts]
+ * @param {{ now?: Date, backup?: boolean }} [opts]
  */
-export async function writeRoute(fs, code, text, { now = new Date() } = {}) {
+export async function writeRoute(fs, code, text, { now = new Date(), backup = true } = {}) {
   const path = `${ROUTES_DIR}/${code}.txt`;
   const existing = await fs.readBytes(path);
-  if (existing !== null && existing.length > 0) {
+  if (backup && existing !== null && existing.length > 0) {
     await fs.writeBytes(await uniqueBackupPath(fs, `${BACKUPS_DIR}/${code}.${backupStamp(now)}`, '.txt'), existing);
     await pruneBackups(fs, code); // the 10 newest per line (user 2026-10-24)
   }

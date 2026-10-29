@@ -10,6 +10,12 @@ const twelve = (files, name, ext) => { for (let i = 0; i < 12; i++) files[`data/
 const backups = (/** @type {any} */ fs) => fs.paths().filter((/** @type {string} */ p) => p.startsWith('data/backups/'));
 
 describe('rotating the save backups', () => {
+  it('a write with backup: false makes no backup (the list switches, 2.5)', async () => {
+    const fs = createMemoryFs({ 'data/routes/5.txt': '#LEV;A;B' });
+    await writeRoute(fs, '5', '#LEV;A;C', { backup: false });
+    expect(backups(fs)).toEqual([]);
+  });
+
   it('keeps the 10 newest backups of a line after a save', async () => {
     /** @type {Record<string, string>} */
     const files = { 'data/routes/100.txt': '#LEV;A;B' };
