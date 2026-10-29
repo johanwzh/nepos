@@ -249,6 +249,11 @@ describe('the stop at the selected row, at the top of the map pane', () => {
     expect(nsr.textContent).toBe('NSR ↗');
     expect(card().textContent).not.toContain('Retning');
     expect(card().querySelector('.sc-facts')?.textContent).toContain('Lukket leskur');
+    // a symbol and a short word for each fact; no hover text (2.5)
+    const facts = [...card().querySelectorAll('.sc-facts .sc-fact')];
+    expect(facts.map((f) => f.textContent?.trim())).toEqual(['Lukket leskur', 'Stoppskilt', 'Rullestol']);
+    expect(facts.every((f) => f.querySelector('svg'))).toBe(true);
+    expect(card().querySelector('.sc-facts')?.hasAttribute('title')).toBe(false);
     /** @type {HTMLElement} */ (card().querySelector('.sc-copy')).click();
     await settle();
     expect(wrote).toEqual(['NSR:Quay:7203']);

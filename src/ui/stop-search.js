@@ -54,10 +54,8 @@ export function openStopSearch(ri, text) {
     <div class="fb-body"><input type="text" class="ss-q" autocomplete="off" spellcheck="false"><div class="ss-status"></div><div class="ss-tree"></div></div>`;
   /** @type {HTMLElement} */ (el.querySelector('.fb-head b')).textContent = t(grid.stops[ri].stopId ? 'spReplace' : 'spFind', ri + 1);
   document.body.appendChild(el);
-  const cell = document.querySelector(`.g-td-name[data-ri="${ri}"]`)?.getBoundingClientRect();
-  el.style.left = `${Math.max(8, Math.min(cell?.left ?? 200, window.innerWidth - (el.offsetWidth || 380) - 8))}px`;
-  el.style.top = `${Math.max(8, (cell?.bottom ?? 160) + 2)}px`;
   open = { el, ri, branches: [], direct: null, kb: -1, seq: ++seq, timer: null };
+  place();
   const q = /** @type {HTMLInputElement} */ (el.querySelector('.ss-q'));
   q.value = text;
   q.placeholder = t('wsPlaceholder');
@@ -204,5 +202,17 @@ function draw() {
     });
   }
   tree.innerHTML = parts.join('');
+  place();
   markKb();
+}
+
+/** Under the stop cell, or above it when the window would run off the bottom; always inside the page. */
+function place() {
+  if (!open) return;
+  const cell = document.querySelector(`.g-td-name[data-ri="${open.ri}"]`)?.getBoundingClientRect();
+  const w = open.el.offsetWidth || 380, h = open.el.offsetHeight || 200;
+  const below = (cell?.bottom ?? 160) + 2, above = (cell?.top ?? 160) - h - 2;
+  const top = below + h <= window.innerHeight - 8 || above < 8 ? below : above;
+  open.el.style.left = `${Math.max(8, Math.min(cell?.left ?? 200, window.innerWidth - w - 8))}px`;
+  open.el.style.top = `${Math.max(8, Math.min(top, window.innerHeight - h - 8))}px`;
 }

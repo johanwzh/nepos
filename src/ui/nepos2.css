@@ -707,6 +707,10 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .sc-muted { font-style: italic; color: var(--text-m); font-weight: 400; }
 .sc-facts { height: 20px; margin-top: 6px; display: flex; gap: 4px; overflow: hidden; white-space: nowrap; }
 .sc-facts > span { flex: none; background: var(--bg-raised); border-radius: 999px; padding: 0 8px; line-height: 20px; font-size: 11px; color: var(--text-m); }
+.sc-fact { display: inline-flex; align-items: center; gap: 3px; }
+.sc-fact svg { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.sc-fact.part svg { stroke: #ef9f27; }
+.sc-fact.no svg { stroke: var(--g-dec-c); }
 .sc-id { height: 24px; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
 .sc-id code { font-size: 11px; color: var(--text-m); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .sc-chip { flex: none; display: inline-flex; align-items: center; height: 20px; padding: 0 9px; border-radius: 999px; font: inherit; font-size: 11px;
@@ -872,7 +876,7 @@ select option { background: var(--bg-panel); color: var(--text); }
 .cal-dir.empty { color: var(--text-f); }
 
 /* A stop's platform code after its name, tinted in the Nepos colour (63) */
-.g-td-name .g-plat { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 3px; font-size: 10px; font-weight: 600;
+:is(.g-td-name, .ss-quay) .g-plat { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 3px; font-size: 10px; font-weight: 600;
   line-height: 15px; background: var(--accent-bg); color: var(--accent); vertical-align: 1px; }
 
 /* Help → Version history: the changelog */
@@ -921,9 +925,9 @@ select option { background: var(--bg-panel); color: var(--text); }
 .re-swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; padding: 0; }
 
 /* A Quay's private code (a view setting): grey, in inverted colours, so it never looks like the public code */
-.g-td-name .g-priv { display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 3px; font-size: 10px; font-weight: 600;
+:is(.g-td-name, .ss-quay) .g-priv { display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 3px; font-size: 10px; font-weight: 600;
   line-height: 15px; vertical-align: 1px; background: #555; color: #f2f2f2; }
-[data-theme="dark"] .g-td-name .g-priv { background: #d6d6d6; color: #222; }
+[data-theme="dark"] :is(.g-td-name, .ss-quay) .g-priv { background: #d6d6d6; color: #222; }
 
 /* Prosjektinnstillinger → speed limits: a compact grid of mode and km/h */
 .set-speed { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; }
@@ -1022,6 +1026,7 @@ details.n2-group > div.n2-issue { margin-left: 22px; opacity: .9; }
 .ss-quay:hover { background: var(--accent-bg); }
 .ss-quay.kb { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--accent-bg); }
 .ss-line { color: var(--text-f); font-family: monospace; width: 1.2em; }
+.ss-quay .g-plat, .ss-quay .g-priv { margin-left: 0; }
 .ss-desc { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-m); font-size: 12px; }
 .ss-quay code { color: var(--text-f); font-size: 10px; }
 .ss-none { padding: 2px 4px 2px 22px; color: var(--text-f); font-style: italic; font-size: 12px; }

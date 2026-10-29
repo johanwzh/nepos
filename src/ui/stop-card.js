@@ -35,18 +35,29 @@ function load(placeId) {
     .then(render);
 }
 
-/** What NSR says about the Quay and its stop place, as short phrases. @param {StopPlace} place @param {string} quayId */
+// The facts' symbols (2.5): small line drawings in the text colour, each with a short word — no hover text
+const svg = (/** @type {string} */ d) => `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="${d}"/></svg>`;
+const ICONS = {
+  shelter: svg('M2 7 L8 2 L14 7 M3.5 6 V14 M12.5 6 V14 M3.5 14 H12.5'),
+  shelterOpen: svg('M2 7 L8 2 L14 7 M3.5 6 V14 M12.5 6 V14'),
+  sign: svg('M8 15 V8 M8 8 a3 3 0 1 0 0.01 0'),
+  wheelchair: svg('M8 2.5 a1 1 0 1 0 0.01 0 M8 5 V9 H11 L12.5 12.5 M6.5 6.5 a4 4 0 1 0 4 6.5'),
+  stepFree: svg('M1.5 13.5 H14.5 L14.5 6 Z'),
+  waiting: svg('M4 2.5 V13.5 M4 8 H11 V13.5 M11 8 V5'),
+};
+
+/** What NSR says about the Quay and its stop place: a symbol and a short word each. @param {StopPlace} place @param {string} quayId */
 function facts(place, quayId) {
   const q = /** @type {any} */ (place.quays.find((x) => x.quayId === quayId));
-  /** @type {string[]} */
+  /** @type {{ icon: string, text: string, cls?: string }[]} */
   const out = [];
-  if (q?.shelter) out.push(t(q.shelter === 'enclosed' ? 'scShelterEnclosed' : 'scShelterOpen'));
-  if (q?.sign) out.push(t('scSign'));
-  if (q?.wheelchair === 'yes') out.push(t('scWheelchairYes'));
-  else if (q?.wheelchair === 'partial') out.push(t('scWheelchairPartial'));
-  else if (q?.wheelchair === 'no') out.push(t('scWheelchairNo'));
-  if (q?.stepFree === 'yes' && q?.wheelchair !== 'yes') out.push(t('scStepFree'));
-  if (place.waitingRoom) out.push(t('scWaitingRoom', place.waitingRoom.seats, place.waitingRoom.heated));
+  if (q?.shelter) out.push({ icon: q.shelter === 'enclosed' ? ICONS.shelter : ICONS.shelterOpen, text: t(q.shelter === 'enclosed' ? 'scShelterEnclosed' : 'scShelterOpen') });
+  if (q?.sign) out.push({ icon: ICONS.sign, text: t('scSign') });
+  if (q?.wheelchair === 'yes') out.push({ icon: ICONS.wheelchair, text: t('scWheelchairYes') });
+  else if (q?.wheelchair === 'partial') out.push({ icon: ICONS.wheelchair, text: t('scWheelchairPartial'), cls: 'part' });
+  else if (q?.wheelchair === 'no') out.push({ icon: ICONS.wheelchair, text: t('scWheelchairNo'), cls: 'no' });
+  if (q?.stepFree === 'yes' && q?.wheelchair !== 'yes') out.push({ icon: ICONS.stepFree, text: t('scStepFree') });
+  if (place.waitingRoom) out.push({ icon: ICONS.waiting, text: t('scWaitingRoom', place.waitingRoom.seats, place.waitingRoom.heated) });
   return out;
 }
 
@@ -55,14 +66,14 @@ export function renderStopCard() { render(); }
 /**
  * The block, always with the same slots: row, sign on its post, name, platform, facts, ID line.
  * @param {{ row?: string, icon?: string, name?: string, nameMuted?: boolean, quay?: string, quayMuted?: boolean,
- *           facts?: string[], id?: string, placeId?: string }} v
+ *           facts?: { icon: string, text: string, cls?: string }[], id?: string, placeId?: string }} v
  */
 function skeleton(v) {
   return `<div class="sc-row">${esc(v.row ?? '')}</div>
     <div class="sc"><div class="sc-post"><div class="sc-plate${v.icon ? '' : ' empty'}">${v.icon ?? ''}</div><div class="sc-pole"></div></div>
       <div class="sc-main"><div class="sc-name${v.nameMuted ? ' sc-muted' : ''}">${esc(v.name ?? '')}</div>
         <div class="sc-quay${v.quayMuted ? ' sc-muted' : ''}">${esc(v.quay ?? '')}</div></div></div>
-    <div class="sc-facts" title="${esc((v.facts ?? []).join(' · '))}">${(v.facts ?? []).map((x) => `<span>${esc(x)}</span>`).join('')}</div>
+    <div class="sc-facts">${(v.facts ?? []).map((x) => `<span class="sc-fact${x.cls ? ` ${x.cls}` : ''}">${x.icon} ${esc(x.text)}</span>`).join('')}</div>
     <div class="sc-id">${v.id ? `<code>${esc(v.id)}</code><button class="sc-chip sc-copy">${esc(t('scCopy'))}</button>` : ''}
       ${v.placeId ? `<a class="sc-chip sc-nsr" href="https://stoppested.entur.org/stop_place/${esc(v.placeId)}" target="_blank" rel="noopener">NSR ↗</a>` : ''}</div>`;
 }

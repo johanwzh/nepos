@@ -293,13 +293,18 @@ standard, får eksporten en advarsel om at Entur kanskje ikke godtar så raske t
 Kartet åpnes med **Alt+M** eller fanen **Kart** til venstre for rutetabellen.
 
 - Øverst vises stoppet på raden du står i: navn, plattform, hva NSR vet om det (leskur, skilt,
-  tilgjengelighet), ID-en med **Kopier** og en lenke til NSR.
-- Står du i en stoppcelle og **skriver**, søker du etter stopp. Klikk stoppestedet i listen, og så
-  plattformen — da er den satt på raden.
-- På kartet vises plattformene når du zoomer inn. Klikk en plattform for å se den, og bruk **Bruk**,
-  **↑ Legg til over** eller **↓ Legg til under** (også på høyreklikk).
-- **Registrer stopp**: slå på, og klikk plattformene langs ruten i rekkefølge — hver legges til
-  nederst. **Ctrl+Z** angrer det siste, **Esc** avslutter.
+  rullestol — med symboler), ID-en med **Kopier** og en lenke til NSR.
+- Står du i en stoppcelle og **skriver**, åpnes et lite søkevindu rett ved cellen. Treffene er et tre: hvert
+  stoppested med plattformene sine under. Du velger alltid en plattform, aldri bare stoppestedet: piltastene går
+  mellom plattformene, **Enter** (eller et klikk) setter den på raden, og cellen blinker. **Esc** lukker uten å
+  velge. En Quay- eller StopPlace-ID kan limes inn i søket.
+- På kartet vises plattformene som nåler (spissen er plattformens plass) når du zoomer inn. Står du i en
+  stoppcelle, setter et **klikk** på en plattform den på raden med en gang. **Shift+klikk** legger den til på en ny
+  rad under, **Alt+Shift+klikk** på en ny rad over; høyreklikk gir de samme valgene. Et klikk på kartet lukker
+  søkevinduet — søk i listen, og velg på kartet.
+- **Registrer stopp** er et kraftverktøy (Spesialverktøy, **Alt+R**): klikk plattformene langs ruten i rekkefølge
+  — hver legges i neste tomme rad eller nederst. **Ctrl+Z** angrer det siste, **Esc** avslutter. Kartet kan brukes
+  mens verktøyet er på. **Optimalisering** ved siden av er ikke i bruk ennå.
 - **Ctrl+C / Ctrl+V på et stoppnavn** kopierer stoppet til en annen rad.
 - **Tøm stopp** fjerner stoppet fra raden (navnet blir stående).
 
