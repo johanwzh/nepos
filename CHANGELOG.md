@@ -4,6 +4,10 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 ## 2.5.0 — not released yet
 
+- **A line where the date changes:** no more `+1` in a time cell. Where a trip passes midnight, a thick line runs over
+  the first time of the new day (over the first time when the trip starts after midnight); a jump of more than one day
+  carries its size (`+2`). The bar under the timetable says "2 days after the day code". **Time cells are narrower**
+  (56 px, from 68), so more of a table fits on screen.
 - **Visual timetable (Marey chart):** **Alt+V** shows the open table as a chart in place of the timetable — the rows down
   the side (spaced by distance or evenly), time along the top, every trip a line through its times. A stop a trip passes
   is a straight dashed line to its next stop, with no marker; runs of trips with the same pattern share a coloured band, so the trips that differ

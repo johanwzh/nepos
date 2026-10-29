@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // Marks on a time (booking spec 2026-10-22): a/p, x (request stop or booking), one note letter. x is never typed.
 import { describe, it, expect, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
 import { initShell } from '../../src/ui/shell.js';
@@ -194,5 +195,18 @@ describe('a/p and x on a time', () => {
     for (const k of ['0', '7', '0', '5', 'p']) press(k);
     press('Enter');
     expect(grid.cols[0].cells[1]).toMatchObject({ time: '0705', suffix: 'p', req: true });
+  });
+});
+
+describe('day offsets without +1 text (backlog 78)', () => {
+  it('the note bar says how many days after the day code a time is', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('2350'), cell('0150', { dayOffset: 2 })], note: '', dates: [] }] });
+    selectCell(1, 0);
+    expect(document.getElementById('fn-preview')?.textContent).toContain('2 dager etter dagkoden'); // the test app is in Norwegian
+  });
+
+  it('time cells are 56 px', () => {
+    const css = readFileSync('src/ui/styles.css', 'utf8');
+    expect(css).toMatch(/\.cw-time\s*\{\s*width: 56px; min-width: 56px; max-width: 56px;/);
   });
 });

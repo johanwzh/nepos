@@ -56,6 +56,8 @@ export function updateFnPreview(where = null) {
     if (cell?.suffix === 'a') more.push(t('fnAlight'));
     if (cell?.suffix === 'p') more.push(t('fnBoard'));
     if (cell?.req) more.push(t('xwReq'));
+    // The day offset is drawn as a line in the grid; the total is said here (backlog 78)
+    if (cell?.time && cell.time !== '|' && cell.dayOffset > 0) more.push(t('fnDayOffset', cell.dayOffset));
     if (cell?.interchange?.type === 'guaranteed' && cell.interchange.maxWait != null) more.push(t('fnWait', cell.interchange.maxWait));
     const booking = cell?.booking ? bookingSummary(cell.booking, t('bkTitle'))
       : col?.booking ? bookingSummary(col.booking, t('bkTrip'))

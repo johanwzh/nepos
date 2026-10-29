@@ -936,7 +936,7 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 .cw-ins   { width: 20px; min-width: 20px; }
 .cw-price { width: 72px; min-width: 72px; }
 .cw-name  { width: 185px; min-width: 185px; }
-.cw-time  { width: 68px; min-width: 68px; max-width: 68px; overflow: hidden; text-overflow: ellipsis; } /* never wider: no shift (user 2026-10-26) */
+.cw-time  { width: 56px; min-width: 56px; max-width: 56px; overflow: hidden; text-overflow: ellipsis; } /* never wider: no shift (user 2026-10-26) */
 
 .g-sticky0     { position: sticky; left: 0px;  z-index: 2; }
 .g-sticky-price{ position: sticky; left: 20px; z-index: 2; }
@@ -1065,7 +1065,7 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 .g-td-time { text-align: left; padding-left: 7px; white-space: nowrap; }
 .g-td-time .g-t { display: inline-block; text-align: left; } /* as wide as the time: the first mark sits right after it (user 2026-10-26) */
 .g-td-time.is-pipe .g-t { width: 2.4em; }
-.g-td-time .g-m { display: inline-block; width: 2.1em; text-align: left; font-size: 11px; }
+.g-td-time .g-m { display: inline-block; width: 1.7em; text-align: left; font-size: 11px; }
 .g-td-time.is-pipe .g-t { text-align: center; }
 
 .g-ix-g  { background: var(--ix-g-bg)     !important; }

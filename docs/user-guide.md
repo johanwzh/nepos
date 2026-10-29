@@ -149,6 +149,11 @@ høyreklikkmenyen for alle valgte celler. **Stopper ved behov** og **bestilling*
 Ved en tid står opptil tre merker: a/p, x og én **bokstav** for tidens merknad og datoer (b, c, d … — a, p og x
 hoppes over; samme merknad gir samme bokstav). Linjen under tabellen viser alt om tiden du står i.
 
+**Etter midnatt:** der datoen skifter i en tur, står en tykk strek over tiden — ingen `+1` i cellen. Hopper datoen
+mer enn én dag, står hoppet på streken (`+2`). Starter turen etter midnatt, står streken over første tid. Linjen
+under tabellen sier hvor mange dager etter dagkoden tiden er. En tid som går bakover gir +1 av seg selv; flere
+dager settes med høyreklikk → Sett dagforskyvning….
+
 Velg et område med **Shift + piltaster** eller ved å **dra med musen**. **Ctrl+C / Ctrl+V** kopierer
 og limer inn tider, også fra og til regneark. Limer du inn flere kolonner eller rader enn tabellen har,
 legges de til (over 50 spør Nepos først).
