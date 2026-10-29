@@ -271,8 +271,16 @@ en før eksport.
 ### Fartsprofilen
 
 Stripen under rutetabellen viser farten mellom stoppene for turen du står i, i luftlinje. Rødt betyr
-at selv luftlinjen er for rask for transportmåten — da er en tid eller et stopp feil. Hold musen over
-en bue for fart og avstand, klikk for å gå til raden.
+at selv luftlinjen er for rask for transportmåten — da er en tid eller et stopp feil. Klikk en bue for å gå til
+raden.
+
+- Den vannrette streken er **turens egen snittfart** (`⌀ 42 km/t`): buer over den går raskere enn turen ellers,
+  buer under går saktere.
+- Rundt hver bue ligger et svakt felt: farten kan ligge hvor som helst der, fordi tider skrives i hele minutter
+  (sekunder skrives aldri). Turens første avgang og en avgang etter venting regnes fra :00; andre tider kan være
+  hvor som helst i minuttet. Korte strekninger får derfor brede felt.
+- Hold musen over en bue: farten står over buen (bare tallet), og statuslinjen nederst viser fra–til, avstand,
+  minutter og fartsspennet.
 
 En rød strekning stopper eksporten. Grensene per transportmiddel kan endres i **Prosjekt →
 Prosjektinnstillinger → Fartsgrenser** (tomt felt = standard). Settes en grense mer enn 1,5 ganger over

@@ -4,6 +4,11 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 ## 2.5.0 — not released yet
 
+- **The speed strip reads better:** the dashed limit line is gone (the colour warns); a line marks **the trip's own
+  average** (`⌀ 42 km/h`), so a section faster or slower than the rest stands out. Each arc has a faint **band for
+  the speeds the minutes allow** — seconds are never typed, so a trip's first departure and a departure after a wait
+  count from :00 and every other time can be anywhere in its minute; short sections get wide bands. Hovering an arc
+  shows **just its km/h**; the status bar gives from–to, distance, minutes and the range. No tooltips on the arcs.
 - **Switches on Linjer:** **Offentlig** and **Eksporteres** are switches on every row, saved at once (export settings,
   not edits of the line: only those two records of the file change, and no backup is made). Unsaved timetable edits
   stay unsaved and carry the new value. On a selected row, a switch sets every selected line. The dropdowns in

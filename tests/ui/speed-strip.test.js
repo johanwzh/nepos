@@ -70,9 +70,9 @@ describe('the speed profile under the timetable', () => {
     expect(Math.round(((xs[2] - xs[0]) / span) * 100)).toBe(92);
     const legs = [...strip().querySelectorAll('.sp-leg')];
     expect(legs.map((l) => l.getAttribute('class'))).toEqual(['sp-leg ok', 'sp-leg ok', 'sp-leg over']);
-    // short: the speed and the distance, nothing else; no numbers drawn over the arcs
-    expect(legs[0].querySelector('title')?.textContent).toBe('33 km/t · 1,1 km');
+    // no numbers drawn over the arcs until hovered; no tooltips on the legs (2.5)
     expect(strip().querySelector('.sp-num')).toBeNull();
+    expect(strip().querySelector('.sp-leg title')).toBeNull();
   });
 
   it('caps an extreme arc instead of drawing it over the screen', () => {
@@ -87,5 +87,35 @@ describe('the speed profile under the timetable', () => {
     expect(strip().querySelector('.sp-here')?.getAttribute('data-ri')).toBe('2');
     strip().querySelectorAll('.sp-leg')[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(selectedRowIndex()).toBe(1);
+  });
+});
+
+describe('the speed strip, 2.5: the trip’s average, possible-speed bands, the number on hover', () => {
+  // the highest point of each quadratic arc in a path: halfway between its ends' line and its control point
+  const minY = (/** @type {Element} */ el) => {
+    const ys = (el.getAttribute('d') ?? '').split(/[^\d.-]+/).filter(Boolean).map(Number).filter((_, i) => i % 2 === 1);
+    return Math.min(...ys.map((y) => (ys[0] + y) / 2));
+  };
+
+  it('no max-speed line; a line at the trip’s average, labelled', () => {
+    expect(strip().querySelector('.sp-limit')).toBeNull();
+    // 55.6 km in 13 minutes
+    expect(strip().querySelector('.sp-avg-t')?.textContent).toBe('⌀ 257 km/t');
+    expect(strip().querySelector('.sp-avg')).not.toBeNull();
+  });
+
+  it('a band round each arc; capped inside the strip', () => {
+    expect(strip().querySelectorAll('.sp-band').length).toBe(3);
+    for (const b of strip().querySelectorAll('.sp-band')) expect(minY(b)).toBeGreaterThanOrEqual(0);
+  });
+
+  it('hover shows just the number; details in the status bar; leaving clears both', () => {
+    const leg = /** @type {Element} */ (strip().querySelectorAll('.sp-leg')[0]);
+    leg.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    expect(strip().querySelector('.sp-num')?.textContent).toBe('33');
+    expect(document.getElementById('sb-hint')?.textContent).toBe('A → B · 1,1 km · 2 min · 22–33 km/t');
+    strip().dispatchEvent(new MouseEvent('mouseleave'));
+    expect(strip().querySelector('.sp-num')).toBeNull();
+    expect(document.getElementById('sb-hint')?.textContent).toBe('');
   });
 });

@@ -725,7 +725,13 @@ dialog.n2-dialog { margin: auto; max-width: min(720px, calc(100vw - 48px)); }
 .speed-strip svg { display: block; }
 .sp-none { height: 64px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-f); font-style: italic; }
 .sp-base { stroke: var(--border); stroke-width: 1; }
-.sp-limit { stroke: var(--text-f); stroke-width: 1; stroke-dasharray: 3 4; }
+/* 2.5: the trip's own average; the speeds the minutes allow (a faint lens round each arc); the hovered km/h */
+.sp-avg { stroke: var(--text-m); stroke-width: 1; pointer-events: none; }
+.sp-avg-t { fill: var(--text-m); font-size: 10px; pointer-events: none; }
+.sp-band { stroke: none; opacity: .15; pointer-events: none; fill: var(--accent); }
+.sp-band.warn { fill: #ef9f27; }
+.sp-band.over, .sp-band.zero { fill: var(--g-dec-c); }
+.sp-num { fill: var(--text); font-size: 11px; font-weight: 700; pointer-events: none; paint-order: stroke; stroke: var(--bg-panel); stroke-width: 3px; }
 .sp-leg path, .sp-leg line { fill: none; stroke-width: 2; stroke-linecap: round; }
 .sp-leg .sp-hit.sp-hit.sp-hit { stroke: transparent; stroke-width: 12; cursor: pointer; } /* the invisible, wider twin that is easy to point at: never coloured */
 .sp-leg.ok path { stroke: var(--accent); }
