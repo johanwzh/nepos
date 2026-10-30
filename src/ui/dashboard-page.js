@@ -147,12 +147,12 @@ export function renderDashboardPage() {
   const flagged = d.today.length + d.soon.length > 0;
   const ok = d.ok.count && d.ok.until ? `<div class="home-ok">✓ ${esc(flagged ? t('homeOkSome', d.ok.count, dateText(d.ok.until)) : t('homeOkAll', d.ok.count, dateText(d.ok.until)))}</div>` : '';
   const never = d.soon.some((s) => s.kind === 'stale' && s.never) ? `<p class="home-sub">${esc(t('homeNeverNote'))}</p>` : '';
-  // The map's container stays between renders: only the text around it is rebuilt
+  // The map's container stays between renders: only the text around it is rebuilt; its own texts follow a change of language by data-lk
   let main = /** @type {HTMLElement | null} */ (body.querySelector('.home-main'));
   if (!main || !body.querySelector('#home-map')) {
     body.innerHTML = `<div class="home-main"></div>
-      <section class="home-section home-network"><h3>${esc(t('homeNetwork'))}</h3><p class="home-sub">${esc(t('homeNetworkNote'))}</p>
-        <div class="home-map" id="home-map"></div><p class="home-sub" id="home-map-none" hidden>${esc(t('homeNetworkNone'))}</p></section>`;
+      <section class="home-section home-network"><h3 data-lk="homeNetwork">${esc(t('homeNetwork'))}</h3><p class="home-sub" data-lk="homeNetworkNote">${esc(t('homeNetworkNote'))}</p>
+        <div class="home-map" id="home-map"></div><p class="home-sub" id="home-map-none" data-lk="homeNetworkNone" hidden>${esc(t('homeNetworkNone'))}</p></section>`;
     main = /** @type {HTMLElement} */ (body.querySelector('.home-main'));
   }
   main.innerHTML = `<p class="home-hello">${esc(greeting())}</p><p class="home-summary">${esc(summary)}</p>

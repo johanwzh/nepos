@@ -2,7 +2,9 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
-## 2.5.0 — not released yet
+## 2.5.0 — 2026-10-30
+
+**New features**
 
 - **Copy several stops or day codes:** with several stops selected, Ctrl+C copies all their Quay IDs as a list (a
   waiting stop once); pasting the list fills the rows down and adds rows as needed. With several columns selected in the
@@ -16,17 +18,10 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Street View** beside NSR on the stop card, at the stop's position.
 - **Linjer:** the Gyldig column is gone (the timeline under each row shows it), and the mode's icon sits before the
   line code instead of in a column of its own.
-- **The label, vehicle and trip-number rows** at the top of the timetable keep their bottom edge when the timetable
-  scrolls.
 - **The map follows the stop column, or stays pinned:** unpinned, the map opens when the cursor is in the stop column
   and hides when it leaves. The pin in the map's header keeps it open; **Alt+M** opens and pins it, Alt+M again unpins
   and hides it; ✕ closes and unpins. A click or Shift+click on the map no longer moves the map back to the first stop
   place.
-- **Stops of the wrong mode are caught for every mode:** a cableway (or coach, funicular …) line was offered stops of
-  any mode, and nothing warned — the filter used the old ERN code, which those modes lack. The search, the map and the
-  export check now use the line's own mode, and a stop of another mode is an export error, as in Entur's validator.
-- **Small fixes from the first look:** time cells never show "…" (a pipe cell and a cell being typed in did); the speed strip's average sits in the top right corner; the disabled tool's text follows
-  the language.
 - **Stop picking 2:** typing a stop name in a stop cell opens a small **search window at the cell** (the map pane no
   longer takes the keyboard). The hits are a tree — each stop place with its platforms (platform and private code)
   under it — and only a platform is ever picked, so it can't be forgotten: arrows, Enter, and the cell flashes. On the
@@ -65,6 +60,17 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   short flash (one colour each way); past midnight the day offset follows. Copy a time to the next row and press + a
   few times — a whole trip from copy/paste. + and − turn on the Tidsforskyver, and while it is on the cells stay
   editable (typing, paste, the cell menu), so the dial is for longer moves and + and − for single steps.
+
+**Bug fixes**
+
+- **Oversikt:** the Network section follows a change of language (it stayed in Norwegian).
+- **Stops of the wrong mode are caught for every mode:** a cableway (or coach, funicular …) line was offered stops of
+  any mode, and nothing warned — the filter used the old ERN code, which those modes lack. The search, the map and the
+  export check now use the line's own mode, and a stop of another mode is an export error, as in Entur's validator.
+- **Small fixes from the first look:** time cells never show "…" (a pipe cell and a cell being typed in did); the speed strip's average sits in the top right corner; the disabled tool's text follows
+  the language.
+- **The label, vehicle and trip-number rows** at the top of the timetable keep their bottom edge when the timetable
+  scrolls.
 
 ## 2.4.0 — 2026-10-27
 

@@ -26,6 +26,8 @@ again. At release only the date goes into the changelog heading — check the ve
 - [ ] `CHANGELOG.md` → a section for the new version: what changed, in plain words, newest first, with the release
       date in its heading (`## 2.2.0 — 2026-10-19`, not "not released yet"). Help → Version history shows only dated
       sections up to the running version.
+      Split the section in two (user 2026-10-30): a `**New features**` paragraph, then `**Bug fixes**` (oversights
+      and things that did not work as meant), each a list. Help shows both; `#` headings are skipped there.
 
 ## 3. What users read
 

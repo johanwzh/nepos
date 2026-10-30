@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup, flush } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell, setPage, currentPage } from '../../src/ui/shell.js';
+import { initShell, setPage, currentPage, applyLang } from '../../src/ui/shell.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
@@ -105,6 +105,16 @@ describe('Oversikt', () => {
     await openProject(200);
     expect([...body().querySelectorAll('.home-mark')].map((m) => m.textContent)).toEqual(['30', '60', '90', '120']);
     expect(body().querySelectorAll('.home-bar')).toHaveLength(1);
+  });
+
+  it("the network section follows a change of language (user 2026-10-30)", async () => {
+    await openProject(200);
+    const sec = /** @type {HTMLElement} */ (body().querySelector('.home-network'));
+    expect(sec.querySelector('h3')?.textContent).toBe('Nettverket');
+    app.settings.lang = 'en'; applyLang();
+    expect(sec.querySelector('h3')?.textContent).toBe('The network');
+    expect(sec.textContent).toContain('Every line that is exported');
+    app.settings.lang = 'no'; applyLang();
   });
 
   it('without a project, says so', async () => {
