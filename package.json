@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run && tsc -p .",
     "test:watch": "vitest",
-    "baseline": "node tools/v1-baseline/record.mjs"
+    "baseline": "node tools/v1-baseline/record.mjs",
+    "probe-export": "node tools/probe-export/probe.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

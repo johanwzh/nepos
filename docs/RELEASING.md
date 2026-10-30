@@ -43,11 +43,15 @@ again. At release only the date goes into the changelog heading — check the ve
 - [ ] NeTEx export changed? The files validate against Entur's NeTEx schema, every reference resolves, and a test
       export of a real project still looks right.
 
-- [ ] **Every release, whether the export changed or not (user 2026-10-30):** export a test project from the app
-      (e.g. JPB, the "absurd" test line with interval trips past midnight and offsets up to +5) and probe the zip:
-      every ServiceJourney's passing times and day offsets match the timetable (interval trips included); each trip's
-      DatedServiceJourneys cover exactly its day code's days in the calendar; every `ref` resolves to an `id` in the
-      export. First done for 2.5.0, after the release — do it before the push from now on.
+- [ ] **Every release, whether the export changed or not (user 2026-10-30):** export the test project(s) from the
+      app, then run the probe on the zip:
+      `npm run probe-export -- "<project>/exports/<time>/<name>.zip"`
+      It finds the project from the zip's place and checks the XML on its own (every reference resolves, no id twice,
+      passing times follow their pattern and run forward, every trip runs on a day, interchanges call where they say)
+      and against the project (every trip of every table, interval trips included: stops, times, day offsets, notes,
+      operating days, interchanges). It warns when a route file was saved after the export (re-export first). Must end
+      with "No errors". A feature that changes the export adds its check to `tools/probe-export/checks.js` (with a test
+      in `tests/tools/probe-export.test.js`). From 2.6: run it on the standard ERN test set (backlog), not only JPB.
 
 ## 5. Tests
 
