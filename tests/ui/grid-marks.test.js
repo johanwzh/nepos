@@ -220,4 +220,9 @@ describe('first look at 2.5 (user 2026-10-30)', () => {
   it('the label, vehicle and trip-number rows have a bottom edge that moves with them (user 2026-10-30)', () => {
     expect(css()).toMatch(/#tbl tr:is\(\.g-row-lb, \.g-row-tn\) > td \{ box-shadow: inset 0 -1px 0 var\(--border\); \}/);
   });
+
+  it('the trip-number row\'s caption lines up with Label and Vehicle (user 2026-10-30)', () => {
+    const n2 = readFileSync('src/ui/nepos2.css', 'utf8');
+    expect(n2).toMatch(/\.g-row-tn \.g-tn-label \{[^}]*text-align: left; padding-left: 8px;/);
+  });
 });
