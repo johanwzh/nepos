@@ -46,7 +46,7 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   standard map, darkened in dark mode) or **Aerial** (Esri imagery). Remembered in your personal settings; hidden when
   the project settings name a map style of their own.
 - **Day offsets without +1 text:** a time on a later day than the day code is marked with a pale green band at the
-  cell's right edge, wider for each day (+1, +2 …); the note letters stay readable on it. The bar under the timetable
+  cell's right edge, 5 px wider for each day (+1 … +6); the note letters stay readable on it. The bar under the timetable
   says "2 days after the day code". **Time cells are narrower** (56 px, from 68), so more of a table fits on screen.
 - **Interchanges as a chain:** a thin dashed line joins the source time to its target, from the empty space after the
   source's time to the space before the target's; the target is marked inside its cell (yellow: guaranteed, teal: stay

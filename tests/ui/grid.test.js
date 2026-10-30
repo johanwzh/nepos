@@ -609,9 +609,12 @@ describe('times aligned, with room for marks (35)', () => {
     expect(document.querySelector('.g-day-line')).toBeNull();
   });
 
-  it('two days after the day code: a wider mark', () => {
-    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('2350'), { ...cell('0150'), dayOffset: 2 }] }] });
-    const td = /** @type {HTMLElement} */ (document.querySelector('[data-r="1"][data-c="0"]'));
+  it('a wider mark for each day, up to six (Hurtigruten ends at +6; user 2026-10-30)', () => {
+    loadGrid({ stops: [stop('A'), stop('B'), stop('C'), stop('D')], cols: [{ dayCode: 'D', cells: [cell('2350'), { ...cell('0150'), dayOffset: 2 }, { ...cell('1200'), dayOffset: 6 }, { ...cell('1300'), dayOffset: 7 }] }] });
+    const at = (/** @type {number} */ r) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="0"]`));
+    expect([at(2), at(3)].map((x) => x.style.getPropertyValue('--d'))).toEqual(['6', '6']);
+    expect(readFileSync('src/ui/styles.css', 'utf8')).toMatch(/width: calc(var(--d, 1) * 5px)/);
+    const td = at(1);
     expect(((/** @type {HTMLElement} */ el) => (el.classList.contains('g-day') ? el.style.getPropertyValue('--d') : ''))(td)).toBe('2');
   });
 

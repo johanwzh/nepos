@@ -511,7 +511,7 @@ function paintDays(ci) {
     const cell = cells[Number(td.dataset.r)];
     const d = cell?.time && cell.time !== '|' && td.textContent?.trim() ? cell.dayOffset || 0 : 0;
     td.classList.toggle('g-day', d > 0);
-    if (d > 0) td.style.setProperty('--d', String(Math.min(d, 4))); else td.style.removeProperty('--d');
+    if (d > 0) td.style.setProperty('--d', String(Math.min(d, 6))); // up to +6 (Hurtigruten, user 2026-10-30) else td.style.removeProperty('--d');
   }
 }
 

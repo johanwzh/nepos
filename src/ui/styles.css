@@ -1060,7 +1060,7 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 /* A line where the trip's date changes; the jump when more than one day (spec 2026-10-29-day-shift-lines) */
 /* A time on a later day than the day code: a translucent green from the right edge, wider per day (--d), over the
    marks so they stay readable (user 2026-10-30) */
-.g-td-time.g-day::after { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: calc(var(--d, 1) * 6px); background: var(--g-day); pointer-events: none; }
+.g-td-time.g-day::after { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: calc(var(--d, 1) * 5px); background: var(--g-day); pointer-events: none; }
 /* A time and its marks: the time always starts at the same place in the column, the marks (a/p/x, +1, and later
    footnote letters: at most two) get a fixed slot to its right */
 .g-td-time { text-align: left; padding-left: 7px; white-space: nowrap; }
