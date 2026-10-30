@@ -28,7 +28,7 @@ describe('snap candidates', () => {
   });
 
   it('widens to 150 m, then 300 m', () => {
-    const p = [LON + 200 * M_LON, LAT - 120 * M_LAT];
+    const p = /** @type {[number, number]} */ ([LON + 200 * M_LON, LAT - 120 * M_LAT]);
     expect(candidates(G, p)).toEqual([]);
     const { list, radius } = candidatesWidening(G, p);
     expect(radius).toBe(150);
