@@ -51,7 +51,9 @@ again. At release only the date goes into the changelog heading — check the ve
       and against the project (every trip of every table, interval trips included: stops, times, day offsets, notes,
       operating days, interchanges). It warns when a route file was saved after the export (re-export first). Must end
       with "No errors". A feature that changes the export adds its check to `tools/probe-export/checks.js` (with a test
-      in `tests/tools/probe-export.test.js`). From 2.6: run it on the standard ERN test set (backlog), not only JPB.
+      in `tests/tools/probe-export.test.js`). The test project is **PRT**
+      (`C:\Users\jwiklund\OneDrive - Entur AS\nepos-online\PRT`, every feature; JPB beside it has times past midnight).
+      PRT grows into the standard test set (backlog): add a case to it with each new feature.
 
 ## 5. Tests
 
