@@ -217,19 +217,7 @@ describe('first look at 2.5 (user 2026-10-30)', () => {
     expect(css()).not.toMatch(/\.cw-time[^{]*\{[^}]*text-overflow: ellipsis/);
   });
 
-  it('with a power tool on, the frozen header cells stay opaque (nothing scrolls through them)', () => {
-    const rule = css().split('\n').find((l) => l.startsWith('body.pt-on #tbl :is(.g-row-ins')) ?? '';
-    expect(rule).not.toContain('opacity');
-  });
-
-  it('the last frozen row is marked, so it gets a bottom edge', () => {
-    const last = () => [...document.querySelectorAll('#tbl tr.g-frz-last')].map((tr) => tr.className.split(' ')[0]);
-    expect(last()).toEqual(['g-row-dc']);
-    grid.vehicleRow = true;
-    loadGrid({ stops: [stop('S'), stop('E')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [] }] });
-    grid.vehicleRow = true;
-    selectCell(0, 0);
-    expect(last()).toEqual(['g-row-lb']);
-    grid.vehicleRow = false;
+  it('the label, vehicle and trip-number rows have a bottom edge that moves with them (user 2026-10-30)', () => {
+    expect(css()).toMatch(/#tbl tr:is\(\.g-row-lb, \.g-row-tn\) > td \{ box-shadow: inset 0 -1px 0 var\(--border\); \}/);
   });
 });

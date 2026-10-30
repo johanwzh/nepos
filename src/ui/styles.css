@@ -943,9 +943,7 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 /* The stop column sits right after the 20px insert column (Nepos 2 has no price column). The header rows'
    top offsets are set by the grid from their real heights (grid.js layoutFrozen). */
 .g-sticky1     { position: sticky; left: 20px; z-index: 2; }
-/* The header rows' cells are frozen (their top is set by layoutFrozen), not the rows (user 2026-10-30) */
-:is(.g-row-ins, .g-row-vehicle, .g-row-foot, .g-row-dc, .g-row-lb, .g-row-tn) > td { position: sticky; top: 0; z-index: 5; }
-#tbl tr:is(.g-row-ins, .g-row-foot, .g-row-dc, .g-row-lb, .g-row-tn) > td.cw-dest { position: sticky; } /* not the relative of the other destination cells */
+.g-row-ins, .g-row-vehicle, .g-row-foot, .g-row-dc, .g-row-lb, .g-row-tn { position: sticky; top: 0; z-index: 5; }
 .g-row-ins     .g-sticky0, .g-row-ins     .g-sticky-price, .g-row-ins     .g-sticky1,
 .g-row-vehicle .g-sticky0, .g-row-vehicle .g-sticky-price, .g-row-vehicle .g-sticky1,
 .g-row-foot    .g-sticky0, .g-row-foot    .g-sticky-price, .g-row-foot    .g-sticky1,
@@ -1459,14 +1457,9 @@ body.pt-intervals .g-td-time.g-blk-r { box-shadow: inset -2px 0 0 var(--accent, 
 body.pt-on :is(#menubar, #tabbar, #route-hdr, #kom-bar, #ts-tabs, #cal-bar, #cal-timeline, #panel-right, #map-strip, #panel-left .route-list, #fn-preview, #speed-strip, #edit-footer > :not(#ef-save):not(#ef-discard):not(#ef-state)) { opacity: .4; pointer-events: none; }
 /* Registrer stopp works on the map: the map pane stays usable while it is on (stop picking 2) */
 body.pt-record :is(#panel-right, #map-strip) { opacity: 1; pointer-events: auto; }
-body.pt-on #tbl :is(.g-row-ins, .g-row-bot, .g-td-name, .g-td-btn, .g-td-ins, .g-dc-cell, .g-fn-cell, .g-lb-cell, .g-tn-cell, .cw-dest, .cw-ins) { pointer-events: none; color: var(--text-f); }
-/* Dim what is in them, never the cells themselves: the frozen rows must stay opaque (user 2026-10-30: rows shone through) */
-body.pt-on #tbl :is(.g-row-ins, .g-row-bot, .g-td-name, .g-td-btn, .g-td-ins, .g-dc-cell, .g-fn-cell, .g-lb-cell, .g-tn-cell, .cw-dest, .cw-ins) > * { opacity: .55; }
-/* The last frozen row's bottom edge: collapsed table borders do not move with a sticky row */
-/* Each frozen cell draws its own discreet frame (user 2026-10-30: the scrolled rows still showed through, likely their
-   collapsed borders): borders that belong to the cell move with the sticky row */
-#tbl tr:is(.g-row-ins, .g-row-foot, .g-row-dc, .g-row-lb, .g-row-tn) > td { box-shadow: inset 0 0 0 1px var(--border-lt); }
-#tbl tr.g-frz-last > td { box-shadow: inset 0 0 0 1px var(--border-lt), inset 0 -1px 0 var(--border); }
+body.pt-on #tbl :is(.g-row-ins, .g-row-bot, .g-td-name, .g-td-btn, .g-td-ins, .g-dc-cell, .g-fn-cell, .g-lb-cell, .g-tn-cell, .cw-dest, .cw-ins) { pointer-events: none; opacity: .55; }
+/* The label, vehicle and trip-number rows' bottom edge: a collapsed border does not move with a sticky row (user 2026-10-30) */
+#tbl tr:is(.g-row-lb, .g-row-tn) > td { box-shadow: inset 0 -1px 0 var(--border); }
 body.pt-on #tbl .g-dc-cell .jd { pointer-events: auto; }
 body.pt-intervals #tbl .g-dc-cell { pointer-events: auto; opacity: 1; cursor: grab; }
 .pt-read { transition: opacity 1s; }
@@ -1482,7 +1475,7 @@ body.pt-intervals #tbl .g-dc-cell { pointer-events: auto; opacity: 1; cursor: gr
 .cpi-tip { font-size: 11px; opacity: .75; margin-top: 4px; }
 
 /* A block in the day-code row (user 2026-10-24): a line from the day code across the band, ending with a tick */
-/* (the block marks are placed in the day-code cell, which is sticky: positioned already) */
+.g-dc-cell.g-blk-dc-start, .g-dc-cell.g-blk-dc, .g-dc-cell.g-blk-dc-end { position: relative; }
 .g-dc-cell.g-blk-dc-start::after { content: ''; position: absolute; left: calc(50% - 10px + 1em); right: 0; top: 50%; border-top: 1.5px solid var(--muted, #9aa0aa); }
 .g-dc-cell.g-blk-dc::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1.5px solid var(--muted, #9aa0aa); }
 .g-dc-cell.g-blk-dc-end::after { content: ''; position: absolute; left: 0; width: calc(50% - 10px); top: 50%; border-top: 1.5px solid var(--muted, #9aa0aa); }

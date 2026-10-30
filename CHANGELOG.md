@@ -10,9 +10,10 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   profile allows — no lift, trolley bus, miniBus and the like. A line already set to something outside it still shows
   its setting.
 - **Street View** beside NSR on the stop card, at the stop's position.
-- **Linjer:** the Gyldig column is gone (the timeline under each row shows it), and the mode column is narrower.
-- **The frozen rows at the top of the timetable** are frozen cell by cell instead of row by row, so they no longer
-  leave gaps the scrolled rows show through.
+- **Linjer:** the Gyldig column is gone (the timeline under each row shows it), and the mode's icon sits before the
+  line code instead of in a column of its own.
+- **The label, vehicle and trip-number rows** at the top of the timetable keep their bottom edge when the timetable
+  scrolls.
 - **The map follows the stop column, or stays pinned:** unpinned, the map opens when the cursor is in the stop column
   and hides when it leaves. The pin in the map's header keeps it open; **Alt+M** opens and pins it, Alt+M again unpins
   and hides it; ✕ closes and unpins. A click or Shift+click on the map no longer moves the map back to the first stop
@@ -20,10 +21,7 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Stops of the wrong mode are caught for every mode:** a cableway (or coach, funicular …) line was offered stops of
   any mode, and nothing warned — the filter used the old ERN code, which those modes lack. The search, the map and the
   export check now use the line's own mode, and a stop of another mode is an export error, as in Entur's validator.
-- The frozen rows above the timetable draw a discreet frame round each cell.
-- **Small fixes from the first look:** time cells never show "…" (a pipe cell and a cell being typed in did); with a
-  power tool on, the frozen rows at the top of the timetable stay solid (the rows below shone through) and the last of
-  them has a bottom edge; the speed strip's average sits in the top right corner; the disabled tool's text follows
+- **Small fixes from the first look:** time cells never show "…" (a pipe cell and a cell being typed in did); the speed strip's average sits in the top right corner; the disabled tool's text follows
   the language.
 - **Stop picking 2:** typing a stop name in a stop cell opens a small **search window at the cell** (the map pane no
   longer takes the keyboard). The hits are a tree — each stop place with its platforms (platform and private code)

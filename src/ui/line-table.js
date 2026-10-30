@@ -183,8 +183,8 @@ export function initLineTable() {
     rows,
     rowId: (r) => r.code,
     columns: [
-      { key: 'mode', label: () => '', width: '22px', sort: (r) => r.mode, cell: (r) => modeIconSvg(r.mode, r.submode), text: (r) => r.mode },
-      { key: 'code', label: () => t('ltCol_code'), width: '64px', sort: (r) => r.publicCode, cell: (r) => esc(r.publicCode), text: (r) => r.publicCode },
+      // The mode's icon before the code: a column of its own was fixed-width room it never needed (user 2026-10-30)
+      { key: 'code', label: () => t('ltCol_code'), width: '84px', sort: (r) => r.publicCode, cell: (r) => `<span class="lt-mode">${modeIconSvg(r.mode, r.submode)}</span>${esc(r.publicCode)}`, text: (r) => r.publicCode },
       { key: 'name', label: () => t('ltCol_name'), width: 'minmax(0, 2fr)', sort: (r) => r.name, cell: (r) => esc(r.name), text: (r) => r.name },
       { key: 'branding', label: () => t('ltCol_branding'), sort: (r) => r.brand, cell: (r) => esc(r.brand), text: (r) => r.brand },
       { key: 'authority', label: () => t('ltCol_authority'), sort: (r) => r.authority, cell: (r) => esc(r.authority), text: (r) => r.authority },

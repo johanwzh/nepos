@@ -71,13 +71,14 @@ describe('Linjer on the shared list frame', () => {
     expect(rows()[1].classList.contains('lv-future')).toBe(true); // cal-new is 2099
   });
 
-  it('has no Gyldig column (the timeline shows it) and a narrow mode column (user 2026-10-30)', () => {
+  it('has no Gyldig column (the timeline shows it) and no mode column: the mode icon sits before the code (user 2026-10-30)', () => {
     setPage('lines');
     expect(rows()[0].querySelector('.lv-c-valid')).toBeNull();
     expect(table().querySelector('.lv-head')?.textContent).not.toMatch(/gyldig/i);
-    const cols = /** @type {HTMLElement} */ (table().querySelector('.lv-head')).style.gridTemplateColumns.split(' ');
-    expect(cols[0]).toBe('22px');
-    expect(table().querySelector('.lv-head span')?.textContent).toBe(''); // the mode's icons need no heading
+    expect(rows()[0].querySelector('.lv-c-mode')).toBeNull();
+    const code = /** @type {HTMLElement} */ (rows()[0].querySelector('.lv-c-code'));
+    expect(code.querySelector('svg')).not.toBeNull();
+    expect(code.textContent?.trim()).toBe('2');
   });
 
   it('searches and sorts', () => {

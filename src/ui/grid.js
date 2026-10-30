@@ -1067,16 +1067,11 @@ function onDestColumnsToggled() {
  */
 function layoutFrozen(tbl) {
   let top = 0;
-  /** @type {HTMLTableRowElement | null} */ let last = null;
   for (const tr of [...tbl.rows]) {
     if (!/\bg-row-(ins|foot|dc|lb|tn)\b/.test(tr.className)) break;
-    // The cells are frozen, not the row: a sticky row in a table with collapsed borders leaves its borders behind and
-    // opens gaps the scrolled rows show through (Chrome; user 2026-10-30)
-    for (const td of tr.cells) td.style.top = `${top}px`;
+    tr.style.top = `${top}px`;
     top += tr.offsetHeight;
-    last = tr;
   }
-  last?.classList.add('g-frz-last'); // its bottom edge (CSS)
   const name = /** @type {HTMLElement | null} */ (tbl.querySelector('.g-row-dc .g-sticky1'));
   const wrap = $('tbl-wrap');
   wrap.style.scrollPaddingTop = `${top}px`;
