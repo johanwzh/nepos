@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup, flush } from './dom-setup.js';
-import { initShell, setPage, panelOpen, refreshAll } from '../../src/ui/shell.js';
+import { initShell, setPage, panelOpen, refreshAll, mapPinned } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid, grid, clearGrid } from '../../src/ui/grid.js';
@@ -86,10 +86,42 @@ describe('stop picking on the map (stop picking 2: click = pick)', () => {
     await settle();
   }
 
-  it('selecting a stop cell does not open the map pane', () => {
+  const timeCell = () => {
+    const time = /** @type {HTMLElement} */ (document.querySelector('[data-r="0"][data-c="0"]'));
+    time.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+  };
+  const altM = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'm', altKey: true, bubbles: true, cancelable: true }));
+
+  it('the map opens in the stop column and hides outside it, unless pinned (user 2026-10-30)', () => {
     expect(panelOpen('right')).toBe(false);
     pickRow(0);
+    expect(panelOpen('right')).toBe(true);
+    expect(mapPinned()).toBe(false);
+    timeCell();
     expect(panelOpen('right')).toBe(false);
+  });
+
+  it('Alt+M opens and pins the map; Alt+M again unpins and hides it', () => {
+    altM();
+    expect(panelOpen('right')).toBe(true);
+    expect(mapPinned()).toBe(true);
+    pickRow(0); timeCell(); // pinned: it stays
+    expect(panelOpen('right')).toBe(true);
+    altM();
+    expect(panelOpen('right')).toBe(false);
+    expect(mapPinned()).toBe(false);
+  });
+
+  it('the pin in the map\'s header pins it; ✕ closes and unpins', () => {
+    pickRow(0);
+    /** @type {HTMLElement} */ (document.getElementById('pin-right')).click();
+    expect(mapPinned()).toBe(true);
+    timeCell();
+    expect(panelOpen('right')).toBe(true);
+    /** @type {HTMLElement} */ (document.getElementById('close-right')).click();
+    expect(panelOpen('right')).toBe(false);
+    expect(mapPinned()).toBe(false);
   });
 
   it('a click on a Quay puts it on the selected stop row at once, and the cell flashes', async () => {
@@ -118,6 +150,19 @@ describe('stop picking on the map (stop picking 2: click = pick)', () => {
     // the new row is now the selected one: "above" goes above it
     pick('quay', 'NSR:Quay:61', 'above');
     expect(grid.stops.map((s) => s.stopId)).toEqual(['NSR:Quay:7203', 'NSR:Quay:11972', 'NSR:Quay:11972', 'NSR:Quay:61', 'NSR:Quay:61', 'NSR:Quay:62']);
+  });
+
+  it('a pick on the map keeps the map where it is (user 2026-10-30: Shift+click jumped back to the first stop place)', async () => {
+    pickRow(3);
+    await openStorsenter();
+    /** @type {boolean[]} */ const stays = [];
+    setPickerMap({ show: (m) => { stays.push(!!m.stay); }, onPick: (fn) => { pick = fn; }, view: () => null, onViewChange: () => {}, zoomTo: () => {} });
+    pick('quay', 'NSR:Quay:62', 'below');
+    expect(stays.length).toBeGreaterThan(0);
+    expect(stays.every(Boolean)).toBe(true);
+    stays.length = 0;
+    pickRow(0); // a row chosen in the grid: the map may move to it
+    expect(stays.some(Boolean)).toBe(false);
   });
 
   it('with a time cell selected, a Quay click does nothing', async () => {

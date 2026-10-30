@@ -16,7 +16,7 @@ const placed = (p) => !!p && p.lat != null && p.lon != null;
 /**
  * @param {{ lineStops: { n: number, stopId: string | null, name: string, info: any }[], row: number | null,
  *           current: any, candidate: any, hits: any[], place: any, browse: any[], browseQuays: any[],
- *           onlyMode: boolean, ernMode: number }} s
+ *           onlyMode: boolean, ernMode: string | number }} s   ernMode: the line's mode (or an old ERN code)
  * @returns {{ markers: PickerMarker[], line: [number, number][], fit: [number, number][] | null }}
  */
 export function pickerMapModel(s) {

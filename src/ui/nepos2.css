@@ -1034,3 +1034,10 @@ details.n2-group > div.n2-issue { margin-left: 22px; opacity: .9; }
 .ss-desc { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-m); font-size: 12px; }
 .ss-quay code { color: var(--text-f); font-size: 10px; }
 .ss-none { padding: 2px 4px 2px 22px; color: var(--text-f); font-style: italic; font-size: 12px; }
+
+/* The map's pin (user 2026-10-30): pinned, it stays open outside the stop column */
+.panel-pin { cursor: pointer; padding: 0 6px; color: var(--text-f); display: inline-flex; align-items: center; }
+.panel-pin svg { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; }
+.panel-pin:hover { color: var(--text); }
+.panel-pin.on { color: var(--accent); }
+.panel-pin.on svg { fill: currentColor; }

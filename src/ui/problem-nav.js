@@ -8,7 +8,7 @@ import { lineIssues } from './line-info.js';
 import { grid, onGridRender, selectDayCode, selectStopCell, selectDestCell, selectCell, viewColumn } from './grid.js';
 import { switchTableSet, switchPeriod } from './route-editor.js';
 import { openEditDialog } from './table-set-tabs.js';
-import { quayStatus } from '../core/quays.js';
+import { quayStatus, lineModeOf } from '../core/quays.js';
 import { quayInfo } from './quays.js';
 import { servedRows } from '../core/destinations.js';
 
@@ -77,7 +77,7 @@ function stopRowFor(code) {
     if (!timedRow(ri) || s.isDwellArr) return false;
     if (!want) return !!s.stopId; // stop-id-clash: any linked stop
     const id = s.stopId == null || s.stopId === '' ? null : String(s.stopId);
-    return quayStatus(id, id ? quayInfo.get(id) : undefined, app.routeState?.transportMode ?? 0) === want;
+    return quayStatus(id, id ? quayInfo.get(id) : undefined, lineModeOf(app.routeState)) === want;
   });
 }
 

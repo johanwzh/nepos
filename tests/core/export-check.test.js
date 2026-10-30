@@ -66,10 +66,16 @@ describe('checkForExport', () => {
       expect(check(rs)).toEqual([]);
     });
 
-    it('only warns about what NSR says', () => {
+    it('warns about what NSR says; a stop of another mode than the line is an error, as in Antu (user 2026-10-30)', () => {
       expect(codes(check(route(), { quayInfo: new Map([...NSR, ['NSR:Quay:11972', null]]) }))).toEqual(['warning:stop-not-seen']);
-      expect(codes(check(route(), { quayInfo: new Map([...NSR, ['NSR:Quay:11972', { ...bus('NSR:Quay:11972', 'Oslo S'), mode: 'rail' }]]) }))).toEqual(['warning:stop-mode']);
+      expect(codes(check(route(), { quayInfo: new Map([...NSR, ['NSR:Quay:11972', { ...bus('NSR:Quay:11972', 'Oslo S'), mode: 'rail' }]]) }))).toEqual(['error:stop-mode']);
       expect(codes(check(route(), { quayInfo: new Map() }))).toEqual(['warning:stop-unchecked']);
+    });
+
+    it('a cableway line (no ERN mode code) with bus stops: an error (user 2026-10-30)', () => {
+      const rs = route();
+      rs.mode = 'cableway'; rs.submode = 'telecabin'; rs.transportMode = 0;
+      expect(codes(check(rs, { quayInfo: NSR })).filter((c) => c.endsWith('stop-mode'))).toEqual(['error:stop-mode']);
     });
 
     it('blocks two stop IDs that would get the same NeTEx ID', () => {

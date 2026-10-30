@@ -138,6 +138,8 @@ function drawPicker() {
   // Fit when what is being looked at changes (a new row, new hits, another stop place) — never
   // while the user pans and zooms to browse.
   const key = `${s.row}|${s.place?.id ?? ''}|${s.hits.map((h) => h.id).join(',')}|${s.current?.quayId ?? ''}`;
+  // A pick made on the map (a click, Shift+click) never moves it: the user is working there (user 2026-10-30)
+  if (s.stay) { pickKey = key; s.stay = false; }
   if (key !== pickKey && model.fit && !s.recording) {
     pickKey = key;
     const pts = model.fit.map(([lat, lon]) => /** @type {[number, number]} */ ([lon, lat]));

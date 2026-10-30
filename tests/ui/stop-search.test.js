@@ -88,8 +88,8 @@ beforeEach(async () => {
 
 describe('the stop search window (stop picking 2)', () => {
   it('typing in a stop cell opens the window at the cell; the map pane stays as it was', async () => {
-    const before = panelOpen('right');
     selectStopCell(1);
+    const before = panelOpen('right');
     press('G');
     expect(box()).not.toBeNull();
     expect(input().value).toBe('G');

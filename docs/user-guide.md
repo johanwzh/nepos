@@ -290,7 +290,9 @@ standard, får eksporten en advarsel om at Entur kanskje ikke godtar så raske t
 
 ## 4. Stopp og kart
 
-Kartet åpnes med **Alt+M** eller fanen **Kart** til venstre for rutetabellen.
+Kartet åpnes av seg selv når du står i stoppkolonnen, og skjules når du går ut av den. Vil du ha det åpent hele
+tiden, klikker du **nålen** øverst i kartet — eller trykker **Alt+M**, som åpner og fester det (Alt+M igjen løsner og
+skjuler det). ✕ lukker og løsner.
 
 - Øverst vises stoppet på raden du står i: navn, plattform, hva NSR vet om det (leskur, skilt,
   rullestol — med symboler), ID-en med **Kopier** og en lenke til NSR.

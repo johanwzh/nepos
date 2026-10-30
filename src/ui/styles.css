@@ -1461,7 +1461,10 @@ body.pt-on #tbl :is(.g-row-ins, .g-row-bot, .g-td-name, .g-td-btn, .g-td-ins, .g
 /* Dim what is in them, never the cells themselves: the frozen rows must stay opaque (user 2026-10-30: rows shone through) */
 body.pt-on #tbl :is(.g-row-ins, .g-row-bot, .g-td-name, .g-td-btn, .g-td-ins, .g-dc-cell, .g-fn-cell, .g-lb-cell, .g-tn-cell, .cw-dest, .cw-ins) > * { opacity: .55; }
 /* The last frozen row's bottom edge: collapsed table borders do not move with a sticky row */
-#tbl tr.g-frz-last > td { box-shadow: inset 0 -1px 0 var(--border); }
+/* Each frozen cell draws its own discreet frame (user 2026-10-30: the scrolled rows still showed through, likely their
+   collapsed borders): borders that belong to the cell move with the sticky row */
+#tbl tr:is(.g-row-ins, .g-row-foot, .g-row-dc, .g-row-lb, .g-row-tn) > td { box-shadow: inset 0 0 0 1px var(--border-lt); }
+#tbl tr.g-frz-last > td { box-shadow: inset 0 0 0 1px var(--border-lt), inset 0 -1px 0 var(--border); }
 body.pt-on #tbl .g-dc-cell .jd { pointer-events: auto; }
 body.pt-intervals #tbl .g-dc-cell { pointer-events: auto; opacity: 1; cursor: grab; }
 .pt-read { transition: opacity 1s; }

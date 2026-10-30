@@ -202,6 +202,29 @@ const panels = {
   left: { el: null, rz: null, w: 180, open: true },
   right: { el: null, rz: null, w: 300, open: false },
 };
+/** The map pinned open (user 2026-10-30): unpinned, it opens in the stop column and hides outside it. */
+let mapPin = false;
+
+export const mapPinned = () => mapPin;
+
+/** Pin the map open, or unpin it. @param {boolean} on */
+export function pinMap(on) {
+  mapPin = on;
+  document.getElementById('pin-right')?.classList.toggle('on', on);
+}
+
+/** Open or open-and-pin the map (Alt+M, the strip); Alt+M on a pinned map unpins and hides it. */
+function toggleMap() {
+  if (panels.right.open && mapPin) { pinMap(false); togglePanel('right'); return; }
+  pinMap(true);
+  openPanel('right');
+}
+
+/** The map follows the stop column while it is not pinned. @param {boolean} want */
+export function autoMap(want) {
+  if (mapPin || panels.right.open === want) return;
+  togglePanel('right');
+}
 
 /** @type {(() => void)[]} */
 const panelListeners = [];
@@ -313,9 +336,10 @@ export function initShell() {
   applyPanel('right');
   panels.left.open = true; // the mini view is always shown (navigation spec §3.1)
   applyPanel('left');
-  $('map-strip').addEventListener('click', () => togglePanel('right'));
+  $('map-strip').addEventListener('click', () => toggleMap());
   $('close-left').addEventListener('click', () => setPage('lines'));
-  $('close-right').addEventListener('click', () => togglePanel('right'));
+  $('close-right').addEventListener('click', () => { pinMap(false); if (panels.right.open) togglePanel('right'); });
+  $('pin-right')?.addEventListener('click', () => pinMap(!mapPin));
 
   /** @type {{ side: 'left' | 'right', x0: number, w0: number } | null} */
   let drag = null;
@@ -357,7 +381,7 @@ export function initShell() {
     // A power tool on: finish with it first (Esc) — nothing else opens or changes page (user 2026-10-24)
     if (document.body.classList.contains('pt-on')) { if (!['j', 'i'].includes(e.key.toLowerCase())) { e.preventDefault(); e.stopPropagation(); } return; }
     // The map is part of the timetable page: Alt+M opens and closes it there.
-    if (e.key.toLowerCase() === 'm') { if (curPage === 'edit') { e.preventDefault(); e.stopPropagation(); togglePanel('right'); } return; }
+    if (e.key.toLowerCase() === 'm') { if (curPage === 'edit') { e.preventDefault(); e.stopPropagation(); toggleMap(); } return; }
     // The destination columns, likewise (destination displays spec)
     if (e.key.toLowerCase() === 'd') { if (curPage === 'edit' && !document.body.classList.contains('marey-on')) { e.preventDefault(); e.stopPropagation(); toggleDestColumns(); } return; }
     // The visual timetable (Marey chart, 2.5): in place of the timetable

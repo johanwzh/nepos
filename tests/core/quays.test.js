@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { NSR_QUAY_PATTERN, stopLocalId, quayRef, quayIdsInErn, modeMatches, quayStatus } from '../../src/core/quays.js';
+import { NSR_QUAY_PATTERN, stopLocalId, quayRef, quayIdsInErn, modeMatches, quayStatus, lineModeOf } from '../../src/core/quays.js';
 
 describe('NSR Quay IDs', () => {
   it('recognises NSR Quay IDs only', () => {
@@ -36,6 +36,15 @@ describe('Quay status', () => {
     expect(modeMatches(1, 'rail')).toBe(false);
     expect(modeMatches(6, 'water')).toBe(true);  // ERN 6 = ship
     expect(modeMatches(1, '')).toBe(true);       // NSR gave no mode: nothing to complain about
+  });
+
+  it('uses the line mode: modes with no ERN code (cableway, coach, funicular) are filtered too (user 2026-10-30)', () => {
+    expect(lineModeOf({ mode: 'cableway', transportMode: 0 })).toBe('cableway');
+    expect(lineModeOf({ mode: '', transportMode: 1 })).toBe('bus'); // an old line: its ERN code
+    expect(modeMatches('cableway', 'bus')).toBe(false);
+    expect(modeMatches('cableway', 'cableway')).toBe(true);
+    expect(modeMatches('coach', 'bus')).toBe(true);
+    expect(quayStatus('NSR:Quay:7203', bus, 'cableway')).toBe('mode-mismatch');
   });
 
   it('tells each case apart', () => {

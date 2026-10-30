@@ -33,14 +33,22 @@ export function quayIdsInErn(text) {
 }
 
 /**
- * Whether a stop place's NSR transport mode suits the line's ERN mode. Advisory only.
- * @param {number} ernMode ERN #RUT mode code
+ * The line's transport mode: its Transmodel mode, or (an old line) its ERN code's. Modes with no ERN code (cableway,
+ * coach, funicular …) have ERN code 0, so the mode itself must be used (user 2026-10-30: a cableway line was offered
+ * bus stops). @param {{ mode?: string, transportMode?: number } | null | undefined} rs
+ */
+export const lineModeOf = (rs) => rs?.mode || /** @type {any} */ (ERN_MODES)[rs?.transportMode ?? 0]?.mode || '';
+
+/**
+ * Whether a stop place's NSR transport mode suits the line's mode. Bus and coach stops serve both.
+ * @param {string | number} lineMode the line's Transmodel mode (lineModeOf), or an ERN #RUT mode code
  * @param {string} nsrMode lower-case NSR transport mode ('' when unknown)
  */
-export function modeMatches(ernMode, nsrMode) {
-  const want = /** @type {any} */ (ERN_MODES)[ernMode]?.mode;
+export function modeMatches(lineMode, nsrMode) {
+  const want = typeof lineMode === 'number' ? /** @type {any} */ (ERN_MODES)[lineMode]?.mode : lineMode;
   if (!want || !nsrMode) return true;
-  return nsrMode === want || (want === 'bus' && nsrMode === 'coach');
+  const road = ['bus', 'coach'];
+  return nsrMode === want || (road.includes(want) && road.includes(nsrMode));
 }
 
 /**
@@ -48,13 +56,13 @@ export function modeMatches(ernMode, nsrMode) {
  * @param {string | null} stopId
  * @param {import('../services/nsr.js').QuayInfo | null | undefined} info undefined: not looked up
  *   (yet, or NSR could not be reached); null: NSR does not know the Quay
- * @param {number} ernMode the line's ERN mode
+ * @param {string | number} lineMode the line's mode (lineModeOf), or its ERN code
  * @returns {'missing' | 'not-nsr' | 'unknown' | 'not-seen' | 'mode-mismatch' | 'confirmed'}
  */
-export function quayStatus(stopId, info, ernMode) {
+export function quayStatus(stopId, info, lineMode) {
   if (stopId == null || stopId === '') return 'missing';
   if (!NSR_QUAY_PATTERN.test(stopId)) return 'not-nsr';
   if (info === undefined) return 'unknown';
   if (info === null) return 'not-seen';
-  return modeMatches(ernMode, info.mode) ? 'confirmed' : 'mode-mismatch';
+  return modeMatches(lineMode, info.mode) ? 'confirmed' : 'mode-mismatch';
 }

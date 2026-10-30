@@ -3,11 +3,11 @@
 // the row, Shift+click: a new row below, Alt+Shift+click: a new row above; right-click: a menu. The changed stop cell
 // flashes. Map picking only works while a stop cell is selected. Services and the map are injectable for tests.
 import { app } from './state.js';
-import { $, openPanel, onRefresh } from './shell.js';
+import { $, openPanel, onRefresh, autoMap, currentPage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { searchStopPlaces, nearbyStopPlaces } from '../services/geocoder.js';
 import { getStopPlace, getStopPlaces, lookupQuays } from '../services/nsr.js';
-import { modeMatches } from '../core/quays.js';
+import { modeMatches, lineModeOf } from '../core/quays.js';
 import { grid, selectedStopRow, selectedRowIndex, setStopOnRow, clearStopOnRow, setStopTypeHandler, onGridRender, appendStopRow, removeStopRow, addStopRowAt, flashStopCell } from './grid.js';
 import { quayInfo } from './quays.js';
 import { openStopSearch, closeStopSearch } from './stop-search.js';
@@ -18,7 +18,8 @@ import { onToolChange, setTool } from './power-tools.js';
  * @typedef {import('../services/nsr.js').StopPlace} StopPlace
  * @typedef {import('../services/geocoder.js').StopPlaceHit} StopPlaceHit
  * @typedef {{ row: number | null, current: QuayInfo | null, candidate: QuayInfo | null, hits: StopPlaceHit[],
- *             place: StopPlace | null, browse: StopPlaceHit[], browseQuays: StopPlace[], onlyMode: boolean, ernMode: number, recording: boolean }} PickerState
+ *             place: StopPlace | null, browse: StopPlaceHit[], browseQuays: StopPlace[], onlyMode: boolean, ernMode: string, recording: boolean, stay?: boolean }} PickerState
+ *   stay: the last change came from a click on the map, which keeps its view (user 2026-10-30)
  *   candidate: the Quay marked in the search window (its pin is marked); hits stay empty since 2.5
  * @typedef {'use' | 'above' | 'below'} QuayAction
  * @typedef {{ show(state: PickerState): void, onPick(fn: (kind: 'place' | 'quay', id: string, action?: QuayAction) => void): void,
@@ -97,7 +98,7 @@ async function browse() {
 }
 
 /** @type {PickerState} */
-const state = { row: null, current: null, candidate: null, hits: [], place: null, browse: [], browseQuays: [], onlyMode: true, ernMode: 0, recording: false };
+const state = { row: null, current: null, candidate: null, hits: [], place: null, browse: [], browseQuays: [], onlyMode: true, ernMode: '', recording: false };
 export const pickerState = () => state;
 let seq = 0;
 
@@ -105,17 +106,20 @@ export const pickerOpts = (/** @type {'geocoder' | 'nsr'} */ which) => ({
   baseUrl: which === 'geocoder' ? app.settings.geocoderUrl : app.settings.stopPlacesUrl,
   clientName: app.settings.clientName || 'nepos-online',
 });
-/** The open line's ERN mode (0: none). */
-export const lineErnMode = () => app.routeState?.transportMode ?? 0;
+/** The open line's transport mode ('' : none) — its Transmodel mode, not the ERN code (cableway has none). */
+export const lineErnMode = () => lineModeOf(app.routeState);
 /** @param {string} id */
 const known = (id) => quayInfo.get(id) ?? null;
 
 /** A new row (or none): the map shows that row's stop; an open stop place is forgotten. */
 function followRow() {
   const row = grid.active && !grid.readOnly ? selectedStopRow() : null;
+  // Unpinned, the map is there while a stop cell is selected (and while recording stops)
+  if (currentPage() === 'edit' && !state.recording) autoMap(row != null);
   if (row === state.row) { render(); return; }
   state.row = row;
   if (keepView) { render(); return; }
+  state.stay = false; // a row chosen in the grid: the map may go to it
   seq++;
   state.place = null;
   render();
@@ -209,6 +213,7 @@ function findQuay(quayId) {
 function actOnQuay(quayId, action) {
   const info = findQuay(quayId);
   if (state.row == null || !info) return;
+  state.stay = true; // the user is working on the map: it must not move (the map clears this once it has drawn)
   useQuay(state.row, info, action);
 }
 

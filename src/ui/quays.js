@@ -3,7 +3,7 @@
 import { app } from './state.js';
 import { t } from '../i18n/strings.js';
 import { lookupQuays } from '../services/nsr.js';
-import { NSR_QUAY_PATTERN, quayIdsInErn, quayStatus } from '../core/quays.js';
+import { NSR_QUAY_PATTERN, quayIdsInErn, quayStatus, lineModeOf } from '../core/quays.js';
 
 /**
  * Quay ID → what NSR said, or null when NSR does not know it. No entry = not looked up.
@@ -66,7 +66,7 @@ export function loadProjectQuays() {
 export function stopMark(stop) {
   const id = stop.stopId == null ? '' : String(stop.stopId);
   const info = quayInfo.get(id);
-  switch (quayStatus(id, info, app.routeState?.transportMode ?? 0)) {
+  switch (quayStatus(id, info, lineModeOf(app.routeState))) {
     case 'missing': return { cls: 'stop-unlinked', title: t('quayMissing') };
     case 'not-nsr': return { cls: 'stop-unlinked', title: t('quayNotNsr', id) };
     case 'not-seen': return { cls: 'n2-quay-notseen', title: t('quayNotSeen', id) };

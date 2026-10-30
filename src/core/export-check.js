@@ -1,7 +1,7 @@
 // The check that runs before an export (spec §9, §7.2, §8): everything that would make the NeTEx
 // wrong or surprising. Errors block the export; warnings are shown and never block. Quay status
 // from NSR is advisory, so it only ever gives warnings. Pure.
-import { quayStatus, stopLocalId } from './quays.js';
+import { quayStatus, stopLocalId, lineModeOf } from './quays.js';
 import { findRole, aliasIssues, orgRole } from './orgs.js';
 import { ROUTE_CODE_PATTERN } from './route-names.js';
 import { journeyStops, tripVariants } from './netex/journeys.js';
@@ -151,7 +151,7 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
         // Only rows that are exported: a time in at least one column.
         if (!grid.cols.some((/** @type {any} */ col) => timed(col.cells[ri]))) return;
         const id = stop.stopId == null || stop.stopId === '' ? null : String(stop.stopId);
-        const status = quayStatus(id, id ? quayInfo.get(id) : undefined, rs.transportMode);
+        const status = quayStatus(id, id ? quayInfo.get(id) : undefined, lineModeOf(rs));
         const label = stop.name || `#${ri + 1}`;
         if (status in byStatus) byStatus[status].push(status === 'not-nsr' ? `${label} (${id})` : label);
         if (id) {
@@ -164,7 +164,7 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
       if (byStatus.missing.length) add('error', 'stop-missing', { ...r, where, detail: list(byStatus.missing) });
       if (byStatus['not-nsr'].length) add('error', 'stop-not-nsr', { ...r, where, detail: list(byStatus['not-nsr']) });
       if (byStatus['not-seen'].length) add('warning', 'stop-not-seen', { ...r, where, detail: list(byStatus['not-seen']) });
-      if (byStatus['mode-mismatch'].length) add('warning', 'stop-mode', { ...r, where, detail: list(byStatus['mode-mismatch']) });
+      if (byStatus['mode-mismatch'].length) add('error', 'stop-mode', { ...r, where, detail: list(byStatus['mode-mismatch']) });
       if (byStatus.unknown.length) add('warning', 'stop-unchecked', { ...r, where, detail: list(byStatus.unknown) });
 
       /** @type {Set<string>} */
