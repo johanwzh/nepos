@@ -183,14 +183,14 @@ export function initLineTable() {
     rows,
     rowId: (r) => r.code,
     columns: [
-      { key: 'mode', label: () => t('ltCol_mode'), width: '28px', sort: (r) => r.mode, cell: (r) => modeIconSvg(r.mode, r.submode), text: (r) => r.mode },
+      { key: 'mode', label: () => '', width: '22px', sort: (r) => r.mode, cell: (r) => modeIconSvg(r.mode, r.submode), text: (r) => r.mode },
       { key: 'code', label: () => t('ltCol_code'), width: '64px', sort: (r) => r.publicCode, cell: (r) => esc(r.publicCode), text: (r) => r.publicCode },
       { key: 'name', label: () => t('ltCol_name'), width: 'minmax(0, 2fr)', sort: (r) => r.name, cell: (r) => esc(r.name), text: (r) => r.name },
       { key: 'branding', label: () => t('ltCol_branding'), sort: (r) => r.brand, cell: (r) => esc(r.brand), text: (r) => r.brand },
       { key: 'authority', label: () => t('ltCol_authority'), sort: (r) => r.authority, cell: (r) => esc(r.authority), text: (r) => r.authority },
       { key: 'operator', label: () => t('ltCol_operator'), sort: (r) => r.operator, cell: (r) => esc(r.operator), text: (r) => r.operator },
       { key: 'calendars', label: () => t('ltCol_calendars'), width: 'minmax(0, 1.2fr)', cell: (r) => r.calendarIds.map((id) => `<button class="lt-calchip" data-cal="${esc(id)}">${esc(calName(id))}</button>`).join(''), text: (r) => r.calendarIds.map(calName).join(', ') },
-      { key: 'valid', label: () => t('ltCol_valid'), width: '170px', sort: (r) => r.days[0] ?? '', cell: (r) => (r.days.length ? `${day(r.days[0])} – ${day(r.days[r.days.length - 1])}` : ''), text: (r) => (r.days.length ? `${day(r.days[0])} – ${day(r.days[r.days.length - 1])}` : '') },
+      // (no Gyldig column: the timeline under each row shows it better, user 2026-10-30)
       { key: 'public', label: () => t('ltCol_public'), width: '72px', sort: (r) => (r.isPublic ? 1 : 0), cell: (r) => flagSwitch(r, 'isPublic'), text: (r) => t(r.isPublic ? 'pubOpen' : 'pubClosed') },
       { key: 'exported', label: () => t('ltCol_exported'), width: '72px', sort: (r) => (r.exported ? 1 : 0), cell: (r) => flagSwitch(r, 'exported'), text: (r) => t(r.exported ? 'exportIn' : 'exportOut') },
       { key: 'status', label: () => t('ltCol_status'), width: '180px', sort: (r) => `${r.exported ? 1 : 0}${validityOf(r.days, todayYmd())}`, cell: status },

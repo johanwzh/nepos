@@ -140,6 +140,21 @@ describe('the stop search window (stop picking 2)', () => {
     expect(pickerState().candidate).toBeNull();
   });
 
+  it('Enter (or F2) on a stop opens the search with its name, not a free-text name; the map stays (user 2026-10-30)', () => {
+    selectStopCell(0);
+    const open = panelOpen('right');
+    press('Enter');
+    expect(document.querySelector('.g-stop-input')).toBeNull();
+    expect(input().value).toBe('Jernbanetorget');
+    expect(input().selectionStart).toBe(0); // all selected: typing replaces it
+    expect(panelOpen('right')).toBe(open);
+    key('Escape');
+    selectStopCell(0);
+    press('F2');
+    expect(input().value).toBe('Jernbanetorget');
+    key('Escape');
+  });
+
   it('Esc closes without picking', async () => {
     await typeSearch(1, 'Grefsen');
     key('ArrowDown');

@@ -1,6 +1,6 @@
 // The two-step transport mode menu (line header spec §2): modes, then the chosen mode's
 // submodes with "not specified" first.
-import { TRANSMODEL_MODES } from '../core/modes.js';
+import { offeredModes } from '../core/modes.js';
 import { modeLabel, submodeLabel } from '../i18n/modes.js';
 import { modeIconSvg } from './mode-icons.js';
 import { t } from '../i18n/strings.js';
@@ -21,12 +21,13 @@ export function openModeMenu(anchor, { mode, submode, lang, onPick }) {
   const subs = document.createElement('div');
   subs.className = 'mode-col mode-subs';
   menu.append(modes, subs);
+  const offered = offeredModes(mode, submode); // the Nordic profile (and the line's own setting)
 
   /** @param {string} m */
   const showSubs = (m) => {
     for (const el of modes.querySelectorAll('.mode-item')) el.classList.toggle('active', /** @type {HTMLElement} */ (el).dataset.mode === m);
     subs.innerHTML = '';
-    const entry = TRANSMODEL_MODES.find((x) => x.mode === m);
+    const entry = offered.find((x) => x.mode === m);
     for (const s of ['', ...(entry?.submodes ?? [])]) {
       const row = document.createElement('div');
       row.className = `mode-sub${m === mode && s === submode ? ' current' : ''}`;
@@ -37,7 +38,7 @@ export function openModeMenu(anchor, { mode, submode, lang, onPick }) {
       subs.appendChild(row);
     }
   };
-  for (const { mode: m } of TRANSMODEL_MODES.filter((x) => x.mode !== 'other')) {
+  for (const { mode: m } of offered.filter((x) => x.mode !== 'other')) {
     const row = document.createElement('div');
     row.className = 'mode-item';
     row.dataset.mode = m;

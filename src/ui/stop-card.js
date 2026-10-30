@@ -66,7 +66,7 @@ export function renderStopCard() { render(); }
 /**
  * The block, always with the same slots: row, sign on its post, name, platform, facts, ID line.
  * @param {{ row?: string, icon?: string, name?: string, nameMuted?: boolean, quay?: string, quayMuted?: boolean,
- *           facts?: { icon: string, text: string, cls?: string }[], id?: string, placeId?: string }} v
+ *           facts?: { icon: string, text: string, cls?: string }[], id?: string, placeId?: string, lat?: number | null, lon?: number | null }} v
  */
 function skeleton(v) {
   return `<div class="sc-row">${esc(v.row ?? '')}</div>
@@ -75,7 +75,8 @@ function skeleton(v) {
         <div class="sc-quay${v.quayMuted ? ' sc-muted' : ''}">${esc(v.quay ?? '')}</div></div></div>
     <div class="sc-facts">${(v.facts ?? []).map((x) => `<span class="sc-fact${x.cls ? ` ${x.cls}` : ''}">${x.icon} ${esc(x.text)}</span>`).join('')}</div>
     <div class="sc-id">${v.id ? `<code>${esc(v.id)}</code><button class="sc-chip sc-copy">${esc(t('scCopy'))}</button>` : ''}
-      ${v.placeId ? `<a class="sc-chip sc-nsr" href="https://stoppested.entur.org/stop_place/${esc(v.placeId)}" target="_blank" rel="noopener">NSR ↗</a>` : ''}</div>`;
+      ${v.placeId ? `<a class="sc-chip sc-nsr" href="https://stoppested.entur.org/stop_place/${esc(v.placeId)}" target="_blank" rel="noopener">NSR ↗</a>` : ''}
+      ${v.lat != null && v.lon != null ? `<a class="sc-chip sc-sv" href="https://www.google.com/maps/@?api=1&amp;map_action=pano&amp;viewpoint=${v.lat},${v.lon}" target="_blank" rel="noopener">StreetView ↗</a>` : ''}</div>`;
 }
 
 function render() {
@@ -95,7 +96,7 @@ function render() {
   box.innerHTML = skeleton({
     row, icon: modeIconSvg(mode), name: info?.stopPlaceName || stop.name || id,
     quay: info === null ? t('scUnknown') : info?.publicCode ? t('wsQuay', info.publicCode) : '', quayMuted: info === null,
-    facts: place && place !== 'loading' ? facts(place, id) : [], id, placeId,
+    facts: place && place !== 'loading' ? facts(place, id) : [], id, placeId, lat: info?.lat, lon: info?.lon, // Street View: the label is English (user 2026-10-30)
   });
   const copy = /** @type {HTMLButtonElement} */ (box.querySelector('.sc-copy'));
   copy.addEventListener('click', () => {

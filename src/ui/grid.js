@@ -752,11 +752,21 @@ export function focusGrid() {
   if (el && el !== document.body) el.blur();
 }
 
-/** @type {((text: string) => void) | null} */
+/** @type {((text: string, ri: number, select?: boolean) => void) | null} */
 let stopTypeHandler = null;
-/** Typing in a selected stop cell goes to the map pane's search (spec §2). @param {((text: string) => void) | null} fn */
+/**
+ * Typing in a selected stop cell goes to the stop search (stop picking 2). Enter / F2 open it with the stop's name,
+ * selected (user 2026-10-30: a stop's name is never free text).
+ * @param {((text: string, ri: number, select?: boolean) => void) | null} fn
+ */
 export function setStopTypeHandler(fn) {
   stopTypeHandler = fn;
+}
+
+/** Enter / F2 on a stop: the search for that row, with its name; the old text editor only without a stop search. @param {number} ri */
+function editStop(ri) {
+  if (stopTypeHandler) { if (grid.stops[ri] && !grid.stops[ri].isDwellArr) stopTypeHandler(grid.stops[ri].name ?? '', ri, true); }
+  else enterStopEdit(ri);
 }
 
 // ─── Interchanges ───────────────────────────────────────────────────────────
@@ -1060,7 +1070,9 @@ function layoutFrozen(tbl) {
   /** @type {HTMLTableRowElement | null} */ let last = null;
   for (const tr of [...tbl.rows]) {
     if (!/\bg-row-(ins|foot|dc|lb|tn)\b/.test(tr.className)) break;
-    tr.style.top = `${top}px`;
+    // The cells are frozen, not the row: a sticky row in a table with collapsed borders leaves its borders behind and
+    // opens gaps the scrolled rows show through (Chrome; user 2026-10-30)
+    for (const td of tr.cells) td.style.top = `${top}px`;
     top += tr.offsetHeight;
     last = tr;
   }
@@ -1655,7 +1667,7 @@ function keyStopCol(e) {
     case 'ArrowDown': e.preventDefault(); if (e.shiftKey) { if (endR < grid.stops.length - 1) { endR++; render(); } } else if (ancR < grid.stops.length - 1) { ancR++; endR = ancR; render(); } break;
     case 'ArrowRight': e.preventDefault(); if (!grid.cols.length) break; inStopCol = false; ancC = 0; endC = 0; render(); scrollTo(ancR, 0); break;
     case 'Escape': e.preventDefault(); inStopCol = false; render(); break;
-    case 'Enter': case 'F2': e.preventDefault(); enterStopEdit(ancR); break;
+    case 'Enter': case 'F2': e.preventDefault(); editStop(ancR); break;
     case 'Delete': case 'Backspace':
       e.preventDefault();
       if (grid.stops[ancR] && !grid.stops[ancR].isDwellArr) { grid.stops[ancR].name = ''; grid.stops[ancR].stopId = null; render(); }
@@ -1663,7 +1675,7 @@ function keyStopCol(e) {
     default:
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && grid.stops[ancR] && !grid.stops[ancR].isDwellArr) {
         e.preventDefault();
-        if (stopTypeHandler) stopTypeHandler(e.key); else enterStopEdit(ancR, e.key);
+        if (stopTypeHandler) stopTypeHandler(e.key, ancR); else enterStopEdit(ancR, e.key);
       }
   }
 }
@@ -1688,7 +1700,7 @@ function keyNav(e) {
       if (sh) extend(endR, endC - 1); else setAnchor(ancR, ancC - 1);
       render(); scrollTo(ancR, ancC); break;
     case 'ArrowRight': e.preventDefault(); if (sh) extend(endR, endC + 1); else setAnchor(ancR, ancC + 1); render(); scrollTo(ancR, ancC); break;
-    case 'F2': e.preventDefault(); enterStopEdit(ancR); break;
+    case 'F2': e.preventDefault(); editStop(ancR); break;
     case 'F7': e.preventDefault(); openNoteOnSelection(ancR, ancC); break;
     case 'F8': e.preventDefault(); openXOnSelection(); break;
     case 'Enter': e.preventDefault(); startEdit(''); break;

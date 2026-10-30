@@ -265,7 +265,7 @@ export function initStopPicker() {
   state.row = null;
   seq++;
   // Typing in a stop cell: the search window at the cell (never the map pane)
-  setStopTypeHandler((text) => { const ri = selectedStopRow(); if (ri != null) openStopSearch(ri, text); });
+  setStopTypeHandler((text, ri, select) => openStopSearch(ri, text, select));
   state.recording = false;
   recorded = [];
   $('sp-clear')?.addEventListener('click', () => { const ri = selectedRowIndex(); if (ri != null) { clearStopOnRow(ri); render(); } });

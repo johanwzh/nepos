@@ -71,6 +71,15 @@ describe('Linjer on the shared list frame', () => {
     expect(rows()[1].classList.contains('lv-future')).toBe(true); // cal-new is 2099
   });
 
+  it('has no Gyldig column (the timeline shows it) and a narrow mode column (user 2026-10-30)', () => {
+    setPage('lines');
+    expect(rows()[0].querySelector('.lv-c-valid')).toBeNull();
+    expect(table().querySelector('.lv-head')?.textContent).not.toMatch(/gyldig/i);
+    const cols = /** @type {HTMLElement} */ (table().querySelector('.lv-head')).style.gridTemplateColumns.split(' ');
+    expect(cols[0]).toBe('22px');
+    expect(table().querySelector('.lv-head span')?.textContent).toBe(''); // the mode's icons need no heading
+  });
+
   it('searches and sorts', () => {
     setPage('lines');
     field('lt-search').value = 'berg';

@@ -15,7 +15,7 @@ import { writeBrandings, newBranding } from '../project/brandings-store.js';
 import { writeLabels, newLabel, LABEL_COLOURS } from '../project/labels-store.js';
 import { writeVehicles, newVehicle, vehicleTypeIdFor } from '../project/vehicles-store.js';
 import { FUEL_TYPES, VEHICLE_TYPE_REF_PREFIX, SHORT_CODE_MAX, vehicleProblems } from '../core/vehicles.js';
-import { TRANSMODEL_MODES } from '../core/modes.js';
+import { NORDIC_MODES } from '../core/modes.js';
 import { modeLabel } from '../i18n/modes.js';
 import { getLang } from '../i18n/strings.js';
 import { refreshRegister } from './org-register.js';
@@ -494,7 +494,7 @@ function vehicleFields(main, id, cur, valid) {
   text('shortCode', t('vehShortCode'), (x) => x.trim(), t('vehShortCodeNote'));
   const shortCode = /** @type {HTMLInputElement} */ (main.querySelector('#re-shortCode'));
   shortCode.maxLength = SHORT_CODE_MAX + 4; // room to see that it is too long
-  choose('transportMode', t('vehMode'), [['', t('vehModeNone')], ...TRANSMODEL_MODES.map((m) => /** @type {[string, string]} */ ([m.mode, modeLabel(m.mode, getLang())]))]);
+  choose('transportMode', t('vehMode'), [['', t('vehModeNone')], ...NORDIC_MODES.map((m) => /** @type {[string, string]} */ ([m.mode, modeLabel(m.mode, getLang())]))]);
   choose('fuelType', t('vehFuel'), [['', '—'], ...FUEL_TYPES.map((x) => /** @type {[string, string]} */ ([x, t(`fuel_${x}`)]))]);
   const low = /** @type {HTMLInputElement} */ (el('input', 're-check'));
   low.type = 'checkbox';

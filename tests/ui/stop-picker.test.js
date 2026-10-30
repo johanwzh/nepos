@@ -292,6 +292,10 @@ describe('the stop at the selected row, at the top of the map pane', () => {
     const nsr = /** @type {HTMLAnchorElement} */ (card().querySelector('a.sc-nsr'));
     expect(nsr.href).toBe('https://stoppested.entur.org/stop_place/NSR:StopPlace:4000');
     expect(nsr.textContent).toBe('NSR ↗');
+    // Street View at the stop's position, beside NSR; the label is English in both languages (user 2026-10-30)
+    const sv = /** @type {HTMLAnchorElement} */ (card().querySelector('a.sc-sv'));
+    expect(sv.textContent).toBe('StreetView ↗');
+    expect(sv.href).toContain('viewpoint=59.91,10.75');
     expect(card().textContent).not.toContain('Retning');
     expect(card().querySelector('.sc-facts')?.textContent).toContain('Lukket leskur');
     // a symbol and a short word for each fact; no hover text (2.5)

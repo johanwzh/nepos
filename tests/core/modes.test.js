@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TRANSMODEL_MODES, isValidMode, modeFromErn, ernCodeFor, submodeElement } from '../../src/core/modes.js';
+import { TRANSMODEL_MODES, isValidMode, modeFromErn, ernCodeFor, submodeElement, NORDIC_MODES } from '../../src/core/modes.js';
 import { modeLabel, submodeLabel } from '../../src/i18n/modes.js';
 
 describe('Transmodel modes', () => {
@@ -39,5 +39,13 @@ describe('Transmodel modes', () => {
         for (const s of submodes) expect(submodeLabel(s, lang), `${lang} ${s}`).not.toBe(s);
       }
     }
+  });
+});
+
+describe('the Nordic profile (user 2026-10-30)', () => {
+  it('has the profile\'s modes and submodes only', () => {
+    expect(NORDIC_MODES.find((m) => m.mode === 'cableway')?.submodes).toEqual(['telecabin']);
+    expect(NORDIC_MODES.find((m) => m.mode === 'water')?.submodes).toEqual(['localPassengerFerry', 'internationalPassengerFerry', 'localCarFerry', 'nationalCarFerry', 'internationalCarFerry', 'highSpeedPassengerService', 'highSpeedVehicleService', 'sightseeingService']);
+    expect(NORDIC_MODES.some((m) => m.mode === 'lift' || m.mode === 'trolleyBus' || m.mode === 'ferry')).toBe(false);
   });
 });

@@ -568,7 +568,12 @@ describe('frozen rows and stop column (49)', () => {
   it('stacks the header rows from the measured heights and tells the scroll area how much is frozen', () => {
     loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')] }] });
     const rows = [...document.querySelectorAll('#tbl tr')].slice(0, 3);
-    for (const tr of rows) expect(/** @type {HTMLElement} */ (tr).style.top).toMatch(/^\d+px$/);
+    // the cells are frozen, not the rows: a frozen row in a table with collapsed borders leaves its borders behind and
+    // opens gaps in Chrome (user 2026-10-30)
+    for (const tr of rows) {
+      expect(/** @type {HTMLElement} */ (tr).style.top).toBe('');
+      for (const td of /** @type {HTMLElement[]} */ ([.../** @type {HTMLTableRowElement} */ (tr).cells])) expect(td.style.top).toMatch(/^\d+px$/);
+    }
     const wrap = /** @type {HTMLElement} */ (document.getElementById('tbl-wrap'));
     expect(wrap.style.scrollPaddingTop).toMatch(/^\d+px$/);
     expect(wrap.style.scrollPaddingLeft).toMatch(/^\d+px$/);

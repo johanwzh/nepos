@@ -295,11 +295,12 @@ tiden, klikker du **nålen** øverst i kartet — eller trykker **Alt+M**, som �
 skjuler det). ✕ lukker og løsner.
 
 - Øverst vises stoppet på raden du står i: navn, plattform, hva NSR vet om det (leskur, skilt,
-  rullestol — med symboler), ID-en med **Kopier** og en lenke til NSR.
+  rullestol — med symboler), ID-en med **Kopier**, en lenke til NSR og en til **StreetView** på stoppets plass.
 - Står du i en stoppcelle og **skriver**, åpnes et lite søkevindu rett ved cellen. Treffene er et tre: hvert
   stoppested med plattformene sine under. Du velger alltid en plattform, aldri bare stoppestedet: piltastene går
   mellom plattformene, **Enter** (eller et klikk) setter den på raden, og cellen blinker. **Esc** lukker uten å
-  velge. En Quay- eller StopPlace-ID kan limes inn i søket.
+  velge. En Quay- eller StopPlace-ID kan limes inn i søket. **Enter** eller **F2** på et stopp åpner søket med
+  stoppets navn, så du kan bytte stopp eller plattform; navnet på et stopp skrives aldri fritt.
 - På kartet vises plattformene som nåler (spissen er plattformens plass) når du zoomer inn. Står du i en
   stoppcelle, setter et **klikk** på en plattform den på raden med en gang. **Shift+klikk** legger den til på en ny
   rad under; høyreklikk gir også **Legg til over**. Plattformen du står på i søkevinduet (piltaster eller musen),

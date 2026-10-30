@@ -15,7 +15,7 @@ import { createOrgPicker } from './org-picker.js';
 import { wireProblemMarker, initProblemNav } from './problem-nav.js';
 import { openModeMenu } from './mode-menu.js';
 import { modeIconSvg } from './mode-icons.js';
-import { ernCodeFor, TRANSMODEL_MODES } from '../core/modes.js';
+import { ernCodeFor, NORDIC_MODES } from '../core/modes.js';
 import { byDate } from '../core/calendars.js';
 import { modeLabel, submodeLabel } from '../i18n/modes.js';
 import { writeOrgs } from '../project/orgs-store.js';
@@ -601,7 +601,7 @@ let listenersWired = false;
 function adoptModeFromStop(info) {
   const rs = app.routeState;
   if (!rs || isRouteReadOnly() || (rs.mode && rs.mode !== 'other')) return;
-  const m = TRANSMODEL_MODES.find((x) => x.mode === info.mode && x.mode !== 'other');
+  const m = NORDIC_MODES.find((x) => x.mode === info.mode);
   if (!m) return;
   rs.mode = m.mode; rs.submode = ''; rs.transportMode = ernCodeFor(m.mode, '', rs.transportMode);
   markDirty();

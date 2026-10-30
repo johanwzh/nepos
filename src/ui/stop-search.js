@@ -47,9 +47,9 @@ function onOutside(e) {
 
 /**
  * Open the search window at a stop cell, with the text typed so far.
- * @param {number} ri the stop row @param {string} text
+ * @param {number} ri the stop row @param {string} text @param {boolean} [select] the text selected (Enter / F2: the stop's name)
  */
-export function openStopSearch(ri, text) {
+export function openStopSearch(ri, text, select = false) {
   closeStopSearch();
   if (grid.readOnly || !grid.stops[ri]) return;
   if (!wired) {
@@ -69,7 +69,7 @@ export function openStopSearch(ri, text) {
   q.value = text;
   q.placeholder = t('wsPlaceholder');
   q.focus();
-  q.setSelectionRange(text.length, text.length);
+  if (select) q.select(); else q.setSelectionRange(text.length, text.length);
   el.addEventListener('keydown', onKey);
   // New text: an answer for the old text must never be drawn (review)
   q.addEventListener('input', () => { if (!open) return; open.seq = ++seq; open.kb = -1; clearTimeout(open.timer); open.timer = setTimeout(() => { void search(); }, 350); });

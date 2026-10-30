@@ -30,6 +30,37 @@ export const TRANSMODEL_MODES = [
   { mode: 'other', submodes: [] },
 ];
 
+/** The Nordic NeTEx profile's modes and submodes (user 2026-10-30): Nepos delivers to Entur, so only these are offered.
+ * ERN and the import keep the full set. "unknown" is left out (a missing submode is an export error). */
+const NORDIC = /** @type {Record<string, string[]>} */ ({
+  air: ['domesticFlight', 'helicopterService', 'internationalFlight'],
+  bus: ['airportLinkBus', 'expressBus', 'localBus', 'nightBus', 'railReplacementBus', 'regionalBus', 'schoolBus', 'shuttleBus', 'sightseeingBus'],
+  cableway: ['telecabin'],
+  coach: ['internationalCoach', 'nationalCoach', 'touristCoach'],
+  funicular: ['funicular'],
+  metro: ['metro', 'urbanRailway'],
+  rail: ['airportLinkRail', 'international', 'interregionalRail', 'local', 'longDistance', 'nightRail', 'regionalRail', 'touristRailway'],
+  taxi: ['charterTaxi', 'communalTaxi', 'waterTaxi'],
+  tram: ['cityTram', 'localTram'],
+  water: ['highSpeedPassengerService', 'highSpeedVehicleService', 'internationalCarFerry', 'internationalPassengerFerry', 'localCarFerry',
+    'localPassengerFerry', 'nationalCarFerry', 'sightseeingService'],
+  snowAndIce: ['snowCoach'],
+});
+export const NORDIC_MODES = TRANSMODEL_MODES.filter((m) => NORDIC[m.mode]).map((m) => ({ mode: m.mode, submodes: m.submodes.filter((s) => NORDIC[m.mode].includes(s)) }));
+
+/**
+ * The modes the user is offered: the Nordic profile, plus a line's own mode and submode when it is set to one outside it
+ * (an older line), so its setting is still shown. @param {string} [mode] @param {string} [submode]
+ */
+export function offeredModes(mode = '', submode = '') {
+  const list = NORDIC_MODES.map((m) => (m.mode === mode && submode && !m.submodes.includes(submode) ? { ...m, submodes: [...m.submodes, submode] } : m));
+  if (mode && !list.some((m) => m.mode === mode)) {
+    const own = TRANSMODEL_MODES.find((m) => m.mode === mode);
+    if (own) list.push({ mode, submodes: submode ? [submode] : [] });
+  }
+  return list;
+}
+
 /** @param {string} mode @param {string} submode */
 export function isValidMode(mode, submode) {
   const m = TRANSMODEL_MODES.find((x) => x.mode === mode);
