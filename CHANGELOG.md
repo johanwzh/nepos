@@ -2,6 +2,12 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
+## 2.5.1 — not released yet
+
+**Bug fixes**
+
+- **The trip-number row's caption** lines up with Label and Vehicle above it.
+
 ## 2.5.0 — 2026-10-30
 
 **New features**
