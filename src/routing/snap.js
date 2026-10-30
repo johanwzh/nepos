@@ -5,8 +5,9 @@ import { CELL, cellKey } from './graph.js';
 import { nearestOnEdge, pointAt, scaleAt } from './edge-geometry.js';
 
 /**
- * @typedef {{ edge: number, at: number, off: number, lon: number, lat: number }} Candidate
- *   at: metres from the edge's from node; off: metres from the point; lon/lat: the snap point
+ * @typedef {{ edge: number, at: number, off: number, lon: number, lat: number, d?: number }} Candidate
+ *   at: metres from the edge's from node; off: metres from the point; lon/lat: the snap point; d: a saved snap's
+ *   direction (0 = the way's node order), the only one allowed there
  * @typedef {{ way: number, lon: number, lat: number, along: boolean, off: number, road: string }} SnapRef
  *   a saved snap (one per Quay within a line); along: driving in the way's node order
  */
@@ -60,5 +61,5 @@ export function fromRef(G, ref) {
   const px = Math.round(ref.lon * Q), py = Math.round(ref.lat * Q);
   const best = near(G, edgesNear(G, px, py, REF_TOLERANCE_M).filter((e) => G.way[e] === ref.way), px, py, REF_TOLERANCE_M)
     .sort((a, b) => a.off - b.off)[0];
-  return best ? { ...best, off: ref.off } : null;
+  return best ? { ...best, off: ref.off, d: ref.along ? 0 : 1 } : null;
 }

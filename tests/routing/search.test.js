@@ -145,3 +145,31 @@ describe('routeChain', () => {
     expect(r).toMatchObject({ ok: false, error: 'no-route', leg: 1 });
   });
 });
+
+describe('review fixes', () => {
+  it('a saved snap keeps its direction', async () => {
+    // a street between two dead ends; the middle stop's saved snap is westbound
+    const { fromRef } = await import('../../src/routing/snap.js');
+    const G = makeGraph({ nodes: [P(0, 0), P(1000, 0)], edges: [{ from: 0, to: 1, way: 1 }] });
+    const fixed = { way: 1, lon: P(500, 0)[0], lat: LAT, along: false, off: 5, road: '' };
+    expect(fromRef(G, fixed).d).toBe(1);
+    const r = legOk(routeChain(G, [stop(100, -5), { ...stop(500, -5), fixed }, stop(900, -5)]));
+    expect(r.snaps[1].along).toBe(false);
+    expect(r.snaps[1].refLost).toBeUndefined();
+  });
+
+  it('the edge of the loaded tiles is not a dead end', async () => {
+    const { decodeTile } = await import('../../src/routing/tile-format.js');
+    const { buildGraph } = await import('../../src/routing/graph.js');
+    const { encodeTile } = await import('./helpers/encode-tile.js');
+    // west tile: A(0) - B(400) with B on the tile border; east tile: B - C(600), C a real dead end
+    const west = encodeTile({ nodes: [[...P(0, 0), 0], [...P(400, 0), 1]], attrs: [{ cls: 2 }], edges: [{ from: 0, to: 1, len: 400, way: 1 }] });
+    const east = encodeTile({ nodes: [[...P(400, 0), 1], [...P(600, 0), 0]], attrs: [{ cls: 2 }], edges: [{ from: 0, to: 1, len: 200, way: 2 }] });
+    const chain = [stop(30, -5), stop(300, -5), stop(200, -5)];
+    const only = buildGraph([{ key: 'w', tile: decodeTile(west) }]);
+    expect(routeChain(only, chain)).toMatchObject({ ok: false, error: 'no-route' });
+    const both = buildGraph([{ key: 'w', tile: decodeTile(west) }, { key: 'e', tile: decodeTile(east) }]);
+    const r = legOk(routeChain(both, chain));
+    expect(r.legs[0].metres + r.legs[1].metres).toBeCloseTo(970, -1);     // turns at C, a real dead end
+  });
+});

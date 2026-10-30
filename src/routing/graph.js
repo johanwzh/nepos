@@ -9,7 +9,7 @@ import { secondsPerMetre } from './cost.js';
  * @typedef {{ nodes: number, edges: number, lon: Int32Array, lat: Int32Array, from: Uint32Array, to: Uint32Array,
  *   len: Float32Array, spm: Float32Array, ferry: Uint8Array, dir: Uint8Array, way: Uint32Array, road: (e: number) => string,
  *   geo: Int32Array, geoStart: Uint32Array, out: { start: Uint32Array, de: Uint32Array },
- *   restrict: Map<number, { no: Set<number>, only: number }>, cells: Map<number, number[]>, keys: Set<string>,
+ *   open: Uint8Array, restrict: Map<number, { no: Set<number>, only: number }>, cells: Map<number, number[]>, keys: Set<string>,
  *   entries: TileEntry[] }} Graph
  */
 
@@ -24,7 +24,7 @@ export function buildGraph(entries) {
     nodes += tile.lon.length; edges += tile.from.length;
     for (let e = 0; e < tile.from.length; e++) points += tile.ptCount[e] + 2;
   }
-  const lon = new Int32Array(nodes), lat = new Int32Array(nodes);
+  const lon = new Int32Array(nodes), lat = new Int32Array(nodes), open = new Uint8Array(nodes);
   const from = new Uint32Array(edges), to = new Uint32Array(edges), len = new Float32Array(edges), spm = new Float32Array(edges);
   const ferry = new Uint8Array(edges), dir = new Uint8Array(edges), way = new Uint32Array(edges);
   const tileOf = new Uint16Array(edges), nameOf = new Uint32Array(edges);
@@ -37,8 +37,9 @@ export function buildGraph(entries) {
     for (let i = 0; i < tile.lon.length; i++) {
       if (tile.border[i]) {
         const k = `${tile.lon[i]},${tile.lat[i]}`, known = border.get(k);
-        if (known !== undefined) { local[i] = known; continue; }
+        if (known !== undefined) { local[i] = known; open[known] = 0; continue; }
         border.set(k, n);
+        open[n] = 1;                                 // on the edge of the loaded tiles until a neighbour joins
       }
       lon[n] = tile.lon[i]; lat[n] = tile.lat[i]; local[i] = n++;
     }
@@ -86,7 +87,7 @@ export function buildGraph(entries) {
   }
 
   return {
-    nodes: n, edges: e, lon: lon.subarray(0, n), lat: lat.subarray(0, n), from, to, len, spm, ferry, dir, way,
+    nodes: n, edges: e, lon: lon.subarray(0, n), lat: lat.subarray(0, n), open: open.subarray(0, n), from, to, len, spm, ferry, dir, way,
     road: (i) => entries[tileOf[i]].tile.names[nameOf[i]] ?? '',
     geo, geoStart, out: { start, de }, restrict, cells, keys: new Set(entries.map((t) => t.key)), entries,
   };

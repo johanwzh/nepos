@@ -33,15 +33,15 @@ export function routeChain(G, points, { offroad = OFFROAD_S_PER_M } = {}) {
   /** @type {Candidate[][]} */
   const cands = [];
   const refLost = [], radius = [];
+  const canDrive = (e, d) => G.dir[e] === 0 || G.dir[e] === (d ? 2 : 1);
   for (let i = 0; i < points.length; i++) {
     const p = points[i];
     const ref = p.fixed ? fromRef(G, p.fixed) : null;
-    if (ref) { cands.push([ref]); radius.push(0); refLost.push(false); continue; }
+    if (ref && canDrive(ref.edge, ref.d)) { cands.push([ref]); radius.push(0); refLost.push(false); continue; }
     const w = candidatesWidening(G, [p.lon, p.lat]);
     if (!w.list.length) return { ok: false, error: 'no-road', point: i };
     cands.push(w.list); radius.push(w.radius); refLost.push(!!p.fixed);
   }
-  const canDrive = (e, d) => G.dir[e] === 0 || G.dir[e] === (d ? 2 : 1);
 
   // Virtual states of point i: index c * 2 + d. cost[i][s] = best time to stand there; back[i][s] = how.
   /** @type {Float64Array[]} */
@@ -50,7 +50,7 @@ export function routeChain(G, points, { offroad = OFFROAD_S_PER_M } = {}) {
   const back = [];
   cost.push(new Float64Array(cands[0].length * 2).fill(Infinity));
   back.push(new Array(cands[0].length * 2).fill(null));
-  cands[0].forEach((c, ci) => { for (const d of [0, 1]) if (canDrive(c.edge, d)) cost[0][ci * 2 + d] = offroad * c.off; });
+  cands[0].forEach((c, ci) => { for (const d of [0, 1]) if (canDrive(c.edge, d) && (c.d === undefined || c.d === d)) cost[0][ci * 2 + d] = offroad * c.off; });
 
   let settled = 0;
   for (let i = 0; i + 1 < points.length; i++) {
@@ -157,6 +157,7 @@ function searchLeg(G, from, start, to, target, offroad, canDrive) {
   /** Targets on edge e driven in direction d, from position a (metres from the from node); arriving costs g at a. */
   const targetsOn = (e, d, a, g, prevDe, enter, src) => {
     for (const ci of toByEdge.get(e) ?? []) {
+      if (to[ci].d !== undefined && to[ci].d !== d) continue;
       const ahead = d ? a - to[ci].at : to[ci].at - a;
       if (ahead >= 0) reachTarget(ci * 2 + d, g + ahead * G.spm[e] + offroad * to[ci].off, prevDe, enter, src);
     }
@@ -189,7 +190,7 @@ function searchLeg(G, from, start, to, target, offroad, canDrive) {
     const g = dist[de], v = head(de), back = de ^ 1;
     const r = G.restrict.get(de);
     const o0 = G.out.start[v], o1 = G.out.start[v + 1];
-    let deadEnd = true;
+    let deadEnd = !G.open[v];            // the edge of the loaded tiles is no dead end: fail there, load more
     for (let k = o0; k < o1; k++) if (G.out.de[k] !== back) { deadEnd = false; break; }
     for (let k = o0; k < o1; k++) {
       const de2 = G.out.de[k], e2 = de2 >> 1, d2 = de2 & 1;
