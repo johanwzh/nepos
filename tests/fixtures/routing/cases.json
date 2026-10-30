@@ -1,0 +1,431 @@
+{
+ "source": "NSR quay coordinates as used in the routing spike (nepos-tiles spike/cases.json, 2026-10-30)",
+ "cases": {
+  "manglerud-b": {
+   "area": "oslo-ost",
+   "chain": [
+    {
+     "quay": "NSR:Quay:10821",
+     "name": "Ryen T",
+     "lon": 10.806231,
+     "lat": 59.895274
+    },
+    {
+     "quay": "NSR:Quay:10854",
+     "name": "Manglerud T",
+     "lon": 10.813621,
+     "lat": 59.897926
+    },
+    {
+     "quay": "NSR:Quay:10890",
+     "name": "Bryn senter",
+     "lon": 10.821729,
+     "lat": 59.905094
+    }
+   ]
+  },
+  "manglerud-a": {
+   "area": "oslo-ost",
+   "chain": [
+    {
+     "quay": "NSR:Quay:10887",
+     "name": "Høyenhall T",
+     "lon": 10.819127,
+     "lat": 59.906962
+    },
+    {
+     "quay": "NSR:Quay:10853",
+     "name": "Manglerud T",
+     "lon": 10.813639,
+     "lat": 59.898321
+    },
+    {
+     "quay": "NSR:Quay:10822",
+     "name": "Ryen T",
+     "lon": 10.805231,
+     "lat": 59.895262
+    }
+   ]
+  },
+  "kalnes": {
+   "area": "ostfold",
+   "chain": [
+    {
+     "quay": "NSR:Quay:5312",
+     "name": "Lekevollkrysset E6",
+     "lon": 11.068069,
+     "lat": 59.296814
+    },
+    {
+     "quay": "NSR:Quay:5360",
+     "name": "Sykehuset Østfold Kalnes",
+     "lon": 11.025199,
+     "lat": 59.316583
+    },
+    {
+     "quay": "NSR:Quay:5115",
+     "name": "Solli",
+     "lon": 10.955008,
+     "lat": 59.325555
+    }
+   ]
+  },
+  "sarpsborg": {
+   "area": "ostfold",
+   "chain": [
+    {
+     "quay": "NSR:Quay:4455",
+     "name": "AMFI Borg",
+     "lon": 11.082437,
+     "lat": 59.274746
+    },
+    {
+     "quay": "NSR:Quay:5181",
+     "name": "Sarpsborg bussterminal",
+     "lon": 11.106859,
+     "lat": 59.282816
+    },
+    {
+     "quay": "NSR:Quay:5221",
+     "name": "Valaskjold omsorgsenter",
+     "lon": 11.09184,
+     "lat": 59.29142
+    }
+   ]
+  },
+  "sarpsborg-waypoint": {
+   "area": "ostfold",
+   "chain": [
+    {
+     "quay": "NSR:Quay:4455",
+     "name": "AMFI Borg",
+     "lon": 11.082437,
+     "lat": 59.274746
+    },
+    {
+     "name": "waypoint on Sandesundsveien",
+     "lon": 11.104135,
+     "lat": 59.277299,
+     "via": true
+    },
+    {
+     "quay": "NSR:Quay:5181",
+     "name": "Sarpsborg bussterminal",
+     "lon": 11.106859,
+     "lat": 59.282816
+    },
+    {
+     "quay": "NSR:Quay:5221",
+     "name": "Valaskjold omsorgsenter",
+     "lon": 11.09184,
+     "lat": 59.29142
+    }
+   ]
+  },
+  "amfi-borg": {
+   "area": "ostfold",
+   "chain": [
+    {
+     "quay": "NSR:Quay:4446",
+     "name": "Yven fv. 109",
+     "lon": 11.063723,
+     "lat": 59.269665
+    },
+    {
+     "quay": "NSR:Quay:4455",
+     "name": "AMFI Borg",
+     "lon": 11.082437,
+     "lat": 59.274746
+    },
+    {
+     "quay": "NSR:Quay:5181",
+     "name": "Sarpsborg bussterminal",
+     "lon": 11.106859,
+     "lat": 59.282816
+    }
+   ]
+  },
+  "lysaker-brygge": {
+   "area": "lysaker",
+   "chain": [
+    {
+     "quay": "NSR:Quay:11922",
+     "name": "Lysaker bru",
+     "lon": 10.640208,
+     "lat": 59.913325
+    },
+    {
+     "quay": "NSR:Quay:7908",
+     "name": "Lysaker brygge",
+     "lon": 10.638928,
+     "lat": 59.911518
+    },
+    {
+     "quay": "NSR:Quay:7890",
+     "name": "Lysakerlokket",
+     "lon": 10.634302,
+     "lat": 59.912938
+    }
+   ]
+  },
+  "sonsveien": {
+   "area": "sonsveien",
+   "chain": [
+    null,
+    {
+     "quay": "NSR:Quay:8558",
+     "name": "Sonsveien stasjon",
+     "lon": 10.726553,
+     "lat": 59.51485
+    },
+    null
+   ]
+  }
+ },
+ "optIn": {
+  "e6-vinterbro": [
+   {
+    "quay": "NSR:Quay:9697",
+    "name": "Korsegården",
+    "lon": 10.746061,
+    "lat": 59.663373
+   },
+   {
+    "quay": "NSR:Quay:10821",
+    "name": "Ryen T",
+    "lon": 10.806231,
+    "lat": 59.895274
+   }
+  ],
+  "line23": [
+   {
+    "quay": "NSR:Quay:7888",
+    "name": "Lysakerlokket",
+    "lon": 10.634353,
+    "lat": 59.913044
+   },
+   {
+    "quay": "NSR:Quay:7909",
+    "name": "Lysaker brygge",
+    "lon": 10.639317,
+    "lat": 59.911398
+   },
+   {
+    "quay": "NSR:Quay:7885",
+    "name": "Strandveien",
+    "lon": 10.639406,
+    "lat": 59.912744
+   },
+   {
+    "quay": "NSR:Quay:11923",
+    "name": "Lysaker bru",
+    "lon": 10.640345,
+    "lat": 59.914488
+   },
+   {
+    "quay": "NSR:Quay:11909",
+    "name": "CC vest",
+    "lon": 10.636745,
+    "lat": 59.918419
+   },
+   {
+    "quay": "NSR:Quay:11905",
+    "name": "Lilleaker",
+    "lon": 10.636045,
+    "lat": 59.92057
+   },
+   {
+    "quay": "NSR:Quay:11913",
+    "name": "Vækerøveien",
+    "lon": 10.643217,
+    "lat": 59.923549
+   },
+   {
+    "quay": "NSR:Quay:12021",
+    "name": "Blokkajordet",
+    "lon": 10.647686,
+    "lat": 59.924967
+   },
+   {
+    "quay": "NSR:Quay:12013",
+    "name": "Radiumhospitalet",
+    "lon": 10.659804,
+    "lat": 59.928838
+   },
+   {
+    "quay": "NSR:Quay:11996",
+    "name": "Montebelloveien",
+    "lon": 10.668878,
+    "lat": 59.931737
+   },
+   {
+    "quay": "NSR:Quay:11986",
+    "name": "Husebyveien",
+    "lon": 10.676109,
+    "lat": 59.934827
+   },
+   {
+    "quay": "NSR:Quay:11958",
+    "name": "Smestad",
+    "lon": 10.682662,
+    "lat": 59.937365
+   },
+   {
+    "quay": "NSR:Quay:11455",
+    "name": "Risalléen",
+    "lon": 10.704742,
+    "lat": 59.945056
+   },
+   {
+    "quay": "NSR:Quay:11485",
+    "name": "Gaustad",
+    "lon": 10.716029,
+    "lat": 59.945545
+   },
+   {
+    "quay": "NSR:Quay:11299",
+    "name": "Ullevål stadion",
+    "lon": 10.732065,
+    "lat": 59.949775
+   },
+   {
+    "quay": "NSR:Quay:11324",
+    "name": "Berg",
+    "lon": 10.744473,
+    "lat": 59.951924
+   },
+   {
+    "quay": "NSR:Quay:11346",
+    "name": "Tåsen senter",
+    "lon": 10.751576,
+    "lat": 59.952766
+   },
+   {
+    "quay": "NSR:Quay:11354",
+    "name": "Bergrådveien",
+    "lon": 10.757364,
+    "lat": 59.953199
+   },
+   {
+    "quay": "NSR:Quay:11136",
+    "name": "Nydalen stasjon",
+    "lon": 10.76985,
+    "lat": 59.952716
+   },
+   {
+    "quay": "NSR:Quay:11149",
+    "name": "Lillo terrasse",
+    "lon": 10.775536,
+    "lat": 59.951078
+   },
+   {
+    "quay": "NSR:Quay:11128",
+    "name": "Storo",
+    "lon": 10.778886,
+    "lat": 59.945688
+   },
+   {
+    "quay": "NSR:Quay:11108",
+    "name": "Grefsen stasjon",
+    "lon": 10.78137,
+    "lat": 59.940782
+   },
+   {
+    "quay": "NSR:Quay:11088",
+    "name": "Sinsenkrysset",
+    "lon": 10.785989,
+    "lat": 59.936806
+   },
+   {
+    "quay": "NSR:Quay:11067",
+    "name": "Sinsenveien",
+    "lon": 10.792606,
+    "lat": 59.934371
+   },
+   {
+    "quay": "NSR:Quay:11071",
+    "name": "Lørenvangen",
+    "lon": 10.799987,
+    "lat": 59.931975
+   },
+   {
+    "quay": "NSR:Quay:10834",
+    "name": "Økern T",
+    "lon": 10.806886,
+    "lat": 59.92824
+   },
+   {
+    "quay": "NSR:Quay:10856",
+    "name": "Ulven torg",
+    "lon": 10.811867,
+    "lat": 59.925512
+   },
+   {
+    "quay": "NSR:Quay:11207",
+    "name": "Valle Hovin",
+    "lon": 10.808447,
+    "lat": 59.918749
+   },
+   {
+    "quay": "NSR:Quay:11202",
+    "name": "Teisenkrysset",
+    "lon": 10.812148,
+    "lat": 59.916755
+   },
+   {
+    "quay": "NSR:Quay:11194",
+    "name": "Brynsengveien",
+    "lon": 10.815678,
+    "lat": 59.91149
+   },
+   {
+    "quay": "NSR:Quay:11184",
+    "name": "Brynseng T",
+    "lon": 10.814181,
+    "lat": 59.909288
+   },
+   {
+    "quay": "NSR:Quay:10887",
+    "name": "Høyenhall T",
+    "lon": 10.819127,
+    "lat": 59.906962
+   },
+   {
+    "quay": "NSR:Quay:10853",
+    "name": "Manglerud T",
+    "lon": 10.813639,
+    "lat": 59.898321
+   },
+   {
+    "quay": "NSR:Quay:10822",
+    "name": "Ryen T",
+    "lon": 10.805231,
+    "lat": 59.895262
+   },
+   {
+    "quay": "NSR:Quay:12280",
+    "name": "Oluf Onsums vei",
+    "lon": 10.801765,
+    "lat": 59.895618
+   },
+   {
+    "quay": "NSR:Quay:12277",
+    "name": "Benveien",
+    "lon": 10.79716,
+    "lat": 59.897536
+   },
+   {
+    "quay": "NSR:Quay:12271",
+    "name": "Lyngveien",
+    "lon": 10.793134,
+    "lat": 59.897616
+   },
+   {
+    "quay": "NSR:Quay:12263",
+    "name": "Simensbråten",
+    "lon": 10.78733,
+    "lat": 59.89583
+   }
+  ]
+ }
+}

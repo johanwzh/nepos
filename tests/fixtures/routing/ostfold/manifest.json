@@ -1,0 +1,20 @@
+{
+ "format": "NPT2",
+ "set": "road",
+ "built": "2026-10-30T21:39:12Z",
+ "dataDate": "2026-10-28T21:21:02Z",
+ "source": "ostlandet-261028.osm.pbf",
+ "tileLon": 0.25,
+ "tileLat": 0.125,
+ "q": 10000000,
+ "tiles": {
+  "43_474": {
+   "size": 26312,
+   "hash": "27395f380077"
+  },
+  "44_474": {
+   "size": 166291,
+   "hash": "984fdf6a2685"
+  }
+ }
+}
