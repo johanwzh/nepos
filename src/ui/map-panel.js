@@ -14,17 +14,11 @@ import { modeIconSvg } from './mode-icons.js';
 import { quayPin, pickAction } from './map-pins.js';
 import { placeMenu } from './place-menu.js';
 import { createMapView } from './map-view.js';
-import { linkFeatures, onLinksChanged, blockLink, routeAgain, linesUsing, linkFor, linkBudgetLeft } from './link-router.js';
-import { ROUTING } from '../core/features.js';
 
 /** @type {import('./map-view.js').MapView | null} */ let view = null;
 let styleKey = '';
 let lastKey = '';
 let scheduled = false;
-/** @type {((view: import('./map-view.js').MapView) => void)[]} */
-const readyListeners = [];
-/** @type {(() => void)[]} */
-const drawListeners = [];
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -40,25 +34,10 @@ function ensureMap() {
     view = createMapView($('map-gl'), { style, dark: theme() === 'dark' });
     styleKey = key;
     view.onMoveEnd(() => { for (const fn of viewListeners) fn(); }); // browsing (stop picking spec §4)
-    view.onLinkContext(linkMenu);
-    const v = view;
-    for (const fn of readyListeners) fn(v);
     return;
   }
   if (key !== styleKey) { view.setStyle(style, theme() === 'dark'); styleKey = key; }
 }
-
-/** The map, once it exists (the link router draws on it and reads its tile source). @param {(view: import('./map-view.js').MapView) => void} fn */
-export function onMapCreated(fn) {
-  readyListeners.push(fn);
-  if (view) fn(view);
-}
-
-/** Called after the map has drawn the trip (the link router adds the trip's links). @param {() => void} fn */
-export function onMapDraw(fn) { drawListeners.push(fn); }
-
-/** Draw again (new links arrived). */
-export function redrawMap() { schedule(); }
 
 /** @type {(kind: 'place' | 'quay', id: string, action?: 'use' | 'above' | 'below') => void} */
 let onPick = () => {};
@@ -84,28 +63,6 @@ function quayMenu(id, ev) {
 }
 function closeQuayMenu() { document.querySelector('.map-ctx')?.remove(); }
 
-/** The right-click menu on a link (design §4): don't route it, or route it again. @param {string} key @param {MouseEvent} ev */
-function linkMenu(key, ev) {
-  closeQuayMenu();
-  if (grid.readOnly) return;
-  ev.preventDefault();
-  const s = linkFor(key);
-  const menu = document.createElement('div');
-  menu.className = 'map-ctx';
-  /** @type {[string, () => void][]} */
-  const items = [];
-  if (s?.status !== 'BLOCKED') items.push([t('linkBlock', linesUsing(key)), () => blockLink(key)]);
-  if (s && s.status !== 'OK') items.push([t('linkRouteAgain'), () => routeAgain(key)]);
-  for (const [label, fn] of items) {
-    const b = document.createElement('button');
-    b.textContent = label;
-    b.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); closeQuayMenu(); fn(); });
-    menu.appendChild(b);
-  }
-  document.body.appendChild(menu);
-  placeMenu(menu, ev.clientX, ev.clientY);
-  setTimeout(() => document.addEventListener('mousedown', closeQuayMenu, { once: true }), 0);
-}
 /** @type {(() => void)[]} */
 const viewListeners = [];
 let pickKey = '';
@@ -120,7 +77,6 @@ function drawPicker() {
   $('map-missing').hidden = true;
   /** @type {HTMLElement | null} */ (document.querySelector('#map-inner .map-hint-overlay')).style.display = 'none';
   v.setTrip({ line: [], dots: [], ring: null });
-  v.setLinks([]);
   v.setDashed(model.line.map(([lat, lon]) => [lon, lat]));
   v.setMarkers(model.markers.map((m) => {
     const base = { lon: m.lon, lat: m.lat };
@@ -148,12 +104,6 @@ function drawPicker() {
   }
 }
 
-/** The trip shown now: the selected column of the open line (the link router draws its links). */
-export function shownTrip() {
-  if (!grid.active || pickerState().row != null || pickerState().recording) return null;
-  return grid.cols[selectedColumn()] ?? null;
-}
-
 /** Draw the selected trip, or the picker. Never touches the grid. */
 function update() {
   scheduled = false;
@@ -170,26 +120,21 @@ function update() {
   const col = grid.active ? grid.cols[ci] : null;
   const trip = col ? tripOnMap(grid, col, quayInfo) : { points: [], missing: [] };
 
-  const notes = [trip.missing.length ? t('mapMissing', trip.missing.join(', ')) : '', !ROUTING || linkBudgetLeft() ? '' : t('linkBudgetUsed')].filter(Boolean);
-  $('map-missing').hidden = !notes.length;
-  $('map-missing').textContent = notes.join(' ');
+  $('map-missing').hidden = !trip.missing.length;
+  $('map-missing').textContent = trip.missing.length ? t('mapMissing', trip.missing.join(', ')) : '';
   /** @type {HTMLElement | null} */ (document.querySelector('#map-inner .map-hint-overlay')).style.display = trip.points.length ? 'none' : '';
-  if (!trip.points.length) { lastKey = ''; v.setTrip({ line: [], dots: [], ring: null }); v.setLinks([]); return; }
+  if (!trip.points.length) { lastKey = ''; v.setTrip({ line: [], dots: [], ring: null }); return; }
 
   const line = trip.points.map((p) => /** @type {[number, number]} */ ([p.lon, p.lat]));
   // The selected row's stop, when it is a call of this trip: a ring on top, in the text colour
   const ri = selectedRowIndex();
   const here = trip.points.find((p) => p.ri === ri || (grid.stops[/** @type {number} */ (ri)]?.isDwellArr && p.ri === /** @type {number} */ (ri) + 1));
   const ink = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#000';
-  // Routed links replace the straight trip line when the line's mode is routed (2.3)
-  const links = ROUTING && col ? linkFeatures(col) : null;
-  v.setLinks(links ?? []);
   v.setTrip({
     // Bold stops (the main stops in the timetable) are the larger dots
-    line: links ? [] : line, ink, ring: here ? [here.lon, here.lat] : null,
+    line, ink, ring: here ? [here.lon, here.lat] : null,
     dots: trip.points.map((p) => ({ lon: p.lon, lat: p.lat, r: p.bold ? 7 : 5, tooltip: `<b>${esc(p.name)}</b> ${esc(p.time.slice(0, 2))}:${esc(p.time.slice(2))}` })),
   });
-  for (const fn of drawListeners) fn();
 
   // Fit only when another trip is shown, so the user's own zoom/pan survives edits.
   const key = `${app.activeRoute}|${app.routeState?.activePer}|${app.routeState?.activeSet}|${ci}|${trip.points.map((p) => p.stopId).join(',')}`;
@@ -247,7 +192,6 @@ export function initMapPanel() {
   // Dragging the panel edge or resizing the window: let the map re-measure.
   new ResizeObserver(() => { view?.resize(); }).observe($('map-inner'));
   onQuaysLoaded(schedule);
-  onLinksChanged(schedule);
   onRefresh(schedule); // page changes, theme, language, another route
   onRefresh(renderLayerSwitch);
 }

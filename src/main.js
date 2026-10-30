@@ -17,11 +17,6 @@ import { initFootnoteEditor } from './ui/footnote-editor.js';
 import { initRouteEditor } from './ui/route-editor.js';
 import { initExportPage } from './ui/export-page.js';
 import { initMapPanel } from './ui/map-panel.js';
-import { initLinkRouter } from './ui/link-router.js';
-import { ROUTING } from './core/features.js';
-import { createShapeEngine } from './shapes/index.js';
-import { styleUrlFor, styleSourceFrom } from './core/map-style.js';
-import { app } from './ui/state.js';
 import { initStopPicker } from './ui/stop-picker.js';
 import { initStopCard } from './ui/stop-card.js';
 import { initSpeedStrip } from './ui/speed-strip.js';
@@ -53,17 +48,6 @@ initRouteEditor();
 initExportPage();
 initDashboardPage();
 initMapPanel();
-// Routed links (2.3): the engine runs in a worker on the map style's own vector tiles; made on first need.
-// Off for now (core/features.js): the map draws straight lines.
-if (ROUTING) initLinkRouter({
-  makeEngine: async () => {
-    const style = styleUrlFor(app.settings, 'light');
-    if (typeof style !== 'string') return null; // a raster map: no vector tiles, links stay straight
-    const json = async (/** @type {string} */ url) => (await fetch(url)).json();
-    const source = await styleSourceFrom(await json(style), json);
-    return source ? createShapeEngine({ styleSource: source }) : null;
-  },
-});
 initStopPicker();
 initStopCard();
 initSpeedStrip();

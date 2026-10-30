@@ -47,12 +47,12 @@ describe('rotating the save backups', () => {
     expect(backups(fs)).toContain('data/backups/7.2026-10-24T101100-2.txt');
   });
 
-  it('keeps the 10 newest shapes backups', async () => {
+  it("never touches 2.3's routed-link backups (shapes-<stamp>.json)", async () => {
     /** @type {Record<string, string>} */
     const files = {};
     twelve(files, 'shapes-', '.json');
     const fs = createMemoryFs(files);
-    expect(await pruneBackups(fs, 'shapes')).toBe(2);
-    expect(backups(fs)).toHaveLength(10);
+    expect(await pruneBackups(fs, 'shapes')).toBe(0);
+    expect(backups(fs)).toHaveLength(12);
   });
 });

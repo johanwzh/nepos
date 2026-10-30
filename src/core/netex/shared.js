@@ -1,13 +1,13 @@
 // _shared_data.xml generator, ported from Nepos 1.5.7 (nepos.html lines 6076–6220).
 import { xe, pubDelivery, compositeFrame } from './xml.js';
 import { stopLocalId, quayRef } from '../quays.js';
-import { decodePolyline } from '../../shapes/geometry.js';
+import { decodePolyline } from '../../routing/geometry.js';
 import { authorityNetworkLocalId } from '../orgs.js';
 import { uuid5 } from '../uuid5.js';
 import { isoDate } from '../calendars.js';
 
 /**
- * The ServiceLinks the line files use (2.3, Lasse's spec): the routed shape as a gml:LineString in lat lon order,
+ * The ServiceLinks the line files use (2.3, Lasse's spec): the routed link as a gml:LineString in lat lon order,
  * Quay to Quay, between the two ScheduledStopPoints. Empty when none.
  * @param {any} data
  */
@@ -16,10 +16,10 @@ function serviceLinksXml(data) {
     const cs = data.cs, CS = String(cs).toUpperCase();
     const links = [...data.usedLinks.values()].map((/** @type {any} */ l) => {
         const uuid = l.id.split(':').pop();
-        const pts = decodePolyline(l.shape.polyline, l.shape.precision ?? 6);
+        const pts = decodePolyline(l.saved.polyline, l.saved.precision ?? 6);
         const pos = pts.map(([lon, lat]) => `${lat.toFixed(6)} ${lon.toFixed(6)}`).join(' ');
         return `      <ServiceLink id="${l.id}" version="1">
-        <Distance>${Math.round(l.shape.distanceM)}</Distance>
+        <Distance>${Math.round(l.saved.distanceM)}</Distance>
         <projections>
           <LinkSequenceProjection id="${cs}:LinkSequenceProjection:${uuid}" version="1">
             <gml:LineString gml:id="${CS}_LinkSequenceProjection_${uuid}" srsName="WGS84">

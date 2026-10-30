@@ -7,7 +7,6 @@ export const LABELS_FILE = 'data/labels.json';
 export const VEHICLES_FILE = 'data/vehicles.json';
 export const EXPORTS_FILE = 'data/exports.json';
 export const CALENDARS_FILE = 'data/calendars.json';
-export const SHAPES_FILE = 'data/shapes.json'; // routed links (2.3), shared by every line
 export const ROUTES_DIR = 'data/routes';
 export const BACKUPS_DIR = 'data/backups';
 export const EXPORTS_DIR = 'exports'; // generated NeTEx deliveries; can be deleted at any time
@@ -35,22 +34,20 @@ export async function uniqueBackupPath(fs, base, ext) {
   return candidate;
 }
 
-/** How many save backups of one line (or of the shapes) are kept (user 2026-10-24). */
+/** How many save backups of one line are kept (user 2026-10-24). */
 export const BACKUP_KEEP = 10;
 
 /**
- * Keep the BACKUP_KEEP newest save backups of a line (`<code>.<stamp>[-n].txt`) or, for 'shapes', of the shapes
- * (`shapes-<stamp>[-n].json`) in data/backups/; delete the rest. Never touched: a deleted line's backup
- * (`.deleted.txt`), format-upgrade copies (folders) and repair backups (other names).
+ * Keep the BACKUP_KEEP newest save backups of a line (`<code>.<stamp>[-n].txt`) in data/backups/; delete the rest.
+ * Never touched: a deleted line's backup (`.deleted.txt`), format-upgrade copies (folders), repair backups and 2.3's
+ * routed-link backups (`shapes-<stamp>.json`; other names).
  * @param {import('./fs.js').ProjectFs} fs
- * @param {string} prefix a line's code, or 'shapes'
+ * @param {string} prefix a line's code
  * @returns {Promise<number>} how many were deleted
  */
 export async function pruneBackups(fs, prefix, keep = BACKUP_KEEP) {
   const esc = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = prefix === 'shapes'
-    ? /^shapes-(\d{4}-\d{2}-\d{2}T\d{6})(?:-(\d+))?\.json$/
-    : new RegExp(`^${esc}\\.(\\d{4}-\\d{2}-\\d{2}T\\d{6})(?:-(\\d+))?\\.txt$`);
+  const re = new RegExp(`^${esc}\\.(\\d{4}-\\d{2}-\\d{2}T\\d{6})(?:-(\\d+))?\\.txt$`);
   const found = [];
   for (const entry of await fs.list(BACKUPS_DIR)) {
     if (entry.kind !== 'file') continue;

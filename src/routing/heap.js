@@ -1,4 +1,4 @@
-// A binary min-heap of (id, priority), for the search. Duplicates are allowed (stale entries are skipped by the
+// A binary min-heap of (id, priority), for the route search (A*). Duplicates are allowed (stale entries are skipped by the
 // caller), so there is no decrease-key. Grows as needed.
 
 /** @param {number} [capacity] */

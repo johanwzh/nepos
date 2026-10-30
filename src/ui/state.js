@@ -30,10 +30,9 @@ export const app = {
   vehiclesError: null,
   /** @type {import('../project/exports-store.js').ExportRecords} when each line was last exported (Oversikt) */
   exports: {},
-  /** @type {Map<string, import('../core/link-state.js').SavedShape>} routed links, by fromQuay|toQuay|profile (2.3) */
-  shapes: new Map(),
-  /** @type {'' | 'unreadable'} */
-  shapesError: '',
+  /** @type {Map<string, import('../core/link-state.js').SavedLink>} routed links, by fromQuay|toQuay|profile: none until the
+   *  new routing tool fills them (the 2.3 engine was removed 2026-10-30; a project's data/shapes.json is never read) */
+  serviceLinks: new Map(),
   /** @type {import('../core/calendars.js').Calendar[]} the project's calendars */
   calendars: [],
   /** @type {null | 'unreadable'} */

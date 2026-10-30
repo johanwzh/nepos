@@ -1,13 +1,14 @@
-// Which links a line needs (design §1 and §10): the consecutive calls of every trip, as the export writes them,
+// Which links (stop-to-stop legs) a line needs: the consecutive calls of every trip, as the export writes them,
 // including the extra patterns a "doesn't run" date makes (tripVariants), so every exported JourneyPattern can get
-// its ServiceLinks. A pair is skipped when either stop is not an NSR Quay with a position. Pure.
+// its ServiceLinks. A pair is skipped when either stop is not an NSR Quay with a position. Kept from 2.3 for the
+// routing session to come (the legs it routes). Pure.
 import { journeyStops, tripVariants } from './netex/journeys.js';
 import { unionDays, tripDays } from './calendars.js';
 import { NSR_QUAY_PATTERN } from './quays.js';
-import { profileFor } from '../shapes/profiles.js';
+import { profileFor } from '../routing/profiles.js';
 
 /** @typedef {{ quayId: string, lon: number, lat: number }} QuayRef */
-/** @typedef {{ key: string, from: QuayRef, to: QuayRef, profile: import('../shapes/profiles.js').Profile }} LinkPair */
+/** @typedef {{ key: string, from: QuayRef, to: QuayRef, profile: import('../routing/profiles.js').Profile }} LinkPair */
 
 /** @param {string} id @param {Map<string, any>} quayInfo @returns {QuayRef | null} */
 function quayRef(id, quayInfo) {
@@ -51,7 +52,7 @@ export function linkPairs(rs, { calendars, quayInfo }) {
 
 /**
  * The links of one trip, with their rows (drawing the selected trip).
- * @param {{ stops: any[] }} grid @param {{ cells: any[] }} col @param {import('../shapes/profiles.js').Profile} profile
+ * @param {{ stops: any[] }} grid @param {{ cells: any[] }} col @param {import('../routing/profiles.js').Profile} profile
  * @returns {{ key: string, fromRi: number, toRi: number }[]}
  */
 export function tripLinks(grid, col, profile) {

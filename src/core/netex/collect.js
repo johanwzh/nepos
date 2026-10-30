@@ -6,7 +6,7 @@ import { unionDays, tripDays, isoDate } from '../calendars.js';
 import { findRole, exportOrgId, netexOrgId } from '../orgs.js';
 import { destSegments, destKey } from '../destinations.js';
 import { uuid5 } from '../uuid5.js';
-import { profileFor } from '../../shapes/profiles.js';
+import { profileFor } from '../../routing/profiles.js';
 import { isExportable } from '../link-state.js';
 
 /**
@@ -17,9 +17,9 @@ import { isExportable } from '../link-state.js';
  *           orgs?: import('../orgs.js').Company[], orgMode?: 'codespace' | 'nog',
  *           brandings?: import('../../project/brandings-store.js').Branding[],
  *           calendars?: import('../calendars.js').Calendar[],
- *           shapes?: Map<string, import('../link-state.js').SavedShape>, quayInfo?: Map<string, any> }} input
+ *           links?: Map<string, import('../link-state.js').SavedLink>, quayInfo?: Map<string, any> }} input
  */
-export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList = [], orgMode = 'codespace', brandings: brandingList = [], calendars: calendarList = [], shapes = undefined, quayInfo = new Map() }) {
+export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList = [], orgMode = 'codespace', brandings: brandingList = [], calendars: calendarList = [], links = undefined, quayInfo = new Map() }) {
     const cs = codespace || '1869';
 
     // Routes without a trip (two or more calls) have nothing to export: no line file at all
@@ -95,7 +95,7 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
     const allDays = [...operDays.keys()].sort();
     const overallFrom = allDays[0] ?? '', overallTo = allDays[allDays.length - 1] ?? '';
 
-    /** @type {Map<string, { id: string, key: string, shape: import('../link-state.js').SavedShape, fromId: string, toId: string }>} the ServiceLinks the line files use */
+    /** @type {Map<string, { id: string, key: string, saved: import('../link-state.js').SavedLink, fromId: string, toId: string }>} the ServiceLinks the line files use */
     const usedLinks = new Map();
     /**
      * The ServiceLink IDs of a pattern's consecutive pairs, or null when any pair has no exportable link (then the
@@ -104,13 +104,13 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
      */
     function linkRefsFor(rs, stopList) {
         const profile = profileFor(rs?.mode ?? '', rs?.submode ?? '');
-        if (!shapes || !shapes.size || !profile || stopList.length < 2) return null;
+        if (!links || !links.size || !profile || stopList.length < 2) return null;
         const found = [];
         for (let i = 1; i < stopList.length; i++) {
             const key = `${stopList[i - 1].stopId}|${stopList[i].stopId}|${profile}`;
-            const shape = shapes.get(key);
-            if (!shape || !isExportable(key, shape, quayInfo)) return null;
-            found.push({ id: `${cs}:ServiceLink:${uuid5(key)}`, key, shape, fromId: stopList[i - 1].stopId, toId: stopList[i].stopId });
+            const saved = links.get(key);
+            if (!saved || !isExportable(key, saved, quayInfo)) return null;
+            found.push({ id: `${cs}:ServiceLink:${uuid5(key)}`, key, saved, fromId: stopList[i - 1].stopId, toId: stopList[i].stopId });
         }
         for (const l of found) if (!usedLinks.has(l.key)) usedLinks.set(l.key, l);
         return found.map((l) => l.id);
