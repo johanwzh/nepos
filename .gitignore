@@ -12,3 +12,6 @@ docs/backlog.md
 
 # A real project the user tests with (private)
 NBU/
+
+# The pre-release test project (user 2026-10-30): its private/ holds secrets; never pushed
+pre-release-data/
