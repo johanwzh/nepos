@@ -43,6 +43,12 @@ again. At release only the date goes into the changelog heading — check the ve
 - [ ] NeTEx export changed? The files validate against Entur's NeTEx schema, every reference resolves, and a test
       export of a real project still looks right.
 
+- [ ] **Every release, whether the export changed or not (user 2026-10-30):** export a test project from the app
+      (e.g. JPB, the "absurd" test line with interval trips past midnight and offsets up to +5) and probe the zip:
+      every ServiceJourney's passing times and day offsets match the timetable (interval trips included); each trip's
+      DatedServiceJourneys cover exactly its day code's days in the calendar; every `ref` resolves to an `id` in the
+      export. First done for 2.5.0, after the release — do it before the push from now on.
+
 ## 5. Tests
 
 - [ ] `npm test` (Vitest and `tsc`) is green **after** the version bump — the smoke test compares
