@@ -1610,6 +1610,13 @@ function onKeyDown(e) {
   if (inDest) { keyDest(e); return; }
   if ((e.ctrlKey || e.metaKey) && e.key === 'c' && inStopCol && !inStopEdit) {
     const stop = grid.stops[ancR];
+    // Several stops selected: their Quay IDs as a list, a waiting stop once (user 2026-10-30); pasting a list fills rows
+    const r0 = Math.min(ancR, endR), r1 = Math.max(ancR, endR);
+    if (r1 > r0) {
+      const ids = grid.stops.slice(r0, r1 + 1).filter((s) => s.stopId && !s.isDwellArr).map((s) => String(s.stopId));
+      if (ids.length) { e.preventDefault(); stopClip = null; void navigator.clipboard?.writeText(ids.join('\n')).catch(() => {}); }
+      return;
+    }
     if (stop?.stopId) {
       e.preventDefault();
       stopClip = { quayId: String(stop.stopId), name: stop.name };
@@ -1643,11 +1650,17 @@ function onKeyDown(e) {
   }
   if ((e.ctrlKey || e.metaKey) && inDC && !dcEdit && grid.cols[dcCol]) {
     const k = e.key.toLowerCase();
-    if (k === 'c') { e.preventDefault(); dcClip = grid.cols[dcCol].dayCode; void navigator.clipboard?.writeText(dcClip).catch(() => {}); return; }
-    if (k === 'v' && !grid.readOnly && dcClip && isValidDayCode(dcClip)) {
+    // Several columns: their day codes, in order (user 2026-10-30)
+    if (k === 'c') { e.preventDefault(); const [a, b] = dcRange(); dcClip = grid.cols.slice(a, b + 1).map((c) => c.dayCode); void navigator.clipboard?.writeText(dcClip.join('\t')).catch(() => {}); return; }
+    if (k === 'v' && !grid.readOnly && dcClip.length && dcClip.every((d) => isValidDayCode(d))) {
       e.preventDefault();
       const [a, b] = dcRange();
-      for (let ci = a; ci <= b; ci++) if (!locked(ci)) grid.cols[ci].dayCode = dcClip;
+      if (dcClip.length === 1) { for (let ci = a; ci <= b; ci++) if (!locked(ci)) grid.cols[ci].dayCode = dcClip[0]; }
+      else {
+        // From the selected column on, one code per column; columns are added at the end when there are too few
+        if (!growGrid(0, Math.max(0, a + dcClip.length - grid.cols.length))) return;
+        dcClip.forEach((d, i) => { if (!locked(a + i)) grid.cols[a + i].dayCode = d; });
+      }
       render(); return;
     }
   }
@@ -1877,8 +1890,8 @@ function pasteCells(parts) {
   render();
 }
 
-/** The day code copied last with Ctrl+C in the day-code row. */
-let dcClip = '';
+/** The day codes copied last with Ctrl+C in the day-code row (one per selected column). @type {string[]} */
+let dcClip = [];
 
 /** The stop copied last with Ctrl+C (its name comes along when the same Quay ID is pasted). */
 let stopClip = /** @type {{ quayId: string, name: string } | null} */ (null);

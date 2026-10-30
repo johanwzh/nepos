@@ -4,6 +4,10 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 ## 2.5.0 — not released yet
 
+- **Copy several stops or day codes:** with several stops selected, Ctrl+C copies all their Quay IDs as a list (a
+  waiting stop once); pasting the list fills the rows down and adds rows as needed. With several columns selected in the
+  day-code row, Ctrl+C copies their day codes, and Ctrl+V puts them in order from the selected column, adding columns as
+  needed.
 - **A stop's name is never free text:** Enter or F2 on a stop opens the stop search with its name (selected, so typing
   replaces it), instead of editing the name. The map stays open.
 - **Modes from the Nordic profile only:** the mode menu (and the vehicles' modes) offer only what Entur's Nordic NeTEx

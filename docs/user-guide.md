@@ -137,7 +137,9 @@ turen kjører.
 - Høyreklikk en dagkode → **Vis kjøretøy** viser en rad for hvilket **kjøretøy** som kjører turen. Den virker
   som etikett-raden: Enter eller dobbeltklikk velger, Delete fjerner, Ctrl+C / Ctrl+V kopierer. Kjøretøyene lager
   du under **Ressurser**. En tur som kopieres med intervall, får ikke med seg kjøretøyet.
-- Dagkoder ryddes selv: DX76 blir DX67, 1234567 blir D. Ctrl+C / Ctrl+V kopierer en dagkode til en annen kolonne.
+- Dagkoder ryddes selv: DX76 blir DX67, 1234567 blir D. Ctrl+C / Ctrl+V kopierer en dagkode til en annen kolonne. Velg
+  flere kolonner, så kopieres alle dagkodene; de limes inn i rekkefølge fra kolonnen du står i, og nye kolonner legges
+  til ved behov.
 - **Flere kolonner:** Shift+klikk eller Shift+piltast i dagkode-raden velger flere kolonner. F7 (eller høyreklikk →
   merknad) gir alle samme merknad, og Ctrl+V limer en dagkode inn i alle. **×** på en av dem, **Delete** eller høyreklikk →
   **Slett de valgte kolonnene** sletter alle (Nepos spør én gang). Det samme med flere stopp: Shift+klikk eller Shift+piltast i stoppkolonnen, så **×**.
@@ -309,7 +311,9 @@ skjuler det). ✕ lukker og løsner.
 - **Registrer stopp** er et kraftverktøy (Spesialverktøy, **Alt+R**): klikk plattformene langs ruten i rekkefølge
   — hver legges i neste tomme rad eller nederst. **Ctrl+Z** angrer det siste, **Esc** avslutter. Kartet kan brukes
   mens verktøyet er på. **Optimalisering** ved siden av er ikke i bruk ennå.
-- **Ctrl+C / Ctrl+V på et stoppnavn** kopierer stoppet til en annen rad.
+- **Ctrl+C / Ctrl+V på et stoppnavn** kopierer stoppet til en annen rad. Velg flere stopp (Shift+klikk eller
+  Shift+piltaster), så kopierer Ctrl+C alle Quay-ID-ene som en liste; limes listen inn, fylles radene nedover og nye
+  rader legges til ved behov.
 - **Tøm stopp** fjerner stoppet fra raden (navnet blir stående).
 
 Nepos tilbyr bare stopp med samme transportmåte som linjen.

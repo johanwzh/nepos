@@ -509,6 +509,18 @@ describe('copying a stop between rows with Ctrl+C / Ctrl+V (user test 2026-10-17
     expect(grid.cols[0].cells[1].time).toBe('0745'); // the times are not touched
   });
 
+  it('copies several selected stops as a list of Quay IDs; a waiting stop once (user 2026-10-30)', async () => {
+    /** @type {string[]} */ const wrote = [];
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (/** @type {string} */ s) => { wrote.push(s); } }, configurable: true });
+    loadGrid({ stops: [stop('A', 'NSR:Quay:1'), { ...stop('B', 'NSR:Quay:2'), isDwellArr: true }, stop('B', 'NSR:Quay:2'), stop('Uten ID'), stop('C', 'NSR:Quay:3')],
+      cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710'), cell('0712'), cell('0720'), cell('0730')] }] });
+    nameCell(0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    nameCell(4).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
+    press('c', { ctrlKey: true });
+    await new Promise((res) => setTimeout(res, 0));
+    expect(wrote).toEqual(['NSR:Quay:1\nNSR:Quay:2\nNSR:Quay:3']);
+  });
+
   it('pastes nothing that is not a Quay ID into a stop', () => {
     nameCell(1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
     const ev = new Event('paste', { bubbles: true, cancelable: true });
@@ -552,6 +564,35 @@ describe('day codes: copy and paste between columns (39)', () => {
     dc(1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
     press('v', { ctrlKey: true });
     expect(grid.cols[1].dayCode).toBe('DX67');
+  });
+});
+
+describe('several day codes at once (user 2026-10-30)', () => {
+  const dc = (/** @type {number} */ ci) => /** @type {HTMLElement} */ (document.querySelector(`.g-dc-cell[data-ci="${ci}"]`));
+  it('copies the selected columns\' day codes and pastes them in order, adding columns when needed', async () => {
+    /** @type {string[]} */ const wrote = [];
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (/** @type {string} */ s) => { wrote.push(s); } }, configurable: true });
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [
+      { dayCode: 'DX67', cells: [cell('0700'), cell('0710')] }, { dayCode: '6', cells: [cell('0800'), cell('0810')] }, { dayCode: '7', cells: [cell('0900'), cell('0910')] }] });
+    dc(0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    dc(1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
+    press('c', { ctrlKey: true });
+    await new Promise((res) => setTimeout(res, 0));
+    expect(wrote).toEqual(['DX67\t6']);
+    dc(2).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    press('v', { ctrlKey: true });
+    expect(grid.cols.map((c) => c.dayCode)).toEqual(['DX67', '6', 'DX67', '6']);
+    expect(grid.cols[3].cells).toEqual([null, null]);
+  });
+
+  it('one copied day code still fills every selected column', () => {
+    loadGrid({ stops: [stop('A')], cols: [{ dayCode: 'DX67', cells: [cell('0700')] }, { dayCode: '6', cells: [cell('0800')] }, { dayCode: '7', cells: [cell('0900')] }] });
+    dc(0).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    press('c', { ctrlKey: true });
+    dc(1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
+    dc(2).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
+    press('v', { ctrlKey: true });
+    expect(grid.cols.map((c) => c.dayCode)).toEqual(['DX67', 'DX67', 'DX67']);
   });
 });
 
