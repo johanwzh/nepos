@@ -98,6 +98,17 @@ describe('checked one step at a time (user 2026-10-26)', () => {
     expect(got).toEqual({ req: false, booking: { access: 'public', methods: ['online'], url: 'https://b.no', bookWhen: 'untilPreviousDay', latest: '1800' } });
   });
 
+  it('"at most before" shorter than "at least before" marks both and holds Apply (user 2026-10-30)', () => {
+    openBookingForm({ booking: { access: 'public', phone: '1', methods: ['callOffice'], minAhead: 'PT20M', maxAhead: 'PT10M' }, x: 0, y: 0, onApply: () => {} });
+    expect(apply().disabled).toBe(true);
+    expect(errs()).toMatch(/som mest før/i);
+    expect(q('.bk-dur[data-k="maxAhead"]').classList.contains('bk-bad')).toBe(true);
+    expect(q('.bk-dur[data-k="minAhead"]').classList.contains('bk-bad')).toBe(true);
+    typeDur('maxAhead', '1d');
+    expect(errs()).toBe('');
+    expect(apply().disabled).toBe(false);
+  });
+
   it('a phone at the stop needs no contact', () => {
     openBookingForm({ booking: null, x: 0, y: 0, onApply: () => {} });
     kind('booking');

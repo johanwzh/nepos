@@ -28,6 +28,13 @@ describe('booking rules (BOOKING_3, the BookWhen / LatestBookingTime / MinimumBo
     expect(bookingProblems({ phone: '1', minAhead: 'PT2H' })).toEqual([]);
   });
 
+  it('"at most before" must be longer than "at least before" (user 2026-10-30)', () => {
+    expect(bookingProblems({ phone: '1', minAhead: 'PT20M', maxAhead: 'PT10M' })).toContain('booking-ahead-order');
+    expect(bookingProblems({ phone: '1', minAhead: 'PT20M', maxAhead: 'PT20M' })).toContain('booking-ahead-order');
+    expect(bookingProblems({ phone: '1', minAhead: 'PT20M', maxAhead: 'P1D' })).toEqual([]);
+    expect(bookingProblems({ phone: '1', bookWhen: 'dayOfTravelOnly', latest: '1800', maxAhead: 'PT10M' })).toEqual([]); // nothing to compare with
+  });
+
   it('a way to book needs its contact: phone for calls and text, a web address for online', () => {
     expect(bookingProblems({ minAhead: 'PT1H', url: 'u', methods: ['callOffice'] })).toContain('booking-method-phone');
     expect(bookingProblems({ minAhead: 'PT1H', phone: '1', methods: ['online'] })).toContain('booking-method-url');

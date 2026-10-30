@@ -6,17 +6,13 @@
 import { t } from '../i18n/strings.js';
 import { openFloatBox } from './float-box.js';
 import { jogDial } from './jog/jogDial.js';
-import { normalizeBooking, bookingProblems, BOOKING_METHODS, BUY_WHEN, BOOKING_ACCESS, BOOK_WHEN } from '../core/booking.js';
+import { normalizeBooking, bookingProblems, minutesOf, BOOKING_METHODS, BUY_WHEN, BOOKING_ACCESS, BOOK_WHEN } from '../core/booking.js';
+
+export { minutesOf };
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/** An ISO duration (PT90M, P1DT4H, P3D) → minutes; null when not one Nepos reads. @param {string | undefined} iso */
-export function minutesOf(iso) {
-  const m = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/.exec(iso ?? '');
-  if (!m || iso === 'P' || iso === 'PT') return null;
-  return Number(m[1] ?? 0) * 1440 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0);
-}
 /** Minutes → an ISO duration ('' for none). @param {number} min */
 export function isoOf(min) {
   if (!(min > 0)) return '';
@@ -65,6 +61,7 @@ function firstStep(b) {
 function fieldsOf(p, mode) {
   if (p === 'booking-method-phone') return ['.bk-phone'];
   if (p === 'booking-method-url') return ['.bk-url'];
+  if (p === 'booking-ahead-order') return ['.bk-dur[data-k="maxAhead"]', '.bk-dur[data-k="minAhead"]'];
   if (p === 'booking-latest' || p === 'booking-neither') return mode === 'ahead' ? ['.bk-dur[data-k="minAhead"]'] : ['.bk-bookWhen', '.bk-latest'];
   return [];
 }

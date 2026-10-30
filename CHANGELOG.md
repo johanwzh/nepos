@@ -7,6 +7,8 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 **Bug fixes**
 
 - **The trip-number row's caption** lines up with Label and Vehicle above it.
+- **Booking deadlines that contradict each other are caught:** "at most before" must be longer than "at least before"; the
+  form marks both and holds Apply, and the export check reports it.
 
 ## 2.5.0 — 2026-10-30
 

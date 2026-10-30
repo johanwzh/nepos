@@ -39,12 +39,19 @@ export function normalizeBooking(b) {
   return Object.keys(out).length ? out : null;
 }
 
+/** An ISO duration (PT90M, P1DT4H, P3D) → minutes; null when not one Nepos reads. @param {string | undefined} iso */
+export function minutesOf(iso) {
+  const m = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/.exec(iso ?? '');
+  if (!m || iso === 'P' || iso === 'PT') return null;
+  return Number(m[1] ?? 0) * 1440 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0);
+}
 /** Which ways to book need which contact (user 2026-10-24): a phone for calls and text, a web address for online. */
 const METHOD_NEEDS = /** @type {Record<string, 'phone' | 'url'>} */ ({ callOffice: 'phone', callDriver: 'phone', text: 'phone', online: 'url' });
 
 /**
  * What Antu (and Uttu) would refuse in a booking: "when to book" without a latest time or the other way round
- * ('booking-latest'), both "when to book" and "at least before" ('booking-both'), neither ('booking-neither'), and a
+ * ('booking-latest'), both "when to book" and "at least before" ('booking-both'), neither ('booking-neither'), "at most before"
+ * not longer than "at least before" ('booking-ahead-order', user 2026-10-30), and a
  * way to book without its contact ('booking-method-phone', 'booking-method-url').
  * @param {any} booking @returns {string[]}
  */
@@ -55,6 +62,8 @@ export function bookingProblems(booking) {
   if (!!b.bookWhen !== !!b.latest) out.push('booking-latest');
   if (b.bookWhen && b.minAhead) out.push('booking-both');
   if (!b.bookWhen && !b.minAhead) out.push('booking-neither');
+  const most = minutesOf(b.maxAhead), least = minutesOf(b.minAhead);
+  if (most != null && least != null && most <= least) out.push('booking-ahead-order');
   for (const need of /** @type {const} */ (['phone', 'url'])) {
     if (!b[need] && (b.methods ?? []).some((m) => METHOD_NEEDS[m] === need)) out.push(`booking-method-${need}`);
   }
