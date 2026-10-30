@@ -10,7 +10,6 @@ import { isValidDayCode } from '../core/ern/validate.js';
 import { canonicalDayCode } from '../core/day-codes.js';
 import { parseCellInput, normalizeCell } from '../core/grid-input.js';
 import { noteLetters } from '../core/note-letters.js';
-import { dayLines } from '../core/day-lines.js';
 import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
@@ -502,16 +501,47 @@ function flashMoved(cls) {
 }
 
 /**
- * A line on the top edge of a time where the trip's date changes, with the jump when it is more than one day
- * (docs/superpowers/specs/2026-10-29-day-shift-lines-design.md). @param {number} ci
+ * Every time on a later day than the day code is marked from the cell's right edge, one step per day (user 2026-10-30;
+ * it replaces the divider line: a line between two cells read as a setting on one cell). Cells drawn empty (a collapsed
+ * band, a block being dragged) get no mark. @param {number} ci
  */
-function paintDayLines(ci) {
-  const lines = dayLines(grid.cols[ci]?.cells ?? []);
+function paintDays(ci) {
+  const cells = grid.cols[ci]?.cells ?? [];
   for (const td of /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(`#tbl td.g-td-time[data-c="${ci}"]`))) {
-    const jump = lines.get(Number(td.dataset.r)) ?? 0;
-    td.classList.toggle('g-day-line', jump > 0);
-    if (jump > 1) td.dataset.jump = String(jump); else delete td.dataset.jump;
+    const cell = cells[Number(td.dataset.r)];
+    const d = cell?.time && cell.time !== '|' && td.textContent?.trim() ? cell.dayOffset || 0 : 0;
+    td.classList.toggle('g-day', d > 0);
+    if (d > 0) td.style.setProperty('--d', String(Math.min(d, 4))); else td.style.removeProperty('--d');
   }
+}
+
+/**
+ * The interchanges as thin dashed chains over the timetable, from the empty space after the source's time to the empty
+ * space before the target's (user 2026-10-30). @param {HTMLTableElement} tbl
+ */
+function drawChains(tbl) {
+  const wrap = $('tbl-wrap');
+  wrap.querySelector('#ix-chains')?.remove();
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.id = 'ix-chains';
+  svg.setAttribute('width', String(tbl.offsetWidth));
+  svg.setAttribute('height', String(tbl.offsetHeight));
+  const parts = [];
+  for (let c = 0; c < grid.cols.length; c++) for (let r = 0; r < grid.stops.length; r++) {
+    const target = grid.cols[c].cells[r]?.interchange ? ixTarget(r, c) : null;
+    if (!target) continue;
+    // Offsets within the table (not screen rectangles): right at any zoom
+    const from = /** @type {HTMLElement | null} */ (tbl.querySelector(`td[data-r="${r}"][data-c="${c}"]`));
+    const to = /** @type {HTMLElement | null} */ (tbl.querySelector(`td[data-r="${target.r}"][data-c="${target.c}"]`));
+    if (!from || !to) continue;
+    const x1 = from.offsetLeft + from.offsetWidth - 3, y1 = from.offsetTop + from.offsetHeight / 2;
+    const x2 = to.offsetLeft + 3, y2 = to.offsetTop + to.offsetHeight / 2;
+    parts.push(`<line class="ix-chain ix-chain-${target.type === 'guaranteed' ? 'g' : 's'}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`);
+  }
+  svg.innerHTML = parts.join('');
+  svg.style.left = `${tbl.offsetLeft}px`;
+  svg.style.top = `${tbl.offsetTop}px`;
+  wrap.appendChild(svg);
 }
 
 function patchTimes(r0, r1, c0, c1) {
@@ -523,7 +553,7 @@ function patchTimes(r0, r1, c0, c1) {
       if (r <= r1) td.innerHTML = cellHTML(grid.cols[c].cells[r], false, '', letters.get(`${c}:${r}`));
       td.classList.toggle('is-dec', isDecreasing(r, c));
     }
-    paintDayLines(c);
+    paintDays(c);
   }
   clearTimeout(jogTimer);
   jogTimer = setTimeout(restRender, JOG_REST);
@@ -826,13 +856,14 @@ export function render() {
   if (grid.vehicleRow) renderLabelRow(tbl, 'vehicle');
   if (grid.tripRow) renderTripRow(tbl);
   grid.stops.forEach((stop, ri) => renderStopRow(tbl, stop, ri, linked));
-  grid.cols.forEach((_, ci) => paintDayLines(ci));
+  grid.cols.forEach((_, ci) => paintDays(ci));
   renderBottomRow(tbl);
   if (destColumnsOpen()) {
     addDestColumns(tbl);
     if (!destOpening) tbl.classList.add('dest-shown');
   } else tbl.classList.remove('dest-shown');
   layoutFrozen(tbl);
+  drawChains(tbl);
   updateFnPreview(inDC ? { type: 'col', ri: 0, ci: dcCol } : inStopCol ? null : { type: 'cell', ri: ancR, ci: ancC });
   if (differs || snapshot() !== baseline) { differs = true; onChange(); }
   for (const fn of renderListeners) fn();

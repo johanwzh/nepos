@@ -27,7 +27,7 @@
     --g-sel:    #c8e4ff;
     --g-rng:    #d8ecff;
     --g-dec-bg: #fde8e8;
-    --g-day-line: #7b1fa2;
+    --g-day: rgba(76, 175, 80, .30);
     --g-dec-c:  #aa0000;
 
     /* Interchange colours */
@@ -58,7 +58,7 @@
     --g-sel:    #1e3a58;
     --g-rng:    #162d46;
     --g-dec-bg: #3d1818;
-    --g-day-line: #ce93d8;
+    --g-day: rgba(102, 187, 106, .28);
     --g-dec-c:  #ff7070;
 
     /* Interchange colours – dark */
@@ -1058,8 +1058,9 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 
 .g-sfx-a, .g-sfx-p, .g-sfx-x { color: #cc0000; }
 /* A line where the trip's date changes; the jump when more than one day (spec 2026-10-29-day-shift-lines) */
-.g-td-time.g-day-line::before { content: ''; position: absolute; left: 0; right: 0; top: -1px; height: 3px; background: var(--g-day-line); pointer-events: none; }
-.g-td-time.g-day-line[data-jump]::after { content: '+' attr(data-jump); position: absolute; left: 1px; top: -1px; padding: 0 2px; font-size: 9px; line-height: 10px; color: var(--bg-panel); background: var(--g-day-line); border-radius: 0 0 3px 0; pointer-events: none; }
+/* A time on a later day than the day code: a translucent green from the right edge, wider per day (--d), over the
+   marks so they stay readable (user 2026-10-30) */
+.g-td-time.g-day::after { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: calc(var(--d, 1) * 6px); background: var(--g-day); pointer-events: none; }
 /* A time and its marks: the time always starts at the same place in the column, the marks (a/p/x, +1, and later
    footnote letters: at most two) get a fixed slot to its right */
 .g-td-time { text-align: left; padding-left: 7px; white-space: nowrap; }
@@ -1070,8 +1071,14 @@ table#tbl { border-collapse: collapse; table-layout: fixed; }
 
 .g-ix-g  { background: var(--ix-g-bg)     !important; }
 .g-ix-s  { background: var(--ix-s-bg)     !important; }
-.g-ix-tg { border-left: 3px solid var(--ix-g-border) !important; }
-.g-ix-ts { border-left: 3px solid var(--ix-s-border) !important; }
+/* The target, marked inside the cell; a dashed chain joins it to its source (user 2026-10-30) */
+.g-ix-tg { box-shadow: inset 3px 0 0 var(--ix-g-border); }
+.g-ix-ts { box-shadow: inset 3px 0 0 var(--ix-s-border); }
+#tbl-wrap { position: relative; }
+#ix-chains { position: absolute; z-index: 1; pointer-events: none; overflow: visible; }
+.ix-chain { stroke-width: 1.5; stroke-dasharray: 3 3; }
+.ix-chain-g { stroke: var(--ix-g-border); }
+.ix-chain-s { stroke: var(--ix-s-border); }
 .g-ix-lg { background: var(--ix-g-hi) !important; outline: 2px dashed var(--ix-g-border); outline-offset: -2px; }
 .g-ix-ls { background: var(--ix-s-hi) !important; outline: 2px dashed var(--ix-s-border); outline-offset: -2px; }
 .g-ix-g.is-anchor, .g-ix-s.is-anchor { outline: 2px solid var(--accent); outline-offset: -2px; }

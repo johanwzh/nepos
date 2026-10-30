@@ -156,10 +156,9 @@ høyreklikkmenyen for alle valgte celler. **Stopper ved behov** og **bestilling*
 Ved en tid står opptil tre merker: a/p, x og én **bokstav** for tidens merknad og datoer (b, c, d … — a, p og x
 hoppes over; samme merknad gir samme bokstav). Linjen under tabellen viser alt om tiden du står i.
 
-**Etter midnatt:** der datoen skifter i en tur, står en tykk strek over tiden — ingen `+1` i cellen. Hopper datoen
-mer enn én dag, står hoppet på streken (`+2`). Starter turen etter midnatt, står streken over første tid. Linjen
-under tabellen sier hvor mange dager etter dagkoden tiden er. En tid som går bakover gir +1 av seg selv; flere
-dager settes med høyreklikk → Sett dagforskyvning….
+**Etter midnatt:** en tid på en senere dag enn dagkoden har et lysegrønt felt i høyre kant av cellen — ingen `+1` i
+cellen. Feltet er bredere for hver dag (+1, +2 …). Linjen under tabellen sier hvor mange dager etter dagkoden tiden
+er. Fyll ut tider og + / − gir +1 av seg selv; ellers settes det med høyreklikk → Sett dagforskyvning….
 
 Velg et område med **Shift + piltaster** eller ved å **dra med musen**. **Ctrl+C / Ctrl+V** kopierer
 og limer inn tider, også fra og til regneark. Limer du inn flere kolonner eller rader enn tabellen har,
@@ -191,7 +190,8 @@ På en tid:
 - **Merknad** (eller F7) og **Datoer for tiden…**.
 - **Korrespondanse** (garantert eller bli sittende) til en annen tur. En garantert korrespondanse spør om **maks
   ventetid**: hvor lenge turen venter, opptil 1–60 minutter. **Venter opptil…** på høyreklikk endrer den, og linjen under
-  tabellen viser den («Venter opptil 15 minutter»).
+  tabellen viser den («Venter opptil 15 minutter»). En stiplet linje går fra tiden til målet, og målet er merket
+  innerst i cellen (gult: garantert, turkis: bli sittende).
 
 På en dagkode:
 

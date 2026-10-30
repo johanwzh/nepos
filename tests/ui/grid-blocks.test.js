@@ -56,10 +56,11 @@ describe('a block in the grid', () => {
     expect(td(0, 1).textContent).toMatch(/5\. min/);
   });
 
-  it('end and band times past midnight get the line, not +1 text', () => {
+  it('end and band times past midnight get the day mark, not +1 text', () => {
     loadGrid({ stops: [stop('A'), stop('B')], cols: [col('0605', '0625', { block: { every: 30, span: 1380 } })] });
     expect(td(0, 3).textContent).toBe('0505');
-    expect(td(0, 3).classList.contains('g-day-line')).toBe(true);
+    expect(td(0, 3).classList.contains('g-day')).toBe(true);
+    expect(td(0, 0).classList.contains('g-day')).toBe(false);
   });
 
   it('band and end columns have no delete ×, and typing there does nothing', () => {

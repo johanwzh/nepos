@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
@@ -275,7 +276,7 @@ describe('nudging times with the jog, a power tool (user test 2026-10-17; power 
     document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     key(jog, 'ArrowDown');
     expect(grid.cols[0].cells[1]).toMatchObject({ time: '0000', dayOffset: 1 });
-    expect(at(1, 0).classList.contains('g-day-line')).toBe(true); // before the jog rests
+    expect(at(1, 0).classList.contains('g-day')).toBe(true); // before the jog rests
   });
 
   it('only ever moves the selected cells, one minute a notch (Shift: ten)', () => {
@@ -602,16 +603,16 @@ describe('times aligned, with room for marks (35)', () => {
     expect(td(1).querySelector('.g-t')?.textContent).toBe('0010');
     expect(td(1).querySelector('.g-m')?.textContent).toBe('p');
     expect(td(1).textContent).toBe('0010p');
-    expect(td(1).classList.contains('g-day-line')).toBe(true);
-    expect(td(1).dataset.jump).toBeUndefined();
-    expect(td(2).classList.contains('g-day-line')).toBe(false);
+    // every time on a later day is marked from the right, one step per day (user 2026-10-30: no divider line)
+    const dayOf = (/** @type {HTMLElement} */ el) => (el.classList.contains('g-day') ? el.style.getPropertyValue('--d') : '');
+    expect([dayOf(td(0)), dayOf(td(1)), dayOf(td(2))]).toEqual(['', '1', '1']);
+    expect(document.querySelector('.g-day-line')).toBeNull();
   });
 
-  it('a jump of more than one day carries its number', () => {
+  it('two days after the day code: a wider mark', () => {
     loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('2350'), { ...cell('0150'), dayOffset: 2 }] }] });
     const td = /** @type {HTMLElement} */ (document.querySelector('[data-r="1"][data-c="0"]'));
-    expect(td.classList.contains('g-day-line')).toBe(true);
-    expect(td.dataset.jump).toBe('2');
+    expect(((/** @type {HTMLElement} */ el) => (el.classList.contains('g-day') ? el.style.getPropertyValue('--d') : ''))(td)).toBe('2');
   });
 
   it('a decreasing time stays red next to a line', () => {
@@ -746,6 +747,19 @@ describe('the private code beside the stop name (a view setting)', () => {
     expect(name.querySelector('.g-plat')?.textContent).toBe('B');
     expect(name.querySelector('.g-priv')?.textContent).toBe('06');
     app.settings.showPrivateCode = false;
+  });
+});
+
+describe('interchanges drawn as a chain (user 2026-10-30)', () => {
+  it('a dashed chain from the source cell to the target cell; the target is marked inside the cell', () => {
+    const from = { ...cell('0700'), interchange: { targetC: 1, targetR: 1, type: 'guaranteed' } };
+    const seated = { ...cell('0705'), interchange: { targetC: 0, targetR: 1, type: 'stayseated' } };
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [from, cell('0710')] }, { dayCode: 'D', cells: [seated, cell('0715')] }] });
+    expect(document.querySelectorAll('#ix-chains .ix-chain')).toHaveLength(2);
+    expect(document.querySelectorAll('#ix-chains .ix-chain-g')).toHaveLength(1);
+    expect(document.querySelectorAll('#ix-chains .ix-chain-s')).toHaveLength(1);
+    const css = readFileSync('src/ui/styles.css', 'utf8');
+    expect(css).toMatch(/\.g-ix-tg \{ box-shadow: inset 3px 0 0 var\(--ix-g-border\)/);
   });
 });
 

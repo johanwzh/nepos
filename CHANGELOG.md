@@ -45,10 +45,12 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Map layers:** a switch at the top right of the map: **Map** (OpenFreeMap, as before), **OpenStreetMap** (the
   standard map, darkened in dark mode) or **Aerial** (Esri imagery). Remembered in your personal settings; hidden when
   the project settings name a map style of their own.
-- **A line where the date changes:** no more `+1` in a time cell. Where a trip passes midnight, a thick line runs over
-  the first time of the new day (over the first time when the trip starts after midnight); a jump of more than one day
-  carries its size (`+2`). The bar under the timetable says "2 days after the day code". **Time cells are narrower**
-  (56 px, from 68), so more of a table fits on screen.
+- **Day offsets without +1 text:** a time on a later day than the day code is marked with a pale green band at the
+  cell's right edge, wider for each day (+1, +2 …); the note letters stay readable on it. The bar under the timetable
+  says "2 days after the day code". **Time cells are narrower** (56 px, from 68), so more of a table fits on screen.
+- **Interchanges as a chain:** a thin dashed line joins the source time to its target, from the empty space after the
+  source's time to the space before the target's; the target is marked inside its cell (yellow: guaranteed, teal: stay
+  seated).
 - **Visual timetable (Marey chart):** **Alt+V** shows the open table as a chart in place of the timetable — the rows down
   the side (spaced by distance or evenly), time along the top, every trip a line through its times. A stop a trip passes
   is a straight dashed line to its next stop, with no marker; runs of trips with the same pattern share a coloured band, so the trips that differ
