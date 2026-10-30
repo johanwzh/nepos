@@ -613,7 +613,7 @@ describe('times aligned, with room for marks (35)', () => {
     loadGrid({ stops: [stop('A'), stop('B'), stop('C'), stop('D')], cols: [{ dayCode: 'D', cells: [cell('2350'), { ...cell('0150'), dayOffset: 2 }, { ...cell('1200'), dayOffset: 6 }, { ...cell('1300'), dayOffset: 7 }] }] });
     const at = (/** @type {number} */ r) => /** @type {HTMLElement} */ (document.querySelector(`[data-r="${r}"][data-c="0"]`));
     expect([at(2), at(3)].map((x) => x.style.getPropertyValue('--d'))).toEqual(['6', '6']);
-    expect(readFileSync('src/ui/styles.css', 'utf8')).toMatch(/width: calc(var(--d, 1) * 5px)/);
+    expect(readFileSync('src/ui/styles.css', 'utf8')).toContain('width: calc(var(--d, 1) * 5px)');
     const td = at(1);
     expect(((/** @type {HTMLElement} */ el) => (el.classList.contains('g-day') ? el.style.getPropertyValue('--d') : ''))(td)).toBe('2');
   });
