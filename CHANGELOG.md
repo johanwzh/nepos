@@ -2,6 +2,12 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
+## 2.6.0 — not released yet
+
+**New features**
+
+- **Routing:** the old routing (switched off since 2.3) is removed; a new routing tool is on its way.
+
 ## 2.5.1 — 2026-10-30
 
 **Bug fixes**

@@ -1,6 +1,6 @@
 {
   "name": "nepos",
-  "version": "2.5.1",
+  "version": "2.6.0",
   "license": "EUPL-1.2",
   "private": true,
   "description": "Nepos 2 — timetable editor that writes ERN and exports NeTEx",
@@ -22,8 +22,6 @@
     "vitest": "^5.0.4"
   },
   "dependencies": {
-    "@mapbox/vector-tile": "2.0.3",
-    "maplibre-gl": "5.6.0",
-    "pbf": "4.0.1"
+    "maplibre-gl": "5.6.0"
   }
 }
