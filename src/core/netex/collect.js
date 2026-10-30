@@ -11,13 +11,13 @@ import { isExportable } from '../link-state.js';
 
 /**
  * Collect everything the NeTEx files need from the parsed routes. Stops are identified by their
- * stop ID in the route file (an NSR Quay ID); rows without one are left out. ServiceLinks (2.3) come from the
- * saved links: a JourneyPattern gets them only when every pair of it has an exportable (routed) link.
+ * stop ID in the route file (an NSR Quay ID); rows without one are left out. ServiceLinks come from each line's own
+ * links (data/links/<code>.json, 2.6): a JourneyPattern gets them only when every pair of it has an exportable link.
  * @param {{ codespace: string, routes: { code: string, rs: any }[],
  *           orgs?: import('../orgs.js').Company[], orgMode?: 'codespace' | 'nog',
  *           brandings?: import('../../project/brandings-store.js').Branding[],
  *           calendars?: import('../calendars.js').Calendar[],
- *           links?: Map<string, import('../link-state.js').SavedLink>, quayInfo?: Map<string, any> }} input
+ *           links?: Map<string, import('../../project/links-store.js').LineLinks>, quayInfo?: Map<string, any> }} input
  */
 export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList = [], orgMode = 'codespace', brandings: brandingList = [], calendars: calendarList = [], links = undefined, quayInfo = new Map() }) {
     const cs = codespace || '1869';
@@ -99,18 +99,20 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
     const usedLinks = new Map();
     /**
      * The ServiceLink IDs of a pattern's consecutive pairs, or null when any pair has no exportable link (then the
-     * pattern is written with its points only, never half its links). Registers the links for the shared file.
-     * @param {any} rs @param {{ stopId: string }[]} stopList
+     * pattern is written with its points only, never half its links). Registers the links for the shared file. Links
+     * belong to the line: two lines with the same pair have a ServiceLink each, keyed `code|pair`.
+     * @param {any} rs @param {{ stopId: string }[]} stopList @param {string} code the line's code
      */
-    function linkRefsFor(rs, stopList) {
+    function linkRefsFor(rs, stopList, code) {
         const profile = profileFor(rs?.mode ?? '', rs?.submode ?? '');
-        if (!links || !links.size || !profile || stopList.length < 2) return null;
+        const own = links?.get(code)?.links;
+        if (!own || !profile || stopList.length < 2) return null;
         const found = [];
         for (let i = 1; i < stopList.length; i++) {
             const key = `${stopList[i - 1].stopId}|${stopList[i].stopId}|${profile}`;
-            const saved = links.get(key);
+            const saved = own[key];
             if (!saved || !isExportable(key, saved, quayInfo)) return null;
-            found.push({ id: `${cs}:ServiceLink:${uuid5(key)}`, key, saved, fromId: stopList[i - 1].stopId, toId: stopList[i].stopId });
+            found.push({ id: `${cs}:ServiceLink:${uuid5(`${code}|${key}`)}`, key: `${code}|${key}`, saved, fromId: stopList[i - 1].stopId, toId: stopList[i].stopId });
         }
         for (const l of found) if (!usedLinks.has(l.key)) usedLinks.set(l.key, l);
         return found.map((l) => l.id);

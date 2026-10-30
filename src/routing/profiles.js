@@ -18,3 +18,7 @@ export function profileFor(mode, submode) {
   if (mode === 'water' || mode === 'ferry') return 'ferry';
   return null;
 }
+
+/** Routed in a routing session: only the road profile has tiles (2.6; rail, tram, metro and ferry draw straight).
+ *  @param {{ mode?: string, submode?: string } | null | undefined} rs */
+export const isRoadLine = (rs) => profileFor(rs?.mode ?? '', rs?.submode ?? '') === 'bus';

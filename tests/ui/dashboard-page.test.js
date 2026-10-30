@@ -21,6 +21,7 @@ import { lineErn } from '../../src/ui/line-text.js';
 import { textHash } from '../../src/core/hash.js';
 import { writeOrgs } from '../../src/project/orgs-store.js';
 import { projectCopy, registerCompanies } from '../fixtures/orgs.js';
+import { routeAllLegs } from '../fixtures/links.js';
 import { closeProject } from '../../src/ui/project-ui.js';
 
 /** A day so many days from today, YYYYMMDD. @param {number} n */
@@ -96,6 +97,7 @@ describe('Oversikt', () => {
   it('says all is well when every line is valid long enough and exported as it is', async () => {
     await openProject(200);
     app.exports = { 50: { at: new Date().toISOString(), hash: textHash(lineErn('50', lineState('50'))) } };
+    routeAllLegs('50');
     setPage('lines'); setPage('home');
     expect(body().textContent).toContain('Alt ser bra ut');
     expect(body().querySelector('.home-ok')?.textContent).toContain('Linjen er gyldig til minst');

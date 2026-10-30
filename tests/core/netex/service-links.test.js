@@ -1,4 +1,4 @@
-// Routed links in the NeTEx export (2.3's writer, kept for the new routing; off while ROUTING is false).
+// Routed links in the NeTEx export: each line's own links (data/links/<code>.json, 2.6) as ServiceLinks.
 import { describe, it, expect } from 'vitest';
 import { parseERN } from '../../../src/core/ern/parse.js';
 import { buildNeTExFiles } from '../../../src/core/netex/export.js';
@@ -15,12 +15,14 @@ const shape = (/** @type {number} */ a, /** @type {number} */ b, status = 'OK') 
   return [`NSR:Quay:${a}|NSR:Quay:${b}|bus`, { polyline: encodePolyline([from, [(from[0] + to[0]) / 2, from[1] + 0.001], to], 6), precision: 6, distanceM: 812.4, status, from, to }];
 };
 const quayInfo = new Map(Object.entries(POS).map(([id, [lon, lat]]) => [id, { lon, lat }]));
+/** Links files by line code. @param {Record<string, [string, any][]>} byLine @returns {Map<string, any>} */
+const lines = (byLine) => new Map(Object.entries(byLine).map(([code, l]) => [code, { version: 1, line: code, links: Object.fromEntries(l), snaps: {} }]));
 /** @param {{ code: string, rs: any }[]} routes @param {Map<string, any> | undefined} links */
 const build = (routes, links) => buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes, orgs: [], brandings: [], calendars: [{ id: 'h1', name: 'V', ranges: [['20260101', '20260630']] }], timestamp: 'x', links, quayInfo });
 
 describe('ServiceLinks in the export', () => {
   it('a pattern whose pairs are all routed gets linksInSequence, and the shared file one ServiceLink per pair', () => {
-    const [shared, line] = build([{ code: 'r1', rs: route('r1', [1, 2, 3]) }], new Map([shape(1, 2), shape(2, 3)]));
+    const [shared, line] = build([{ code: 'r1', rs: route('r1', [1, 2, 3]) }], lines({ r1: [shape(1, 2), shape(2, 3)] }));
     expect([...shared.xml.matchAll(/<ServiceLink id=/g)]).toHaveLength(2);
     expect(line.xml).toContain('<linksInSequence>');
     expect([...line.xml.matchAll(/<ServiceLinkInJourneyPattern /g)]).toHaveLength(2);
@@ -36,22 +38,37 @@ describe('ServiceLinks in the export', () => {
   it('a pattern with one missing, unrouted or out-of-date pair gets no links at all', () => {
     const moved = shape(2, 3);
     moved[1] = { ...moved[1], to: [10.78, 59.915] }; // Quay 3 has moved since the link was routed
-    for (const links of [new Map([shape(1, 2)]), new Map([shape(1, 2), shape(2, 3, 'NO_PATH')]), new Map([shape(1, 2), moved])]) {
-      const [shared, line] = build([{ code: 'r1', rs: route('r1', [1, 2, 3]) }], /** @type {any} */ (links));
+    for (const l of [[shape(1, 2)], [shape(1, 2), shape(2, 3, 'NO_PATH')], [shape(1, 2), moved]]) {
+      const [shared, line] = build([{ code: 'r1', rs: route('r1', [1, 2, 3]) }], lines({ r1: l }));
       expect(line.xml).not.toContain('linksInSequence');
       expect(shared.xml).not.toContain('<serviceLinks>');
     }
   });
 
-  it('writes a pair shared by two lines once, with the same ID in every export', () => {
+  it('two lines with the same pair have a ServiceLink each, each pattern refers to its own line\'s', () => {
     const routes = [{ code: 'r1', rs: route('r1', [1, 2]) }, { code: 'r2', rs: route('r2', [1, 2]) }];
-    const a = build(routes, new Map([shape(1, 2)]))[0].xml, b = build(routes, new Map([shape(1, 2)]))[0].xml;
-    expect([...a.matchAll(/<ServiceLink id="([^"]+)"/g)]).toHaveLength(1);
-    expect(a.match(/<ServiceLink id="([^"]+)"/)?.[1]).toBe(b.match(/<ServiceLink id="([^"]+)"/)?.[1]);
+    const other = shape(1, 2); other[1] = { ...other[1], distanceM: 900 };
+    const [shared, l1, l2] = build(routes, lines({ r1: [shape(1, 2)], r2: [other] }));
+    const ids = [...shared.xml.matchAll(/<ServiceLink id="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).not.toBe(ids[1]);
+    expect(l1.xml).toContain(`<ServiceLinkRef ref="${ids[0]}"/>`);
+    expect(l2.xml).toContain(`<ServiceLinkRef ref="${ids[1]}"/>`);
+    expect(shared.xml).toContain('<Distance>812</Distance>');
+    expect(shared.xml).toContain('<Distance>900</Distance>');
+    // the same IDs in every export
+    expect([...build(routes, lines({ r1: [shape(1, 2)], r2: [other] }))[0].xml.matchAll(/<ServiceLink id="([^"]+)"/g)].map((m) => m[1])).toEqual(ids);
+  });
+
+  it('a line without its own links gets none, even when another line has the pair', () => {
+    const routes = [{ code: 'r1', rs: route('r1', [1, 2]) }, { code: 'r2', rs: route('r2', [1, 2]) }];
+    const [shared, , l2] = build(routes, lines({ r1: [shape(1, 2)] }));
+    expect([...shared.xml.matchAll(/<ServiceLink id=/g)]).toHaveLength(1);
+    expect(l2.xml).not.toContain('linksInSequence');
   });
 
   it('writes the shape as lat lon pairs from Quay to Quay, with a matching count', () => {
-    const shared = build([{ code: 'r1', rs: route('r1', [1, 2]) }], new Map([shape(1, 2)]))[0].xml;
+    const shared = build([{ code: 'r1', rs: route('r1', [1, 2]) }], lines({ r1: [shape(1, 2)] }))[0].xml;
     const m = /** @type {RegExpMatchArray} */ (shared.match(/<gml:posList srsDimension="2" count="(\d+)">([^<]+)<\/gml:posList>/));
     const nums = m[2].trim().split(/\s+/).map(Number);
     expect(Number(m[1])).toBe(nums.length / 2);

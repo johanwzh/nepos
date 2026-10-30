@@ -16,6 +16,7 @@ import { writeRoute } from '../../src/project/routes.js';
 import { writeOrgs } from '../../src/project/orgs-store.js';
 import { writeCalendars } from '../../src/project/calendars-store.js';
 import { projectCopy, registerCompanies } from '../fixtures/orgs.js';
+import { routeAllLegs } from '../fixtures/links.js';
 
 /** @param {string} secondStopId */
 const route = (secondStopId) => [
@@ -72,8 +73,8 @@ describe('export page', () => {
     setPage('export');
     await settle();
     expect(document.getElementById('btn-validate')).toBeNull();
-    // Routing is off (core/features.js): the line checks clean, and there is no routing button
-    expect(document.getElementById('val-results').textContent).toContain('Ingen problemer funnet');
+    // Routing is on (2.6): a leg not routed yet is a warning, never an error; routing happens on the line, not here
+    expect(document.getElementById('val-results').textContent).toContain('ikke rutet — åpne Ruting på linjen');
     expect(document.getElementById('btn-route-links')).toBeNull();
   });
 
@@ -151,6 +152,22 @@ describe('export page', () => {
     await click('btn-netex');
     const [dir] = await fs.list('exports');
     expect((await fs.list(`exports/${dir.name}`)).map((/** @type {any} */ e) => e.name)).toEqual(['TST-Line-50.xml', '_TST-shared.xml']);
+  });
+
+  it('a routed line checks clean and its links go into the export as ServiceLinks (2.6)', async () => {
+    await openProjectWith(route('NSR:Quay:11972'));
+    routeAllLegs('50');
+    setPage('export');
+    await settle();
+    expect(document.getElementById('val-results').textContent).toContain('Ingen problemer funnet');
+    const zip = /** @type {HTMLInputElement} */ (document.getElementById('chk-zip'));
+    zip.checked = false;
+    zip.dispatchEvent(new Event('change'));
+    await settle();
+    await click('btn-netex');
+    const [dir] = await fs.list('exports');
+    expect(await readText(fs, `exports/${dir.name}/_TST-shared.xml`)).toContain('<serviceLinks>');
+    expect(await readText(fs, `exports/${dir.name}/TST-Line-50.xml`)).toContain('<linksInSequence>');
   });
 
   it('asks to save unsaved changes first, and Cancel stops the export', async () => {

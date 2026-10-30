@@ -10,7 +10,7 @@ import { genLineXml } from './line.js';
  *           orgs: import('../orgs.js').Company[], orgMode?: 'codespace' | 'nog',
  *           brandings?: import('../../project/brandings-store.js').Branding[],
  *           calendars?: import('../calendars.js').Calendar[], timestamp?: string,
- *           links?: Map<string, import('../link-state.js').SavedLink>, quayInfo?: Map<string, any> }} input
+ *           links?: Map<string, import('../../project/links-store.js').LineLinks>, quayInfo?: Map<string, any> }} input
  * @returns {{ name: string, xml: string }[]}
  */
 export function buildNeTExFiles({ codespace, deliveryName, routes, orgs, orgMode = 'codespace', brandings = [], calendars = [], timestamp, links, quayInfo }) {

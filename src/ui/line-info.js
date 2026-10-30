@@ -4,6 +4,7 @@
 import { app } from './state.js';
 import { parseERN } from '../core/ern/parse.js';
 import { checkForExport } from '../core/export-check.js';
+import { routedLinks } from '../core/features.js';
 import { orgExportMode } from '../project/meta.js';
 import { quayInfo } from './quays.js';
 import { routeSummary } from './route-summary.js';
@@ -46,6 +47,7 @@ function check(routes) {
     codespace: app.meta?.codespace ?? '', orgsProblem: app.orgsError ? 'unreadable' : '', brandings: app.brandings,
     brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars,
     calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, speedLimits: app.meta?.speedLimits ?? null, vehicles: app.vehicles ?? [],
+    links: routedLinks(app.lineLinks),
   });
 }
 
@@ -63,7 +65,7 @@ export function lineIssues(code) {
   const rs = lineState(code);
   const live = code === app.activeRoute || app.drafts.has(code);
   // Saved lines: cached by their text and by the project data the check reads.
-  const key = [entry.text, app.orgs, app.orgRegister, app.brandings, app.calendars, app.vehicles, app.meta, quayInfo.size];
+  const key = [entry.text, app.orgs, app.orgRegister, app.brandings, app.calendars, app.vehicles, app.meta, quayInfo.size, app.lineLinks.get(code)];
   const hit = cache.get(code);
   if (!live && hit && hit.key.every((/** @type {any} */ v, /** @type {number} */ i) => v === key[i])) return hit.issues;
   const issues = check([{ code, rs, status: entry.status }]).filter((i) => i.route === code);

@@ -292,6 +292,11 @@ export const STRINGS = {
     destToggle: 'Destinations',
     rlNewLine: '+ New line',
     'chk:speed-over': (d) => `Faster than the mode's speed limit (straight line): ${d}. Check the times or the stops.`, 'chk:speed-limit-high': (d) => `The project's speed limit is set far above normal (${d}). Entur may not accept trips this fast.`,
+    'chk:link-missing': (d) => {
+      const [n, o] = d.split('|').map(Number), legs = (/** @type {number} */ k) => `${k} ${k === 1 ? 'leg' : 'legs'}`;
+      const text = n ? `${legs(n)} not routed${o ? `, ${o} out of date` : ''}` : `${legs(o)} out of date`;
+      return `${text} — open Routing on the line.`;
+    },
     settingsSpeed: 'Speed limits (km/h, straight line)', settingsSpeedNote: 'A leg faster than this is red in the speed strip and stops the export. Empty: the default. Far above the default (more than 1.5 ×), Entur may not accept the speeds.',
     showPrivateCodes: 'Show stops\' private codes', privateCodeTitle: (c) => `Private code ${c} (NSR)`, 'chk:no-submode': 'The line has a mode but no submode: choose one with the mode button.',
     rsTypeLabel: 'Label', labelAdd: '+ New label', labelName: 'Name', labelColour: 'Colour', labelsUnreadable: 'data/labels.json cannot be read.', labelRenameNote: 'renaming does not change lines that use the old name', labelDeleteConfirm: (n, u) => `Delete ${n} label(s)? ${u} line(s) use them; their columns keep the name, in grey.`,
@@ -671,6 +676,11 @@ export const STRINGS = {
     destToggle: 'Destinasjoner',
     rlNewLine: '+ Ny linje',
     'chk:speed-over': (d) => `Raskere enn fartsgrensen for transportmiddelet (i luftlinje): ${d}. Sjekk tidene eller stoppene.`, 'chk:speed-limit-high': (d) => `Prosjektets fartsgrense er satt langt over det vanlige (${d}). Entur godtar kanskje ikke så raske turer.`,
+    'chk:link-missing': (d) => {
+      const [n, o] = d.split('|').map(Number), legs = (/** @type {number} */ k) => `${k} ${k === 1 ? 'strekning er' : 'strekninger er'}`;
+      const text = n ? `${legs(n)} ikke rutet${o ? `, ${o} er utdatert` : ''}` : `${legs(o)} utdatert`;
+      return `${text} — åpne Ruting på linjen.`;
+    },
     settingsSpeed: 'Fartsgrenser (km/t, luftlinje)', settingsSpeedNote: 'En strekning raskere enn dette blir rød i fartsstripen og stopper eksporten. Tom: standard. Langt over standard (mer enn 1,5 ×) godtar Entur kanskje ikke farten.',
     showPrivateCodes: 'Vis stoppenes privatkode', privateCodeTitle: (c) => `Privatkode ${c} (NSR)`, 'chk:no-submode': 'Linjen har transportmiddel, men ingen undertype: velg en med transportmiddel-knappen.',
     rsTypeLabel: 'Etikett', labelAdd: '+ Ny etikett', labelName: 'Navn', labelColour: 'Farge', labelsUnreadable: 'data/labels.json kan ikke leses.', labelRenameNote: 'å gi nytt navn endrer ikke linjer som bruker det gamle', labelDeleteConfirm: (n, u) => `Slette ${n} etikett(er)? ${u} linje(r) bruker dem; kolonnene beholder navnet, i grått.`,

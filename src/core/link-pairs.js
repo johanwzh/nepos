@@ -6,6 +6,7 @@ import { journeyStops, tripVariants } from './netex/journeys.js';
 import { unionDays, tripDays } from './calendars.js';
 import { NSR_QUAY_PATTERN } from './quays.js';
 import { profileFor } from '../routing/profiles.js';
+import { expandRoute } from './blocks.js';
 
 /** @typedef {{ quayId: string, lon: number, lat: number }} QuayRef */
 /** @typedef {{ key: string, from: QuayRef, to: QuayRef, profile: import('../routing/profiles.js').Profile }} LinkPair */
@@ -18,17 +19,37 @@ function quayRef(id, quayInfo) {
 }
 
 /**
+ * Every trip's calls as the export writes them: blocks expanded, the extra patterns of "doesn't run" dates, only the
+ * periods of table set `setId` when given.
+ * @param {any} rs @param {{ calendars: import('./calendars.js').Calendar[], setId?: number }} ctx
+ * @param {(calls: { stopId: string }[]) => void} fn
+ */
+function eachTrip(rs, { calendars, setId }, fn) {
+  const ex = expandRoute(rs);
+  for (const per of ex?.periods ?? []) {
+    if (setId !== undefined && per.setId !== setId) continue;
+    const grid = ex.grids?.[`${per.id}:${per.setId}`];
+    if (!grid) continue;
+    const periodDays = unionDays(calendars.filter((c) => per.calendarIds.includes(c.id)));
+    for (const col of grid.cols) {
+      const days = tripDays(periodDays, col);
+      const variants = days.length ? tripVariants(grid, col, days) : [{ calls: journeyStops(grid, col) }];
+      for (const v of variants) fn(v.calls);
+    }
+  }
+}
+
+/**
  * @param {any} rs a parsed line (route state), its grids as they are now
- * @param {{ calendars: import('./calendars.js').Calendar[], quayInfo: Map<string, any> }} ctx
+ * @param {{ calendars: import('./calendars.js').Calendar[], quayInfo: Map<string, any>, setId?: number }} ctx
  * @returns {LinkPair[]} unique by key, in the order first met
  */
-export function linkPairs(rs, { calendars, quayInfo }) {
+export function linkPairs(rs, { calendars, quayInfo, setId }) {
   const profile = profileFor(rs?.mode ?? '', rs?.submode ?? '');
   if (!profile) return [];
   /** @type {Map<string, LinkPair>} */
   const out = new Map();
-  /** @param {{ stopId: string }[]} calls */
-  const add = (calls) => {
+  eachTrip(rs, { calendars, setId }, (calls) => {
     for (let i = 1; i < calls.length; i++) {
       if (calls[i - 1].stopId === calls[i].stopId) continue;
       const from = quayRef(calls[i - 1].stopId, quayInfo), to = quayRef(calls[i].stopId, quayInfo);
@@ -36,17 +57,38 @@ export function linkPairs(rs, { calendars, quayInfo }) {
       const key = `${from.quayId}|${to.quayId}|${profile}`;
       if (!out.has(key)) out.set(key, { key, from, to, profile });
     }
+  });
+  return [...out.values()];
+}
+
+/**
+ * The distinct stop sequences a routing session routes (one chain per pattern). A stop that linkPairs skips (not an
+ * NSR Quay with a position) splits the chain; a dwell is one stop. Chains of one stop are dropped.
+ * @param {any} rs @param {{ calendars: import('./calendars.js').Calendar[], quayInfo: Map<string, any>, setId?: number }} ctx
+ * @returns {{ stops: QuayRef[], keys: string[] }[]} in the order first met
+ */
+export function linkChains(rs, { calendars, quayInfo, setId }) {
+  const profile = profileFor(rs?.mode ?? '', rs?.submode ?? '');
+  if (!profile) return [];
+  /** @type {Map<string, { stops: QuayRef[], keys: string[] }>} */
+  const out = new Map();
+  /** @param {QuayRef[]} stops */
+  const add = (stops) => {
+    if (stops.length < 2) return;
+    const id = stops.map((q) => q.quayId).join(' ');
+    if (!out.has(id)) out.set(id, { stops, keys: stops.slice(1).map((q, i) => `${stops[i].quayId}|${q.quayId}|${profile}`) });
   };
-  for (const per of rs.periods ?? []) {
-    const grid = rs.grids?.[`${per.id}:${per.setId}`];
-    if (!grid) continue;
-    const periodDays = unionDays(calendars.filter((c) => per.calendarIds.includes(c.id)));
-    for (const col of grid.cols) {
-      const days = tripDays(periodDays, col);
-      const variants = days.length ? tripVariants(grid, col, days) : [{ calls: journeyStops(grid, col) }];
-      for (const v of variants) add(v.calls);
-    }
-  }
+  eachTrip(rs, { calendars, setId }, (calls) => {
+    /** @type {QuayRef[]} */
+    let run = [];
+    calls.forEach((c, i) => {
+      if (i && calls[i - 1].stopId === c.stopId) return;
+      const q = quayRef(c.stopId, quayInfo);
+      if (q) run.push(q);
+      else { add(run); run = []; }
+    });
+    add(run);
+  });
   return [...out.values()];
 }
 

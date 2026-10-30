@@ -1,14 +1,14 @@
-// Routing is off (the 2.3 engine was removed 2026-10-30): nothing routes, the map draws straight lines and the export
-// has no ServiceLinks (Entur's import can make them). One switch, ROUTING, for the new routing to turn on.
+// Routing is on (2.6, 2026-10-31): the export writes each line's routed links. One switch, ROUTING, turns it off.
 import { describe, it, expect } from 'vitest';
 import { ROUTING, routedLinks } from '../../src/core/features.js';
 
 describe('routing switch', () => {
-  it('is off', () => {
-    expect(ROUTING).toBe(false);
+  it('is on', () => {
+    expect(ROUTING).toBe(true);
   });
 
-  it('hands no links to the export while off', () => {
-    expect(routedLinks(new Map([['a|b|bus', /** @type {any} */ ({ status: 'OK' })]]))).toBeUndefined();
+  it('hands the links to the export while on', () => {
+    const links = new Map([['L1', /** @type {any} */ ({ links: {} })]]);
+    expect(routedLinks(links)).toBe(links);
   });
 });

@@ -7,6 +7,7 @@ import { t } from '../i18n/strings.js';
 import { parseERN } from '../core/ern/parse.js';
 import { orgExportMode, writeOrgExportMode } from '../project/meta.js';
 import { checkForExport } from '../core/export-check.js';
+import { routedLinks } from '../core/features.js';
 import { buildNeTExFiles } from '../core/netex/export.js';
 import { writeExport } from '../project/export.js';
 import { listRoutes, readRoute } from '../project/routes.js';
@@ -85,7 +86,7 @@ async function runCheck() {
   // Lines set to "Eksporteres: nei" are left out entirely (navigation spec §4), damaged or not; other
   // damaged lines are still checked (and block the export).
   const exported = routes.filter((r) => (r.rs ? r.rs.exported !== false : !r.excluded));
-  const issues = checkForExport({ routes: exported, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, brandings: app.brandings, brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars, calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, changedOnDisk, vehicles: app.vehicles ?? [], speedLimits: meta.speedLimits ?? null });
+  const issues = checkForExport({ routes: exported, orgs: app.orgs, register: app.orgRegister?.companies ?? null, orgMode: orgExportMode(meta), codespace: meta.codespace, orgsProblem, brandings: app.brandings, brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars, calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, changedOnDisk, vehicles: app.vehicles ?? [], speedLimits: meta.speedLimits ?? null, links: routedLinks(app.lineLinks) });
   result = { fs, issues };
   refreshAll(); // the route list shows the files as they are now
   return { routes: exported.map(({ code, rs }) => ({ code, rs })), issues };
@@ -100,7 +101,7 @@ async function runExport() {
     return;
   }
   const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: app.orgs, orgMode: orgExportMode(app.meta), brandings: app.brandings, calendars: app.calendars,
-    quayInfo });
+    links: routedLinks(app.lineLinks), quayInfo });
   const asZip = app.settings.exportAsZip !== false;
   let written = '';
   const ok = await runAction(async () => { written = await writeExport(fs, files, { codespace: meta.codespace, asZip }); });

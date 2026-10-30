@@ -13,6 +13,7 @@ import { speedProfile, SPEED_LIMITS, HIGH_LIMIT } from './speed-profile.js';
 import { ERN_MODES } from './ern/modes.js';
 import { expandRoute } from './blocks.js';
 import { normalizeBooking, bookingProblems } from './booking.js';
+import { lineLinkSummary } from './link-status.js';
 
 /** Every code the check can give; each has a text 'chk:<code>' in both languages. */
 export const CHECK_CODES = [
@@ -21,6 +22,7 @@ export const CHECK_CODES = [
   'calendar-missing', 'calendar-empty', 'day-code', 'no-operating-days', 'calendars-unreadable', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'cell-dates-also', 'cell-dates-short', 'route-no-trips',
   'route-changed-on-disk', 'org-alias-missing', 'no-submode', 'speed-over', 'speed-limit-high', 'dest-missing', 'dest-last-dropped', 'dest-via-text', 'dest-unserved', 'dest-not-on-route', 'vehicle-mode',
+  'link-missing',
 ];
 
 /**
@@ -42,10 +44,11 @@ const minutes = (cell) => (cell.dayOffset || 0) * 1440 + Number(cell.time.slice(
  *           brandings: { id: string }[], brandingsProblem?: '' | 'unreadable',
  *           calendars: import('./calendars.js').Calendar[], calendarsProblem?: '' | 'unreadable',
  *           quayInfo: Map<string, any>, changedOnDisk?: string[], speedLimits?: Record<string, number> | null,
- *           vehicles?: { name: string, transportMode?: string }[] }} input   vehicles: the project's (a trip's vehicle must run the line's mode)
+ *           vehicles?: { name: string, transportMode?: string }[], links?: Map<string, import('../project/links-store.js').LineLinks> }} input
+ *   vehicles: the project's (a trip's vehicle must run the line's mode); links: each line's routed links (2.6)
  * @returns {CheckIssue[]} errors first, then warnings
  */
-export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', calendars = [], calendarsProblem = '', quayInfo, changedOnDisk = [], speedLimits = null, vehicles = [] }) {
+export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', calendars = [], calendarsProblem = '', quayInfo, changedOnDisk = [], speedLimits = null, vehicles = [], links = undefined }) {
   /** @type {CheckIssue[]} */
   const issues = [];
   /** @param {'error' | 'warning'} level @param {string} code @param {Partial<CheckIssue>} [extra] */
@@ -73,6 +76,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     if (!routeTrips) add('warning', 'route-no-trips', { route: code });
     checkVehicles(code, rs, vehicles, add);
     checkBookings(code, rs, add);
+    if (links) checkLinks(code, rs, links.get(code), { calendars, quayInfo, add });
     trips += routeTrips;
   }
   if (orgMode === 'codespace') {
@@ -320,4 +324,15 @@ function checkCellDates(grid, col, periodDays, at, add) {
   if (col.cells.some((/** @type {any} */ c) => c?.dates?.some((/** @type {any} */ d) => d.on))) add('warning', 'cell-dates-also', { where: at });
   const short = tripVariants(grid, col, tripDays(periodDays, col)).filter((v) => v.calls.length < 2).reduce((n, v) => n + v.days.length, 0);
   if (short && journeyStops(grid, col).length >= 2) add('warning', 'cell-dates-short', { where: at, detail: String(short) });
+}
+
+/**
+ * Legs of a line not routed or out of date: one warning with the counts (2.6). Such a pattern is exported without
+ * ServiceLinks, so this never blocks the export. Lines without a road profile (rail, ferry) have no legs.
+ * @param {string} code @param {any} rs @param {import('../project/links-store.js').LineLinks | undefined} lineLinks
+ * @param {{ calendars: import('./calendars.js').Calendar[], quayInfo: Map<string, any>, add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void }} ctx
+ */
+function checkLinks(code, rs, lineLinks, { calendars, quayInfo, add }) {
+  const sum = lineLinkSummary(rs, lineLinks, { calendars, quayInfo });
+  if (sum.notRouted || sum.outOfDate) add('warning', 'link-missing', { route: code, detail: `${sum.notRouted}|${sum.outOfDate}` });
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { linkPairs, tripLinks } from '../../src/core/link-pairs.js';
+import { linkPairs, linkChains, tripLinks } from '../../src/core/link-pairs.js';
 
 const stop = (/** @type {string} */ name, /** @type {string | null} */ stopId, extra = {}) => ({ name, stopId, bold: false, sep: false, isDwellArr: false, price: null, ...extra });
 const cell = (/** @type {string} */ time, extra = {}) => ({ time, dayOffset: 0, suffix: '', interchange: null, ...extra });
@@ -52,5 +52,50 @@ describe('the stop pairs a line needs (design §1, §10)', () => {
   it('gives each link of one trip with its rows, for drawing', () => {
     const grid = { stops: STOPS, cols: [{ dayCode: 'D', cells: [cell('0700'), cell(''), cell('0720')] }] };
     expect(tripLinks(grid, grid.cols[0], 'bus')).toEqual([{ key: 'NSR:Quay:1|NSR:Quay:3|bus', fromRi: 0, toRi: 2 }]);
+  });
+});
+
+describe('the chains of a table set (routing session, 2026-10-31)', () => {
+  const t = (/** @type {string[]} */ times) => ({ dayCode: 'D', cells: times.map((x) => cell(x)) });
+  const chains = (/** @type {any} */ rs, setId = undefined) => linkChains(rs, { calendars: CAL, quayInfo: QUAYS, setId })
+    .map((c) => ({ stops: c.stops.map((q) => q.quayId.slice(9)), keys: c.keys.map((k) => k.split('|').map((x) => x.slice(9)).slice(0, 2).join('>')) }));
+
+  it('two patterns sharing a pair are two chains, the shared pair in both', () => {
+    expect(chains(line([t(['0700', '0710', '0720']), t(['0800', '0810', '']), t(['0900', '0910', '0920'])]))).toEqual([
+      { stops: ['1', '2', '3'], keys: ['1>2', '2>3'] },
+      { stops: ['1', '2'], keys: ['1>2'] },
+    ]);
+  });
+
+  it('a stop without a position splits a chain, as linkPairs skips it', () => {
+    const stops = [stop('A', 'NSR:Quay:1'), stop('B', 'NSR:Quay:2'), stop('X', '104'), stop('C', 'NSR:Quay:3'), stop('D', 'NSR:Quay:1')];
+    expect(chains(line([t(['0700', '0710', '0715', '0720', '0730'])], stops))).toEqual([
+      { stops: ['1', '2'], keys: ['1>2'] },
+      { stops: ['3', '1'], keys: ['3>1'] },
+    ]);
+  });
+
+  it('setId keeps to the periods of that table set; linkPairs too', () => {
+    const rs = { mode: 'bus', submode: 'localBus', tableSets: [{ id: 0, name: 'T' }, { id: 1, name: 'U' }],
+      periods: [{ id: 0, setId: 0, calendarIds: ['c'] }, { id: 0, setId: 1, calendarIds: ['c'] }],
+      grids: { '0:0': { stops: STOPS, cols: [t(['0700', '0710', ''])] }, '0:1': { stops: STOPS, cols: [t(['', '0710', '0720'])] } } };
+    expect(chains(rs).map((c) => c.stops)).toEqual([['1', '2'], ['2', '3']]);
+    expect(chains(rs, 1).map((c) => c.stops)).toEqual([['2', '3']]);
+    expect(linkPairs(rs, { calendars: CAL, quayInfo: QUAYS, setId: 0 }).map((p) => p.key)).toEqual(['NSR:Quay:1|NSR:Quay:2|bus']);
+  });
+
+  it('a block\'s trips are walked as the export does', () => {
+    const col = t(['0700', '0710', '0720']);
+    col.block = { every: 30, span: 60 };
+    expect(chains(line([col])).map((c) => c.stops)).toEqual([['1', '2', '3']]);
+  });
+
+  it('a dwell (arrival and departure at one stop) stays one stop of the chain', () => {
+    const stops = [stop('A', 'NSR:Quay:1'), stop('B', 'NSR:Quay:2', { isDwellArr: true }), stop('B', 'NSR:Quay:2'), stop('C', 'NSR:Quay:3')];
+    expect(chains(line([t(['0700', '0710', '0712', '0720'])], stops))).toEqual([{ stops: ['1', '2', '3'], keys: ['1>2', '2>3'] }]);
+  });
+
+  it('no chains for a mode without a routing profile', () => {
+    expect(chains(line([t(['0700', '0710'])], STOPS, 'air'))).toEqual([]);
   });
 });

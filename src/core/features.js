@@ -1,13 +1,12 @@
 // Features that can be switched off in one place.
 
 /**
- * Routed links: off. The 2.3 engine (routing on the map's vector tiles, switched off 2026-10-20) was removed on
- * 2026-10-30. The new routing (graph tiles built from OpenStreetMap, routed in a routing session) will turn this on.
- * While it is false the map draws straight lines between the stops and the export writes no ServiceLinks. A project's
+ * Routed links: on since 2.6 (2026-10-31): road graph tiles built from OpenStreetMap, routed in a routing session,
+ * saved per line in data/links/. Set it false to draw straight lines and export no ServiceLinks again. A project's
  * data/shapes.json from 2.3 is left alone on disk and never read.
  */
-export const ROUTING = false;
+export const ROUTING = true;
 
-/** The routed links to hand to the export: none while routing is off.
+/** The routed links to hand to the export and the check: none while routing is off.
  *  @template T @param {T} links @returns {T | undefined} */
 export const routedLinks = (links) => (ROUTING ? links : undefined);

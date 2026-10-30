@@ -423,3 +423,28 @@ describe('vehicles on trips (user 2026-10-20)', () => {
     for (const lang of Object.keys(STRINGS)) expect(STRINGS[lang]['chk:vehicle-mode']).toBeTruthy();
   });
 });
+
+describe('routed links in the check (2.6: a warning, never an error)', () => {
+  const KEY = 'NSR:Quay:7203|NSR:Quay:11972|bus';
+  /** @param {Record<string, any>} links */
+  const lineLinks = (links) => new Map([['50', { version: 1, line: '50', links, snaps: {} }]]);
+  const ok = { polyline: '', precision: 6, distanceM: 900, status: 'OK', from: [0, 0], to: [0, 0] };
+
+  it('warns once per line with the counts of legs not routed and out of date', () => {
+    const issues = check(three(), { links: lineLinks({ [KEY]: { ...ok, to: [0.001, 0] } }) });
+    expect(issues).toEqual([{ level: 'warning', code: 'link-missing', route: '50', detail: '1|1' }]);
+    expect(STRINGS.en['chk:link-missing']('1|1')).toBe('1 leg not routed, 1 out of date — open Routing on the line.');
+    expect(STRINGS.no['chk:link-missing']('4|0')).toBe('4 strekninger er ikke rutet — åpne Ruting på linjen.');
+  });
+
+  it('nothing when every leg is routed, or when no links are given', () => {
+    expect(check(route(), { links: lineLinks({ [KEY]: ok }) })).toEqual([]);
+    expect(check(route())).toEqual([]);
+  });
+
+  it('nothing for a line without a road profile (rail)', () => {
+    const rs = route();
+    rs.mode = 'rail'; rs.submode = 'regionalRail';
+    expect(codes(check(rs, { links: new Map() })).filter((c) => c.endsWith('link-missing'))).toEqual([]);
+  });
+});
