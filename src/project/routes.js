@@ -1,6 +1,7 @@
 import { ROUTES_DIR, BACKUPS_DIR, backupStamp, uniqueBackupPath, pruneBackups } from './layout.js';
 import { encodeWin1252, decodeWin1252 } from '../core/ern/win1252.js';
 import { compareRouteCodes } from '../core/route-codes.js';
+import { deleteLineLinks } from './links-store.js';
 
 /**
  * Route codes in the project, from data/routes/*.txt. Numeric codes come first in numeric order.
@@ -54,4 +55,5 @@ export async function deleteRoute(fs, code, { now = new Date() } = {}) {
   if (existing === null) return;
   await fs.writeBytes(await uniqueBackupPath(fs, `${BACKUPS_DIR}/${code}.${backupStamp(now)}.deleted`, '.txt'), existing);
   await fs.remove(path);
+  await deleteLineLinks(fs, code, { now }); // a line's links go with it (2.6)
 }

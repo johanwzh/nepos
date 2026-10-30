@@ -3,6 +3,7 @@
 // "40.TXT" and "40.txt" are the same file.
 import { ROUTES_DIR, BACKUPS_DIR, backupStamp, uniqueBackupPath } from './layout.js';
 import { checkRouteFileName } from '../core/route-names.js';
+import { renameLineLinks } from './links-store.js';
 
 /**
  * Route file names that break the rules, with the rename that fixes each. `rename` is null when
@@ -49,6 +50,7 @@ export async function repairFileNames(fs, problems, { now = new Date() } = {}) {
     await fs.remove(from);
     await fs.writeBytes(to, bytes);
     await fs.remove(tmp);
+    await renameLineLinks(fs, fileName.replace(/\.txt$/i, ''), rename.replace(/\.txt$/i, '')); // the links file follows (2.6)
     done.push({ from: fileName, to: rename });
   }
   return done;

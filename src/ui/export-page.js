@@ -12,7 +12,6 @@ import { writeExport } from '../project/export.js';
 import { listRoutes, readRoute } from '../project/routes.js';
 import { checkRouteFile } from '../core/integrity/check.js';
 import { quayInfo, loadProjectQuays } from './quays.js';
-import { routedLinks } from '../core/features.js';
 import { groupIssues } from '../core/issue-groups.js';
 import { recordExports, writeExports } from '../project/exports-store.js';
 import { lineErn } from './line-text.js';
@@ -101,7 +100,7 @@ async function runExport() {
     return;
   }
   const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: app.orgs, orgMode: orgExportMode(app.meta), brandings: app.brandings, calendars: app.calendars,
-    links: routedLinks(app.serviceLinks), quayInfo });
+    quayInfo });
   const asZip = app.settings.exportAsZip !== false;
   let written = '';
   const ok = await runAction(async () => { written = await writeExport(fs, files, { codespace: meta.codespace, asZip }); });

@@ -110,6 +110,7 @@ export async function deleteLines(codes) {
     if (!(await runAction(() => deleteRoute(fs, code)))) break;
     app.routes = app.routes.filter((r) => r.code !== code);
     app.drafts.delete(code);
+    app.lineLinks.delete(code);
     if (code === app.activeRoute) closeRoute();
   }
   refreshAll();

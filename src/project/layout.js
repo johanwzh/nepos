@@ -9,6 +9,9 @@ export const EXPORTS_FILE = 'data/exports.json';
 export const CALENDARS_FILE = 'data/calendars.json';
 export const ROUTES_DIR = 'data/routes';
 export const BACKUPS_DIR = 'data/backups';
+export const LINKS_DIR = 'data/links'; // routed links, one file per line (2.6)
+export const CACHE_DIR = 'cache'; // downloads Nepos can fetch again; can be deleted at any time
+export const ROUTING_CACHE_DIR = 'cache/routing/road';
 export const EXPORTS_DIR = 'exports'; // generated NeTEx deliveries; can be deleted at any time
 export const SETTINGS_FILE = 'private/settings.json';
 export const SECRETS_FILE = 'private/secrets.json';
@@ -38,16 +41,19 @@ export async function uniqueBackupPath(fs, base, ext) {
 export const BACKUP_KEEP = 10;
 
 /**
- * Keep the BACKUP_KEEP newest save backups of a line (`<code>.<stamp>[-n].txt`) in data/backups/; delete the rest.
+ * Keep the BACKUP_KEEP newest save backups of a line (`<prefix>.<stamp>[-n]<ext>`) in data/backups/; delete the rest.
+ * A links file's backups use prefix `links-<code>` and ext '.json'.
  * Never touched: a deleted line's backup (`.deleted.txt`), format-upgrade copies (folders), repair backups and 2.3's
  * routed-link backups (`shapes-<stamp>.json`; other names).
  * @param {import('./fs.js').ProjectFs} fs
  * @param {string} prefix a line's code
+ * @param {number} [keep]
+ * @param {string} [ext]
  * @returns {Promise<number>} how many were deleted
  */
-export async function pruneBackups(fs, prefix, keep = BACKUP_KEEP) {
-  const esc = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`^${esc}\\.(\\d{4}-\\d{2}-\\d{2}T\\d{6})(?:-(\\d+))?\\.txt$`);
+export async function pruneBackups(fs, prefix, keep = BACKUP_KEEP, ext = '.txt') {
+  const esc = (/** @type {string} */ s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`^${esc(prefix)}\\.(\\d{4}-\\d{2}-\\d{2}T\\d{6})(?:-(\\d+))?${esc(ext)}$`);
   const found = [];
   for (const entry of await fs.list(BACKUPS_DIR)) {
     if (entry.kind !== 'file') continue;

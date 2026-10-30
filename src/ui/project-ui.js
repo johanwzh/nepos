@@ -25,6 +25,7 @@ import { clearGrid } from './grid.js';
 import { loadProjectQuays } from './quays.js';
 import { syncProjectCopy } from './org-register.js';
 import { openFailureMessage, createFailureMessage, issueMessage, summaryMessage, fileNameMessage } from './messages.js';
+import { readAllLinks } from '../project/links-store.js';
 
 /** Notes to show in the next project check (settings reset, format upgraded). @type {string[]} */
 let pendingNotes = [];
@@ -56,7 +57,7 @@ export async function openFs(fs, { handle = null, sample = false, landing = fals
     brandings: result.brandings, brandingsError: result.brandingsError,
     labels: result.labels ?? [], labelsError: result.labelsError ?? null,
     vehicles: result.vehicles ?? [], vehiclesError: result.vehiclesError ?? null, exports: result.exports ?? {},
-    serviceLinks: new Map(),
+    lineLinks: await readAllLinks(fs),
     calendars: result.calendars, calendarsError: result.calendarsError,
     routes: result.routes, activeRoute: null, routeState: null, dirty: false, drafts: new Map(), calendarDrafts: new Map(), calendarSelected: null, resourceDrafts: new Map(), resourceSelected: null, calendarMonth: '',
     fileNameProblems: await findFileNameProblems(fs),
@@ -192,7 +193,7 @@ export async function pickAndOpen() {
 /** Close the open project (after the unsaved-changes check). */
 export async function closeProject() {
   if (!app.meta || !(await beforeLeave())) return;
-  Object.assign(app, { fs: null, handle: null, meta: null, routes: [], orgs: [], orgsError: null, brandings: [], brandingsError: null, labels: [], labelsError: null, vehicles: [], vehiclesError: null, exports: {}, serviceLinks: new Map(),
+  Object.assign(app, { fs: null, handle: null, meta: null, routes: [], orgs: [], orgsError: null, brandings: [], brandingsError: null, labels: [], labelsError: null, vehicles: [], vehiclesError: null, exports: {}, lineLinks: new Map(),
     calendars: [], calendarsError: null, activeRoute: null, routeState: null, dirty: false, drafts: new Map(), calendarDrafts: new Map(), calendarSelected: null, resourceDrafts: new Map(), resourceSelected: null, fileNameProblems: [], sampleMode: false });
   clearGrid();
   refreshAll();
