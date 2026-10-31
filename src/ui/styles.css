@@ -1482,7 +1482,7 @@ body.route-on .route-view { display: grid; flex: 1; min-width: 0; min-height: 0;
 .rv-pick { opacity: .7; }
 /* Each stop numbered as on the map, in a circle on the leg line (user 2026-10-31); the line runs through x = 9 px */
 .rv-st { display: flex; align-items: center; gap: 6px; padding: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rv-n { flex: none; width: 18px; height: 18px; border-radius: 50%; background: var(--bg-raised, #fff); color: var(--text, #222); border: 2px solid #333; box-sizing: border-box; font-size: 9px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.rv-n { flex: none; width: 18px; height: 18px; border-radius: 50%; background: var(--bg-raised, #fff); color: var(--text, #222); border: 2px solid var(--text, #333); box-sizing: border-box; font-size: 9px; line-height: 1; display: flex; align-items: center; justify-content: center; }
 .rv-st.rv-nopos { opacity: .5; }
 .rv-st.rv-nopos .rv-n { border-style: dashed; }
 .rv-gap { height: 12px; margin-left: 8px; border-left: 3px solid #1b8a4a; cursor: pointer; }
