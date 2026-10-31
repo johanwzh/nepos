@@ -2,8 +2,8 @@
 
 /** @typedef {import('./search.js').ChainPoint} ChainPoint */
 
-/** @param {() => Worker} [makeWorker] */
-export function createRoutingClient(makeWorker = () => new Worker(new URL('./worker.js', import.meta.url), { type: 'module' })) {
+/** @param {() => Worker} [makeWorker] @param {import('./profiles.js').Profile} [profile] the network the worker routes on */
+export function createRoutingClient(makeWorker = () => new Worker(new URL('./worker.js', import.meta.url), { type: 'module' }), profile = 'bus') {
   const worker = makeWorker(), pending = new Map(), loaded = new Set();
   let next = 1, closed = false;
   worker.onmessage = (ev) => {
@@ -17,7 +17,7 @@ export function createRoutingClient(makeWorker = () => new Worker(new URL('./wor
     if (closed) { reject(new Error('routing closed')); return; }
     const id = next++;
     pending.set(id, { resolve, reject });
-    worker.postMessage({ id, ...msg }, transfer);
+    worker.postMessage({ id, profile, ...msg }, transfer);
   });
   return {
     /** @param {{ key: string, buf: ArrayBuffer }[]} entries @returns {Promise<string[]>} */

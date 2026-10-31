@@ -4,9 +4,10 @@
 // review: leave a point in the direction you arrived; never take back the edge just driven unless it is a dead end;
 // bus turn restrictions apply; off-road metres between a point and its snap cost OFFROAD_S_PER_M and are never driven.
 import { createHeap } from './heap.js';
-import { OFFROAD_S_PER_M, VMAX_MS } from './cost.js';
+import { OFFROAD_S_PER_M } from './cost.js';
 import { candidatesWidening, fromRef } from './snap.js';
-import { scaleAt, sliceEdge } from './edge-geometry.js';
+import { scaleAt, sliceEdge, turnDeg } from './edge-geometry.js';
+import { rulesFor, MAX_TURN_DEG } from './rules.js';
 
 /**
  * @typedef {import('./graph.js').Graph} Graph
@@ -27,8 +28,13 @@ const SLACK_S = 600;
 /** Per-graph scratch arrays, reused across searches. @type {WeakMap<Graph, { dist: Float64Array, prev: Int32Array, done: Uint8Array }>} */
 const scratch = new WeakMap();
 
-/** @param {Graph} G @param {ChainPoint[]} points @param {{ offroad?: number }} [opts] @returns {ChainResult} */
-export function routeChain(G, points, { offroad = OFFROAD_S_PER_M } = {}) {
+/**
+ * The graph's profile sets the snap radius, the top speed and whether track turns are checked (rules.js).
+ * @param {Graph} G @param {ChainPoint[]} points @param {{ offroad?: number, radius?: number, vmax?: number, track?: boolean }} [opts] @returns {ChainResult}
+ */
+export function routeChain(G, points, opts = {}) {
+  const rules = rulesFor(G.profile);
+  const { offroad = OFFROAD_S_PER_M, radius: radius0 = rules.radius, vmax = rules.vmax, track = rules.track } = opts;
   const t0 = performance.now();
   /** @type {Candidate[][]} */
   const cands = [];
@@ -38,7 +44,7 @@ export function routeChain(G, points, { offroad = OFFROAD_S_PER_M } = {}) {
     const p = points[i];
     const ref = p.fixed ? fromRef(G, p.fixed) : null;
     if (ref && canDrive(ref.edge, ref.d)) { cands.push([ref]); radius.push(0); refLost.push(false); continue; }
-    const w = candidatesWidening(G, [p.lon, p.lat]);
+    const w = candidatesWidening(G, [p.lon, p.lat], radius0);
     if (!w.list.length) return { ok: false, error: 'no-road', point: i };
     cands.push(w.list); radius.push(w.radius); refLost.push(!!p.fixed);
   }
@@ -54,7 +60,7 @@ export function routeChain(G, points, { offroad = OFFROAD_S_PER_M } = {}) {
 
   let settled = 0;
   for (let i = 0; i + 1 < points.length; i++) {
-    const leg = searchLeg(G, cands[i], cost[i], cands[i + 1], points[i + 1], offroad, canDrive);
+    const leg = searchLeg(G, cands[i], cost[i], cands[i + 1], points[i + 1], offroad, canDrive, vmax, track);
     settled += leg.settled;
     if (!leg.cost.some(Number.isFinite)) {
       let stops = 0;
@@ -116,7 +122,7 @@ function addPiece(G, leg, pc) {
  * @param {Graph} G @param {Candidate[]} from @param {Float64Array} start @param {Candidate[]} to @param {ChainPoint} target
  * @param {number} offroad @param {(e: number, d: number) => boolean} canDrive
  */
-function searchLeg(G, from, start, to, target, offroad, canDrive) {
+function searchLeg(G, from, start, to, target, offroad, canDrive, vmax, track) {
   let sc = scratch.get(G);
   if (!sc) {
     const n = G.edges * 2;
@@ -137,7 +143,7 @@ function searchLeg(G, from, start, to, target, offroad, canDrive) {
   // A* bound: straight distance to the next point, less the widest snap, at the top speed.
   const tx = target.lon * Q, ty = target.lat * Q, sx = scaleAt(ty).x * 0.99, sy = scaleAt(ty).y * 0.99;
   const reach = Math.max(...to.map((c) => c.off));
-  const h = (x, y) => Math.max(0, Math.hypot((x - tx) * sx, (y - ty) * sy) - reach) / VMAX_MS;
+  const h = (x, y) => Math.max(0, Math.hypot((x - tx) * sx, (y - ty) * sy) - reach) / vmax;
 
   // Heap ids: a real state de, or -(1 + target index).
   const heap = createHeap(1024);
@@ -196,6 +202,7 @@ function searchLeg(G, from, start, to, target, offroad, canDrive) {
       const de2 = G.out.de[k], e2 = de2 >> 1, d2 = de2 & 1;
       if (de2 === back && !deadEnd) continue;
       if (r && (r.no.has(e2) || (r.only >= 0 && r.only !== e2))) continue;
+      if (track && de2 !== back && turnDeg(G, de, de2) > MAX_TURN_DEG) continue; // a train does not reverse through a switch
       relax(de2, g + G.len[e2] * G.spm[e2], de);
       targetsOn(e2, d2, d2 ? G.len[e2] : 0, g, de, de2, -1);
     }

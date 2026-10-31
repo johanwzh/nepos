@@ -67,3 +67,25 @@ export function nearestOnEdge(G, e, px, py) {
   }
   return { off: best, at: Math.min(bestAt * (run ? G.len[e] / run : 1), G.len[e]) };
 }
+
+/**
+ * The turn in degrees (0 straight on, 180 back the way it came) from directed edge deIn, arriving at its head, on to
+ * directed edge deOut leaving that node: measured on the geometry next to the node (routing for all modes: track
+ * never turns sharply). @param {import('./graph.js').Graph} G @param {number} deIn @param {number} deOut
+ */
+export function turnDeg(G, deIn, deOut) {
+  const vec = (/** @type {number} */ e, /** @type {boolean} */ atEnd, /** @type {boolean} */ arriving) => {
+    const i0 = G.geoStart[e], i1 = G.geoStart[e + 1] - 1;
+    // the node's point and its neighbour along the edge
+    const [n, m] = atEnd ? [i1, i1 - 1] : [i0, i0 + 1];
+    const dx = G.geo[n * 2] - G.geo[m * 2], dy = G.geo[n * 2 + 1] - G.geo[m * 2 + 1];
+    return arriving ? [dx, dy] : [-dx, -dy];
+  };
+  const eIn = deIn >> 1, eOut = deOut >> 1;
+  const [ax, ay] = vec(eIn, (deIn & 1) === 0, true);
+  const [bx, by] = vec(eOut, (deOut & 1) === 1, false);
+  const s = scaleAt(G.lat[(deIn & 1) ? G.from[eIn] : G.to[eIn]]);
+  const x1 = ax * s.x, y1 = ay * s.y, x2 = bx * s.x, y2 = by * s.y;
+  const l = Math.hypot(x1, y1) * Math.hypot(x2, y2);
+  return l ? (Math.acos(Math.max(-1, Math.min(1, (x1 * x2 + y1 * y2) / l))) * 180) / Math.PI : 0;
+}

@@ -43,6 +43,16 @@ describe('routing client', () => {
     await expect(client.route([])).rejects.toThrow('boom');
   });
 
+  it('sends the line\'s profile with every message (routing for all modes)', async () => {
+    /** @type {any[]} */
+    const sent = [];
+    const w = { onmessage: null, postMessage(/** @type {any} */ m) { sent.push(m); /** @type {any} */ (w).onmessage({ data: { id: m.id, result: m.op === 'route' ? { ok: true } : [] } }); }, terminate() {} };
+    const client = createRoutingClient(() => /** @type {any} */ (w), 'tram');
+    await client.addTiles([]);
+    await client.route([]);
+    expect(sent.map((m) => [m.op, m.profile])).toEqual([['addTiles', 'tram'], ['route', 'tram']]);
+  });
+
   it('final I1: after close, a call rejects at once instead of waiting on a dead worker', async () => {
     const client = createRoutingClient(() => /** @type {any} */ (fakeWorker()));
     client.close();

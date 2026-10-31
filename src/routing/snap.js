@@ -45,12 +45,13 @@ export function candidates(G, p, radius = RADIUS_M) {
   return near(G, edgesNear(G, px, py, radius), px, py, radius);
 }
 
-/** 75 m, then 150, then 300; an empty list when even 300 m finds nothing. @param {import('./graph.js').Graph} G @param {[number, number]} p */
-export function candidatesWidening(G, p) {
-  let radius = RADIUS_M;
+/** The profile's radius (75 m for a bus), then twice and four times that; an empty list when even that finds nothing.
+ *  @param {import('./graph.js').Graph} G @param {[number, number]} p @param {number} [radius0] */
+export function candidatesWidening(G, p, radius0 = RADIUS_M) {
+  let radius = radius0;
   for (;;) {
     const list = candidates(G, p, radius);
-    if (list.length || radius >= RADIUS_M * 4) return { list, radius };
+    if (list.length || radius >= radius0 * 4) return { list, radius };
     radius *= 2;
   }
 }

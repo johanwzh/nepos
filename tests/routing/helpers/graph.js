@@ -23,5 +23,5 @@ export function tileOf({ nodes, edges, attrs = [{ cls: 2 }], names = [''], restr
   });
 }
 
-/** @param {Parameters<typeof tileOf>[0]} g */
-export const makeGraph = (g) => buildGraph([{ key: 'test', tile: decodeTile(tileOf(g)) }]);
+/** @param {Parameters<typeof tileOf>[0]} g @param {import('../../../src/routing/profiles.js').Profile} [profile] */
+export const makeGraph = (g, profile) => buildGraph([{ key: 'test', tile: decodeTile(tileOf(g)) }], profile);

@@ -6,7 +6,8 @@ import { secondsPerMetre } from './cost.js';
 /** @typedef {import('./tile-format.js').Tile} Tile */
 /** @typedef {{ key: string, tile: Tile }} TileEntry */
 /**
- * @typedef {{ nodes: number, edges: number, lon: Int32Array, lat: Int32Array, from: Uint32Array, to: Uint32Array,
+ * profile: the network's rules (rules.js), fixed when the graph is built.
+ * @typedef {{ profile: import('./profiles.js').Profile, nodes: number, edges: number, lon: Int32Array, lat: Int32Array, from: Uint32Array, to: Uint32Array,
  *   len: Float32Array, spm: Float32Array, ferry: Uint8Array, dir: Uint8Array, way: Uint32Array, road: (e: number) => string,
  *   geo: Int32Array, geoStart: Uint32Array, out: { start: Uint32Array, de: Uint32Array },
  *   open: Uint8Array, restrict: Map<number, { no: Set<number>, only: number }>, cells: Map<number, number[]>, keys: Set<string>,
@@ -17,8 +18,8 @@ import { secondsPerMetre } from './cost.js';
 export const CELL = 50000;
 export const cellKey = (/** @type {number} */ cx, /** @type {number} */ cy) => cx * 100000 + cy;
 
-/** @param {TileEntry[]} entries @returns {Graph} */
-export function buildGraph(entries) {
+/** @param {TileEntry[]} entries @param {import('./profiles.js').Profile} [profile] @returns {Graph} */
+export function buildGraph(entries, profile = 'bus') {
   let nodes = 0, edges = 0, points = 0;
   for (const { tile } of entries) {
     nodes += tile.lon.length; edges += tile.from.length;
@@ -47,7 +48,7 @@ export function buildGraph(entries) {
     for (let i = 0; i < tile.from.length; i++, e++) {
       const a = tile.attrs[tile.attr[i]];
       from[e] = local[tile.from[i]]; to[e] = local[tile.to[i]]; len[e] = tile.len[i];
-      spm[e] = secondsPerMetre(a); ferry[e] = a.ferry ? 1 : 0; dir[e] = a.dir; way[e] = tile.way[i];
+      spm[e] = secondsPerMetre(a, profile); ferry[e] = a.ferry ? 1 : 0; dir[e] = a.dir; way[e] = tile.way[i];
       tileOf[e] = ti; nameOf[e] = tile.name[i];
       const pts = edgePoints(tile, i);
       geoStart[e] = g; geo.set(pts, g * 2); g += pts.length / 2;
@@ -87,7 +88,7 @@ export function buildGraph(entries) {
   }
 
   return {
-    nodes: n, edges: e, lon: lon.subarray(0, n), lat: lat.subarray(0, n), open: open.subarray(0, n), from, to, len, spm, ferry, dir, way,
+    profile, nodes: n, edges: e, lon: lon.subarray(0, n), lat: lat.subarray(0, n), open: open.subarray(0, n), from, to, len, spm, ferry, dir, way,
     road: (i) => entries[tileOf[i]].tile.names[nameOf[i]] ?? '',
     geo, geoStart, out: { start, de }, restrict, cells, keys: new Set(entries.map((t) => t.key)), entries,
   };
@@ -96,5 +97,5 @@ export function buildGraph(entries) {
 /** A new graph with more tiles (tiles already in G are skipped). @param {Graph} G @param {TileEntry[]} more */
 export function addTiles(G, more) {
   const fresh = more.filter((t) => !G.keys.has(t.key));
-  return fresh.length ? buildGraph([...G.entries, ...fresh]) : G;
+  return fresh.length ? buildGraph([...G.entries, ...fresh], G.profile) : G;
 }

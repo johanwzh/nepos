@@ -4,12 +4,15 @@ import { addTiles as joinTiles, buildGraph } from './graph.js';
 import { routeChain } from './search.js';
 import { legFlags } from './flags.js';
 import { tilesForChain } from './tile-select.js';
+import { rulesFor } from './rules.js';
 
 /** @typedef {import('./search.js').ChainPoint} ChainPoint */
 /** @typedef {import('./search.js').ChainResult & { flags?: ('detour' | 'far-snap')[][] }} RouteResult */
 
-export function createRouter() {
-  let G = buildGraph([]);
+/** @param {import('./profiles.js').Profile} [profile] the network's rules (routing for all modes) */
+export function createRouter(profile = 'bus') {
+  let G = buildGraph([], profile);
+  const farSnap = rulesFor(profile).farSnap;
   return {
     /** Unzipped tiles. @param {{ key: string, buf: ArrayBuffer }[]} entries @returns {string[]} the keys now loaded */
     addTiles(entries) {
@@ -24,9 +27,9 @@ export function createRouter() {
       if (!r.ok) return r;
       const stops = chain.map((p, i) => i).filter((i) => i === 0 || i === chain.length - 1 || !chain[i].via);
       const flags = r.legs.map((leg, k) => {
-        const f = legFlags(leg, chain[stops[k]], chain[stops[k + 1]], r.snaps[stops[k + 1]]);
+        const f = legFlags(leg, chain[stops[k]], chain[stops[k + 1]], r.snaps[stops[k + 1]], farSnap);
         // the first stop's snap has no leg ending at it: flag it on the first leg
-        if (k === 0 && r.snaps[0].off > 25 && !f.includes('far-snap')) f.push('far-snap');
+        if (k === 0 && r.snaps[0].off > farSnap && !f.includes('far-snap')) f.push('far-snap');
         return f;
       });
       return { ...r, flags };
