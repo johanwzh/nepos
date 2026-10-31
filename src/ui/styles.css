@@ -1461,9 +1461,30 @@ body.pt-intervals .g-td-time.g-blk-r { box-shadow: inset -2px 0 0 var(--accent, 
 .g-td-time.g-blk-pending { box-shadow: inset -2px 0 0 var(--accent, #9db8e8); outline: 1px dashed var(--accent, #9db8e8); outline-offset: -1px; }
 .iv-drop-hint { position: fixed; z-index: 50; padding: 3px 8px; border-radius: 6px; font-size: 12px; background: var(--bg-raised, #fff); border: 1px dashed var(--accent, #9db8e8); pointer-events: none; }
 /* A power tool on: only the grid's times and the toolbox respond; Save and Discard stay (user 2026-10-24) */
-body.pt-on :is(#menubar, #tabbar, #route-hdr, #kom-bar, #ts-tabs, #cal-bar, #cal-timeline, #panel-right, #map-strip, #panel-left .route-list, #fn-preview, #speed-strip, #edit-footer > :not(#ef-save):not(#ef-discard):not(#ef-state)) { opacity: .4; pointer-events: none; }
+body.pt-on :is(#menubar, #tabbar, #route-hdr, #kom-bar, #ts-tabs, #cal-bar, #cal-timeline, #panel-right, #map-strip, #panel-left .route-list, #fn-preview, #speed-strip) { opacity: .4; pointer-events: none; }
+/* On its own: inside the list above, its four IDs gave every part of the rule that weight, so pt-record / pt-route could not lift the map (2026-10-31) */
+body.pt-on #edit-footer > :not(#ef-save):not(#ef-discard):not(#ef-state) { opacity: .4; pointer-events: none; }
 /* Registrer stopp works on the map: the map pane stays usable while it is on (stop picking 2) */
-body.pt-record :is(#panel-right, #map-strip) { opacity: 1; pointer-events: auto; }
+body.pt-on.pt-record :is(#panel-right, #map-strip) { opacity: 1; pointer-events: auto; }
+/* Ruting (2.6): the map is the tool; the timetable rests */
+body.pt-on.pt-route :is(#panel-right, #map-strip) { opacity: 1; pointer-events: auto; }
+body.pt-route #tbl { opacity: .55; pointer-events: none; }
+body.pt-route #map-stop { display: none; }
+/* Above the map, never over it (an overlay hid the legs on a narrow map), and of a fixed height so the map does not move when a leg is selected (2026-10-31) */
+.rt-box { position: relative; flex: none; margin: 6px; height: 210px; overflow: auto; box-sizing: border-box; padding: 8px 30px 8px 10px; font-size: 12px; background: var(--bg-raised, #fff); color: var(--text, #222); border: 2px solid var(--accent, #d63384); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+.rt-box .rt-head { font-weight: 600; margin-bottom: 4px; }
+.rt-box .rt-x { position: absolute; top: 4px; right: 4px; border: none; background: none; cursor: pointer; font-size: 14px; color: inherit; }
+.rt-box .rt-check { list-style: none; margin: 6px 0; padding: 0; }
+.rt-box .rt-check li { padding: 2px 4px; border-radius: 4px; cursor: pointer; }
+.rt-box .rt-check li:hover { background: var(--bg-hover, rgba(0,0,0,.06)); }
+.rt-box .rt-check .rt-failed { color: #c62828; }
+.rt-box .rt-check .rt-flagged { color: #b36b00; }
+.rt-box .rt-leg { margin: 6px 0; padding: 4px 6px; border-left: 3px solid #0078d4; }
+.rt-box .rt-hint, .rt-box .rt-attr, .rt-box .rt-newer { font-size: 11px; opacity: .8; margin-top: 4px; }
+.rt-box .rt-error { color: #c62828; margin-top: 4px; }
+.rt-box .rt-foot { position: sticky; bottom: -8px; display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; padding: 4px 0 8px; background: var(--bg-raised, #fff); }
+.pm.rt-wp { border-radius: 50%; background: #fff; border: 3px solid #0078d4; box-sizing: border-box; cursor: grab; }
+.pm.rt-wp.on { background: #0078d4; }
 body.pt-on #tbl :is(.g-row-ins, .g-row-bot, .g-td-name, .g-td-btn, .g-td-ins, .g-dc-cell, .g-fn-cell, .g-lb-cell, .g-tn-cell, .cw-dest, .cw-ins) { pointer-events: none; opacity: .55; }
 /* The label, vehicle and trip-number rows' bottom edge: a collapsed border does not move with a sticky row (user 2026-10-30) */
 #tbl tr:is(.g-row-lb, .g-row-tn) > td { box-shadow: inset 0 -1px 0 var(--border); }

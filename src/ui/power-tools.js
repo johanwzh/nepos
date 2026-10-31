@@ -3,17 +3,19 @@
 // is on only that tool works in the grid (typing, pasting and the menus are off) — except the Tidsforskyver, which leaves
 // the cells editable (hypothesis, user 2026-10-28: + and − turn it on). One tool at a time; Esc turns it off.
 // Tools: the Jog (time shift, moved here from the context menu), Virtual intervals, Registrer stopp (2.5: clicks on the
-// map's Quays fill the stop rows; the map pane stays usable) and Optimalisering (2.5: a placeholder, disabled).
+// map's Quays fill the stop rows; the map pane stays usable), Ruting (2.6: a routing session on the map; only for lines
+// routed on roads) and Optimalisering (2.5: a placeholder, disabled).
 import { t } from '../i18n/strings.js';
 import { jogDial } from './jog/jogDial.js';
 import { currentPage } from './shell.js';
 
-/** @typedef {'' | 'jog' | 'intervals' | 'record' | 'optimize'} ToolName */
+/** @typedef {'' | 'jog' | 'intervals' | 'record' | 'route' | 'optimize'} ToolName */
 
 const TOOLS = /** @type {{ name: ToolName, icon: string, label: string, key: string, disabled?: boolean }[]} */ ([
   { name: 'jog', icon: '⇅', label: 'ptJog', key: 'j' },
   { name: 'intervals', icon: '⋯', label: 'ptIntervals', key: 'i' },
   { name: 'record', icon: '⊕', label: 'ptRecord', key: 'r' },
+  { name: 'route', icon: '⛙', label: 'ptRoute', key: 'l' },
   // Where the passing-seconds tools will live (backlog 87): shown, not wired
   { name: 'optimize', icon: '⚙', label: 'ptOptimize', key: '', disabled: true },
 ]);
@@ -55,6 +57,10 @@ let jogHandler = () => {};
 let keysWired = false;
 /** True while the grid holds an Esc of its own (a time being typed): Esc cancels that, not the tool. */
 let escGuard = () => false;
+/** Tools that cannot be turned on now (Ruting on a line not routed on roads). @type {Set<ToolName>} */
+const unavailable = new Set();
+/** A tool that may refuse to be turned off (Ruting with unsaved legs asks first). @type {Partial<Record<ToolName, () => boolean>>} */
+const leaveGuards = {};
 
 /** The tool that is on ('' for none). */
 export const activeTool = () => active;
@@ -70,6 +76,17 @@ export function setUnpackHandler(fn) { unpackHandler = fn; }
 
 /** @param {() => boolean} fn */
 export function setEscGuard(fn) { escGuard = fn; }
+
+/** @param {ToolName} name @param {() => boolean} fn true: the tool may be turned off */
+export function setLeaveGuard(name, fn) { leaveGuards[name] = fn; }
+
+/** Whether a tool can be turned on now; its button follows. @param {ToolName} name @param {boolean} ok @param {string} [why] the button's title when not */
+export function setToolAvailable(name, ok, why = '') {
+  if (ok) unavailable.delete(name); else unavailable.add(name);
+  const btn = /** @type {HTMLButtonElement | null} */ (document.querySelector(`#power-tools .pt-tool[data-tool="${name}"]`));
+  const x = TOOLS.find((tool) => tool.name === name);
+  if (btn && x) { btn.disabled = !ok; btn.title = ok ? `Alt+${x.key.toUpperCase()}` : why; }
+}
 
 /** One step of the Tidsforskyver: counted in its readout, applied by the grid. @param {number} d minutes */
 function step(d) {
@@ -106,7 +123,8 @@ function placeAbove() {
 
 /** Turn a tool on ('' turns all off). @param {ToolName} name */
 export function setTool(name) {
-  if (active === name || TOOLS.find((x) => x.name === name)?.disabled) return;
+  if (active === name || TOOLS.find((x) => x.name === name)?.disabled || (name && unavailable.has(name))) return;
+  if (active && leaveGuards[active] && !leaveGuards[active]?.()) return;
   active = name;
   // While a tool is on, only the grid and the toolbox respond: the rest of the page is dimmed and locked (CSS)
   document.body.classList.toggle('pt-on', !!name);

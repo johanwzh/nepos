@@ -32,7 +32,7 @@ describe('the power toolbox', () => {
   it('sits at the bottom of the line navigator panel with its tools, none on', () => {
     const box = /** @type {HTMLElement} */ (document.getElementById('power-tools'));
     expect(box.closest('#panel-left')).not.toBeNull();
-    expect([...box.querySelectorAll('.pt-tool')].map((b) => /** @type {HTMLElement} */ (b).dataset.tool)).toEqual(['jog', 'intervals', 'record', 'optimize']);
+    expect([...box.querySelectorAll('.pt-tool')].map((b) => /** @type {HTMLElement} */ (b).dataset.tool)).toEqual(['jog', 'intervals', 'record', 'route', 'optimize']);
     expect(activeTool()).toBe('');
   });
 
@@ -276,9 +276,13 @@ describe('Registrer stopp and Optimalisering in the toolbox (stop picking 2, 2.5
     expect(document.body.classList.contains('pt-record')).toBe(true);
   });
 
-  it('while recording, the map pane is not locked', () => {
+  it('while recording or routing, the map pane is not locked', () => {
     const css = readFileSync('src/ui/styles.css', 'utf8');
-    expect(css).toMatch(/body\.pt-record :is\(#panel-right, #map-strip\) \{ opacity: 1; pointer-events: auto; \}/);
+    // as heavy as the lock rule (body.pt-on + an ID + a class), and after it: the lock's footer part has its own rule,
+    // or its four IDs would outweigh this (2026-10-31: the map stayed locked)
+    expect(css).toMatch(/body\.pt-on\.pt-record :is\(#panel-right, #map-strip\) \{ opacity: 1; pointer-events: auto; \}/);
+    expect(css).toMatch(/body\.pt-on\.pt-route :is\(#panel-right, #map-strip\) \{ opacity: 1; pointer-events: auto; \}/);
+    expect(css).not.toMatch(/body\.pt-on :is\([^)]*#edit-footer/);
   });
 });
 

@@ -16,6 +16,9 @@ import { placeMenu } from './place-menu.js';
 import { createMapView } from './map-view.js';
 
 /** @type {import('./map-view.js').MapView | null} */ let view = null;
+/** The routing session draws the map itself while it is open (2.6). @type {((v: import('./map-view.js').MapView) => void) | null} */
+let extra = null;
+let extraShown = false;
 let styleKey = '';
 let lastKey = '';
 let scheduled = false;
@@ -112,6 +115,14 @@ function update() {
   const v = /** @type {import('./map-view.js').MapView} */ (view);
   v.resize(); // only when the size changed (map-view): a real resize repaints and fires move events (final review I6)
 
+  if (extra) {
+    lastKey = ''; pickKey = ''; extraShown = true;
+    $('map-missing').hidden = true;
+    /** @type {HTMLElement | null} */ (document.querySelector('#map-inner .map-hint-overlay')).style.display = 'none';
+    extra(v);
+    return;
+  }
+  if (extraShown) { extraShown = false; v.setLinks([]); }
   if (pickerState().row != null || pickerState().recording) { lastKey = ''; drawPicker(); return; }
   pickKey = '';
   v.setMarkers([]);
@@ -156,6 +167,12 @@ function refitAfterSlide() {
   schedule();
   setTimeout(() => { lastKey = ''; schedule(); }, 250);
 }
+
+/** Let the routing session draw the map (null: back to the trip). @param {((v: import('./map-view.js').MapView) => void) | null} fn */
+export function drawExtra(fn) { extra = fn; schedule(); }
+
+/** Draw again soon (the session changed). */
+export function redraw() { schedule(); }
 
 /** The map layer switch (2.5): today's map, OpenStreetMap, aerial; hidden when the settings name a style of their own. */
 function renderLayerSwitch() {
