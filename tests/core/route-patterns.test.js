@@ -28,6 +28,7 @@ describe('the journey patterns of a table set (routing editor, 2026-10-31)', () 
     const p = pats(line([t('u1', ['0700', '0710', '0720']), t('u2', ['0800', '', '0820']), t('u3', ['0900', '0910', '0920'])]));
     expect(p.map((x) => x.id)).toEqual(['NSR:Quay:1 NSR:Quay:2 NSR:Quay:3', 'NSR:Quay:1 NSR:Quay:3']);
     expect(p[0].trips).toEqual(['u1', 'u3']);
+    expect(p.map((x) => x.runs)).toEqual([2, 1]);
     expect(p[0].keys).toEqual([k('1', '2'), k('2', '3')]);
     expect(p[0].stops.map((s) => s.name)).toEqual(['A', 'B', 'C']);
     expect(p[1].keys).toEqual([k('1', '3')]);
@@ -37,6 +38,7 @@ describe('the journey patterns of a table set (routing editor, 2026-10-31)', () 
     const col = t('u1', ['0700', '0710', '0720']);
     /** @type {any} */ (col).block = { every: 30, span: 60 };
     expect(pats(line([col])).map((x) => x.trips)).toEqual([['u1']]);
+    expect(pats(line([col])).map((x) => x.runs)).toEqual([3]); // the parent and its two generated trips (user 2026-10-31: a trip count per pattern)
     const off = cell('0710', { dates: [{ from: '20260105', to: '20260105', on: false }] });
     const p = pats(line([t('u2', ['0700', off, '0720'])]));
     expect(p.map((x) => [x.id, x.trips])).toEqual([['NSR:Quay:1 NSR:Quay:2 NSR:Quay:3', ['u2']], ['NSR:Quay:1 NSR:Quay:3', ['u2']]]);

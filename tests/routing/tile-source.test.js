@@ -147,4 +147,12 @@ describe('tile source', () => {
     const r = await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS, { latest: true });
     expect([r.manifest.built, r.newer]).toEqual(['2026-11-01T00:00:00Z', false]);
   });
+
+  it('reports the tiles it downloads as they come (user 2026-10-31: a progress bar while map data loads)', async () => {
+    const fs = createMemoryFs(), { fetch } = server(v1());
+    /** @type {[number, number][]} */
+    const seen = [];
+    await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS, { onProgress: (done, total) => seen.push([done, total]) });
+    expect(seen).toEqual([[0, 2], [1, 2], [2, 2]]);
+  });
 });

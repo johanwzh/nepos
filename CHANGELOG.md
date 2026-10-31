@@ -9,14 +9,17 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Routing:** **Ruting** (Alt+L, bus lines) is a view of its own in place of the timetable: the line's journey
   patterns as small pictures framed red (not routed), orange (to check: a stop moved in NSR, newer map data, another
   stop on a row) or green; the selected pattern's stops beside a large map with the stops' names; and an info pane
-  for the table set, the pattern and the selected leg. Nothing routes and no saved distance changes without you:
+  for the table set, the pattern and the selected leg. The stop list shows every row of the table, a passed one with
+  **|**; each picture counts the pattern's trips; a legend explains the colours. Nothing routes and no saved distance changes without you:
   **Route** makes a proposal, drawn over the old route with the change in km and minutes; add or drag waypoints on a
-  leg; **Accept** saves it in `data/links/<line>.json`, **Discard** drops it, and **Keep** marks an orange pattern
-  checked without changing a metre. An **Automatic routing** setting (View menu) adds **Update all**. The map data
+  leg; **Accept** saves it in `data/links/<line>.json`, and **Keep** marks an orange pattern checked without changing a
+  metre. At the bottom right, **Discard** drops the proposal, **Apply** accepts it, saves and closes, and **Close** leaves.
+  The info pane shows the map data being fetched in a new area. An **Automatic routing** setting (View menu) adds **Update all**. The map data
   comes from Nepos's own road tiles (nepos-tiles, rebuilt monthly) and is kept in the project's `cache/`, so routing
-  works offline where it has run before. Saving a line drops the links no trip uses any more.
-- **Map:** the selected trip follows its routed legs; a leg whose stop has moved is orange, a leg without a route
-  stays straight.
+  works offline where it has run before. A link no trip uses any more is not exported but kept until you remove it
+  (**Remove unused**), so fixing a typo in the timetable brings the same route back.
+- **Map:** on a bus line the selected trip's legs have Ruting's colours: along the routed road, orange where a stop has
+  moved, red dashed where there is no route.
 - **Export:** each pattern whose legs are all routed gets its ServiceLinks (per line); legs not routed or out of date
   (a stop moved more than 5 m) are a warning in the check, never an error. The old routing (off since 2.3) is removed.
 - **Lines:** a Ruting column shows how many of each bus line's journey patterns are routed, and how many to check.

@@ -132,12 +132,13 @@ function update() {
   const ri = selectedRowIndex();
   const here = trip.points.find((p) => p.ri === ri || (grid.stops[/** @type {number} */ (ri)]?.isDwellArr && p.ri === /** @type {number} */ (ri) + 1));
   const ink = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#000';
-  // The legs with a saved route follow it, the rest stay straight (routing editor, 2026-10-31)
+  // A bus line's legs as in Ruting (user 2026-10-31): along their saved route, orange when a stop has moved, red dashed
+  // without a route; other modes keep the trip line
   const routed = col && app.activeRoute && isRoadLine(app.routeState)
     ? tripRouteLegs(grid, col, app.lineLinks.get(app.activeRoute)?.links, quayInfo) : null;
-  if (routed?.links.length) v.setLinks(routed.links);
+  if (routed) v.setLinks([...routed.links, ...routed.straight.map((s) => ({ ...s, state: /** @type {const} */ ('failed') }))]);
   v.setTrip({
-    ...(routed?.links.length ? { segments: routed.straight } : {}),
+    ...(routed ? { segments: [] } : {}),
     // Bold stops (the main stops in the timetable) are the larger dots
     line, ink, ring: here ? [here.lon, here.lat] : null,
     dots: trip.points.map((p) => ({ lon: p.lon, lat: p.lat, r: p.bold ? 7 : 5, tooltip: `<b>${esc(p.name)}</b> ${esc(p.time.slice(0, 2))}:${esc(p.time.slice(2))}` })),

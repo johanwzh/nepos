@@ -11,7 +11,7 @@ import { gunzip } from './tile-format.js';
 /**
  * @typedef {{ format: string, set: string, built: string, dataDate: string, tileLon: number, tileLat: number,
  *   tiles: Record<string, { size: number, hash: string }> }} Manifest
- * @typedef {{ open: (points: { lon: number, lat: number }[], opts?: { latest?: boolean }) => Promise<{ manifest: Manifest, newer: boolean }>,
+ * @typedef {{ open: (points: { lon: number, lat: number }[], opts?: { latest?: boolean, onProgress?: (done: number, total: number) => void }) => Promise<{ manifest: Manifest, newer: boolean }>,
  *   loadTile: (key: string) => Promise<ArrayBuffer>, stats: () => { downloaded: number, bytes: number, cached: number },
  *   published: () => Promise<Manifest | null> }} TileSource
  *   published: the newest build known without downloading tiles (routing editor, 2026-10-31: newer map data is orange)
@@ -62,7 +62,7 @@ export function createTileSource({ fs, baseUrl, fetch = globalThis.fetch.bind(gl
 
   return {
     /** latest: route on the published build when there is one, even if the cache covers the area (final review 1) */
-    async open(points, { latest = false } = {}) {
+    async open(points, { latest = false, onProgress } = {}) {
       if (session) return { manifest: session, newer };
       const cached = await readCachedManifest();
       const files = new Set((await fs.list(ROUTING_CACHE_DIR)).filter((e) => e.kind === 'file').map((e) => e.name));
@@ -84,7 +84,14 @@ export function createTileSource({ fs, baseUrl, fetch = globalThis.fetch.bind(gl
       // The published build: fetch the needed tiles the cache lacks or holds from another build, then switch the cache
       const same = (/** @type {string} */ k) => !!cached && inCache(cached, k) && cached.tiles[k].hash === published?.tiles[k]?.hash;
       const need = tilesForChain(published, points, 1).filter((k) => !same(k));
-      const got = await Promise.all(need.map(async (k) => /** @type {[string, Uint8Array]} */ ([k, await download(/** @type {Manifest} */ (published), k)])));
+      // onProgress: the tiles downloaded so far (user 2026-10-31: a new area takes a while, and it must show)
+      let done = 0;
+      onProgress?.(0, need.length);
+      const got = await Promise.all(need.map(async (k) => {
+        const bytes = await download(/** @type {Manifest} */ (published), k);
+        onProgress?.(++done, need.length);
+        return /** @type {[string, Uint8Array]} */ ([k, bytes]);
+      }));
       for (const name of files) {
         const k = name.replace(/\.bin\.gz$/, '');
         if (name.endsWith('.bin.gz') && !same(k)) await fs.remove(tilePath(k));

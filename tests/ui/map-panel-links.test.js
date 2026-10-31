@@ -95,21 +95,21 @@ async function openWith(links) {
 }
 
 describe('the timetable’s map and the saved routes', () => {
-  it('a routed leg follows its route; the leg without one is straight', async () => {
+  it('a routed leg follows its route; the leg without one is red dashed, as in Ruting (user 2026-10-31)', async () => {
     await openWith({ [K1]: link(K1) });
-    expect(drawn.links.map((l) => [l.key, l.state])).toEqual([[K1, 'routed']]);
-    expect(drawn.trip.segments).toEqual([[POS['NSR:Quay:2'], POS['NSR:Quay:3']]]);
+    expect(drawn.links.map((l) => [l.key, l.state])).toEqual([[K1, 'routed'], [K2, 'failed']]);
+    expect(drawn.links[1].coords).toEqual([POS['NSR:Quay:2'], POS['NSR:Quay:3']]);
+    expect(drawn.trip.segments).toEqual([]);
   });
 
   it('a stop moved since it was routed: stale', async () => {
     await openWith({ [K1]: link(K1, { to: [10.011, 59] }) });
-    expect(drawn.links.map((l) => l.state)).toEqual(['stale']);
+    expect(drawn.links.map((l) => l.state)).toEqual(['stale', 'failed']);
   });
 
-  it('no routes: the trip line as before', async () => {
+  it('a bus line never routed: every leg red dashed (user 2026-10-31)', async () => {
     await openWith({});
-    expect(drawn.links).toEqual([]);
-    expect(drawn.trip.segments).toBeUndefined();
-    expect(drawn.trip.line).toHaveLength(3);
+    expect(drawn.links.map((l) => [l.key, l.state])).toEqual([[K1, 'failed'], [K2, 'failed']]);
+    expect(drawn.trip.segments).toEqual([]);
   });
 });

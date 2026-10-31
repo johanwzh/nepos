@@ -271,6 +271,19 @@ describe('routing session: failures stay contained', () => {
     expect([file.links[k].polyline, file.links[k].distanceM]).toEqual([saved.links[k].polyline, saved.links[k].distanceM]);
   });
 
+  it('removeUnused() drops the links no trip of the line uses, only when asked; onProgress hears about map data (user 2026-10-31)', async () => {
+    const extra = { polyline: 'x', precision: 6, distanceM: 5, status: 'OK', from: [10, 59], to: [10.1, 59] };
+    const tiles = fixtureTiles();
+    const onProgress = vi.fn();
+    const s = createRoutingSession({ code: 'L1', rs: line([SARPSBORG]), setId: 0, calendars: CAL, lineLinks: /** @type {any} */ ({ ...EMPTY, links: { [key('1', '2')]: extra } }),
+      quayInfo: QUAYS, router: createRouter(), tiles, now: NOW, onProgress });
+    await s.open();
+    expect(Object.keys(s.file().links)).toEqual([key('1', '2')]);
+    expect(Object.keys(s.removeUnused().links)).toEqual([]);
+    await s.route(pid(SARPSBORG));
+    expect(/** @type {any} */ (tiles.open.mock.calls[0])[1].onProgress).toBe(onProgress);
+  });
+
   it('says when newer map data exists than the build it routes on', async () => {
     const tiles = fixtureTiles();
     tiles.open.mockResolvedValue({ manifest, newer: true });

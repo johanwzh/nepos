@@ -65,8 +65,8 @@ const link = (/** @type {string} */ key, extra = {}) => ({ polyline: encodePolyl
  */
 function fakeSession() {
   const stop = (/** @type {string} */ id) => ({ stopId: id, quay: { quayId: id, lon: POS[id][0], lat: POS[id][1] }, name: `Stopp ${id.slice(9)}` });
-  const A = { id: 'A', stops: ['NSR:Quay:1', 'NSR:Quay:2', 'NSR:Quay:3'].map(stop), keys: [K1, K2], trips: ['u1'] };
-  const B = { id: 'B', stops: ['NSR:Quay:1', 'NSR:Quay:3'].map(stop), keys: [K13], trips: ['u2'] };
+  const A = { id: 'A', stops: ['NSR:Quay:1', 'NSR:Quay:2', 'NSR:Quay:3'].map(stop), keys: [K1, K2], trips: ['u1'], runs: 1 };
+  const B = { id: 'B', stops: ['NSR:Quay:1', 'NSR:Quay:3'].map(stop), keys: [K13], trips: ['u2'], runs: 3 };
   /** @type {any} */
   let file = { version: 1, line: '50', links: { [K13]: link(K13) }, snaps: {} };
   let bReviewed = false;
@@ -103,6 +103,7 @@ function fakeSession() {
     newerMap: () => false,
     updateAll: vi.fn(async () => file),
     file: () => file,
+    removeUnused: vi.fn(() => { const { [K13]: _, ...links } = file.links; file = { ...file, links }; return file; }),
     close: vi.fn(),
   };
   return s;
@@ -110,6 +111,8 @@ function fakeSession() {
 
 /** @type {ReturnType<typeof fakeSession>} */
 let session;
+/** What the view handed the session factory (its progress callback). @type {any} */
+let sessionCtx;
 /** @type {any} */
 let fs;
 let wired = false;
@@ -126,7 +129,7 @@ beforeEach(async () => {
   initRouteEditor();
   initMapPanel();
   session = fakeSession();
-  initRouteView({ createSession: () => /** @type {any} */ (session) });
+  initRouteView({ createSession: (/** @type {any} */ ctx) => { sessionCtx = ctx; return /** @type {any} */ (session); } });
   setTool('');
   drawn.links = []; drawn.markers = []; drawn.labels = [];
   window.confirm = vi.fn(() => true);
@@ -183,7 +186,8 @@ describe('the routing view', () => {
     thumbs()[0].click();
     await settle();
     expect(thumbs()[0].classList.contains('on')).toBe(true);
-    expect([...rv().querySelectorAll('.rv-st')].map((el) => el.textContent)).toEqual(['Stopp 1', 'Stopp 2', 'Stopp 3']);
+    expect([...rv().querySelectorAll('.rv-st')].map((el) => el.textContent)).toEqual(['A', 'B', 'C']);
+    expect(rv().querySelectorAll('.rv-pass')).toHaveLength(0);
     expect(drawn.links.filter((l) => l.state !== 'faint').map((l) => [l.key, l.state])).toEqual([[K1, 'failed'], [K2, 'failed']]);
     expect(drawn.links.filter((l) => l.state === 'faint').map((l) => l.key)).toEqual([K13]);
     expect(drawn.labels.map((s) => [s.n, s.name])).toEqual([[1, 'Stopp 1'], [2, 'Stopp 2'], [3, 'Stopp 3']]);
@@ -269,12 +273,12 @@ describe('the routing view', () => {
     await settle();
     expect(window.confirm).toHaveBeenCalledWith('Bytte uten å godta rutingen?');
     expect(thumbs()[0].classList.contains('on')).toBe(true);
-    /** @type {HTMLButtonElement} */ (btn('.rv-x')).click();
+    /** @type {HTMLButtonElement} */ (btn('.rv-close')).click();
     await settle();
     expect(window.confirm).toHaveBeenLastCalledWith('Gå ut uten å godta rutingen?');
     expect(activeTool()).toBe('route');
     window.confirm = vi.fn(() => true);
-    /** @type {HTMLButtonElement} */ (btn('.rv-x')).click();
+    /** @type {HTMLButtonElement} */ (btn('.rv-close')).click();
     await settle();
     expect(activeTool()).toBe('');
     expect(await readText(fs, 'data/links/50.json')).toBeNull();
@@ -339,13 +343,72 @@ describe('the routing view', () => {
     session.updateAll = vi.fn(() => new Promise((r) => { finish = r; }));
     /** @type {HTMLButtonElement} */ (btn('.rv-all')).click();
     await settle();
-    /** @type {HTMLButtonElement} */ (btn('.rv-x')).click();
+    /** @type {HTMLButtonElement} */ (btn('.rv-close')).click();
     await settle();
     expect(window.confirm).toHaveBeenCalledWith('Gå ut uten å godta rutingen?');
     expect(activeTool()).toBe('');
     finish(session.file());
     await settle();
     expect(await readText(fs, 'data/links/50.json')).toBeNull();
+  });
+
+  it('the stop list shows every row of the table, a passed one with |; each thumbnail counts its trips (user 2026-10-31)', async () => {
+    await open();
+    expect(thumbs()[1].textContent).toContain('3 turer');
+    expect(thumbs()[0].textContent).toContain('1 tur');
+    thumbs()[1].click();
+    await settle();
+    expect([...rv().querySelectorAll('.rv-st')].map((el) => [el.textContent, el.classList.contains('rv-pass')])).toEqual([['A', false], ['| B', true], ['C', false]]);
+  });
+
+  it('says it is fetching map data, with progress, while Route waits for it (user 2026-10-31)', async () => {
+    /** @type {(v?: any) => void} */
+    let finish = () => {};
+    await open();
+    thumbs()[0].click();
+    await settle();
+    session.route = vi.fn(() => { sessionCtx.onProgress(1, 4); return new Promise((r) => { finish = r; }); });
+    /** @type {HTMLButtonElement} */ (btn('.rv-route')).click();
+    await settle();
+    expect(q('.rv-busy')?.textContent).toContain('Henter kartdata (1 / 4)');
+    finish();
+    await settle();
+    expect(q('.rv-busy')).toBeNull();
+  });
+
+  it('has a legend of the colours and dashes', async () => {
+    await open();
+    const text = q('.rv-legend')?.textContent ?? '';
+    for (const w of ['Rutet', 'Via punkter', 'Må sjekkes', 'Ingen rute', 'Gammel rute']) expect(text).toContain(w);
+  });
+
+  it('Forkast / Bruk / Lukk at the bottom right: Bruk accepts the open proposal, saves and closes (user 2026-10-31)', async () => {
+    await open();
+    expect(btn('.rv-x')).toBeNull();
+    expect(btn('.rv-apply')?.disabled).toBe(true);
+    thumbs()[0].click();
+    await settle();
+    /** @type {HTMLButtonElement} */ (btn('.rv-route')).click();
+    await settle();
+    /** @type {HTMLButtonElement} */ (btn('.rv-apply')).click();
+    await settle();
+    expect(session.accept).toHaveBeenCalledWith('A');
+    expect(JSON.parse(await readText(fs, 'data/links/50.json')).links[K1].distanceM).toBe(1500);
+    expect(activeTool()).toBe('');
+  });
+
+  it('a link no trip uses is kept and counted; it goes only when the user removes it (user 2026-10-31)', async () => {
+    await open();
+    expect(q('.rv-info')?.textContent).toContain('1 ubrukt strekning beholdt');
+    window.confirm = vi.fn(() => false);
+    /** @type {HTMLButtonElement} */ (btn('.rv-unused')).click();
+    await settle();
+    expect(session.removeUnused).not.toHaveBeenCalled();
+    window.confirm = vi.fn(() => true);
+    /** @type {HTMLButtonElement} */ (btn('.rv-unused')).click();
+    await settle();
+    expect(session.removeUnused).toHaveBeenCalled();
+    expect(Object.keys(JSON.parse(await readText(fs, 'data/links/50.json')).links)).not.toContain(K13);
   });
 
   it('while open, Ctrl+S saves nothing', async () => {

@@ -7,7 +7,7 @@
 import { routeWithTiles } from './router-core.js';
 import { encodePolyline, haversineM } from './geometry.js';
 import { MOVED_M } from '../core/link-state.js';
-import { tablePatterns, patternStates } from '../core/route-patterns.js';
+import { tablePatterns, patternStates, pruneLineLinks } from '../core/route-patterns.js';
 
 /** @typedef {import('../core/link-pairs.js').QuayRef} QuayRef */
 /** @typedef {import('../core/link-state.js').SavedLink} SavedLink */
@@ -35,9 +35,10 @@ const isLink = (/** @type {any} */ l) => l?.status === 'OK';
  * @param {{ code: string, rs: any, setId: number, calendars: import('../core/calendars.js').Calendar[], lineLinks: LineLinks,
  *   quayInfo: Map<string, any>,
  *   router: { has: (key: string) => boolean, addTiles: (e: { key: string, buf: ArrayBuffer }[]) => any, route: (c: ChainPoint[]) => any, close?: () => void },
- *   tiles: import('./tile-source.js').TileSource, now?: () => Date }} opts
+ *   tiles: import('./tile-source.js').TileSource, now?: () => Date, onProgress?: (done: number, total: number) => void }} opts
+ *   onProgress: map data downloaded so far, when Route has to fetch it
  */
-export function createRoutingSession({ code, rs, setId, calendars, lineLinks, quayInfo, router, tiles, now = () => new Date() }) {
+export function createRoutingSession({ code, rs, setId, calendars, lineLinks, quayInfo, router, tiles, now = () => new Date(), onProgress }) {
   const patterns = tablePatterns(rs, { calendars, quayInfo, setId });
   const byId = new Map(patterns.map((p) => [p.id, p]));
   let file = lineLinks;
@@ -83,7 +84,7 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
       for (const k of p.keys) if (k) for (const [lon, lat] of viaOf(proposals.get(p.id), k)) points.push({ lon, lat });
     }
     // The newest published build: Route on an orange "newer map data" pattern compares with that (final review 1)
-    const opened = await tiles.open(points, { latest: true });
+    const opened = await tiles.open(points, { latest: true, onProgress });
     manifest = opened.manifest; newer = opened.newer;
   }
 
@@ -257,6 +258,16 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
 
     /** The links file as accepted and kept so far in this session. */
     file: () => file,
+
+    /**
+     * Drops the links no trip of the line uses — only when the user asks (user 2026-10-31: a red link is kept, so fixing
+     * a typo in the timetable brings it back). @returns {LineLinks} the file to write
+     */
+    removeUnused() {
+      const next = pruneLineLinks(rs, file);
+      if (next) file = next;
+      return file;
+    },
 
     /** Auto routing (a setting): routes and accepts every red and orange pattern. @returns {Promise<LineLinks>} */
     async updateAll() {

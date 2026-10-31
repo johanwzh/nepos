@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-// Unused links are dropped when a line is saved (routing editor spec, Goal 6, 2026-10-31).
+// Saving a line never removes links (user 2026-10-31): a link no trip uses is kept until the user removes it in Ruting,
+// so fixing a typo in the timetable brings the same valid link back.
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup, flush } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
@@ -57,18 +58,11 @@ async function editAndSave(links) {
 
 const backups = async () => (await fs.list('data/backups')).filter((/** @type {any} */ e) => e.name.startsWith('links-20.')).length;
 
-describe('cleanup of unused links on line save', () => {
-  it('drops the link no trip uses, with its snap, and backs the old file up', async () => {
+describe('line save and the links file', () => {
+  it('keeps a link no trip uses: the links file is not written', async () => {
     await editAndSave({ [USED]: link, [UNUSED]: link });
-    const saved = JSON.parse(await readText(fs, 'data/links/20.json'));
-    expect(Object.keys(saved.links)).toEqual([USED]);
-    expect(Object.keys(saved.snaps)).toEqual(['104', '105']);
-    expect(Object.keys(app.lineLinks.get('20')?.links ?? {})).toEqual([USED]);
-    expect(await backups()).toBe(1);
-  });
-
-  it('nothing unused: the links file is not written', async () => {
-    await editAndSave({ [USED]: link });
+    expect(Object.keys(JSON.parse(await readText(fs, 'data/links/20.json')).links)).toEqual([USED, UNUSED]);
+    expect(Object.keys(app.lineLinks.get('20')?.links ?? {})).toEqual([USED, UNUSED]);
     expect(await backups()).toBe(0);
   });
 });

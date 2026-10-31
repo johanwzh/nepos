@@ -11,8 +11,9 @@ import { profileFor } from '../routing/profiles.js';
 /** @typedef {import('../project/links-store.js').LineLinks} LineLinks */
 /** @typedef {import('../project/links-store.js').SavedPattern} SavedPattern */
 /**
- * id: the stop IDs joined by a space; keys: per leg, null when either stop has no NSR position; trips: column UUIDs.
- * @typedef {{ id: string, stops: { stopId: string, quay: QuayRef | null, name: string }[], keys: (string | null)[], trips: string[] }} Pattern
+ * id: the stop IDs joined by a space; keys: per leg, null when either stop has no NSR position; trips: column UUIDs;
+ * runs: how many trips run it as the export writes them (a block's generated trips each count; user 2026-10-31).
+ * @typedef {{ id: string, stops: { stopId: string, quay: QuayRef | null, name: string }[], keys: (string | null)[], trips: string[], runs: number }} Pattern
  */
 /** @typedef {{ key: string | null, state: 'routed' | 'moved' | 'map' | 'changed' | 'none' | 'unroutable', oldKey?: string }} LegState */
 /** @typedef {{ pattern: Pattern, state: 'red' | 'orange' | 'green', legs: LegState[], saved: SavedPattern | null }} PatternState */
@@ -34,9 +35,10 @@ export function tablePatterns(rs, { calendars, quayInfo, setId }) {
     if (!p) {
       const stops = seq.map((c) => ({ stopId: c.stopId, quay: quayRef(c.stopId, quayInfo), name: c.name ?? '' }));
       const keys = stops.slice(1).map((s, i) => (stops[i].quay && s.quay ? `${stops[i].stopId}|${s.stopId}|${profile}` : null));
-      p = { id, stops, keys, trips: [] };
+      p = { id, stops, keys, trips: [], runs: 0 };
       out.set(id, p);
     }
+    p.runs++;
     if (uid && !p.trips.includes(uid)) p.trips.push(uid);
   });
   return [...out.values()];

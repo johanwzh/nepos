@@ -1488,6 +1488,28 @@ body.route-on .route-view { display: grid; flex: 1; min-width: 0; min-height: 0;
 .rv-gap.rv-bad { border-left: 3px dashed #c62828; }
 .rv-gap.on { border-left: 5px solid #0078d4; margin-left: -12px; }
 .rv-gap:not([data-key]) { cursor: default; }
+/* A row the pattern passes (user 2026-10-31): as in the timetable, a | instead of a stop */
+.rv-st.rv-pass { opacity: .55; font-style: italic; }
+.rv-st.rv-pass::before { display: none; }
+.rv-st.rv-pass.rv-in { margin-left: -11px; padding-left: 11px; border-left: 3px solid #1b8a4a; }
+.rv-st.rv-pass.rv-in.rv-bad { border-left: 3px dashed #c62828; }
+.rv-busy { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-weight: 600; }
+.rv-spin { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: rv-spin .8s linear infinite; flex: none; }
+@keyframes rv-spin { to { transform: rotate(360deg); } }
+.rv-unused-note { margin-top: 6px; }
+.rv-legend { padding: 4px 10px; font-size: 11px; border-top: 1px solid var(--border, #ddd); }
+.rv-legend summary { cursor: pointer; }
+.rv-legend ul { list-style: none; margin: 4px 0 0; padding: 0; }
+.rv-legend li { display: flex; align-items: center; gap: 6px; }
+.rv-lg { display: inline-block; width: 22px; flex: none; border-top: 4px solid; }
+.rv-lg-routed { border-color: #1b8a4a; }
+.rv-lg-via { border-color: #6a3fc4; }
+.rv-lg-flagged { border-color: #e08a00; }
+.rv-lg-failed { border-top: 3px dashed #c62828; }
+.rv-lg-old { border-top: 4px dashed #777; }
+.rv-lg-selected { border-color: #0078d4; border-top-width: 6px; }
+.rv-lg-faint { border-color: #9a9a9a; border-top-width: 2px; opacity: .6; }
+.rv-foot { display: flex; justify-content: flex-end; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--border, #ddd); }
 .rv-mapwrap { position: relative; min-width: 0; min-height: 0; }
 #rv-map { position: absolute; inset: 0; }
 .rv-attr { position: absolute; left: 4px; bottom: 2px; font-size: 10px; background: rgba(255,255,255,.8); color: #333; padding: 0 4px; border-radius: 3px; pointer-events: none; }
@@ -1516,7 +1538,8 @@ body.route-on .route-view { display: grid; flex: 1; min-width: 0; min-height: 0;
 .rv-thumb.on { box-shadow: 0 0 0 2px var(--bg, #fff), 0 0 0 4px #0078d4; }
 .rv-thumb.rv-pending span::after { content: ' •'; color: #6a3fc4; font-weight: 700; }
 .rv-stop { display: flex; align-items: center; gap: 4px; pointer-events: none; font-size: 11px; white-space: nowrap; }
-.rv-stop b { width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #333; box-sizing: border-box; font-size: 9px; display: grid; place-items: center; color: #333; }
+/* line-height 1: the map's own 20 px line pushed the number below the circle's middle (user 2026-10-31) */
+.rv-stop b { width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #333; box-sizing: border-box; font-size: 9px; line-height: 1; display: flex; align-items: center; justify-content: center; color: #333; }
 .rv-stop span { background: rgba(255,255,255,.85); color: #222; padding: 0 3px; border-radius: 2px; }
 .pm.rt-wp { border-radius: 50%; background: #fff; border: 3px solid #0078d4; box-sizing: border-box; cursor: grab; }
 .pm.rt-wp.on { background: #0078d4; }

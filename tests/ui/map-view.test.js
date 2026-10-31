@@ -103,6 +103,8 @@ describe('routing on the map', () => {
     expect(markers.length).toBe(before + 1);
     expect(m.getElement().className).toBe('rv-stop');
     expect(m.getElement().textContent).toBe('1Torget <1>');
+    // the 16 px circle's centre on the stop (user 2026-10-31: the numbers did not match their circles)
+    expect([m.opts.anchor, m.opts.offset]).toEqual(['left', [-8, 0]]);
     v.setStopLabels([]);
     expect(m.removed).toBe(true);
   });

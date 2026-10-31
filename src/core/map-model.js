@@ -41,12 +41,12 @@ export function tripOnMap(grid, col, quayInfo) {
  * @param {{ stops: any[] }} grid @param {{ cells: any[] }} col
  * @param {Record<string, import('./link-state.js').SavedLink> | undefined} links the line's links
  * @param {Map<string, { lat: number | null, lon: number | null } | null>} quayInfo
- * @returns {{ links: { key: string, coords: [number, number][], state: 'routed' | 'stale' }[], straight: [number, number][][] }}
+ * @returns {{ links: { key: string, coords: [number, number][], state: 'routed' | 'stale' }[], straight: { key: string, coords: [number, number][] }[] }}
  */
 export function tripRouteLegs(grid, col, links, quayInfo) {
   /** @type {{ key: string, coords: [number, number][], state: 'routed' | 'stale' }[]} */
   const out = [];
-  /** @type {[number, number][][]} */
+  /** @type {{ key: string, coords: [number, number][] }[]} */
   const straight = [];
   for (const { key } of tripLinks(grid, col, 'bus')) {
     const l = links?.[key];
@@ -55,7 +55,7 @@ export function tripRouteLegs(grid, col, links, quayInfo) {
       continue;
     }
     const [a, b] = key.split('|').map((id) => quayInfo.get(id));
-    if (a?.lat != null && a.lon != null && b?.lat != null && b.lon != null) straight.push([[a.lon, a.lat], [b.lon, b.lat]]);
+    if (a?.lat != null && a.lon != null && b?.lat != null && b.lon != null) straight.push({ key, coords: [[a.lon, a.lat], [b.lon, b.lat]] });
   }
   return { links: out, straight };
 }

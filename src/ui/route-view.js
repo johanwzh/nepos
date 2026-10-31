@@ -20,16 +20,17 @@ import { emptyLineLinks, writeLineLinks } from '../project/links-store.js';
 import { DEFAULT_SETTINGS } from '../project/settings.js';
 import { styleUrlFor } from '../core/map-style.js';
 import { patternThumb } from '../core/pattern-thumb.js';
+import { pruneLineLinks } from '../core/route-patterns.js';
 
 /** @typedef {[number, number]} LonLat */
 /** @typedef {ReturnType<typeof createRoutingSession>} Session */
-/** @typedef {(ctx: { code: string, rs: any, setId: number }) => Session} SessionFactory */
+/** @typedef {(ctx: { code: string, rs: any, setId: number, onProgress: (done: number, total: number) => void }) => Session} SessionFactory */
 /** @typedef {import('../core/route-patterns.js').Pattern} Pattern */
 /** @typedef {import('../core/link-state.js').SavedLink} SavedLink */
 
 /** The real session: the table set's patterns, the router worker, the project's tile cache. @type {SessionFactory} */
-function defaultSession({ code, rs, setId }) {
-  return createRoutingSession({ code, rs, setId, calendars: app.calendars, lineLinks: app.lineLinks.get(code) ?? emptyLineLinks(code), quayInfo,
+function defaultSession({ code, rs, setId, onProgress }) {
+  return createRoutingSession({ code, rs, setId, onProgress, calendars: app.calendars, lineLinks: app.lineLinks.get(code) ?? emptyLineLinks(code), quayInfo,
     router: createRoutingClient(), tiles: createTileSource({ fs: /** @type {any} */ (app.fs), baseUrl: app.settings.routingTilesUrl || DEFAULT_SETTINGS.routingTilesUrl }) });
 }
 
@@ -48,6 +49,8 @@ let selLeg = null;
 /** @type {number | null} the selected waypoint of the selected leg */
 let selWp = null;
 let busy = false;
+/** What a busy view is waiting for: the map data downloaded so far ('' while it routes). */
+let progress = '';
 let error = '';
 let fitFor = '';
 /** Changes run one after the other; each session has its own queue (a closed one may never settle: plan-3 final I1). */
@@ -124,7 +127,7 @@ function enqueue(fn) {
   busy = true;
   render();
   queue = queue.then(() => (session === s ? fn(s) : undefined)).catch((e) => { if (session === s) error = message(e); })
-    .then(() => { if (session === s) { busy = false; render(); } });
+    .then(() => { if (session === s) { busy = false; progress = ''; render(); } });
   return queue;
 }
 
@@ -258,7 +261,7 @@ function thumb(st) {
   const legs = st.pattern.keys.map((/** @type {string | null} */ k, /** @type {number} */ i) => coordsOf(st.pattern, i, k ? legNow(st, k) : undefined));
   const first = st.pattern.stops[0]?.name ?? '', last = st.pattern.stops.at(-1)?.name ?? '';
   return `<button type="button" class="rv-thumb rv-${st.state}${st.pattern.id === selPattern ? ' on' : ''}${st.proposal ? ' rv-pending' : ''}" data-id="${esc(st.pattern.id)}" title="${esc(`${first} – ${last}`)}">`
-    + `<svg viewBox="0 0 90 56" aria-hidden="true"><path d="${patternThumb(legs, 90, 56)}"/></svg><span>${esc(t('rvStops', st.pattern.stops.length))}</span></button>`;
+    + `<svg viewBox="0 0 90 56" aria-hidden="true"><path d="${patternThumb(legs, 90, 56)}"/></svg><span>${esc(t('rvStops', st.pattern.stops.length))} · ${esc(t('rvRuns', st.pattern.runs ?? 0))}</span></button>`;
 }
 
 /** Km and seconds of the pattern's legs, by a choice of link per leg. @param {any} st @param {(k: string) => any} pick */
@@ -266,6 +269,17 @@ function totals(st, pick) {
   let m = 0, s = 0;
   for (const k of st.pattern.keys) { const l = k ? pick(k) : null; if (isLink(l)) { m += l.distanceM; s += l.seconds ?? 0; } }
   return { m, s };
+}
+
+/**
+ * The links no trip of the line uses: kept (not exported) until the user removes them, so fixing a typo in the timetable
+ * brings the same link back (user 2026-10-31).
+ */
+function unused() {
+  const file = session?.file();
+  if (!file || !rs) return 0;
+  const next = pruneLineLinks(rs, file);
+  return next ? Object.keys(file.links).length - Object.keys(next.links).length : 0;
 }
 
 function info() {
@@ -276,7 +290,8 @@ function info() {
     const keys = new Set(all.flatMap((x) => x.pattern.keys.filter(Boolean)));
     const m = [...keys].reduce((sum, k) => { const l = session?.file().links[/** @type {string} */ (k)]; return sum + (isLink(l) ? /** @type {any} */ (l).distanceM : 0); }, 0);
     return `<div class="rv-head">${esc(t('rtTitle'))}</div><div>${esc(t('rvSetSummary', all.length, n('green'), n('orange'), n('red')))}</div>`
-      + `<div>${esc(t('rvLegsKm', keys.size, km(m)))}</div>${session?.newerMap() ? `<div class="rv-note">${esc(t('rtNewer'))}</div>` : ''}`;
+      + `<div>${esc(t('rvLegsKm', keys.size, km(m)))}</div>${session?.newerMap() ? `<div class="rv-note">${esc(t('rtNewer'))}</div>` : ''}`
+      + (unused() ? `<div class="rv-unused-note">${esc(t('rvUnused', unused()))} <button type="button" class="pop-btn rv-unused"${busy ? ' disabled' : ''}>${esc(t('rvRemoveUnused'))}</button></div>` : '');
   }
   const p = st.pattern;
   const now = totals(st, (k) => legNow(st, k));
@@ -324,26 +339,58 @@ function actions() {
   const b = (/** @type {string} */ cls, /** @type {string} */ key, primary = false) => `<button type="button" class="pop-btn${primary ? ' primary' : ''} ${cls}"${busy ? ' disabled' : ''}>${esc(t(key))}</button>`;
   let html = '';
   if (st && st.pattern.keys.some(Boolean)) html += b('rv-route', 'rvRoute', !st.proposal && st.state !== 'green');
-  if (st?.proposal?.legs.size) html += b('rv-accept', 'rvAccept', true) + b('rv-discard', 'rvDiscard');
-  else if (st?.proposal) html += b('rv-discard', 'rvDiscard');
+  if (st?.proposal?.legs.size) html += b('rv-accept', 'rvAccept', true);
   if (st && !st.proposal && st.legs.some((l) => l.state === 'moved' || l.state === 'map')) html += b('rv-keep', 'rvKeep');
   if (app.settings.autoRoute) html += b('rv-all', 'rvUpdateAll');
   return html;
+}
+
+/**
+ * The table set's rows, each with the pattern's call it is (null: passed) — so the stops are as recognisable as in the
+ * timetable (user 2026-10-31). A dwell's arrival row is left out (the call is one stop). Null when the rows do not hold
+ * the pattern (then its own stops are listed). @param {Pattern} p @returns {{ name: string, call: number | null }[] | null}
+ */
+function rowsOf(p) {
+  const per = (rs?.periods ?? []).find((/** @type {any} */ x) => x.setId === setId);
+  const grid = per ? rs.grids?.[`${per.id}:${setId}`] : null;
+  if (!grid) return null;
+  let i = 0;
+  const rows = grid.stops.filter((/** @type {any} */ r) => !r.isDwellArr).map((/** @type {any} */ r) => {
+    const call = i < p.stops.length && String(r.stopId ?? '') === p.stops[i].stopId ? i++ : null;
+    return { name: String(r.name ?? ''), call };
+  });
+  return i === p.stops.length ? rows : null;
 }
 
 function stopList() {
   const st = current();
   if (!st) return `<div class="rv-pick">${esc(t('rvPick'))}</div>`;
   const p = st.pattern;
-  return `<ol>${p.stops.map((s, i) => {
-    let li = `<li class="rv-st${s.quay ? '' : ' rv-nopos'}">${esc(s.name)}</li>`;
+  const rows = rowsOf(p) ?? p.stops.map((s, i) => ({ name: s.name, call: /** @type {number | null} */ (i) }));
+  /** The leg the rows below a call belong to (-1 before the first call). */
+  let leg = -1;
+  const bad = (/** @type {number} */ i) => st.legs[i].state !== 'routed' && !(p.keys[i] && isLink(st.proposal?.legs.get(/** @type {string} */ (p.keys[i]))));
+  return `<ol>${rows.map((r) => {
+    if (r.call === null) {
+      const inLeg = leg >= 0 && leg < p.keys.length;
+      return `<li class="rv-st rv-pass${inLeg ? ` rv-in${bad(leg) ? ' rv-bad' : ''}` : ''}">| ${esc(r.name)}</li>`;
+    }
+    const i = r.call;
+    leg = i;
+    let li = `<li class="rv-st${p.stops[i].quay ? '' : ' rv-nopos'}">${esc(r.name)}</li>`;
     if (i < p.keys.length) {
       const k = p.keys[i];
-      const bad = st.legs[i].state !== 'routed' && !(k && isLink(st.proposal?.legs.get(k)));
-      li += `<li class="rv-gap${bad ? ' rv-bad' : ''}${k && k === selLeg ? ' on' : ''}"${k ? ` data-key="${esc(k)}"` : ''}></li>`;
+      li += `<li class="rv-gap${bad(i) ? ' rv-bad' : ''}${k && k === selLeg ? ' on' : ''}"${k ? ` data-key="${esc(k)}"` : ''}></li>`;
     }
     return li;
   }).join('')}</ol>`;
+}
+
+/** The way out, at the bottom right (user 2026-10-31): Forkast drops the open proposal, Bruk accepts it, saves and closes, Lukk closes. */
+function footer() {
+  const open = !!session?.pending().length;
+  const b = (/** @type {string} */ cls, /** @type {string} */ key, on = true, primary = false) => `<button type="button" class="pop-btn${primary ? ' primary' : ''} ${cls}"${busy || !on ? ' disabled' : ''}>${esc(t(key))}</button>`;
+  return b('rv-discard', 'rvDiscard', open) + b('rv-apply', 'rvApply', open, true) + `<button type="button" class="pop-btn rv-close" title="Esc">${esc(t('rvClose'))}</button>`;
 }
 
 function render() {
@@ -352,9 +399,11 @@ function render() {
   const sets = (rs?.tableSets ?? []).map((/** @type {any} */ s) => `<button type="button" class="rv-set${s.id === setId ? ' on' : ''}" data-set="${s.id}">${esc(s.name || t('tableSetUnnamed'))}</button>`).join('');
   /** @type {HTMLElement} */ (root.querySelector('.rv-sets')).innerHTML = sets;
   /** @type {HTMLElement} */ (root.querySelector('.rv-stops')).innerHTML = stopList();
-  /** @type {HTMLElement} */ (root.querySelector('.rv-info')).innerHTML = info() + (error ? `<div class="rv-error">${esc(error)}</div>` : '')
+  const wait = busy ? `<div class="rv-busy"><span class="rv-spin" aria-hidden="true"></span>${esc(progress || t('rvWorking'))}</div>` : '';
+  /** @type {HTMLElement} */ (root.querySelector('.rv-info')).innerHTML = wait + info() + (error ? `<div class="rv-error">${esc(error)}</div>` : '')
     + `<div class="rv-hint">${esc(t('rvHint'))}</div>`;
   /** @type {HTMLElement} */ (root.querySelector('.rv-actions')).innerHTML = actions();
+  /** @type {HTMLElement} */ (root.querySelector('.rv-foot')).innerHTML = footer();
   /** @type {HTMLElement} */ (root.querySelector('.rv-strip')).innerHTML = states().map(thumb).join('');
   drawMap();
 }
@@ -363,16 +412,26 @@ function render() {
 
 function build() {
   const root = /** @type {HTMLElement} */ (document.getElementById('route-view'));
-  root.innerHTML = `<div class="rv-top"><span class="rv-title">${esc(t('rtTitle'))}</span><div class="rv-sets"></div><button type="button" class="rv-x" title="Esc">✕</button></div>`
+  // The legend (user 2026-10-31): the map's colours and dashes, built once so it stays open or closed as the user left it
+  const lg = /** @type {[string, string][]} */ ([['routed', 'rvLgRouted'], ['via', 'rvLgVia'], ['flagged', 'rvLgCheck'], ['failed', 'rvLgNone'],
+    ['old', 'rvLgOld'], ['selected', 'rvLgSelected'], ['faint', 'rvLgOther']]);
+  const legend = `<details class="rv-legend"><summary>${esc(t('rvLegend'))}</summary><ul>${lg.map(([c, k]) => `<li><i class="rv-lg rv-lg-${c}"></i>${esc(t(k))}</li>`).join('')}</ul></details>`;
+  root.innerHTML = `<div class="rv-top"><span class="rv-title">${esc(t('rtTitle'))}</span><div class="rv-sets"></div></div>`
     + '<div class="rv-body"><div class="rv-stops"></div><div class="rv-mapwrap"><div id="rv-map"></div>'
-    + `<div class="rv-attr">${esc(t('rtAttribution'))}</div></div><div class="rv-side"><div class="rv-info"></div><div class="rv-actions"></div></div></div>`
+    + `<div class="rv-attr">${esc(t('rtAttribution'))}</div></div><div class="rv-side"><div class="rv-info"></div>${legend}<div class="rv-actions"></div><div class="rv-foot"></div></div></div>`
     + '<div class="rv-strip"></div>';
   root.addEventListener('click', (e) => {
     const el = /** @type {HTMLElement} */ (e.target);
     const id = selPattern;
-    if (el.closest('.rv-x')) setTool('');
+    if (el.closest('.rv-close')) setTool('');
     // While it routes or saves, the selection stays (final review 3: no switch from under a write, no hidden proposal)
-    else if (busy && el.closest('.rv-set, .rv-thumb, .rv-gap, .rv-check li')) return;
+    else if (busy && el.closest('.rv-set, .rv-thumb, .rv-gap, .rv-check li, .rv-foot, .rv-unused')) return;
+    else if (el.closest('.rv-discard')) { for (const p of session?.pending() ?? []) session?.discard(p); render(); }
+    else if (el.closest('.rv-apply')) {
+      enqueue(async (s) => { for (const p of s.pending()) await s.accept(p); await write(s, s.file()); }).then(() => { if (!error) setTool(''); });
+    } else if (el.closest('.rv-unused')) {
+      if (confirm(t('rvRemoveUnusedQ', unused()))) enqueue(async (s) => write(s, s.removeUnused()));
+    }
     else if (el.closest('.rv-set')) selectSet(Number(/** @type {HTMLElement} */ (el.closest('.rv-set')).dataset.set));
     else if (el.closest('.rv-thumb')) selectPattern(/** @type {HTMLElement} */ (el.closest('.rv-thumb')).dataset.id ?? null);
     else if (el.closest('.rv-gap[data-key]')) selectLeg(/** @type {HTMLElement} */ (el.closest('.rv-gap')).dataset.key ?? null);
@@ -381,7 +440,6 @@ function build() {
       if (el.closest('.rv-all')) enqueue(async (s) => write(s, await s.updateAll()));
     } else if (el.closest('.rv-route')) { const leg = selLeg ?? undefined; enqueue((s) => s.route(id, leg)); }
     else if (el.closest('.rv-accept')) enqueue(async (s) => write(s, await s.accept(id)));
-    else if (el.closest('.rv-discard')) { session?.discard(id); render(); }
     else if (el.closest('.rv-keep')) enqueue(async (s) => write(s, s.keep(id)));
     else if (el.closest('.rv-all')) enqueue(async (s) => write(s, await s.updateAll()));
   });
@@ -398,7 +456,7 @@ async function start(id) {
   setId = id;
   selPattern = null; selLeg = null; selWp = null; error = ''; busy = false; fitFor = '';
   queue = Promise.resolve();
-  session = makeSession({ code, rs, setId });
+  session = makeSession({ code, rs, setId, onProgress: (done, total) => { progress = t('rvFetching', done, total); render(); } });
   const s = session;
   render();
   enqueue(() => s.open());

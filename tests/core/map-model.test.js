@@ -48,7 +48,7 @@ describe('the selected trip along its saved routes (routing editor, 2026-10-31)'
   it('a leg with a saved route follows it; a leg without one is a straight line', () => {
     const r = tripRouteLegs(grid, grid.cols[0], { [K1]: link }, info);
     expect(r.links).toEqual([{ key: K1, coords: route, state: 'routed' }]);
-    expect(r.straight).toEqual([[[10.1, 60], [10.2, 60]]]);
+    expect(r.straight).toEqual([{ key: 'NSR:Quay:2|NSR:Quay:3|bus', coords: [[10.1, 60], [10.2, 60]] }]);
   });
 
   it('a Quay moved since it was routed: the route is drawn stale', () => {
@@ -57,6 +57,6 @@ describe('the selected trip along its saved routes (routing editor, 2026-10-31)'
   });
 
   it('no links: every leg straight', () => {
-    expect(tripRouteLegs(grid, grid.cols[0], undefined, info)).toEqual({ links: [], straight: [[[10, 60], [10.1, 60]], [[10.1, 60], [10.2, 60]]] });
+    expect(tripRouteLegs(grid, grid.cols[0], undefined, info).straight.map((s) => s.coords)).toEqual([[[10, 60], [10.1, 60]], [[10.1, 60], [10.2, 60]]]);
   });
 });

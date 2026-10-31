@@ -156,7 +156,7 @@ export function createMapView(el, { style, dark = false }) {
         const name = document.createElement('span');
         name.textContent = s.name;
         box.append(n, name);
-        return new maplibregl.Marker({ element: box, anchor: 'left', offset: [-7, 0] }).setLngLat([s.lon, s.lat]).addTo(map);
+        return new maplibregl.Marker({ element: box, anchor: 'left', offset: [-8, 0] }).setLngLat([s.lon, s.lat]).addTo(map);
       });
     },
     /** @param {LonLat[]} line */
