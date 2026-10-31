@@ -2,6 +2,8 @@
 // sequence as the export writes it; it is traced to the pattern the user accepted through its trips' UUIDs, so a Quay
 // replaced on a row is a change inside the pattern (orange), and another set of calls is a new pattern (red). Pure.
 import { eachTrip, quayRef } from './link-pairs.js';
+import { journeyStops } from './netex/journeys.js';
+import { expandRoute } from './blocks.js';
 import { quayMoved } from './link-state.js';
 import { profileFor } from '../routing/profiles.js';
 
@@ -82,4 +84,44 @@ export function patternStates(patterns, lineLinks, { quayInfo, publishedBuilt = 
     const state = has(['none', 'unroutable']) ? 'red' : has(['moved', 'map', 'changed']) ? 'orange' : 'green';
     return { pattern, state, legs, saved };
   });
+}
+
+/** A call a "doesn't run" date can take out (tripVariants then makes the pattern without it). @param {any} c */
+const skippable = (c) => [c.arrCell, c.depCell].some((cell) => cell?.dates?.some((/** @type {any} */ r) => !r.on));
+
+/**
+ * The file without the links no trip uses any more (spec Goal 6), run when a line is saved. Used is decided by stop IDs
+ * only — never by NSR positions, so an offline lookup drops nothing; without calendars, every pair a "doesn't run" date
+ * could make counts as used. A saved pattern stays while one of its trips exists, and so do its legs' links (the
+ * comparison needs them); snaps go with the last link of their Quay.
+ * @param {any} rs @param {LineLinks} lineLinks @returns {LineLinks | null} null: nothing to drop, or not a road line
+ */
+export function pruneLineLinks(rs, lineLinks) {
+  const profile = profileFor(rs?.mode ?? '', rs?.submode ?? '');
+  if (profile !== 'bus') return null;
+  /** @type {Set<string>} */
+  const used = new Set();
+  /** @type {Set<string>} */
+  const uids = new Set();
+  const ex = expandRoute(rs);
+  for (const grid of Object.values(ex?.grids ?? {})) {
+    for (const col of /** @type {any} */ (grid).cols) {
+      if (col.uid) uids.add(col.uid);
+      const calls = journeyStops(/** @type {any} */ (grid), col);
+      for (let i = 0; i < calls.length; i++) {
+        for (let j = i + 1; j < calls.length; j++) {
+          if (calls[i].stopId !== calls[j].stopId) used.add(`${calls[i].stopId}|${calls[j].stopId}|${profile}`);
+          if (!skippable(calls[j])) break;
+        }
+      }
+    }
+  }
+  const patterns = Object.fromEntries(Object.entries(lineLinks.patterns ?? {}).filter(([, sp]) => sp.trips.some((u) => uids.has(u))));
+  for (const sp of Object.values(patterns)) for (const key of sp.keys) if (key) used.add(key);
+  const links = Object.fromEntries(Object.entries(lineLinks.links).filter(([key]) => used.has(key)));
+  const quays = new Set(Object.keys(links).flatMap((key) => key.split('|').slice(0, 2)));
+  const snaps = Object.fromEntries(Object.entries(lineLinks.snaps).filter(([id]) => quays.has(id)));
+  const same = (/** @type {object} */ a, /** @type {object | undefined} */ b) => Object.keys(a).length === Object.keys(b ?? {}).length;
+  if (same(links, lineLinks.links) && same(snaps, lineLinks.snaps) && same(patterns, lineLinks.patterns)) return null;
+  return { ...lineLinks, links, snaps, patterns };
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tablePatterns, patternStates } from '../../src/core/route-patterns.js';
+import { tablePatterns, patternStates, pruneLineLinks } from '../../src/core/route-patterns.js';
 
 const stop = (/** @type {string} */ name, /** @type {string | null} */ stopId, extra = {}) => ({ name, stopId, bold: false, sep: false, isDwellArr: false, price: null, ...extra });
 const cell = (/** @type {string} */ time, extra = {}) => ({ time, dayOffset: 0, suffix: '', interchange: null, ...extra });
@@ -132,5 +132,44 @@ describe('the state of each pattern (spec "The user is in control")', () => {
     const s = states(now, accepted(p));
     expect(s[0].state).toBe('red');
     expect(s[0].saved).toBeNull();
+  });
+});
+
+describe('unused links are dropped when a line is saved (spec Goal 6)', () => {
+  const rs = line([t('u1', ['0700', '0710', '0720'])]);
+  const p = pats(rs);
+  const file = () => ({ ...accepted(p), snaps: { 'NSR:Quay:1': {}, 'NSR:Quay:2': {}, 'NSR:Quay:3': {} } });
+  const B4 = [stop('A', 'NSR:Quay:1'), stop('B', 'NSR:Quay:4'), stop('C', 'NSR:Quay:3')];
+
+  it('nothing unused: null (no write)', () => {
+    expect(pruneLineLinks(rs, file())).toBeNull();
+  });
+
+  it('a replaced stop keeps the old pair while the saved pattern’s trips exist (Review Focus 3)', () => {
+    expect(pruneLineLinks(line(rs.grids['0:0'].cols, B4), file())).toBeNull();
+  });
+
+  it('once no trip of the saved pattern is left, the pattern, its unused links and their snaps go', () => {
+    const now = line([t('u9', ['0700', '0710', '0720'])], B4);
+    const f = { ...file(), links: { ...file().links, [k('4', '3')]: link(k('4', '3')) } };
+    const out = /** @type {any} */ (pruneLineLinks(now, f));
+    expect(Object.keys(out.links)).toEqual([k('4', '3')]);
+    expect(out.patterns).toEqual({});
+    expect(Object.keys(out.snaps)).toEqual(['NSR:Quay:3']);
+  });
+
+  it('decided by stop IDs only: no positions (NSR offline) drops nothing that is still called', () => {
+    const f = { ...file(), patterns: {} };
+    expect(pruneLineLinks(rs, f)).toBeNull();
+  });
+
+  it('a pair only a "doesn’t run" date makes is still used', () => {
+    const off = cell('0710', { dates: [{ from: '20260105', to: '20260105', on: false }] });
+    const f = { ...file(), patterns: {}, links: { ...file().links, [k('1', '3')]: link(k('1', '3')) } };
+    expect(pruneLineLinks(line([t('u1', ['0700', off, '0720'])]), f)).toBeNull();
+  });
+
+  it('a line not routed on roads keeps its file', () => {
+    expect(pruneLineLinks(line([t('u9', ['0700', '0710'])], STOPS, 'rail'), file())).toBeNull();
   });
 });

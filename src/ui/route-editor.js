@@ -22,6 +22,8 @@ import { writeOrgs } from '../project/orgs-store.js';
 import { pruneProjectCopy } from './org-register.js';
 import { compareRouteCodes } from '../core/route-codes.js';
 import { writeRoute } from '../project/routes.js';
+import { writeLineLinks } from '../project/links-store.js';
+import { pruneLineLinks } from '../core/route-patterns.js';
 import { openBookingForm } from './booking-form.js';
 import { showProjectCheck } from './project-ui.js';
 import { renderTimeline } from './timeline.js';
@@ -133,9 +135,11 @@ export async function saveRoute(trigger = null) {
     showMessage(t('saveWouldDamage', issues.filter((i) => i.severity === 'damaged').map(issueMessage).join('\n')));
     return false;
   }
+  const rs = app.routeState;
   saving = true; // one save at a time (Ctrl+S held down, or Ctrl+S during a button save)
   const ok = await runAction(() => writeRoute(fs, code, text), trigger).finally(() => { saving = false; });
   if (!ok) return false;
+  await pruneLinks(fs, code, rs);
   app.routes = app.routes.map((r) => (r.code === code ? { code, text, status, issues } : r));
   // A line saved without a name gets its name field outlined until it has one (user test 2026-10-16)
   if (app.routeState?.routeName) savedNameless.delete(code); else savedNameless.add(code);
@@ -147,6 +151,21 @@ export async function saveRoute(trigger = null) {
   }
   refreshAll();
   return true;
+}
+
+/**
+ * After a line is saved: drop the links no trip uses any more (routing editor spec, Goal 6, 2026-10-31). A failure
+ * leaves the old file, which only keeps a few unused links. @param {import('../project/fs.js').ProjectFs} fs
+ * @param {string} code @param {any} rs the line as saved
+ */
+async function pruneLinks(fs, code, rs) {
+  const cur = app.lineLinks.get(code);
+  const next = cur && pruneLineLinks(rs, cur);
+  if (!next) return;
+  try {
+    await writeLineLinks(fs, code, next);
+    app.lineLinks = new Map(app.lineLinks).set(code, next);
+  } catch { /* kept as it was */ }
 }
 
 /** The open route as ERN text, including the grid on screen. */
@@ -193,6 +212,7 @@ export async function saveRoutes(codes, trigger = null) {
       await writeRoute(fs, code, text);
       app.routes = app.routes.map((r) => (r.code === code ? { code, text, status, issues } : r));
       app.drafts.delete(code);
+      await pruneLinks(fs, code, rs);
     } catch {
       failed.push(code);
     }
