@@ -38,12 +38,13 @@ let status = /** @type {'loading' | 'ready' | 'error'} */ ('loading');
 let progress = '';
 let error = '';
 let applied = false;
+let applying = false;
 /** @type {string | null} */
 let selected = null;
 /** @type {number | null} the selected waypoint of the selected leg */
 let selectedWp = null;
 let fitted = false;
-/** Changes run one after the other. */
+/** Changes run one after the other; each session has its own queue (a closed one may never settle: final review I1). */
 let queue = Promise.resolve();
 /** @type {HTMLElement | null} */
 let box = null;
@@ -61,6 +62,7 @@ const failed = (/** @type {any} */ p) => p.state === 'no-route' || p.state === '
 
 /** @param {any} p */
 function reason(p) {
+  if (p.error) return message({ message: p.error });
   if (p.state === 'no-route') return t('rtNoRoute');
   if (p.state === 'no-road') return t('rtNoRoad');
   if (p.state === 'pending') return t('rtPending');
@@ -88,7 +90,8 @@ function along(line, p) {
 
 /** Run a change after the ones before it, then draw. @param {() => Promise<void>} fn */
 function enqueue(fn) {
-  queue = queue.then(fn).catch((e) => { error = message(e); }).then(() => { render(); redraw(); });
+  const s = session;
+  queue = queue.then(fn).catch((e) => { if (session === s) error = message(e); }).then(() => { if (session === s) { render(); redraw(); } });
   return queue;
 }
 
@@ -169,12 +172,19 @@ function render() {
 }
 
 async function apply() {
-  const s = session, fs = app.fs;
-  if (!s || !fs || status !== 'ready') return;
-  await queue;
-  const data = s.result();
-  if (!(await runAction(() => writeLineLinks(fs, code, data)))) return;
-  app.lineLinks = new Map(app.lineLinks).set(code, data);
+  const s = session, fs = app.fs, c = code;
+  if (!s || !fs || status !== 'ready' || applying) return;
+  applying = true;
+  try {
+    await queue;
+    // Left without saving while a re-route finished, or another session opened since: write nothing (final review I2)
+    if (session !== s) return;
+    const data = s.result();
+    if (!(await runAction(() => writeLineLinks(fs, c, data)))) return;
+    app.lineLinks = new Map(app.lineLinks).set(c, data);
+  } finally {
+    applying = false;
+  }
   applied = true;
   setTool('');
   refreshAll();
@@ -184,7 +194,8 @@ function open() {
   const rs = app.activeRoute ? lineState(app.activeRoute) : null;
   if (!rs || !app.activeRoute) { setTool(''); return; }
   code = app.activeRoute;
-  status = 'loading'; progress = ''; error = ''; applied = false; selected = null; selectedWp = null; fitted = false;
+  status = 'loading'; progress = ''; error = ''; applied = false; applying = false; selected = null; selectedWp = null; fitted = false;
+  queue = Promise.resolve();
   session = makeSession({ code, rs });
   openPanel('right');
   box = document.createElement('div');

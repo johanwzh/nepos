@@ -42,4 +42,11 @@ describe('routing client', () => {
     const client = createRoutingClient(() => /** @type {any} */ (w));
     await expect(client.route([])).rejects.toThrow('boom');
   });
+
+  it('final I1: after close, a call rejects at once instead of waiting on a dead worker', async () => {
+    const client = createRoutingClient(() => /** @type {any} */ (fakeWorker()));
+    client.close();
+    await expect(client.route([])).rejects.toThrow('routing closed');
+    await expect(client.addTiles([])).rejects.toThrow('routing closed');
+  });
 });

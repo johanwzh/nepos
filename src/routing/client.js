@@ -5,7 +5,7 @@
 /** @param {() => Worker} [makeWorker] */
 export function createRoutingClient(makeWorker = () => new Worker(new URL('./worker.js', import.meta.url), { type: 'module' })) {
   const worker = makeWorker(), pending = new Map(), loaded = new Set();
-  let next = 1;
+  let next = 1, closed = false;
   worker.onmessage = (ev) => {
     const { id, result, error } = ev.data, p = pending.get(id);
     if (!p) return;
@@ -13,6 +13,8 @@ export function createRoutingClient(makeWorker = () => new Worker(new URL('./wor
     error ? p.reject(new Error(error)) : p.resolve(result);
   };
   const call = (msg, transfer = []) => new Promise((resolve, reject) => {
+    // a dead worker never answers: reject at once (final review I1, 2026-10-31)
+    if (closed) { reject(new Error('routing closed')); return; }
     const id = next++;
     pending.set(id, { resolve, reject });
     worker.postMessage({ id, ...msg }, transfer);
@@ -29,6 +31,7 @@ export function createRoutingClient(makeWorker = () => new Worker(new URL('./wor
     /** @param {ChainPoint[]} chain @returns {Promise<import('./router-core.js').RouteResult>} */
     route: (chain) => /** @type {Promise<any>} */ (call({ op: 'route', chain })),
     close() {
+      closed = true;
       worker.terminate();
       for (const p of pending.values()) p.reject(new Error('routing closed'));
       pending.clear();

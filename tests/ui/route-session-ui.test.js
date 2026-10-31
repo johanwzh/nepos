@@ -75,6 +75,8 @@ function fakeSession() {
 
 /** @type {ReturnType<typeof fakeSession>} */
 let session;
+/** Sessions handed out before `session` (a test that opens twice). @type {any[]} */
+let next = [];
 /** @type {any} */
 let fs;
 let wired = false;
@@ -91,7 +93,8 @@ beforeEach(async () => {
   initRouteEditor();
   initMapPanel();
   session = fakeSession();
-  initRouteSessionUi({ createSession: () => /** @type {any} */ (session) });
+  next = [];
+  initRouteSessionUi({ createSession: () => /** @type {any} */ (next.shift() ?? session) });
   setTool('');
   drawn.links = []; drawn.markers = []; // the map view (and its click handler) lives on across tests
   window.confirm = vi.fn(() => true);
@@ -187,5 +190,46 @@ describe('the routing power tool', () => {
     press('Delete');
     await settle();
     expect(session.setWaypoints).toHaveBeenLastCalledWith(K1, []);
+  });
+
+  it('final I1: leaving while it still routes, then opening again, starts the new session', async () => {
+    const stuck = fakeSession();
+    stuck.start = vi.fn(() => new Promise(() => {}));
+    next = [stuck];
+    toolBtn().click();
+    await settle();
+    /** @type {HTMLButtonElement} */ (box()?.querySelector('.rt-x')).click();
+    await settle();
+    expect(activeTool()).toBe('');
+    toolBtn().click();
+    await settle();
+    expect(session.start).toHaveBeenCalled();
+    expect(box()?.textContent).toContain('1 strekning rutet');
+  });
+
+  it('final I2: Apply waiting on a re-route, then leaving without saving, writes nothing', async () => {
+    toolBtn().click();
+    await settle();
+    /** @type {(v?: any) => void} */
+    let finish = () => {};
+    session.setWaypoints = vi.fn(() => new Promise((r) => { finish = r; }));
+    drawn.linkClick.at(-1)?.(K1, [10.005, 59.001]);
+    await settle();
+    drawn.linkClick.at(-1)?.(K1, [10.006, 59.001]);
+    await settle();
+    expect(session.setWaypoints).toHaveBeenCalled(); // the re-route is in flight
+    /** @type {HTMLButtonElement} */ (box()?.querySelector('.rt-apply')).click();
+    /** @type {HTMLButtonElement} */ (box()?.querySelector('.rt-x')).click();
+    finish();
+    for (let i = 0; i < 5; i++) await settle();
+    expect(await readText(fs, 'data/links/50.json')).toBeNull();
+    expect(app.lineLinks.has('50')).toBe(false);
+  });
+
+  it('final I3: a leg whose map data could not load says so', async () => {
+    Object.assign(session.pairs()[1], { error: 'routing-offline' });
+    toolBtn().click();
+    await settle();
+    expect(box()?.querySelector('.rt-check')?.textContent).toContain('Ingen tilkobling');
   });
 });

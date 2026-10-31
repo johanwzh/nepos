@@ -115,4 +115,9 @@ describe('the export probe on routed links (2.6)', () => {
     const { errors } = probeExport({ files: edit(/-Line-/, /<ServiceLinkInJourneyPattern [\s\S]*?<\/ServiceLinkInJourneyPattern>/, ''), project: withLinks });
     expect(errors.some((e) => e.includes('links do not follow its stops'))).toBe(true);
   });
+
+  it('final I6: a far stop (up to 300 m from the road, spec §5) is no error', () => {
+    const { errors } = probeExport({ files: edit(/-shared\.xml$/, /count="3">59\.910000 10\.750000/, 'count="3">59.911500 10.750000'), project: withLinks });
+    expect(errors.filter((e) => / m from its stop/.test(e))).toEqual([]);
+  });
 });

@@ -243,20 +243,15 @@ export function probeExport({ files, project }) {
   if (project?.links && x.links.length) {
     /** @type {Map<string, any>} ServiceLink id → saved link */
     const saved = new Map();
-    /** @type {Map<string, [number, number]>} Quay → where it was when routed */
-    const quayPos = new Map();
-    for (const [code, ll] of project.links) for (const [key, s] of Object.entries(ll.links ?? {})) {
-      saved.set(`${cs}:ServiceLink:${uuid5(`${code}|${key}`)}`, s);
-      const [a, b] = key.split('|');
-      quayPos.set(a, s.from); quayPos.set(b, s.to);
-    }
-    const END_M = 75;
+    for (const [code, ll] of project.links) for (const [key, s] of Object.entries(ll.links ?? {})) saved.set(`${cs}:ServiceLink:${uuid5(`${code}|${key}`)}`, s);
+    // A far stop is routed up to 300 m from the road and exported (spec §5): the end check allows that (final review I6)
+    const END_M = 300;
     for (const l of x.links) {
       const s = saved.get(l.id);
       if (!s) { warnings.push(`${l.id}: not in the project's links files`); continue; }
       if (l.distance !== Math.round(s.distanceM)) errors.push(`${l.id}: Distance ${l.distance}, saved ${Math.round(s.distanceM)}`);
-      for (const [side, sp, pt] of /** @type {const} */ ([['starts', l.from, l.pts[0]], ['ends', l.to, l.pts[l.pts.length - 1]]])) {
-        const pos = quayPos.get(x.quayOf.get(sp ?? '') ?? '');
+      // measured from where the link's own Quays were when it was routed
+      for (const [side, pos, pt] of /** @type {const} */ ([['starts', s.from, l.pts[0]], ['ends', s.to, l.pts[l.pts.length - 1]]])) {
         if (!pos || !pt) continue;
         const m = haversineM(pt, pos);
         if (m > END_M) errors.push(`${l.id}: ${side} ${Math.round(m)} m from its stop`);

@@ -133,4 +133,44 @@ describe('routing session', () => {
     expect(/** @type {any[]} */ (tiles.open.mock.calls[0])[0]).toHaveLength(4);
     expect(s.newerMap()).toBe(true);
   });
+
+  it('final I3: a map tile that cannot be loaded fails only its legs, not the session', async () => {
+    const tiles = fixtureTiles();
+    tiles.loadTile = async () => { throw new Error('routing-offline'); };
+    const s = createRoutingSession({ code: 'L1', chains: [SARPSBORG], lineLinks: { version: 1, line: 'L1', links: {}, snaps: {} }, quayInfo: new Map(), router: createRouter(), tiles, now: NOW });
+    await s.start();
+    expect(s.pairs().map((p) => [p.state, p.error])).toEqual([['no-route', 'routing-offline'], ['no-route', 'routing-offline']]);
+  });
+
+  it('final I3: a waypoint whose routing throws leaves the leg as it was', async () => {
+    const router = createRouter();
+    const s = session([SARPSBORG], undefined, router);
+    await s.start();
+    const before = byKey(s).get(key('4455', '5181')).link;
+    router.route = () => { throw new Error('routing-bad-tile'); };
+    await expect(s.setWaypoints(key('4455', '5181'), [WAYPOINT])).rejects.toThrow('routing-bad-tile');
+    const p = byKey(s).get(key('4455', '5181'));
+    expect([p.state, p.via, p.link]).toEqual(['routed', [], before]);
+  });
+
+  it('final I4: a Quay NSR moved since it was routed snaps again', async () => {
+    const first = session([SARPSBORG]);
+    await first.start();
+    const saved = first.result();
+    const moved = { ...Q['5181'], lat: Q['5181'].lat + 0.0015 }; // about 170 m north
+    const again = session([{ stops: [Q['4455'], moved, Q['5221']], keys: SARPSBORG.keys }], saved);
+    await again.start();
+    expect(again.result().snaps['NSR:Quay:5181']).not.toEqual(saved.snaps['NSR:Quay:5181']);
+    expect(again.result().snaps['NSR:Quay:4455']).toEqual(saved.snaps['NSR:Quay:4455']);
+  });
+
+  it('final I5: a loop line gets one snap for the Quay it starts and ends at, and opens again unchanged', async () => {
+    const loop = chain(['4446', '4455', '4446']);
+    const first = session([loop]);
+    await first.start();
+    const saved = first.result();
+    const again = session([loop], saved);
+    await again.start();
+    expect(again.dirty()).toBe(false);
+  });
 });
