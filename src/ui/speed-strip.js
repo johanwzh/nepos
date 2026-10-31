@@ -4,7 +4,8 @@
 // screen. Layovers are flat. The selected row's stop is ringed as on the map; a click on a dot or a leg selects that
 // row. Fixed height: the table never jumps. 2.5 (user 2026-10-29): a line at the trip's own average instead of the
 // limit (the colour warns); a faint band round each arc for the speeds the minutes allow (seconds are never typed);
-// hovering a leg shows just its km/h, with the details in the status bar — no tooltips.
+// hovering a leg shows just its km/h, with the details in the status bar — no tooltips. 2.6 (user 2026-10-31): on a
+// bus line a routed leg is measured along the road (a leg whose stop has moved since stays a straight line).
 import { app } from './state.js';
 import { onRefresh, currentPage } from './shell.js';
 import { t } from '../i18n/strings.js';
@@ -12,6 +13,8 @@ import { grid, selectedColumn, selectedRowIndex, selectRow, onGridRender } from 
 import { quayInfo, onQuaysLoaded } from './quays.js';
 import { speedProfile } from '../core/speed-profile.js';
 import { ERN_MODES } from '../core/ern/modes.js';
+import { isExportable } from '../core/link-state.js';
+import { isRoadLine } from '../routing/profiles.js';
 
 const H = 64;          // the strip's height
 const BASE = H - 12;   // the line the dots sit on
@@ -28,13 +31,23 @@ function lineMode() {
   return rs?.mode || /** @type {any} */ (ERN_MODES)[rs?.transportMode ?? 0]?.mode || '';
 }
 
+/** The open bus line's routed km between two stops, or null. @type {() => ((a: string, b: string) => number | null) | undefined} */
+function roadKm() {
+  const links = app.activeRoute && isRoadLine(app.routeState) ? app.lineLinks.get(app.activeRoute)?.links : undefined;
+  if (!links) return undefined;
+  return (a, b) => {
+    const key = `${a}|${b}|bus`, l = links[key];
+    return l && isExportable(key, l, /** @type {any} */ (quayInfo)) ? l.distanceM / 1000 : null;
+  };
+}
+
 function render() {
   const box = document.getElementById('speed-strip');
   if (!box) return;
   box.hidden = currentPage() !== 'edit' || !grid.active;
   if (box.hidden) return;
   const col = grid.cols[selectedColumn()];
-  const p = col ? speedProfile(grid, col, quayInfo, lineMode(), app.meta?.speedLimits) : null;
+  const p = col ? speedProfile(grid, col, quayInfo, lineMode(), app.meta?.speedLimits, roadKm()) : null;
   if (!p || p.points.length < 2) { box.innerHTML = `<div class="sp-none">${esc(t(p ? 'spdNoPositions' : 'spdNone'))}</div>`; return; }
 
   const W = Math.max(200, box.clientWidth || 1000);
@@ -108,7 +121,7 @@ function showLeg(li) {
   const hint = document.getElementById('sb-hint');
   if (hint) hint.textContent = leg.kind === 'layover' ? `${leg.fromName} → ${leg.toName} · ${t('spdLayover', leg.minutes)}`
     : leg.kmhMin == null || leg.kmhMax == null ? `${leg.fromName} → ${leg.toName} · ${t('spdNegative')}`
-    : t('spdHint', leg.fromName, leg.toName, fmt(leg.km), leg.minutes, fmt(leg.kmhMin, 0), fmt(leg.kmhMax, 0));
+    : t('spdHint', leg.fromName, leg.toName, fmt(leg.km), leg.minutes, fmt(leg.kmhMin, 0), fmt(leg.kmhMax, 0), leg.road);
 }
 
 function clearLeg() {

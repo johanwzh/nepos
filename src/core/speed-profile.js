@@ -8,6 +8,9 @@
 // - Seconds are never typed (2.5, user 2026-10-29): a trip's first departure and a departure after a wait or a
 //   layover are taken as :00, every other time as somewhere in its minute (:00–:59). Each leg gets the slowest and
 //   fastest speed those windows allow; the trip gets its own average (km over running minutes, layovers left out).
+// - Routed legs (2.6, user 2026-10-31): a leg with a routed link is measured along the road, the most realistic speed
+//   there is; the rest stay straight lines. The colour (kind) stays on the straight line: that is what the speed
+//   limits in the project settings, and the export check, are set against.
 import { journeyStops } from './netex/journeys.js';
 
 /** Warning levels, straight-line km/h, per NeTEx mode. */
@@ -34,7 +37,7 @@ const SAME_PLACE_KM = 0.05;
 /**
  * @typedef {{ ri: number, name: string, bold: boolean, x: number, lat: number, lon: number }} ProfilePoint
  * @typedef {{ from: number, to: number, fromName: string, toName: string, minutes: number, km: number,
- *             kmh: number | null, kmhMin: number | null, kmhMax: number | null,
+ *             kmh: number | null, kmhMin: number | null, kmhMax: number | null, road: boolean,
  *             kind: 'ok' | 'warn' | 'over' | 'zero' | 'negative' | 'layover' }} ProfileLeg
  */
 
@@ -55,9 +58,10 @@ function km(a, b) {
  * @param {Map<string, { lat: number | null, lon: number | null } | null>} quayInfo
  * @param {string} mode the line's NeTEx mode
  * @param {Record<string, number> | null} [limits] the project's own levels
+ * @param {(fromId: string, toId: string) => number | null} [roadKm] a leg's routed km, or null when it has no route
  * @returns {{ points: ProfilePoint[], legs: ProfileLeg[], limit: number, avg: number | null }}
  */
-export function speedProfile(grid, col, quayInfo, mode, limits) {
+export function speedProfile(grid, col, quayInfo, mode, limits, roadKm) {
   const limit = speedLimit(mode, limits);
   const calls = journeyStops(grid, col).flatMap((c) => {
     const pos = quayInfo.get(c.stopId);
@@ -71,17 +75,20 @@ export function speedProfile(grid, col, quayInfo, mode, limits) {
     const a = calls[i - 1], b = calls[i];
     let minutes = b.arr - a.dep;
     if (minutes < -720) minutes += 1440; // the clock wrapped past midnight without a day offset
-    const dist = km(a, b);
-    const layover = a.stopId === b.stopId || dist < SAME_PLACE_KM;
+    const line = km(a, b);
+    const layover = a.stopId === b.stopId || line < SAME_PLACE_KM;
+    const routed = layover ? null : roadKm?.(String(a.stopId), String(b.stopId)) ?? null;
+    const dist = routed ?? line;
     const kmh = !layover && minutes > 0 ? dist / (minutes / 60) : null;
+    const lineKmh = !layover && minutes > 0 ? line / (minutes / 60) : 0;
     const kind = layover ? 'layover' : minutes < 0 ? 'negative' : minutes === 0 ? 'zero'
-      : /** @type {number} */ (kmh) > limit ? 'over' : /** @type {number} */ (kmh) > limit * NEAR ? 'warn' : 'ok';
+      : lineKmh > limit ? 'over' : lineKmh > limit * NEAR ? 'warn' : 'ok';
     // The departure is pinned at :00 at the trip's start and after a wait or a layover; else it is a window
     const pinned = i === 1 || (a.arrCell != null && a.arr !== a.dep) || legs[i - 2]?.kind === 'layover';
     const lo = Math.max(1, minutes * 60 - (pinned ? 0 : 59)), hi = minutes * 60 + 59;
     const ranged = !layover && minutes >= 0;
     legs.push({ from: a.ri, to: b.ri, fromName: a.name, toName: b.name, minutes, km: dist, kmh,
-      kmhMin: ranged ? dist / (hi / 3600) : null, kmhMax: ranged ? dist / (lo / 3600) : null, kind });
+      kmhMin: ranged ? dist / (hi / 3600) : null, kmhMax: ranged ? dist / (lo / 3600) : null, kind, road: routed != null });
     at.push(at[i - 1] + Math.max(0, minutes));
   }
   const total = at[at.length - 1];

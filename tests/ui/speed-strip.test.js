@@ -15,6 +15,7 @@ import { initSpeedStrip } from '../../src/ui/speed-strip.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
+import { app } from '../../src/ui/state.js';
 
 // A (0700) → B (0702, 1.1 km) → C (0712, 1.1 km) → D (0713, 54 km: far too fast)
 const ROUTE = [
@@ -115,9 +116,32 @@ describe('the speed strip, 2.5: the trip’s average, possible-speed bands, the 
     const leg = /** @type {Element} */ (strip().querySelectorAll('.sp-leg')[0]);
     leg.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
     expect(strip().querySelector('.sp-num')?.textContent).toBe('33');
-    expect(document.getElementById('sb-hint')?.textContent).toBe('A → B · 1,1 km · 2 min · 22–33 km/t');
+    expect(document.getElementById('sb-hint')?.textContent).toBe('A → B · 1,1 km luftlinje · 2 min · 22–33 km/t');
     strip().dispatchEvent(new MouseEvent('mouseleave'));
     expect(strip().querySelector('.sp-num')).toBeNull();
     expect(document.getElementById('sb-hint')?.textContent).toBe('');
+  });
+});
+
+describe('the speed strip, 2.6: routed legs (user 2026-10-31)', () => {
+  /** A routed A → B of 3 km; quayMoved: B has moved since it was routed. @param {boolean} [quayMoved] */
+  const route = (quayMoved = false) => {
+    app.lineLinks.set('61', { version: 1, line: '61', snaps: {}, links: { 'NSR:Quay:1|NSR:Quay:2|bus': {
+      polyline: '', distanceM: 3000, status: 'OK', from: [10, 60], to: quayMoved ? [10.1, 60.01] : [10, 60.01] } } });
+    refreshAll();
+  };
+  const hover = () => {
+    strip().querySelectorAll('.sp-leg')[0].dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    return [strip().querySelector('.sp-num')?.textContent, document.getElementById('sb-hint')?.textContent];
+  };
+
+  it('a routed leg on a bus line is measured along the road', () => {
+    route();
+    expect(hover()).toEqual(['90', 'A → B · 3 km langs veien · 2 min · 60–90 km/t']);
+  });
+
+  it('a leg whose stop has moved since it was routed stays a straight line', () => {
+    route(true);
+    expect(hover()).toEqual(['33', 'A → B · 1,1 km luftlinje · 2 min · 22–33 km/t']);
   });
 });

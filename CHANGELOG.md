@@ -18,6 +18,8 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   comes from Nepos's own road tiles (nepos-tiles, rebuilt monthly) and is kept in the project's `cache/`, so routing
   works offline where it has run before. A link no trip uses any more is not exported but kept until you remove it
   (**Remove unused**), so fixing a typo in the timetable brings the same route back.
+- **Speed strip:** on a bus line a routed leg is measured along the road (the status bar says "langs veien" or
+  "luftlinje"); the colours still follow the straight line, as the speed limits and the export check do.
 - **Map:** on a bus line the selected trip's legs have Ruting's colours: along the routed road, orange where a stop has
   moved, red dashed where there is no route, and a stop on a leg without a route is a red dot. While you pick a stop,
   a note says how close to zoom before stops (and then their platforms) show.

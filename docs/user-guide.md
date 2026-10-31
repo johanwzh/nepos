@@ -301,9 +301,10 @@ en før eksport.
 
 ### Fartsprofilen
 
-Stripen under rutetabellen viser farten mellom stoppene for turen du står i, i luftlinje. Rødt betyr
-at selv luftlinjen er for rask for transportmåten — da er en tid eller et stopp feil. Klikk en bue for å gå til
-raden.
+Stripen under rutetabellen viser farten mellom stoppene for turen du står i. På en busslinje måles en rutet
+strekning langs veien, resten i luftlinje (statuslinjen sier hvilken når du holder over en bue). Fargen regnes alltid
+i luftlinje, som fartsgrensene i prosjektinnstillingene: rødt betyr at selv luftlinjen er for rask for
+transportmåten — da er en tid eller et stopp feil. Klikk en bue for å gå til raden.
 
 - Den vannrette streken er **turens egen snittfart** (`⌀ 42 km/t`): buer over den går raskere enn turen ellers,
   buer under går saktere.

@@ -8,6 +8,16 @@ const at = (/** @type {number} */ lat, /** @type {number} */ lon) => ({ quayId: 
 const info = new Map([['A', at(60, 10)], ['B', at(60.01, 10)], ['C', at(60.02, 10)], ['D', at(60.5, 10)]]);
 
 describe('speedProfile', () => {
+  it('measures a routed leg along the road, the rest in a straight line; the colour stays on the straight line (user 2026-10-31)', () => {
+    const grid = { stops: [stop('A', 'A'), stop('B', 'B'), stop('C', 'C')], cols: [{ cells: [cell('1000'), cell('1002'), cell('1010')] }] };
+    const road = (/** @type {string} */ a, /** @type {string} */ b) => (a === 'A' && b === 'B' ? 3 : null);
+    const p = speedProfile(grid, grid.cols[0], info, 'bus', null, road);
+    expect(p.legs.map((l) => [l.road, Math.round(l.km * 10) / 10, Math.round(/** @type {number} */ (l.kmh))])).toEqual([[true, 3, 90], [false, 1.1, 8]]);
+    expect(p.legs.map((l) => l.kind)).toEqual(['ok', 'ok']); // 33 km/h in a straight line: the export's rule
+    expect([p.legs[0].kmhMin, p.legs[0].kmhMax].map((v) => Math.round(/** @type {number} */ (v)))).toEqual([60, 90]); // 3 km in 120–179 s
+    expect(Math.round(/** @type {number} */ (p.avg) * 10) / 10).toBe(Math.round((3 + 1.112) / (10 / 60) * 10) / 10);
+  });
+
   it('gives each leg its straight-line speed and places the stops by their share of the running time', () => {
     const grid = { stops: [stop('A', 'A'), stop('B', 'B'), stop('C', 'C')], cols: [{ cells: [cell('1000'), cell('1002'), cell('1010')] }] };
     const p = speedProfile(grid, grid.cols[0], info, 'bus');
