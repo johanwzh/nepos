@@ -32,7 +32,7 @@ describe('the power toolbox', () => {
   it('sits at the bottom of the line navigator panel with its tools, none on', () => {
     const box = /** @type {HTMLElement} */ (document.getElementById('power-tools'));
     expect(box.closest('#panel-left')).not.toBeNull();
-    expect([...box.querySelectorAll('.pt-tool')].map((b) => /** @type {HTMLElement} */ (b).dataset.tool)).toEqual(['jog', 'intervals', 'record', 'route', 'optimize']);
+    expect([...box.querySelectorAll('.pt-tool')].map((b) => /** @type {HTMLElement} */ (b).dataset.tool)).toEqual(['jog', 'intervals', 'record', 'route', 'hub', 'optimize']);
     expect(activeTool()).toBe('');
   });
 

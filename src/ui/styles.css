@@ -1470,6 +1470,58 @@ body.pt-on.pt-record :is(#panel-right, #map-strip) { opacity: 1; pointer-events:
 .route-view { display: none; }
 body.route-on #page-edit > :not(#route-view) { display: none !important; }
 body.route-on .route-view { display: grid; flex: 1; min-width: 0; min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; }
+/* Knutepunkt (interchanges spec 2026-10-31): like Ruting, a view of its own; stops | timeline and Forslag | criteria */
+.hub-view { display: none; }
+body.hub-on #page-edit > :not(#hub-view) { display: none !important; }
+body.hub-on .hub-view { display: grid; flex: 1; min-width: 0; min-height: 0; grid-template-rows: auto minmax(0, 1fr); }
+.hv-line { opacity: .75; }
+.hv-body { display: grid; grid-template-columns: 220px minmax(0, 1fr) 290px; min-height: 0; }
+.hv-stops { overflow: auto; padding: 8px; font-size: 12px; border-right: 1px solid var(--border, #ddd); }
+.hv-list { list-style: none; margin: 0; padding: 0; }
+.hv-stop { display: flex; align-items: flex-start; gap: 6px; padding: 3px 4px; border-radius: 4px; border: 1px solid transparent; }
+.hv-stop.hv-is-on { cursor: pointer; }
+.hv-stop.on { border-color: var(--accent, #2a6fdb); background: var(--bg-raised, #fff); }
+.hv-stop small { display: block; opacity: .7; font-size: 11px; }
+.hv-stop.hv-lost small { color: #b36b00; opacity: 1; }
+.hv-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hv-mid { overflow: auto; padding: 8px 12px; font-size: 12px; }
+.hv-side { overflow: auto; border-left: 1px solid var(--border, #ddd); }
+.hv-timeline { margin: 4px 0 8px; user-select: none; }
+.hv-timeline svg { display: block; cursor: grab; }
+.hv-tick { stroke: var(--border, #ddd); }
+.hv-axis, .hv-rowlabel, .hv-deptime { font-size: 10px; fill: currentColor; opacity: .75; }
+.hv-win { fill: var(--accent, #2a6fdb); opacity: .1; }
+.hv-dep { fill: var(--bg-raised, #fff); stroke: var(--accent, #2a6fdb); stroke-width: 2; cursor: pointer; }
+.hv-dep.on { fill: var(--accent, #2a6fdb); }
+.hv-dep.hv-block { stroke: #999; cursor: default; }
+.hv-arr { fill: #0f766e; }
+.hv-arr.hv-out { fill: #999; opacity: .6; }
+.hv-link { stroke-width: 1.6; }
+.hv-link-approved { stroke: #0f766e; }
+.hv-link-proposal { stroke: #d97706; stroke-dasharray: 4 3; }
+.hv-link-pick { stroke: #7c3aed; stroke-dasharray: 3 3; }
+.hv-proposals { border-collapse: collapse; width: 100%; }
+.hv-proposals th { text-align: left; font-weight: 500; opacity: .7; border-bottom: 1px solid currentColor; padding: 2px 4px; }
+.hv-proposals td { padding: 2px 4px; border-bottom: 1px dotted var(--border, #ddd); font-variant-numeric: tabular-nums; }
+.hv-st { font-size: 11px; padding: 0 6px; border-radius: 8px; white-space: nowrap; }
+.hv-st-new { background: #dbeafe; color: #1e40af; }
+.hv-st-same { background: #e5e7eb; color: #444; }
+.hv-st-changed { background: #fef3c7; color: #92400e; }
+.hv-st-gone, .hv-st-lost { background: #fee2e2; color: #991b1b; }
+.hv-st-pick { background: #ede9fe; color: #5b21b6; }
+.hv-st-none { opacity: .6; }
+.hv-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.hv-pills { display: flex; flex-wrap: wrap; gap: 3px; margin: 3px 0; }
+.hv-pill { border: 1px solid var(--border, #bbb); border-radius: 10px; padding: 0 2px 0 7px; font-size: 11px; }
+.hv-x { border: none; background: none; cursor: pointer; color: inherit; font-size: 10px; }
+.hv-nums { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 6px 0; }
+.hv-nums input, .hv-radius { width: 46px; }
+.hv-crit { display: block; margin: 4px 0; }
+.hv-crit b { display: block; font-weight: 600; font-size: 11px; opacity: .8; }
+.hv-check { display: block; }
+/* A trip of ours that waits for a feeder from another line (Knutepunkt) */
+.g-td-time.g-hub { position: relative; }
+.g-td-time.g-hub::after { content: '\21C4'; position: absolute; top: 0; right: 1px; font-size: 8px; line-height: 1; color: #0f766e; }
 .rv-top { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-bottom: 1px solid var(--border, #ddd); }
 .rv-title { font-weight: 600; }
 .rv-sets { display: flex; gap: 4px; flex: 1; overflow-x: auto; }

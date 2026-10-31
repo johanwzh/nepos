@@ -1463,6 +1463,8 @@ function renderStopRow(tbl, stop, ri, linked) {
     const isSel = !inDC && !inTN && !inLB && !inStopCol && !inStopEdit && ri === ancR && ci === ancC;
     const isRange = !inDC && !inTN && !inLB && !inStopCol && !inStopEdit && inRect(ri, ci) && !isSel;
     if (cell && cell.interchange) td.classList.add(cell.interchange.type === 'guaranteed' ? 'g-ix-g' : 'g-ix-s');
+    // An approved Knutepunkt link: our trip waits here for a feeder from another line (2026-10-31)
+    if (cell?.hubLink?.line && grid.stops[ri]?.hub) td.classList.add('g-hub');
     const into = targetsNow.get(`${ri},${ci}`);
     if (into) td.classList.add(into === 'guaranteed' ? 'g-ix-tg' : 'g-ix-ts');
     if (linked.has(`${ri},${ci}:guaranteed`)) td.classList.add('g-ix-lg');

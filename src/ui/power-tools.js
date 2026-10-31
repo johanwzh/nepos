@@ -4,18 +4,20 @@
 // the cells editable (hypothesis, user 2026-10-28: + and − turn it on). One tool at a time; Esc turns it off.
 // Tools: the Jog (time shift, moved here from the context menu), Virtual intervals, Registrer stopp (2.5: clicks on the
 // map's Quays fill the stop rows; the map pane stays usable), Ruting (2.6: a routing session on the map; only for lines
-// routed on roads) and Optimalisering (2.5: a placeholder, disabled).
+// routed on roads), Knutepunkt (2.6: interchanges with other lines) and Optimalisering (2.5: a placeholder, disabled).
 import { t } from '../i18n/strings.js';
 import { jogDial } from './jog/jogDial.js';
 import { currentPage } from './shell.js';
 
-/** @typedef {'' | 'jog' | 'intervals' | 'record' | 'route' | 'optimize'} ToolName */
+/** @typedef {'' | 'jog' | 'intervals' | 'record' | 'route' | 'hub' | 'optimize'} ToolName */
 
 const TOOLS = /** @type {{ name: ToolName, icon: string, label: string, key: string, disabled?: boolean }[]} */ ([
   { name: 'jog', icon: '⇅', label: 'ptJog', key: 'j' },
   { name: 'intervals', icon: '⋯', label: 'ptIntervals', key: 'i' },
   { name: 'record', icon: '⊕', label: 'ptRecord', key: 'r' },
   { name: 'route', icon: '⛙', label: 'ptRoute', key: 'l' },
+  // Knutepunkt (2.6, interchanges spec 2026-10-31): our trips wait for feeders from other lines
+  { name: 'hub', icon: '⇄', label: 'ptHub', key: 'k' },
   // Where the passing-seconds tools will live (backlog 87): shown, not wired
   { name: 'optimize', icon: '⚙', label: 'ptOptimize', key: '', disabled: true },
 ]);
