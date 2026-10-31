@@ -19,13 +19,13 @@ import { emptyLineLinks, writeLineLinks } from '../project/links-store.js';
 import { DEFAULT_SETTINGS } from '../project/settings.js';
 
 /** @typedef {[number, number]} LonLat */
-/** @typedef {ReturnType<typeof createRoutingSession>} Session */
+/** @typedef {any} Session the plan-3 session (replaced by route-view.js, routing editor 2026-10-31) */
 /** @typedef {(ctx: { code: string, rs: any }) => Session} SessionFactory */
 
 /** The real session: the shown table set's chains, the router worker, the project's tile cache. @type {SessionFactory} */
 function defaultSession({ code, rs }) {
   const chains = linkChains(rs, { calendars: app.calendars, quayInfo, setId: rs.activeSet });
-  return createRoutingSession({ code, chains, lineLinks: app.lineLinks.get(code) ?? emptyLineLinks(code), quayInfo, router: createRoutingClient(),
+  return /** @type {any} */ (createRoutingSession)({ code, chains, lineLinks: app.lineLinks.get(code) ?? emptyLineLinks(code), quayInfo, router: createRoutingClient(),
     tiles: createTileSource({ fs: /** @type {any} */ (app.fs), baseUrl: app.settings.routingTilesUrl || DEFAULT_SETTINGS.routingTilesUrl }) });
 }
 

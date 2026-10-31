@@ -127,4 +127,16 @@ describe('tile source', () => {
     s.b = build('2026-11-01T00:00:00Z', { '40_472': tile(10.1, 59.05, 1), '41_472': tile(10.3, 59.05, 1) });
     expect((await src.open(POINTS)).manifest.built).toBe('2026-10-01T00:00:00Z');
   });
+
+  it('published(): the published manifest only, else the cached one, else null — no tile fetched (routing editor)', async () => {
+    const fs = createMemoryFs(), b = v1(), { s, fetch } = server(b);
+    expect((await createTileSource({ fs, baseUrl: BASE, fetch }).published())?.built).toBe('2026-10-01T00:00:00Z');
+    expect(tileCalls(s.calls)).toEqual([]);
+    s.offline = true;
+    expect(await createTileSource({ fs, baseUrl: BASE, fetch }).published()).toBeNull();
+    s.offline = false;
+    await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS);
+    s.offline = true;
+    expect((await createTileSource({ fs, baseUrl: BASE, fetch }).published())?.built).toBe('2026-10-01T00:00:00Z');
+  });
 });

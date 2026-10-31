@@ -12,7 +12,9 @@ import { gunzip } from './tile-format.js';
  * @typedef {{ format: string, set: string, built: string, dataDate: string, tileLon: number, tileLat: number,
  *   tiles: Record<string, { size: number, hash: string }> }} Manifest
  * @typedef {{ open: (points: { lon: number, lat: number }[]) => Promise<{ manifest: Manifest, newer: boolean }>,
- *   loadTile: (key: string) => Promise<ArrayBuffer>, stats: () => { downloaded: number, bytes: number, cached: number } }} TileSource
+ *   loadTile: (key: string) => Promise<ArrayBuffer>, stats: () => { downloaded: number, bytes: number, cached: number },
+ *   published: () => Promise<Manifest | null> }} TileSource
+ *   published: the newest build known without downloading tiles (routing editor, 2026-10-31: newer map data is orange)
  */
 
 const MANIFEST = `${ROUTING_CACHE_DIR}/manifest.json`;
@@ -102,5 +104,9 @@ export function createTileSource({ fs, baseUrl, fetch = globalThis.fetch.bind(gl
     },
 
     stats: () => ({ ...counts }),
+
+    async published() {
+      try { return JSON.parse(new TextDecoder().decode(await get('manifest.json'))); } catch { return readCachedManifest(); }
+    },
   };
 }
