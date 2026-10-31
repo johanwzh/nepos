@@ -6,10 +6,12 @@ import { haversineM } from '../routing/geometry.js';
  * A routed link, by key fromQuay|toQuay|profile. polyline: Google's polyline coding (lat first) at 10^precision;
  * distanceM: along the network (ferry included); from, to: the Quays' positions [lon, lat] when it was routed.
  * 2.6 adds: ferryM, seconds (driving time by the router's cost), via (the user's waypoints [lon, lat]), roads (names
- * along it), flags ('detour', 'far-snap'), routedAt (ISO) and the tile build it was routed on.
+ * along it), flags ('detour', 'far-snap'), routedAt (ISO) and the tile build it was routed on. reviewed (routing editor,
+ * 2026-10-31): Keep — the user checked the saved route against this road build and these Quay positions.
  * @typedef {{ polyline: string, precision?: number, distanceM: number, status: string, from: [number, number], to: [number, number],
  *   ferryM?: number, seconds?: number, via?: [number, number][], roads?: string[], flags?: string[], routedAt?: string,
- *   tiles?: { set: 'road', built: string, dataDate: string, hashes: Record<string, string> } }} SavedLink
+ *   tiles?: { set: 'road', built: string, dataDate: string, hashes: Record<string, string> },
+ *   reviewed?: { built?: string, from?: [number, number], to?: [number, number] } }} SavedLink
  */
 
 /** A Quay moved further than this (NSR) makes the link out of date. */

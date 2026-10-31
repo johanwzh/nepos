@@ -12,7 +12,7 @@ import { expandRoute } from './blocks.js';
 /** @typedef {{ key: string, from: QuayRef, to: QuayRef, profile: import('../routing/profiles.js').Profile }} LinkPair */
 
 /** @param {string} id @param {Map<string, any>} quayInfo @returns {QuayRef | null} */
-function quayRef(id, quayInfo) {
+export function quayRef(id, quayInfo) {
   if (!NSR_QUAY_PATTERN.test(id)) return null;
   const q = quayInfo.get(id);
   return q?.lat != null && q.lon != null ? { quayId: id, lon: q.lon, lat: q.lat } : null;
@@ -20,11 +20,12 @@ function quayRef(id, quayInfo) {
 
 /**
  * Every trip's calls as the export writes them: blocks expanded, the extra patterns of "doesn't run" dates, only the
- * periods of table set `setId` when given.
+ * periods of table set `setId` when given. `uid`: the column's UUID (a block's generated trips: their parent's), '' when
+ * it has none yet.
  * @param {any} rs @param {{ calendars: import('./calendars.js').Calendar[], setId?: number }} ctx
- * @param {(calls: { stopId: string }[]) => void} fn
+ * @param {(calls: { stopId: string, name?: string }[], uid: string) => void} fn
  */
-function eachTrip(rs, { calendars, setId }, fn) {
+export function eachTrip(rs, { calendars, setId }, fn) {
   const ex = expandRoute(rs);
   for (const per of ex?.periods ?? []) {
     if (setId !== undefined && per.setId !== setId) continue;
@@ -34,7 +35,8 @@ function eachTrip(rs, { calendars, setId }, fn) {
     for (const col of grid.cols) {
       const days = tripDays(periodDays, col);
       const variants = days.length ? tripVariants(grid, col, days) : [{ calls: journeyStops(grid, col) }];
-      for (const v of variants) fn(v.calls);
+      const uid = (col.parentCi != null ? grid.cols[col.parentCi]?.uid : col.uid) ?? '';
+      for (const v of variants) fn(v.calls, uid);
     }
   }
 }

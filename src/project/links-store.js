@@ -8,8 +8,13 @@ import { LINKS_DIR, BACKUPS_DIR, backupStamp, uniqueBackupPath, pruneBackups } f
 /** @typedef {import('../core/link-state.js').SavedLink} SavedLink */
 /** @typedef {import('../routing/snap.js').SnapRef} SnapRef */
 /**
- * links: by key fromQuay|toQuay|profile; snaps: one per Quay id (spec §5).
- * @typedef {{ version: 1, line: string, links: Record<string, SavedLink>, snaps: Record<string, SnapRef> }} LineLinks
+ * An accepted journey pattern (routing editor, 2026-10-31): its stop IDs in order, each leg's link key (null where it
+ * cannot be routed) and the UUIDs of the trips that ran it, so a changed timetable can be traced back to it.
+ * @typedef {{ stops: string[], keys: (string | null)[], trips: string[], acceptedAt: string }} SavedPattern
+ */
+/**
+ * links: by key fromQuay|toQuay|profile; snaps: one per Quay id (spec §5); patterns: by stop IDs joined by a space.
+ * @typedef {{ version: 1, line: string, links: Record<string, SavedLink>, snaps: Record<string, SnapRef>, patterns?: Record<string, SavedPattern> }} LineLinks
  */
 
 const pathOf = (/** @type {string} */ code) => `${LINKS_DIR}/${code}.json`;
@@ -26,7 +31,9 @@ export async function readLineLinks(fs, code, { now = new Date() } = {}) {
   if (text === null) return emptyLineLinks(code);
   try {
     const v = JSON.parse(text);
-    if (v?.version === 1 && isObject(v.links) && isObject(v.snaps)) return { version: 1, line: code, links: v.links, snaps: v.snaps };
+    if (v?.version === 1 && isObject(v.links) && isObject(v.snaps)) {
+      return { version: 1, line: code, links: v.links, snaps: v.snaps, ...(isObject(v.patterns) ? { patterns: v.patterns } : {}) };
+    }
   } catch { /* unreadable: below */ }
   const bytes = /** @type {Uint8Array} */ (await fs.readBytes(pathOf(code)));
   await fs.writeBytes(await uniqueBackupPath(fs, `${BACKUPS_DIR}/links-${code}.${backupStamp(now)}.broken`, '.json'), bytes);
@@ -47,7 +54,8 @@ export async function writeLineLinks(fs, code, data, { now = new Date() } = {}) 
     await fs.writeBytes(await uniqueBackupPath(fs, `${BACKUPS_DIR}/links-${code}.${backupStamp(now)}`, '.json'), old);
     await pruneBackups(fs, `links-${code}`, undefined, '.json');
   }
-  await writeJson(fs, pathOf(code), { version: 1, line: code, links: sorted(data.links), snaps: sorted(data.snaps) });
+  await writeJson(fs, pathOf(code), { version: 1, line: code, links: sorted(data.links), snaps: sorted(data.snaps),
+    ...(data.patterns && Object.keys(data.patterns).length ? { patterns: sorted(data.patterns) } : {}) });
 }
 
 /** With the line (deleteRoute): backed up as `.deleted.json`. @param {import('./fs.js').ProjectFs} fs @param {string} code @param {{ now?: Date }} [opts] */

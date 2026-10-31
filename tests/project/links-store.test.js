@@ -32,6 +32,15 @@ describe('links store', () => {
     expect(await readLineLinks(fs, 'L1')).toEqual(data);
   });
 
+  it('keeps the accepted patterns (routing editor, 2026-10-31); an empty set is not written', async () => {
+    const fs = createMemoryFs();
+    const patterns = { 'NSR:Quay:1 NSR:Quay:2': { stops: ['NSR:Quay:1', 'NSR:Quay:2'], keys: ['NSR:Quay:1|NSR:Quay:2|bus'], trips: ['u1'], acceptedAt: '2026-10-31T10:00:00Z' } };
+    await writeLineLinks(fs, 'L1', { ...emptyLineLinks('L1'), patterns }, { now });
+    expect((await readLineLinks(fs, 'L1')).patterns).toEqual(patterns);
+    await writeLineLinks(fs, 'L1', { ...emptyLineLinks('L1'), patterns: {} }, { now });
+    expect(JSON.parse(await readText(fs, 'data/links/L1.json')).patterns).toBeUndefined();
+  });
+
   it('backs up the previous file on the second write', async () => {
     const fs = createMemoryFs();
     await writeLineLinks(fs, 'L1', emptyLineLinks('L1'), { now });
