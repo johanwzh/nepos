@@ -75,14 +75,18 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
   const viaOf = (pr, key) => pr?.via.get(key) ?? file.links[key]?.via ?? [];
 
   /** The road build, once, on the first Route (never on open). */
-  async function openTiles() {
-    if (manifest) return;
+  /**
+   * The map data for one pattern, in driving order (its stops and waypoints): only what it needs, fetched on its Route
+   * (user 2026-10-31: a short branch fetched the whole line). The first call chooses the build. @param {Pattern} p
+   */
+  async function openTiles(p) {
     /** @type {{ lon: number, lat: number }[]} */
     const points = [];
-    for (const p of patterns) {
-      for (const s of p.stops) if (s.quay) points.push({ lon: s.quay.lon, lat: s.quay.lat });
-      for (const k of p.keys) if (k) for (const [lon, lat] of viaOf(proposals.get(p.id), k)) points.push({ lon, lat });
-    }
+    p.stops.forEach((s, i) => {
+      if (s.quay) points.push({ lon: s.quay.lon, lat: s.quay.lat });
+      const k = p.keys[i];
+      if (k) for (const [lon, lat] of viaOf(proposals.get(p.id), k)) points.push({ lon, lat });
+    });
     // The newest published build: Route on an orange "newer map data" pattern compares with that (final review 1)
     const opened = await tiles.open(points, { latest: true, onProgress });
     manifest = opened.manifest; newer = opened.newer;
@@ -173,7 +177,7 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
     async route(id, key) {
       const p = byId.get(id);
       if (!p) return;
-      await openTiles();
+      await openTiles(p);
       const st = stateOf(id);
       const pr = proposalOf(id);
       /** @type {Set<number>} */
@@ -201,7 +205,7 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
       pr.via.set(key, via);
       if (!pr.legs.has(key)) return;
       try {
-        await openTiles();
+        await openTiles(p);
         await route(pr, [/** @type {QuayRef} */ (p.stops[i].quay), /** @type {QuayRef} */ (p.stops[i + 1].quay)], [key], true);
       } catch (e) {
         if (had) pr.via.set(key, had); else pr.via.delete(key);

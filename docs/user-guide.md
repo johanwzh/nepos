@@ -55,8 +55,9 @@ Når du åpner et prosjekt, kommer du til **Oversikt**. Den sier med vanlige ord
   Her står også linjer som ikke er eksportert på et halvt år, og linjer som bare har advarsler.
 - En grønn linje når resten er i orden.
 - **Gyldighet**: hver linje som eksporteres, frem til sin siste dag, med merker ved 30, 60, 90 og 120 dager.
-- **Nettverket**: alle linjene som eksporteres på ett kart. Hver strekning tegnes én gang, tykkere der flere turer går,
-  og rødt der en linje har feil.
+- **Nettverket**: alle linjene som eksporteres på ett kart. Hver strekning tegnes én gang, langs veien der den er
+  rutet, tykkere der flere turer går, og rødt der en linje har feil. Bare hovedstoppene (uthevet i en rutetabell) har
+  en liten prikk.
 
 Linjer som er satt til **Eksporteres ikke**, er ikke med. Nepos husker hver eksport (`data/exports.json`) fra denne
 versjonen; før den første eksporten står linjene som «ingen eksport registrert».
@@ -354,7 +355,9 @@ valget.
 
 Kartet bruker OpenFreeMap (lyst eller mørkt etter Nepos' utseende), eller kartlaget du har valgt. På en busslinje har
 strekningene samme farger som i Ruting: grønn langs den rutede veien, oransje der et stopp er flyttet siden den ble
-rutet, og rød stiplet rett linje der den ikke er rutet. Andre linjer tegnes som rette linjer mellom stoppene. Rutene lages i **Ruting** (kraftverktøyene); eksporten skriver dem som
+rutet, og rød stiplet rett linje der den ikke er rutet; et stopp på en strekning uten rute er en rød prikk. Andre linjer
+tegnes som rette linjer mellom stoppene. Når du velger stopp, viser kartet stoppene i nærheten først når du har zoomet
+nok inn; en merknad øverst på kartet sier fra. Rutene lages i **Ruting** (kraftverktøyene); eksporten skriver dem som
 ServiceLinks for hvert mønster der alle strekningene er rutet.
 
 ---

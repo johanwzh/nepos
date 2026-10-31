@@ -2,6 +2,7 @@
 // patterns use it, with the number of trips on it, so many patterns do not make a tangle.
 import { describe, it, expect } from 'vitest';
 import { networkOf } from '../../src/core/network.js';
+import { encodePolyline } from '../../src/routing/geometry.js';
 
 const stop = (/** @type {string} */ id, extra = {}) => ({ name: id, stopId: id, bold: false, sep: false, isDwellArr: false, price: null, ...extra });
 const cell = (/** @type {string} */ time) => ({ time, dayOffset: 0, suffix: '', interchange: null });
@@ -34,5 +35,23 @@ describe('networkOf', () => {
     const n = networkOf([{ code: '1', rs: r, problem: false }, { code: '2', rs: rs([stop('A'), stop('B')], [['0800', '0810']]), problem: false }], QUAYS);
     expect(n.segments.map((x) => `${x.from}-${x.to}`)).toEqual(['A-B']); // A–X and X–B have no position for X; A–B from line 2
     expect(n.stops.map((x) => [x.id, x.lines])).toEqual([['A', 2], ['B', 2]]);
+  });
+
+  it('a stretch with a routed link follows it, in either direction; a bus line only (user 2026-10-31)', () => {
+    const road = /** @type {[number, number][]} */ ([[10, 60], [10.05, 60.03], [10.1, 60]]);
+    const link = /** @type {any} */ ({ polyline: encodePolyline(road, 6), precision: 6, distanceM: 6000, status: 'OK', from: [10, 60], to: [10.1, 60] });
+    const bus = { ...rs([stop('A'), stop('B'), stop('C')], [['0700', '0710', '0720']]), mode: 'bus' };
+    const n = networkOf([{ code: '1', rs: bus, problem: false, links: { 'A|B|bus': link } }], QUAYS);
+    const s = Object.fromEntries(n.segments.map((x) => [`${x.from}-${x.to}`, x]));
+    expect(s['A-B'].coords).toEqual(road);
+    expect(s['B-C'].coords).toEqual([[10.1, 60], [10.2, 60]]);
+    // the other direction uses it too, turned round
+    const back = { ...rs([stop('B'), stop('A')], [['0700', '0710']]), mode: 'bus' };
+    expect(networkOf([{ code: '2', rs: back, problem: false, links: { 'A|B|bus': link } }], QUAYS).segments[0].coords).toEqual([...road].reverse());
+  });
+
+  it('marks the main stops (bold in a timetable): the overview draws only those, small (user 2026-10-31)', () => {
+    const r = rs([stop('A', { bold: true }), stop('B'), stop('C')], [['0700', '0710', '0720']]);
+    expect(networkOf([{ code: '1', rs: r, problem: false }], QUAYS).stops.map((x) => [x.id, x.main])).toEqual([['A', true], ['B', false], ['C', false]]);
   });
 });

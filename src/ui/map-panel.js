@@ -10,7 +10,7 @@ import { tripOnMap, tripRouteLegs } from '../core/map-model.js';
 import { isRoadLine } from '../routing/profiles.js';
 import { styleUrlFor } from '../core/map-style.js';
 import { pickerState, setPickerMap } from './stop-picker.js';
-import { pickerMapModel } from '../core/picker-map-model.js';
+import { pickerMapModel, zoomNote } from '../core/picker-map-model.js';
 import { modeIconSvg } from './mode-icons.js';
 import { quayPin, pickAction } from './map-pins.js';
 import { placeMenu } from './place-menu.js';
@@ -34,7 +34,7 @@ function ensureMap() {
   if (!view) {
     view = createMapView($('map-gl'), { style, dark: theme() === 'dark' });
     styleKey = key;
-    view.onMoveEnd(() => { for (const fn of viewListeners) fn(); }); // browsing (stop picking spec §4)
+    view.onMoveEnd(() => { showZoomNote(); for (const fn of viewListeners) fn(); }); // browsing (stop picking spec §4)
     return;
   }
   if (key !== styleKey) { view.setStyle(style, theme() === 'dark'); styleKey = key; }
@@ -67,6 +67,16 @@ function closeQuayMenu() { document.querySelector('.map-ctx')?.remove(); }
 /** @type {(() => void)[]} */
 const viewListeners = [];
 let pickKey = '';
+
+/** While a stop row is picked or stops are recorded: how close to zoom before stops show (user 2026-10-31). */
+function showZoomNote() {
+  const el = document.getElementById('map-zoom-note');
+  if (!el) return;
+  const s = pickerState();
+  const key = view && (s.row != null || s.recording) ? zoomNote(view.getZoom(), s.recording) : '';
+  el.hidden = !key;
+  if (key) el.textContent = t(key);
+}
 
 /** While a stop row is being picked (stop picking spec §5): the picker's symbols. */
 function drawPicker() {
@@ -114,6 +124,7 @@ function update() {
   v.resize(); // only when the size changed (map-view): a real resize repaints and fires move events (final review I6)
 
   v.setLinks([]);
+  showZoomNote();
   if (pickerState().row != null || pickerState().recording) { lastKey = ''; drawPicker(); return; }
   pickKey = '';
   v.setMarkers([]);
@@ -137,11 +148,14 @@ function update() {
   const routed = col && app.activeRoute && isRoadLine(app.routeState)
     ? tripRouteLegs(grid, col, app.lineLinks.get(app.activeRoute)?.links, quayInfo) : null;
   if (routed) v.setLinks([...routed.links, ...routed.straight.map((s) => ({ ...s, state: /** @type {const} */ ('failed') }))]);
+  const unrouted = new Set((routed?.straight ?? []).flatMap((s) => s.key.split('|').slice(0, 2)));
   v.setTrip({
     ...(routed ? { segments: [] } : {}),
     // Bold stops (the main stops in the timetable) are the larger dots
     line, ink, ring: here ? [here.lon, here.lat] : null,
-    dots: trip.points.map((p) => ({ lon: p.lon, lat: p.lat, r: p.bold ? 7 : 5, tooltip: `<b>${esc(p.name)}</b> ${esc(p.time.slice(0, 2))}:${esc(p.time.slice(2))}` })),
+    // A stop on a leg without a route is red as well: the dots hid the red dashes (user 2026-10-31)
+    dots: trip.points.map((p) => ({ lon: p.lon, lat: p.lat, r: p.bold ? 7 : 5, tooltip: `<b>${esc(p.name)}</b> ${esc(p.time.slice(0, 2))}:${esc(p.time.slice(2))}`,
+      ...(unrouted.has(p.stopId) ? { c: '#c62828' } : {}) })),
   });
 
   // Fit only when another trip is shown, so the user's own zoom/pan survives edits.

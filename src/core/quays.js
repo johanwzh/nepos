@@ -40,15 +40,22 @@ export function quayIdsInErn(text) {
 export const lineModeOf = (rs) => rs?.mode || /** @type {any} */ (ERN_MODES)[rs?.transportMode ?? 0]?.mode || '';
 
 /**
- * Whether a stop place's NSR transport mode suits the line's mode. Bus and coach stops serve both.
+ * The stops each line mode may use (user 2026-10-31): every road vehicle uses the road stops (there are no coach-only
+ * stops); a car ferry may call at any ferry or boat quay (it just cannot unload cars there), and a boat at a car ferry
+ * quay. Other modes use their own stops.
+ * @type {Record<string, string[]>}
+ */
+const STOP_MODES = { bus: ['bus', 'coach'], coach: ['bus', 'coach'], taxi: ['bus', 'coach'], ferry: ['ferry', 'water'], water: ['water', 'ferry'] };
+
+/**
+ * Whether a stop place's NSR transport mode suits the line's mode (STOP_MODES; otherwise the same mode).
  * @param {string | number} lineMode the line's Transmodel mode (lineModeOf), or an ERN #RUT mode code
  * @param {string} nsrMode lower-case NSR transport mode ('' when unknown)
  */
 export function modeMatches(lineMode, nsrMode) {
   const want = typeof lineMode === 'number' ? /** @type {any} */ (ERN_MODES)[lineMode]?.mode : lineMode;
   if (!want || !nsrMode) return true;
-  const road = ['bus', 'coach'];
-  return nsrMode === want || (road.includes(want) && road.includes(nsrMode));
+  return nsrMode === want || (STOP_MODES[want] ?? []).includes(nsrMode);
 }
 
 /**

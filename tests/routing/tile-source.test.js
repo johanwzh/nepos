@@ -1,9 +1,9 @@
 // The tile source: the published build (manifest + tiles) and the project's cache, one build per session (spec §9).
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { gzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import { createMemoryFs, readText } from '../../src/project/fs.js';
-import { createTileSource } from '../../src/routing/tile-source.js';
+import { createTileSource, clearTileMemory } from '../../src/routing/tile-source.js';
 import { encodeTile } from './helpers/encode-tile.js';
 
 const BASE = 'https://tiles.test/road/';
@@ -42,11 +42,12 @@ const tileCalls = (/** @type {string[]} */ calls) => calls.filter((c) => c.endsW
 const POINTS = [{ lon: 10.1, lat: 59.05 }, { lon: 10.3, lat: 59.05 }];
 const v1 = () => build('2026-10-01T00:00:00Z', { '40_472': tile(10.1, 59.05), '41_472': tile(10.3, 59.05), '50_480': tile(12.6, 60.01) });
 
-/** Open a session's tiles and wait for its cache writes (they run in the background, user 2026-10-31). */
+/** Open a session's tiles and wait for its cache writes (they run in the background, user 2026-10-31); forget the page's memory. */
 async function prime(/** @type {any} */ fs, /** @type {any} */ fetch, /** @type {any[]} */ points, /** @type {any} */ opts = undefined) {
   const src = createTileSource({ fs, baseUrl: BASE, fetch });
   await src.open(points, opts);
   await src.saved();
+  clearTileMemory(); // the next session reads the disk cache, as after a reload
 }
 
 /** A memory project whose file writes wait until released (a slow OneDrive folder). */
@@ -59,6 +60,8 @@ function slowFs() {
   fs.writeBytes = async (path, bytes) => { await gate; return write(path, bytes); };
   return { fs, release };
 }
+
+beforeEach(() => clearTileMemory());
 
 describe('tile source', () => {
   it('first open downloads the area and caches it with the manifest', async () => {
@@ -187,13 +190,36 @@ describe('tile source', () => {
     expect(fs.paths().filter((p) => p.startsWith(DIR)).sort()).toEqual([`${DIR}/40_472.bin.gz`, `${DIR}/41_472.bin.gz`, `${DIR}/manifest.json`]);
   });
 
-  it('a cache write that never finishes leaves no old manifest beside new tiles: the next session downloads again', async () => {
-    const fs = createMemoryFs(), { s, fetch } = server(v1());
+  it('a cached tile whose bytes do not match the build is not used: it is downloaded again (a cache write cut short)', async () => {
+    const fs = createMemoryFs(), b = v1(), { fetch } = server(b);
     await prime(fs, fetch, POINTS);
-    // now every write hangs (the page closes before the cache is written)
-    fs.writeBytes = () => new Promise(() => {});
-    s.b = build('2026-11-01T00:00:00Z', { '40_472': tile(10.1, 59.05, 1), '41_472': tile(10.3, 59.05, 1) });
-    await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS, { latest: true });
-    expect(await readText(fs, `${DIR}/manifest.json`)).toBeNull();
+    clearTileMemory();
+    await fs.writeBytes(`${DIR}/40_472.bin.gz`, new Uint8Array(gzipSync(tile(10.1, 59.05, 9))));
+    const src = createTileSource({ fs, baseUrl: BASE, fetch });
+    await src.open(POINTS);
+    expect(new Uint8Array(await src.loadTile('40_472'))).toEqual(b.raw['40_472']);
+    expect(src.stats().downloaded).toBe(1);
+  });
+
+  it('a later Route in the same session fetches only the tiles its points add, with progress (user 2026-10-31)', async () => {
+    const fs = createMemoryFs(), { s, fetch } = server(v1());
+    const src = createTileSource({ fs, baseUrl: BASE, fetch });
+    await src.open(POINTS);
+    s.calls.length = 0;
+    /** @type {[number, number][]} */
+    const seen = [];
+    await src.open([{ lon: 12.6, lat: 60.01 }], { onProgress: (d, n) => seen.push([d, n]) });
+    expect(tileCalls(s.calls)).toEqual(['50_480.bin.gz']);
+    expect(seen).toEqual([[0, 1], [1, 1]]);
+  });
+
+  it('tiles downloaded earlier in this page are reused by a later session: no download, no disk (user 2026-10-31)', async () => {
+    const { fs } = slowFs(), b = v1(), { s, fetch } = server(b);
+    await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS);
+    s.calls.length = 0;
+    const src = createTileSource({ fs, baseUrl: BASE, fetch });
+    await src.open(POINTS);
+    expect(tileCalls(s.calls)).toEqual([]);
+    expect(new Uint8Array(await src.loadTile('41_472'))).toEqual(b.raw['41_472']);
   });
 });

@@ -47,6 +47,16 @@ describe('Quay status', () => {
     expect(quayStatus('NSR:Quay:7203', bus, 'cableway')).toBe('mode-mismatch');
   });
 
+  it('groups of modes (user 2026-10-31): every road vehicle may use road stops; a car ferry may use any ferry or boat quay', () => {
+    for (const line of ['bus', 'coach', 'taxi']) for (const stop of ['bus', 'coach']) expect(modeMatches(line, stop), `${line} at ${stop}`).toBe(true);
+    expect(modeMatches('ferry', 'water')).toBe(true);
+    expect(modeMatches('water', 'ferry')).toBe(true);
+    expect(modeMatches('tram', 'tram')).toBe(true);
+    for (const [line, stop] of [['tram', 'bus'], ['bus', 'tram'], ['taxi', 'rail'], ['metro', 'rail'], ['ferry', 'bus'], ['coach', 'water']]) {
+      expect(modeMatches(line, stop), `${line} at ${stop}`).toBe(false);
+    }
+  });
+
   it('tells each case apart', () => {
     expect(quayStatus(null, undefined, 1)).toBe('missing');
     expect(quayStatus('101', undefined, 1)).toBe('not-nsr');

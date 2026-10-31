@@ -100,6 +100,8 @@ describe('the timetable’s map and the saved routes', () => {
     expect(drawn.links.map((l) => [l.key, l.state])).toEqual([[K1, 'routed'], [K2, 'failed']]);
     expect(drawn.links[1].coords).toEqual([POS['NSR:Quay:2'], POS['NSR:Quay:3']]);
     expect(drawn.trip.segments).toEqual([]);
+    // a stop on a leg without a route is red too: the big dots hid the red dashes (user 2026-10-31)
+    expect(drawn.trip.dots.map((/** @type {any} */ d) => d.c ?? '')).toEqual(['', '#c62828', '#c62828']);
   });
 
   it('a stop moved since it was routed: stale', async () => {

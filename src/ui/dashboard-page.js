@@ -113,7 +113,8 @@ function drawNetwork(lines) {
   const host = document.getElementById('home-map');
   const none = document.getElementById('home-map-none');
   if (!host) return;
-  const routes = lines.filter((l) => l.exported).map((l) => ({ code: l.code, rs: lineState(l.code), problem: l.issues.some((i) => i.level === 'error') })).filter((r) => r.rs);
+  const routes = lines.filter((l) => l.exported).map((l) => ({ code: l.code, rs: lineState(l.code), problem: l.issues.some((i) => i.level === 'error'),
+    links: app.lineLinks.get(l.code)?.links })).filter((r) => r.rs);
   const net = networkOf(routes, quayInfo);
   if (none) none.hidden = net.stops.length > 0;
   if (!net.stops.length) return;
@@ -123,7 +124,8 @@ function drawNetwork(lines) {
     const most = Math.max(...net.segments.map((s) => s.trips), 1);
     view.setNetwork({
       lines: net.segments.map((s) => ({ coords: s.coords, w: 2 + 6 * Math.log1p(s.trips) / Math.log1p(most), c: s.problem ? '#d9534f' : '#3d7ebf', tooltip: `${esc(s.lines.map(lineLabel).join(', '))} · ${s.trips}` })),
-      stops: net.stops.map((p) => ({ lon: p.lon, lat: p.lat, r: p.lines > 1 ? 5 : 3.5, tooltip: esc(p.name) })),
+      // Only the main stops (bold in a timetable), small: every stop crowded the map (user 2026-10-31)
+      stops: net.stops.filter((p) => p.main).map((p) => ({ lon: p.lon, lat: p.lat, r: p.lines > 1 ? 3 : 2.5, tooltip: esc(p.name) })),
     });
     const key = `${app.meta?.name}|${net.stops.length}`;
     if (key !== fittedFor) { view.whenReady(() => view?.fit(net.stops.map((p) => /** @type {[number, number]} */ ([p.lon, p.lat])), { padding: 30, maxZoom: 13 })); fittedFor = key; }

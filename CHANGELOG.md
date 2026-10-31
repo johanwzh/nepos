@@ -19,7 +19,11 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   works offline where it has run before. A link no trip uses any more is not exported but kept until you remove it
   (**Remove unused**), so fixing a typo in the timetable brings the same route back.
 - **Map:** on a bus line the selected trip's legs have Ruting's colours: along the routed road, orange where a stop has
-  moved, red dashed where there is no route.
+  moved, red dashed where there is no route, and a stop on a leg without a route is a red dot. While you pick a stop,
+  a note says how close to zoom before stops (and then their platforms) show.
+- **Overview:** the network follows the routed roads, and shows only the main stops (bold in a timetable), as small dots.
+- **Stops and modes:** every road vehicle (bus, coach, taxi) may use the road stops, and a car ferry any ferry or boat
+  quay (and the other way round); other modes use their own stops.
 - **Export:** each pattern whose legs are all routed gets its ServiceLinks (per line); legs not routed or out of date
   (a stop moved more than 5 m) are a warning in the check, never an error. The old routing (off since 2.3) is removed.
 - **Lines:** a Ruting column shows how many of each bus line's journey patterns are routed, and how many to check.
@@ -29,6 +33,8 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Routing a new area:** after the map data was downloaded, Nepos wrote every tile into the project's `cache/`
   and read it back before routing began, which took minutes in a OneDrive folder. It now routes from the downloaded
   data at once and fills the cache in the background; the info pane says "Routing…" once the download is done.
+  Each Route fetches only the map data its own pattern needs (a short branch fetched the whole line's), and map data
+  fetched once is kept while the page is open.
 - **Registrer stopp:** the map was dimmed and locked like the rest of the page while the tool was on; it stays usable now.
 
 ## 2.5.1 — 2026-10-30

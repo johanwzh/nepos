@@ -1654,3 +1654,7 @@ body.marey-on .marey { display: block; }
 @keyframes g-flash-pick { from { background: color-mix(in srgb, var(--accent) 55%, transparent); } }
 @keyframes g-flash-up { from { background: rgba(46, 160, 67, .55); } }
 @keyframes g-flash-down { from { background: rgba(214, 69, 65, .55); } }
+
+/* How close to zoom before stops show on the picker map (user 2026-10-31) */
+.map-zoom-note { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 5; padding: 3px 10px; border-radius: 12px; font-size: 12px; background: rgba(0,0,0,.72); color: #fff; pointer-events: none; white-space: nowrap; }
+.map-zoom-note[hidden] { display: none; }

@@ -10,6 +10,19 @@ import { modeMatches } from './quays.js';
  *             state?: '' | 'current' | 'candidate' }} PickerMarker   state: a Quay that is the row's stop or the candidate
  */
 
+/** The stop places nearby show from this zoom; their Quays from QUAYS_ZOOM (from PLACES_ZOOM while recording). */
+export const PLACES_ZOOM = 15;
+export const QUAYS_ZOOM = 16;
+
+/**
+ * The note over a map too far out to show stops (user 2026-10-31: the user must know how close to zoom).
+ * @param {number} zoom @param {boolean} recording @returns {'' | 'mapZoomStops' | 'mapZoomQuays'} a text key
+ */
+export function zoomNote(zoom, recording) {
+  if (zoom < PLACES_ZOOM) return 'mapZoomStops';
+  return zoom < (recording ? PLACES_ZOOM : QUAYS_ZOOM) ? 'mapZoomQuays' : '';
+}
+
 /** @param {{ lat: number | null, lon: number | null } | null | undefined} p */
 const placed = (p) => !!p && p.lat != null && p.lon != null;
 

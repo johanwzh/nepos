@@ -285,6 +285,16 @@ describe('routing session: failures stay contained', () => {
     expect(/** @type {any} */ (tiles.open.mock.calls[0])[1].onProgress).toBe(onProgress);
   });
 
+  it('Route asks for the map data of the pattern it routes only (user 2026-10-31: a short branch fetched the whole line)', async () => {
+    const s = session([SARPSBORG, AMFI]);
+    await s.open();
+    await s.route(pid(AMFI));
+    expect((/** @type {any} */ (s.tiles.open.mock.calls[0])[0]).map((/** @type {any} */ p) => [p.lon, p.lat]))
+      .toEqual(AMFI.map((n) => { const q = /** @type {any} */ (QUAYS.get(`NSR:Quay:${n}`)); return [q.lon, q.lat]; }));
+    await s.route(pid(SARPSBORG));
+    expect(s.tiles.open).toHaveBeenCalledTimes(2);
+  });
+
   it('says when newer map data exists than the build it routes on', async () => {
     const tiles = fixtureTiles();
     tiles.open.mockResolvedValue({ manifest, newer: true });

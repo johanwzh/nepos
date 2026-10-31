@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pickerMapModel } from '../../src/core/picker-map-model.js';
+import { pickerMapModel, zoomNote, PLACES_ZOOM } from '../../src/core/picker-map-model.js';
 
 const info = (/** @type {string} */ id, /** @type {number} */ lat, code = 'A') => ({ quayId: id, publicCode: code, stopPlaceId: `SP${id}`, stopPlaceName: `Stop ${id}`, mode: 'bus', lat, lon: 10 });
 const hit = (/** @type {string} */ id, /** @type {string} */ mode, lat = 60) => ({ id, name: id, context: '', description: '', modes: [mode], lat, lon: 10 });
@@ -54,5 +54,15 @@ describe('picker map model', () => {
   it('fits to the search hits while they are shown, else to the current stop', () => {
     expect(pickerMapModel({ ...base, hits: [hit('P1', 'bus', 61), hit('P5', 'bus', 62)] }).fit).toEqual([[61, 10], [62, 10]]);
     expect(pickerMapModel(base).fit).toEqual([[59.2, 10]]);
+  });
+});
+
+describe('the zoom note (user 2026-10-31: stops only show up close in, and the user must know)', () => {
+  it('asks to zoom in until the stop places show, then until their Quays show (sooner while recording)', () => {
+    expect(PLACES_ZOOM).toBe(15);
+    expect(zoomNote(12, false)).toBe('mapZoomStops');
+    expect(zoomNote(15.5, false)).toBe('mapZoomQuays');
+    expect(zoomNote(16, false)).toBe('');
+    expect(zoomNote(15.5, true)).toBe('');
   });
 });

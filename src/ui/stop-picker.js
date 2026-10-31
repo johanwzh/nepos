@@ -8,6 +8,7 @@ import { t } from '../i18n/strings.js';
 import { searchStopPlaces, nearbyStopPlaces } from '../services/geocoder.js';
 import { getStopPlace, getStopPlaces, lookupQuays } from '../services/nsr.js';
 import { modeMatches, lineModeOf } from '../core/quays.js';
+import { PLACES_ZOOM, QUAYS_ZOOM } from '../core/picker-map-model.js';
 import { grid, selectedStopRow, selectedRowIndex, setStopOnRow, clearStopOnRow, setStopTypeHandler, onGridRender, appendStopRow, removeStopRow, addStopRowAt, flashStopCell } from './grid.js';
 import { quayInfo } from './quays.js';
 import { openStopSearch, closeStopSearch } from './stop-search.js';
@@ -73,7 +74,7 @@ let browseSeq = 0;
 async function browse() {
   const v = map?.view() ?? null;
   const my = ++browseSeq;
-  if ((state.row == null && !state.recording) || !v || v.zoom < 15) {
+  if ((state.row == null && !state.recording) || !v || v.zoom < PLACES_ZOOM) {
     if (state.browse.length || state.browseQuays.length) { state.browse = []; state.browseQuays = []; render(); }
     return;
   }
@@ -85,7 +86,7 @@ async function browse() {
   }
   if (my !== browseSeq) return;
   state.browse = hits;
-  if (v.zoom >= (state.recording ? 15 : 16)) {
+  if (v.zoom >= (state.recording ? PLACES_ZOOM : QUAYS_ZOOM)) {
     const missing = hits.map((h) => h.id).filter((id) => !quayCache.has(id));
     if (missing.length) {
       try { for (const p of await services.getStopPlaces(missing, pickerOpts('nsr'))) quayCache.set(p.id, p); } catch { /* shown without Quays */ }

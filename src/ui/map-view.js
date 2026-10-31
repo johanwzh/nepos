@@ -13,7 +13,7 @@ import { t } from '../i18n/strings.js';
  * @typedef {{ key: string, coords: LonLat[], state: 'routed' | 'flagged' | 'failed' | 'selected' | 'via' | 'old' | 'faint' | 'stale' }} MapLink
  *   via: a leg through waypoints; old: the saved route under a proposal; faint: the table set's other patterns; stale: a
  *   saved route out of date (the timetable's map) — routing editor, 2026-10-31
- * @typedef {{ lon: number, lat: number, r: number, tooltip: string }} MapDot
+ * @typedef {{ lon: number, lat: number, r: number, tooltip: string, c?: string }} MapDot   c: the dot's colour (default blue)
  */
 
 const BLUE = '#0078d4';
@@ -80,7 +80,7 @@ export function createMapView(el, { style, dark = false }) {
     // An invisible wide line over the legs: easy to point at
     map.addLayer({ id: 'links-hit', type: 'line', source: 'links', paint: { 'line-color': '#000', 'line-width': 14, 'line-opacity': 0 } });
     map.addLayer({ id: 'trip-line', type: 'line', source: 'trip-line', paint: { 'line-color': BLUE, 'line-width': 3, 'line-opacity': 0.85 } });
-    map.addLayer({ id: 'dots', type: 'circle', source: 'dots', paint: { 'circle-radius': ['get', 'r'], 'circle-color': BLUE,
+    map.addLayer({ id: 'dots', type: 'circle', source: 'dots', paint: { 'circle-radius': ['get', 'r'], 'circle-color': ['coalesce', ['get', 'c'], BLUE],
       'circle-stroke-color': isDark ? '#2a2620' : '#ffffff', 'circle-stroke-width': 2 } });
     map.addLayer({ id: 'ring', type: 'circle', source: 'ring', paint: { 'circle-radius': 12, 'circle-opacity': 0,
       'circle-stroke-color': ['get', 'ink'], 'circle-stroke-width': 3 } });
@@ -130,7 +130,7 @@ export function createMapView(el, { style, dark = false }) {
     setTrip(trip) {
       const lines = trip.segments ?? (trip.line.length > 1 ? [trip.line] : []);
       put('trip-line', collection(lines.map((l) => lineFeature(l))));
-      put('dots', collection(trip.dots.map((d) => pointFeature([d.lon, d.lat], { r: d.r, tooltip: d.tooltip }))));
+      put('dots', collection(trip.dots.map((d) => pointFeature([d.lon, d.lat], { r: d.r, tooltip: d.tooltip, ...(d.c ? { c: d.c } : {}) }))));
       put('ring', collection(trip.ring ? [pointFeature(trip.ring, { ink: trip.ink ?? '#000' })] : []));
     },
     /** The network (Oversikt): lines { coords, w, c, tooltip } and stops { lon, lat, r, tooltip }. @param {{ lines: { coords: LonLat[], w: number, c: string, tooltip?: string }[], stops: { lon: number, lat: number, r: number, tooltip?: string }[] }} net */
