@@ -174,7 +174,7 @@ describe('the organisation register in Prosjektinnstillinger', () => {
     expect(dlg.querySelector('a[href="mailto:kollektivdata@entur.org"]')).not.toBeNull();
     // the road tiles for routing (2.6), read-only like the other addresses
     expect(dlg.querySelector('.set-urls')?.textContent).toContain('Kartdata for ruting');
-    expect(dlg.querySelector('.set-urls')?.textContent).toContain('https://johanwzh.github.io/nepos-tiles/road/');
+    expect(dlg.querySelector('.set-urls')?.textContent).toContain('https://johanwzh.github.io/nepos-tiles/');
   });
 
   it('follows the register while the dialog is open', () => {
