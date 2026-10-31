@@ -29,6 +29,13 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Export:** each pattern whose legs are all routed gets its ServiceLinks (per line); legs not routed or out of date
   (a stop moved more than 5 m) are a warning in the check, never an error. The old routing (off since 2.3) is removed.
 - **Lines:** a Ruting column shows how many of each bus line's journey patterns are routed, and how many to check.
+- **Analyse:** Oversikt has two tabs, **Gjøremål** (as before) and **Analyse**: the plan's numbers as a receipt, for
+  the whole project, an authority or an operator (a tree on the left). Scope per mode (lines, trips, departures,
+  stops), the routed network per routing group, production planned / done / remaining with average speed, per fuel
+  (km, hours, seat-km, low-floor and booking shares), per day type, vehicles on the road at once (per 15 minutes) and
+  production through the period. km counts only where every stretch is routed; missing data is a grey "Ukjent" row in
+  the sum, never a warning. Pick a period, or everything planned. **Excel** saves `analyse/<time> <name>.xlsx` in the
+  project; **Tekst** copies the receipt for an e-mail.
 - **Knutepunkt** (Alt+K, interchanges between lines): our trips can wait at a stop for a feeder from another line in the
   project. The tool takes over the timetable like Ruting: every stop of the table set with a switch; for a stop that is
   on, **what we wait for** (the stops for the transfer or a radius, a window before our departure, the maximum wait,

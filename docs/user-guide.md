@@ -47,7 +47,8 @@ som må rettes, eller som har feil filnavn — og tilbyr å rette det som kan re
 
 ### Oversikt
 
-Når du åpner et prosjekt, kommer du til **Oversikt**. Den sier med vanlige ord hva som trenger deg:
+Når du åpner et prosjekt, kommer du til **Oversikt**. Den har to faner: **Gjøremål** og **Analyse**. Gjøremål sier med
+vanlige ord hva som trenger deg:
 
 - **I dag** (store kort, hvert med én knapp): en linje som slutter å gå om under 30 dager (eller alt har sluttet), en
   linje med feil (feilene samlet etter type), og linjer som er endret siden forrige eksport.
@@ -61,6 +62,31 @@ Når du åpner et prosjekt, kommer du til **Oversikt**. Den sier med vanlige ord
 
 Linjer som er satt til **Eksporteres ikke**, er ikke med. Nepos husker hver eksport (`data/exports.json`) fra denne
 versjonen; før den første eksporten står linjene som «ingen eksport registrert».
+
+#### Analyse
+
+**Analyse** viser tallene i planen, satt opp som et regnskap eller en kvittering: rader som summerer seg, og hver sum
+delt i sine deler. Det er ingen kontroll: mangler noe, havner det i en grå **Ukjent**-rad som er med i summen.
+
+Til venstre er et tre: **Hele prosjektet**, oppdragsgiverne under det, og operatørene under hver oppdragsgiver (en
+operatør som kjører for to oppdragsgivere, står under begge). En linje hører til den første oppdragsgiveren og den
+første operatøren i linjedataene. Bare linjer som eksporteres, telles. Velg et nivå, og du får de samme blokkene:
+
+- **Omfang** per transportmåte: linjer, turer, avganger (en tur på én dato) og stopp.
+- **Rutet nett** per rutegruppe (vei, jernbane, sjø …): strekningene som er rutet, med km, og de som ikke er det.
+  Hver strekning telles én gang.
+- **Produksjon**: avganger, rutetimer og km, **planlagt**, **utført** (datoer før i dag) og **gjenstår**, og
+  snittfarten. En tur har kjent km bare når alle strekningene er rutet; ellers telles den som «ukjent km».
+- **Per drivstoff** (fra kjøretøyet på turen): avganger, km, timer og setekm, med andelen lavgulv og bestilling.
+- **Per dagtype**: hverdag, lørdag, søndag og helligdag, per dato.
+- **Kjøretøy på veien samtidig**: hvor mange turer som er i gang hvert kvarter på en dato (den travleste først), med
+  toppen merket. Det er det minste antallet kjøretøy planen trenger.
+- **Produksjon gjennom perioden**: én stolpe per dato, avganger eller km.
+- **Under …**: oppdragsgiverne, operatørene eller linjene under nivået du står på; klikk for å gå dit.
+
+Øverst velger du **Alt planlagt** eller **Velg periode…** (fra–til). **Excel** lagrer tallene i
+`analyse/<tidspunkt> <navn>.xlsx` i prosjektmappa, ett ark per blokk; **Tekst** kopierer kvitteringen, klar til å
+limes inn i en e-post.
 
 ---
 

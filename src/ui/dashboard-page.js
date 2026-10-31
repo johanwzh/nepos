@@ -137,6 +137,7 @@ function drawNetwork(lines) {
 export function renderDashboardPage() {
   if (currentPage() !== 'home') return;
   const body = $('home-body');
+  if (body.hidden) return; // Analyse is shown (Oversikt's sub-pages, 2026-10-31)
   if (!app.meta) { body.innerHTML = `<p class="home-empty">${esc(t('homeNoProject'))}</p>`; mapEl = null; return; }
   if (!app.routes.length) { body.innerHTML = `<p class="home-empty">${esc(t('homeNoLines'))}</p>`; mapEl = null; return; }
   const lines = dashLines();
