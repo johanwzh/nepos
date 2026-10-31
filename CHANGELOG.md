@@ -6,7 +6,19 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 **New features**
 
-- **Routing:** the old routing (switched off since 2.3) is removed; a new routing tool is on its way.
+- **Routing:** a new power tool, **Ruting** (Alt+L, bus lines), routes every leg of the shown table set along
+  OpenStreetMap's roads, on the map. It lists the legs worth a look (no route, no road near the stop, long detour,
+  stop far from the road); click a leg to see it, click again to add a waypoint, drag it to move it, right-click or
+  Delete removes it. **Apply** saves the line's legs in `data/links/<line>.json`; Esc leaves without saving. The map
+  data comes from Nepos's own road tiles (nepos-tiles, rebuilt monthly) and is kept in the project's `cache/`, so
+  routing works offline where it has run before. A saved leg never changes until it is routed again.
+- **Export:** each pattern whose legs are all routed gets its ServiceLinks (per line); legs not routed or out of date
+  (a stop moved more than 5 m) are a warning in the check, never an error. The old routing (off since 2.3) is removed.
+- **Lines:** a Ruting column shows how much of each bus line is routed.
+
+**Bug fixes**
+
+- **Registrer stopp:** the map was dimmed and locked like the rest of the page while the tool was on; it stays usable now.
 
 ## 2.5.1 — 2026-10-30
 

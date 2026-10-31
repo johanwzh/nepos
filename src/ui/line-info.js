@@ -5,6 +5,8 @@ import { app } from './state.js';
 import { parseERN } from '../core/ern/parse.js';
 import { checkForExport } from '../core/export-check.js';
 import { routedLinks } from '../core/features.js';
+import { lineLinkSummary } from '../core/link-status.js';
+import { isRoadLine } from '../routing/profiles.js';
 import { orgExportMode } from '../project/meta.js';
 import { quayInfo } from './quays.js';
 import { routeSummary } from './route-summary.js';
@@ -79,6 +81,16 @@ export function projectIssues() {
     .map((r) => ({ code: r.code, status: r.status, rs: lineState(r.code) }))
     .filter((r) => r.rs?.exported !== false);
   return check(routes);
+}
+
+/**
+ * How much of a line is routed (2.6): its legs by status, or null for a line not routed on roads (or damaged).
+ * @param {string} code
+ */
+export function lineRouting(code) {
+  const rs = lineState(code);
+  if (!rs || !isRoadLine(rs)) return null;
+  return lineLinkSummary(rs, app.lineLinks.get(code), { calendars: app.calendars, quayInfo });
 }
 
 /**

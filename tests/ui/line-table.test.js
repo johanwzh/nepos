@@ -14,6 +14,8 @@ import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
 import { writeCalendars } from '../../src/project/calendars-store.js';
+import { quayInfo } from '../../src/ui/quays.js';
+import { routeAllLegs } from '../fixtures/links.js';
 
 const route = (/** @type {string} */ code, /** @type {string} */ pub, /** @type {string} */ name, cal = 'cal-new') => [
   '#LEV;Test;TST', `#RUT;-1;${pub};${name};;1;`, '#EKS;1', '#OFF;1', '#SEK;NOG:Operator:bbbbbbbbbb2;B;0;1;0;0', '#CUR;neposcoin;1', '#TRA;A - B',
@@ -54,6 +56,22 @@ beforeEach(async () => {
 });
 
 describe('Linjer on the shared list frame', () => {
+  it('shows how much of each line is routed (2.6)', () => {
+    quayInfo.set('NSR:Quay:1', /** @type {any} */ ({ lon: 10, lat: 59 }));
+    quayInfo.set('NSR:Quay:2', /** @type {any} */ ({ lon: 10.01, lat: 59 }));
+    setPage('lines');
+    const routing = (/** @type {string} */ name) => rows().find((r) => r.querySelector('.lv-c-name')?.textContent === name)?.querySelector('.lv-c-routing')?.textContent;
+    expect(table().querySelector('.lv-head [data-col="routing"]')?.textContent).toBe('Ruting');
+    expect(routing('Alta')).toBe('Ikke rutet');
+    routeAllLegs('b');
+    refreshAll();
+    expect(routing('Alta')).toBe('1 / 1');
+    quayInfo.set('NSR:Quay:2', /** @type {any} */ ({ lon: 10.02, lat: 59 })); // moved since it was routed
+    refreshAll();
+    expect(routing('Alta')).toBe('0 / 1, 1 utdatert');
+    quayInfo.clear();
+  });
+
   it('is its own page (Alt+2), sorted by public code, with Finn and Verktøy in a left pane', () => {
     key('2', { altKey: true });
     expect(currentPage()).toBe('lines');

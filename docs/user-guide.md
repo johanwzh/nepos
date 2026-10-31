@@ -18,9 +18,10 @@ Alt Nepos lagrer, ligger i én mappe du velger selv:
 - `data/` — linjene (ERN-filer), kalendere, merkevarer og organisasjoner. Det er denne delen du
   deler med andre eller tar sikkerhetskopi av. Hver gang en linje lagres, legges den forrige versjonen i
   `data/backups/`; de 10 nyeste per linje beholdes. En slettet linje og kopiene fra formatoppgraderinger
-  blir aldri ryddet bort.
+  blir aldri ryddet bort. De rutede strekningene til hver linje ligger i `data/links/<linje>.json`.
 - `private/` — dine egne innstillinger (språk, fargetema). Deles ikke.
 - `exports/` — NeTEx-filene, én undermappe for hver eksport.
+- `cache/` — kartdata Nepos har lastet ned for Ruting. Kan slettes når som helst; de lastes ned igjen ved behov.
 
 ### Nytt prosjekt eller åpne et som finnes
 
@@ -222,7 +223,7 @@ På en dagkode:
 ### Kraftverktøy
 
 Nederst i linjenavigatoren står **kraftverktøyene**. Å se dem endrer ingenting; slår du et verktøy på (klikk, eller
-**Alt+J** / **Alt+I**), virker bare det verktøyet i tabellen — skriving, innliming og menyer er av, og resten av siden er dempet og låst (bare Lagre og Forkast virker). **Esc** slår det av. Med verktøyet av ser en blokk ut som vanlige kolonner, svakt skravert der du ikke kan skrive; med Virtuelle intervall på lyser alle blokkene opp.
+**Alt+J** / **Alt+I** / **Alt+L**), virker bare det verktøyet i tabellen — skriving, innliming og menyer er av, og resten av siden er dempet og låst (bare Lagre og Forkast virker). **Esc** slår det av. Med verktøyet av ser en blokk ut som vanlige kolonner, svakt skravert der du ikke kan skrive; med Virtuelle intervall på lyser alle blokkene opp.
 
 - **Tidsforskyver** — et hjul (joggen) som flytter de valgte tidene ett minutt per hakk (Shift: ti): dra **ned** for senere, opp for tidligere (også hjulet og piltastene). Tallet (+8 min) gjelder de valgte tidene; velger du andre, toner det ut og starter på 0.
 - **Virtuelle intervall** — dra en tur mot høyre for å gjenta den. Ett steg: en dialog der du skriver intervallet og
@@ -233,6 +234,15 @@ Nederst i linjenavigatoren står **kraftverktøyene**. Å se dem endrer ingentin
   ramme; dra den tilbake til første tur for å fjerne den, eller **Pakk ut blokk** for å gjøre den til vanlige kolonner.
   Eksporten skriver alle turene. Intervaller som ikke går opp i en time (40 minutter), lager du med **Kopier med
   intervall**. En tur med korrespondanse kan ikke bli en blokk ennå.
+- **Ruting** (busslinjer) — ruter alle strekningene i tabellsettet som vises langs veiene i OpenStreetMap. Kartet
+  åpnes, og tabellen hviler. Boksen over kartet viser fremdriften, hvor mange strekninger som er rutet, og dem som bør
+  sjekkes: ingen rute, ingen vei nær stoppet, lang omvei eller stopp langt fra veien. Klikk en strekning for å se
+  lengde, tid, veiene og hvor langt stoppene ligger fra veien; klikk den igjen for å legge til et punkt ruten skal gå
+  gjennom. Dra punktet for å flytte det; høyreklikk eller **Delete** fjerner det. **Bruk** lagrer linjens strekninger;
+  ✕ eller **Esc** går ut uten å lagre (Nepos spør først om du har endret noe). Kartdataene lastes ned første gang og
+  ligger så i prosjektets `cache/`, så du kan rute uten nett der du har rutet før. En lagret strekning endres aldri
+  uten at du ruter den på nytt; flytter NSR et stopp mer enn 5 m, blir den utdatert. **Linjer** viser hvor mye av
+  hver linje som er rutet, og eksportkontrollen varsler om strekninger som mangler. Kartdata © OpenStreetMap-bidragsytere.
 
 ### Visuell rutetabell (Alt+V)
 
@@ -325,7 +335,8 @@ valget.
 ### Strekninger på kartet
 
 Kartet bruker OpenFreeMap (lyst eller mørkt etter Nepos' utseende), eller kartlaget du har valgt. Turen tegnes som rette linjer mellom
-stoppene.
+stoppene. De rutede strekningene langs veien ser du i **Ruting** (kraftverktøyene); eksporten skriver dem som
+ServiceLinks for hvert mønster der alle strekningene er rutet.
 
 ---
 

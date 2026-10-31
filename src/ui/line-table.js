@@ -18,6 +18,7 @@ import { unionDays } from '../core/calendars.js';
 import { createListView, validityOf } from './list-view.js';
 import { todayYmd } from './validity-bar.js';
 import { toggleLineFlag } from './line-flags.js';
+import { lineRouting } from './line-info.js';
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -41,6 +42,16 @@ const calName = (/** @type {string} */ id) => app.calendars.find((c) => c.id ===
 function rows() {
   return lineRows().map((r) => ({ ...r, days: daysOf(r.calendarIds) }));
 }
+
+/** How much of the line is routed (2.6): "37 / 40", "Not routed", or nothing for a line not routed on roads. @param {string} code */
+function routingText(code) {
+  const s = lineRouting(code);
+  if (!s || !s.pairs) return '';
+  if (!s.routed && !s.outOfDate) return t('ltRoutingNone');
+  return `${s.routed} / ${s.pairs}${s.outOfDate ? t('ltRoutingOld', s.outOfDate) : ''}`;
+}
+/** @param {string} code */
+const routingSort = (code) => { const s = lineRouting(code); return s?.pairs ? s.routed / s.pairs : -1; };
 
 /** The status tag: validity, unsaved, problems (export and public are the switches). @param {Row} r */
 function status(r) {
@@ -193,6 +204,7 @@ export function initLineTable() {
       // (no Gyldig column: the timeline under each row shows it better, user 2026-10-30)
       { key: 'public', label: () => t('ltCol_public'), width: '72px', sort: (r) => (r.isPublic ? 1 : 0), cell: (r) => flagSwitch(r, 'isPublic'), text: (r) => t(r.isPublic ? 'pubOpen' : 'pubClosed') },
       { key: 'exported', label: () => t('ltCol_exported'), width: '72px', sort: (r) => (r.exported ? 1 : 0), cell: (r) => flagSwitch(r, 'exported'), text: (r) => t(r.exported ? 'exportIn' : 'exportOut') },
+      { key: 'routing', label: () => t('ltCol_routing'), width: '110px', sort: (r) => routingSort(r.code), cell: (r) => esc(routingText(r.code)), text: (r) => routingText(r.code) },
       { key: 'status', label: () => t('ltCol_status'), width: '180px', sort: (r) => `${r.exported ? 1 : 0}${validityOf(r.days, todayYmd())}`, cell: status },
     ],
     band: (r) => r.days,

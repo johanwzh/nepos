@@ -31,4 +31,12 @@ describe('strings', () => {
     setLang('de');
     expect(getLang()).toBe('no');
   });
+
+  it('lists the routing tool\'s keys in Hurtigtaster (2.6)', () => {
+    for (const [lang, del] of /** @type {const} */ ([['no', 'Delete (Ruting)'], ['en', 'Delete (Routing)']])) {
+      const keys = STRINGS[lang].helpKeys.map((/** @type {string[]} */ k) => k[0]);
+      expect(keys, lang).toContain('Alt+L');
+      expect(keys, lang).toContain(del);
+    }
+  });
 });

@@ -45,13 +45,17 @@ if (projectDir) {
     return { code, text: decodeWin1252(readFileSync(join(routesDir, f))) };
   });
   if (existsSync(calPath) && statSync(calPath).mtimeMs > exportedAt) notes.push('calendars.json was saved after the export');
-  project = { codespace: meta.codespace, routes, calendars };
+  // The routed links (2.6): data/links/<code>.json
+  const linksDir = join(data, 'links');
+  const links = new Map(existsSync(linksDir) ? readdirSync(linksDir).filter((f) => f.endsWith('.json')).map((f) => [f.slice(0, -5), JSON.parse(readFileSync(join(linksDir, f), 'utf8'))]) : []);
+  project = { codespace: meta.codespace, routes, calendars, links };
   console.log(`Project: ${meta.name ?? projectDir} (${meta.codespace}), ${routes.length} route file(s) from ${routesDir}`);
 } else console.log('No project found: only the checks of the XML on its own are run.');
 
 const { errors, warnings, stats } = probeExport({ files, project });
 console.log(`Export:  ${basename(inputPath)} — ${stats.files} files`);
 console.log(`  ${stats.journeys} journeys (${stats.expected} expected), ${stats.passingTimes} passing times, ${stats.datedJourneys} dated journeys`);
+console.log(`  ${stats.links} service links, ${stats.linkKm.toFixed(1)} km`);
 console.log(`  day offsets up to +${stats.maxDayOffset}, ${stats.startAfterMidnight} journeys start after midnight, ${stats.interchanges} interchanges, ${stats.references} references`);
 for (const n of notes) console.log(`! ${n}`);
 /** @param {string} title @param {string[]} list */

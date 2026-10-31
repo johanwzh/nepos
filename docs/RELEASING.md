@@ -49,7 +49,9 @@ again. At release only the date goes into the changelog heading — check the ve
       It finds the project from the zip's place and checks the XML on its own (every reference resolves, no id twice,
       passing times follow their pattern and run forward, every trip runs on a day, interchanges call where they say)
       and against the project (every trip of every table, interval trips included: stops, times, day offsets, notes,
-      operating days, interchanges). It warns when a route file was saved after the export (re-export first). Must end
+      operating days, interchanges) and its routed links (2.6, from `data/links/`: each ServiceLink starts and ends
+      within 75 m of its stops, its Distance is the saved one, a pattern's links follow its stops; PRT keeps at least
+      one routed bus line). It warns when a route file was saved after the export (re-export first). Must end
       with "No errors". A feature that changes the export adds its check to `tools/probe-export/checks.js` (with a test
       in `tests/tools/probe-export.test.js`). The test project is **PRT**
       (`C:\Users\jwiklund\OneDrive - Entur AS\nepos-online\PRT`, every feature; JPB beside it has times past midnight).

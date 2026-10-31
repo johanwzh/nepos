@@ -10,6 +10,7 @@ import { expandRoute } from '../../src/core/blocks.js';
 import { unionDays, tripDays, isoDate } from '../../src/core/calendars.js';
 import { tripVariants } from '../../src/core/netex/journeys.js';
 import { uuid5 } from '../../src/core/uuid5.js';
+import { haversineM } from '../../src/routing/geometry.js';
 
 /** @param {string} s */
 const unesc = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
@@ -86,8 +87,22 @@ export function readExport(files) {
     if (list.includes(day)) dsjDuplicates.push(`${sj} ${day}`);
     list.push(day); daysOf.set(sj, list);
   }
+  // Routed links (2.6): each ServiceLink's length, ends and shape; each JourneyPattern's links in order
+  const links = blocks(all, 'ServiceLink').map(({ id, body }) => {
+    const nums = (/<gml:posList[^>]*>([^<]*)<\/gml:posList>/.exec(body)?.[1] ?? '').trim().split(/\s+/).filter(Boolean).map(Number);
+    /** @type {[number, number][]} [lon, lat] */
+    const pts = [];
+    for (let i = 0; i + 1 < nums.length; i += 2) pts.push([nums[i + 1], nums[i]]);
+    return { id, distance: Number(val(body, 'Distance')), from: refOf(body, 'FromPointRef'), to: refOf(body, 'ToPointRef'), pts };
+  });
+  /** @type {Map<string, string[]>} JourneyPattern → its ServiceLinks in order */
+  const jpLinks = new Map();
+  for (const { id, body } of blocks(all, 'JourneyPattern')) {
+    const refs = blocks(body, 'ServiceLinkInJourneyPattern').map((l) => /** @type {string} */ (refOf(l.body, 'ServiceLinkRef')));
+    if (refs.length) jpLinks.set(id, refs);
+  }
   const interchanges = blocks(all, 'ServiceJourneyInterchange').map(({ id, body }) => ({ id, from: refOf(body, 'FromJourneyRef'), to: refOf(body, 'ToJourneyRef'), fromPt: refOf(body, 'FromPointRef'), toPt: refOf(body, 'ToPointRef') }));
-  return { ids, duplicates, refs, quayOf, jpPoints, spOf, notesOn, sjs, daysOf, dsjDuplicates, interchanges };
+  return { ids, duplicates, refs, quayOf, jpPoints, spOf, notesOn, sjs, daysOf, dsjDuplicates, interchanges, links, jpLinks };
 }
 
 /**
@@ -140,7 +155,8 @@ export function expectedTrips({ codespace: cs, routes, calendars }) {
 
 /**
  * Every check. Errors are what is wrong in the export; warnings are worth a look.
- * @param {{ files: Map<string, string>, project?: { codespace: string, routes: { code: string, text: string }[], calendars: any[] } }} input
+ * @param {{ files: Map<string, string>, project?: { codespace: string, routes: { code: string, text: string }[], calendars: any[], links?: Map<string, any> } }} input
+ *   links: the project's links files (data/links/<code>.json) by line code
  */
 export function probeExport({ files, project }) {
   /** @type {string[]} */ const errors = [];
@@ -217,6 +233,37 @@ export function probeExport({ files, project }) {
     if (exp.interchanges !== x.interchanges.length) errors.push(`${x.interchanges.length} interchanges in the export, ${exp.interchanges} in the timetables`);
   }
 
-  const stats = { files: names.length, journeys: x.sjs.size, expected, passingTimes, datedJourneys: [...x.daysOf.values()].reduce((n, d) => n + d.length, 0), maxDayOffset: maxOffset, startAfterMidnight: afterMidnight, interchanges: x.interchanges.length, references: x.refs.length };
+  // ── Routed links (2.6) ──
+  const linkById = new Map(x.links.map((l) => [l.id, l]));
+  for (const [jp, refs] of x.jpLinks) {
+    const sps = (x.jpPoints.get(jp) ?? []).map((p) => x.spOf.get(p));
+    const ok = refs.length === sps.length - 1 && refs.every((r, i) => linkById.get(r)?.from === sps[i] && linkById.get(r)?.to === sps[i + 1]);
+    if (!ok) errors.push(`${jp}: its links do not follow its stops`);
+  }
+  if (project?.links && x.links.length) {
+    /** @type {Map<string, any>} ServiceLink id → saved link */
+    const saved = new Map();
+    /** @type {Map<string, [number, number]>} Quay → where it was when routed */
+    const quayPos = new Map();
+    for (const [code, ll] of project.links) for (const [key, s] of Object.entries(ll.links ?? {})) {
+      saved.set(`${cs}:ServiceLink:${uuid5(`${code}|${key}`)}`, s);
+      const [a, b] = key.split('|');
+      quayPos.set(a, s.from); quayPos.set(b, s.to);
+    }
+    const END_M = 75;
+    for (const l of x.links) {
+      const s = saved.get(l.id);
+      if (!s) { warnings.push(`${l.id}: not in the project's links files`); continue; }
+      if (l.distance !== Math.round(s.distanceM)) errors.push(`${l.id}: Distance ${l.distance}, saved ${Math.round(s.distanceM)}`);
+      for (const [side, sp, pt] of /** @type {const} */ ([['starts', l.from, l.pts[0]], ['ends', l.to, l.pts[l.pts.length - 1]]])) {
+        const pos = quayPos.get(x.quayOf.get(sp ?? '') ?? '');
+        if (!pos || !pt) continue;
+        const m = haversineM(pt, pos);
+        if (m > END_M) errors.push(`${l.id}: ${side} ${Math.round(m)} m from its stop`);
+      }
+    }
+  }
+
+  const stats = { links: x.links.length, linkKm: x.links.reduce((n, l) => n + (l.distance || 0), 0) / 1000, files: names.length, journeys: x.sjs.size, expected, passingTimes, datedJourneys: [...x.daysOf.values()].reduce((n, d) => n + d.length, 0), maxDayOffset: maxOffset, startAfterMidnight: afterMidnight, interchanges: x.interchanges.length, references: x.refs.length };
   return { errors, warnings, stats };
 }
