@@ -2,7 +2,10 @@
 // cache in cache/routing/road/ (<key>.bin.gz + manifest.json; deletable at any time). One build per session, chosen
 // on open: the cached build when it already holds every tile the stops need (a newer published build is then only a
 // notice), else the published build, downloading that area only. The cache always holds one build: when it moves to
-// a newer one, tiles that changed are dropped (2026-10-31). Offline works when the tiles are cached.
+// a newer one, tiles that changed are dropped (2026-10-31). Offline works when the tiles are cached. Downloaded tiles
+// are routed from memory at once and written to the cache in the background (user 2026-10-31: writing 115 tiles one by
+// one into a OneDrive folder took minutes before routing began); the old manifest goes first and the new one is written
+// last, so a cache left half-written is never taken for a build it does not hold.
 import { ROUTING_CACHE_DIR } from '../project/layout.js';
 import { readText, writeJson } from '../project/fs.js';
 import { tilesForChain } from './tile-select.js';
@@ -13,8 +16,9 @@ import { gunzip } from './tile-format.js';
  *   tiles: Record<string, { size: number, hash: string }> }} Manifest
  * @typedef {{ open: (points: { lon: number, lat: number }[], opts?: { latest?: boolean, onProgress?: (done: number, total: number) => void }) => Promise<{ manifest: Manifest, newer: boolean }>,
  *   loadTile: (key: string) => Promise<ArrayBuffer>, stats: () => { downloaded: number, bytes: number, cached: number },
- *   published: () => Promise<Manifest | null> }} TileSource
- *   published: the newest build known without downloading tiles (routing editor, 2026-10-31: newer map data is orange)
+ *   published: () => Promise<Manifest | null>, saved: () => Promise<void> }} TileSource
+ *   published: the newest build known without downloading tiles (routing editor, 2026-10-31: newer map data is orange);
+ *   saved: settles when the background cache writes so far are done
  */
 
 const MANIFEST = `${ROUTING_CACHE_DIR}/manifest.json`;
@@ -36,6 +40,13 @@ export function createTileSource({ fs, baseUrl, fetch = globalThis.fetch.bind(gl
   let session = null;
   let newer = false;
   const counts = { downloaded: 0, bytes: 0, cached: 0 };
+  /** This session's downloaded tiles (gzip bytes), routed from memory. @type {Map<string, Uint8Array>} */
+  const mem = new Map();
+  /** Cached tiles that belong to this session's build (only these are read from the cache). @type {Set<string>} */
+  const valid = new Set();
+  /** The background cache writes, one after the other; a failure only costs a download next time. */
+  let saving = Promise.resolve();
+  const save = (/** @type {() => Promise<void>} */ fn) => { saving = saving.then(fn).catch(() => {}); };
 
   /** @param {string} name */
   async function get(name) {
@@ -71,15 +82,20 @@ export function createTileSource({ fs, baseUrl, fetch = globalThis.fetch.bind(gl
       let published = null;
       try { published = JSON.parse(new TextDecoder().decode(await get('manifest.json'))); } catch { published = null; }
 
+      /** The cache's build for this session. @param {Manifest} m */
+      const useCache = (m) => {
+        session = m;
+        for (const name of files) { const k = name.replace(/\.bin\.gz$/, ''); if (inCache(m, k)) valid.add(k); }
+      };
       if (!published) {
         if (!cached || !tilesForChain(cached, points, 1).every((k) => inCache(cached, k))) throw new Error('routing-offline');
-        session = cached;
-        return { manifest: session, newer };
+        useCache(cached);
+        return { manifest: cached, newer };
       }
       if (cached && (!latest || cached.built === published.built) && tilesForChain(published, points, 1).every((k) => inCache(cached, k))) {
-        session = cached;
+        useCache(cached);
         newer = published.built > cached.built;
-        return { manifest: session, newer };
+        return { manifest: cached, newer };
       }
       // The published build: fetch the needed tiles the cache lacks or holds from another build, then switch the cache
       const same = (/** @type {string} */ k) => !!cached && inCache(cached, k) && cached.tiles[k].hash === published?.tiles[k]?.hash;
@@ -92,24 +108,36 @@ export function createTileSource({ fs, baseUrl, fetch = globalThis.fetch.bind(gl
         onProgress?.(++done, need.length);
         return /** @type {[string, Uint8Array]} */ ([k, bytes]);
       }));
-      for (const name of files) {
-        const k = name.replace(/\.bin\.gz$/, '');
-        if (name.endsWith('.bin.gz') && !same(k)) await fs.remove(tilePath(k));
-      }
-      for (const [k, bytes] of got) await fs.writeBytes(tilePath(k), bytes);
-      await writeJson(fs, MANIFEST, published);
-      session = published;
+      const pub = /** @type {Manifest} */ (published);
+      for (const name of files) { const k = name.replace(/\.bin\.gz$/, ''); if (name.endsWith('.bin.gz') && same(k)) valid.add(k); }
+      for (const [k, bytes] of got) mem.set(k, bytes);
+      if (cached) await fs.remove(MANIFEST);
+      save(async () => {
+        for (const name of files) {
+          const k = name.replace(/\.bin\.gz$/, '');
+          if (name.endsWith('.bin.gz') && !same(k)) await fs.remove(tilePath(k));
+        }
+        // a few at a time: a OneDrive folder is slow per file
+        for (let i = 0; i < got.length; i += 8) await Promise.all(got.slice(i, i + 8).map(([k, bytes]) => fs.writeBytes(tilePath(k), bytes)));
+        await writeJson(fs, MANIFEST, pub);
+      });
+      session = pub;
       return { manifest: session, newer };
     },
 
     async loadTile(key) {
       if (!session) throw new Error('routing-not-open');
-      const hit = await fs.readBytes(tilePath(key));
+      const m = mem.get(key);
+      if (m) return gunzip(/** @type {ArrayBuffer} */ (m.slice().buffer));
+      const hit = valid.has(key) ? await fs.readBytes(tilePath(key)) : null;
       if (hit) { counts.cached++; return gunzip(/** @type {ArrayBuffer} */ (hit.slice().buffer)); }
       const bytes = await download(session, key);
-      await fs.writeBytes(tilePath(key), bytes);
+      mem.set(key, bytes);
+      save(() => fs.writeBytes(tilePath(key), bytes));
       return gunzip(/** @type {ArrayBuffer} */ (bytes.slice().buffer));
     },
+
+    saved: () => saving,
 
     stats: () => ({ ...counts }),
 

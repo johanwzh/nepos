@@ -42,6 +42,24 @@ const tileCalls = (/** @type {string[]} */ calls) => calls.filter((c) => c.endsW
 const POINTS = [{ lon: 10.1, lat: 59.05 }, { lon: 10.3, lat: 59.05 }];
 const v1 = () => build('2026-10-01T00:00:00Z', { '40_472': tile(10.1, 59.05), '41_472': tile(10.3, 59.05), '50_480': tile(12.6, 60.01) });
 
+/** Open a session's tiles and wait for its cache writes (they run in the background, user 2026-10-31). */
+async function prime(/** @type {any} */ fs, /** @type {any} */ fetch, /** @type {any[]} */ points, /** @type {any} */ opts = undefined) {
+  const src = createTileSource({ fs, baseUrl: BASE, fetch });
+  await src.open(points, opts);
+  await src.saved();
+}
+
+/** A memory project whose file writes wait until released (a slow OneDrive folder). */
+function slowFs() {
+  const fs = createMemoryFs();
+  /** @type {() => void} */
+  let release = () => {};
+  const gate = new Promise((r) => { release = () => r(undefined); });
+  const write = fs.writeBytes.bind(fs);
+  fs.writeBytes = async (path, bytes) => { await gate; return write(path, bytes); };
+  return { fs, release };
+}
+
 describe('tile source', () => {
   it('first open downloads the area and caches it with the manifest', async () => {
     const fs = createMemoryFs(), b = v1(), { s, fetch } = server(b);
@@ -50,15 +68,16 @@ describe('tile source', () => {
     expect(newer).toBe(false);
     expect(manifest.built).toBe('2026-10-01T00:00:00Z');
     expect(tileCalls(s.calls).sort()).toEqual(['40_472.bin.gz', '41_472.bin.gz']);
+    await src.saved();
     expect(fs.paths().filter((p) => p.startsWith(DIR)).sort()).toEqual([`${DIR}/40_472.bin.gz`, `${DIR}/41_472.bin.gz`, `${DIR}/manifest.json`]);
     expect(new Uint8Array(await src.loadTile('40_472'))).toEqual(b.raw['40_472']);
-    expect(tileCalls(s.calls)).toHaveLength(2); // served from the cache
-    expect(src.stats()).toEqual({ downloaded: 2, bytes: b.gz['40_472'].length + b.gz['41_472'].length, cached: 1 });
+    expect(tileCalls(s.calls)).toHaveLength(2); // served from memory: downloaded once
+    expect(src.stats()).toEqual({ downloaded: 2, bytes: b.gz['40_472'].length + b.gz['41_472'].length, cached: 0 });
   });
 
   it('a later session uses the cache: no tile is fetched again', async () => {
     const fs = createMemoryFs(), b = v1(), { s, fetch } = server(b);
-    await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS);
+    await prime(fs, fetch, POINTS);
     s.calls.length = 0;
     const src = createTileSource({ fs, baseUrl: BASE, fetch });
     expect((await src.open(POINTS)).newer).toBe(false);
@@ -69,7 +88,7 @@ describe('tile source', () => {
 
   it('a newer published build with every needed tile cached: keeps the cached build, says newer', async () => {
     const fs = createMemoryFs(), { s, fetch } = server(v1());
-    await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS);
+    await prime(fs, fetch, POINTS);
     s.b = build('2026-11-01T00:00:00Z', { '40_472': tile(10.1, 59.05, 1), '41_472': tile(10.3, 59.05, 1), '50_480': tile(12.6, 60.01) });
     s.calls.length = 0;
     const src = createTileSource({ fs, baseUrl: BASE, fetch });
@@ -81,13 +100,14 @@ describe('tile source', () => {
 
   it('a newer build and a tile not cached: that area comes from the new build, stale tiles leave the cache', async () => {
     const fs = createMemoryFs(), { s, fetch } = server(v1());
-    await createTileSource({ fs, baseUrl: BASE, fetch }).open([POINTS[0]]); // caches 40_472 and 41_472 (ring 1)
-    await createTileSource({ fs, baseUrl: BASE, fetch }).open([{ lon: 12.6, lat: 60.01 }]); // and 50_480
+    await prime(fs, fetch, [POINTS[0]]); // caches 40_472 and 41_472 (ring 1)
+    await prime(fs, fetch, [{ lon: 12.6, lat: 60.01 }]); // and 50_480
     const v2 = build('2026-11-01T00:00:00Z', { '40_472': tile(10.1, 59.05, 1), '41_472': tile(10.3, 59.05), '42_472': tile(10.6, 59.05), '50_480': tile(12.6, 60.01, 1) });
     s.b = v2;
     s.calls.length = 0;
     const src = createTileSource({ fs, baseUrl: BASE, fetch });
     const { manifest, newer } = await src.open([...POINTS, { lon: 10.6, lat: 59.05 }]);
+    await src.saved();
     expect(newer).toBe(false);
     expect(manifest.built).toBe('2026-11-01T00:00:00Z');
     expect(tileCalls(s.calls).sort()).toEqual(['40_472.bin.gz', '42_472.bin.gz']); // 41_472 did not change
@@ -98,7 +118,7 @@ describe('tile source', () => {
 
   it('offline with every needed tile cached: routes from the cache', async () => {
     const fs = createMemoryFs(), b = v1(), { s, fetch } = server(b);
-    await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS);
+    await prime(fs, fetch, POINTS);
     s.offline = true;
     const src = createTileSource({ fs, baseUrl: BASE, fetch });
     expect(await src.open(POINTS)).toMatchObject({ newer: false, manifest: { built: '2026-10-01T00:00:00Z' } });
@@ -107,7 +127,7 @@ describe('tile source', () => {
 
   it('offline with a tile missing: routing-offline', async () => {
     const fs = createMemoryFs(), { s, fetch } = server(v1());
-    await createTileSource({ fs, baseUrl: BASE, fetch }).open([POINTS[0]]);
+    await prime(fs, fetch, [POINTS[0]]);
     s.offline = true;
     await expect(createTileSource({ fs, baseUrl: BASE, fetch }).open([{ lon: 12.6, lat: 60.01 }])).rejects.toThrow('routing-offline');
     await expect(createTileSource({ fs: createMemoryFs(), baseUrl: BASE, fetch }).open(POINTS)).rejects.toThrow('routing-offline');
@@ -135,14 +155,14 @@ describe('tile source', () => {
     s.offline = true;
     expect(await createTileSource({ fs, baseUrl: BASE, fetch }).published()).toBeNull();
     s.offline = false;
-    await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS);
+    await prime(fs, fetch, POINTS);
     s.offline = true;
     expect((await createTileSource({ fs, baseUrl: BASE, fetch }).published())?.built).toBe('2026-10-01T00:00:00Z');
   });
 
   it('final review 1: open(points, { latest: true }) routes on a newer published build even when the cache covers the area', async () => {
     const fs = createMemoryFs(), { s, fetch } = server(v1());
-    await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS);
+    await prime(fs, fetch, POINTS);
     s.b = build('2026-11-01T00:00:00Z', { '40_472': tile(10.1, 59.05, 1), '41_472': tile(10.3, 59.05, 1) });
     const r = await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS, { latest: true });
     expect([r.manifest.built, r.newer]).toEqual(['2026-11-01T00:00:00Z', false]);
@@ -152,7 +172,28 @@ describe('tile source', () => {
     const fs = createMemoryFs(), { fetch } = server(v1());
     /** @type {[number, number][]} */
     const seen = [];
-    await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS, { onProgress: (done, total) => seen.push([done, total]) });
+    await prime(fs, fetch, POINTS, { onProgress: (done, total) => seen.push([done, total]) });
     expect(seen).toEqual([[0, 2], [1, 2], [2, 2]]);
+  });
+
+  it('routes from the downloaded tiles at once: the cache is written in the background (user 2026-10-31: 115 tiles took minutes)', async () => {
+    const { fs, release } = slowFs(), b = v1(), { fetch } = server(b);
+    const src = createTileSource({ fs, baseUrl: BASE, fetch });
+    await src.open(POINTS);
+    expect(new Uint8Array(await src.loadTile('41_472'))).toEqual(b.raw['41_472']);
+    expect(fs.paths().filter((p) => p.startsWith(DIR))).toEqual([]);
+    release();
+    await src.saved();
+    expect(fs.paths().filter((p) => p.startsWith(DIR)).sort()).toEqual([`${DIR}/40_472.bin.gz`, `${DIR}/41_472.bin.gz`, `${DIR}/manifest.json`]);
+  });
+
+  it('a cache write that never finishes leaves no old manifest beside new tiles: the next session downloads again', async () => {
+    const fs = createMemoryFs(), { s, fetch } = server(v1());
+    await prime(fs, fetch, POINTS);
+    // now every write hangs (the page closes before the cache is written)
+    fs.writeBytes = () => new Promise(() => {});
+    s.b = build('2026-11-01T00:00:00Z', { '40_472': tile(10.1, 59.05, 1), '41_472': tile(10.3, 59.05, 1) });
+    await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS, { latest: true });
+    expect(await readText(fs, `${DIR}/manifest.json`)).toBeNull();
   });
 });

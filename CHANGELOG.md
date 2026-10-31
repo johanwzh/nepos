@@ -2,15 +2,15 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
-## 2.6.0 — not released yet
+## 2.6.1 — not released yet
 
 **New features**
 
 - **Routing:** **Ruting** (Alt+L, bus lines) is a view of its own in place of the timetable: the line's journey
   patterns as small pictures framed red (not routed), orange (to check: a stop moved in NSR, newer map data, another
   stop on a row) or green; the selected pattern's stops beside a large map with the stops' names; and an info pane
-  for the table set, the pattern and the selected leg. The stop list shows every row of the table, a passed one with
-  **|**; each picture counts the pattern's trips; a legend explains the colours. Nothing routes and no saved distance changes without you:
+  for the table set, the pattern and the selected leg. The stop list shows every row of the table, each stop numbered
+  as on the map and a passed one with **|**; each picture counts the pattern's trips; a legend explains the colours. Nothing routes and no saved distance changes without you:
   **Route** makes a proposal, drawn over the old route with the change in km and minutes; add or drag waypoints on a
   leg; **Accept** saves it in `data/links/<line>.json`, and **Keep** marks an orange pattern checked without changing a
   metre. At the bottom right, **Discard** drops the proposal, **Apply** accepts it, saves and closes, and **Close** leaves.
@@ -26,6 +26,9 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 **Bug fixes**
 
+- **Routing a new area:** after the map data was downloaded, Nepos wrote every tile into the project's `cache/`
+  and read it back before routing began, which took minutes in a OneDrive folder. It now routes from the downloaded
+  data at once and fills the cache in the background; the info pane says "Routing…" once the download is done.
 - **Registrer stopp:** the map was dimmed and locked like the rest of the page while the tool was on; it stays usable now.
 
 ## 2.5.1 — 2026-10-30

@@ -377,7 +377,7 @@ function stopList() {
     }
     const i = r.call;
     leg = i;
-    let li = `<li class="rv-st${p.stops[i].quay ? '' : ' rv-nopos'}">${esc(r.name)}</li>`;
+    let li = `<li class="rv-st${p.stops[i].quay ? '' : ' rv-nopos'}"><b class="rv-n">${i + 1}</b>${esc(r.name)}</li>`;
     if (i < p.keys.length) {
       const k = p.keys[i];
       li += `<li class="rv-gap${bad(i) ? ' rv-bad' : ''}${k && k === selLeg ? ' on' : ''}"${k ? ` data-key="${esc(k)}"` : ''}></li>`;
@@ -456,7 +456,7 @@ async function start(id) {
   setId = id;
   selPattern = null; selLeg = null; selWp = null; error = ''; busy = false; fitFor = '';
   queue = Promise.resolve();
-  session = makeSession({ code, rs, setId, onProgress: (done, total) => { progress = t('rvFetching', done, total); render(); } });
+  session = makeSession({ code, rs, setId, onProgress: (done, total) => { progress = done < total ? t('rvFetching', done, total) : t('rvRoutingNow'); render(); } });
   const s = session;
   render();
   enqueue(() => s.open());

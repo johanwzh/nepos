@@ -19,6 +19,7 @@ function fixtureTiles(published = manifest) {
     loadTile: vi.fn(async (/** @type {string} */ key) => { const b = gunzipSync(readFileSync(new URL(`${key}.bin.gz`, FIX))); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); }),
     stats: () => ({ downloaded: 0, bytes: 0, cached: 0 }),
     published: vi.fn(async () => published),
+    saved: async () => {},
   };
 }
 

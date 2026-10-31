@@ -186,7 +186,9 @@ describe('the routing view', () => {
     thumbs()[0].click();
     await settle();
     expect(thumbs()[0].classList.contains('on')).toBe(true);
-    expect([...rv().querySelectorAll('.rv-st')].map((el) => el.textContent)).toEqual(['A', 'B', 'C']);
+    // each stop numbered as on the map (user 2026-10-31: a mark for the stops between the leg lines)
+    expect([...rv().querySelectorAll('.rv-st')].map((el) => el.textContent)).toEqual(['1A', '2B', '3C']);
+    expect([...rv().querySelectorAll('.rv-st .rv-n')].map((el) => el.textContent)).toEqual(['1', '2', '3']);
     expect(rv().querySelectorAll('.rv-pass')).toHaveLength(0);
     expect(drawn.links.filter((l) => l.state !== 'faint').map((l) => [l.key, l.state])).toEqual([[K1, 'failed'], [K2, 'failed']]);
     expect(drawn.links.filter((l) => l.state === 'faint').map((l) => l.key)).toEqual([K13]);
@@ -358,7 +360,7 @@ describe('the routing view', () => {
     expect(thumbs()[0].textContent).toContain('1 tur');
     thumbs()[1].click();
     await settle();
-    expect([...rv().querySelectorAll('.rv-st')].map((el) => [el.textContent, el.classList.contains('rv-pass')])).toEqual([['A', false], ['| B', true], ['C', false]]);
+    expect([...rv().querySelectorAll('.rv-st')].map((el) => [el.textContent, el.classList.contains('rv-pass')])).toEqual([['1A', false], ['| B', true], ['2C', false]]);
   });
 
   it('says it is fetching map data, with progress, while Route waits for it (user 2026-10-31)', async () => {
@@ -371,6 +373,8 @@ describe('the routing view', () => {
     /** @type {HTMLButtonElement} */ (btn('.rv-route')).click();
     await settle();
     expect(q('.rv-busy')?.textContent).toContain('Henter kartdata (1 / 4)');
+    sessionCtx.onProgress(4, 4);
+    expect(q('.rv-busy')?.textContent).toContain('Ruter');
     finish();
     await settle();
     expect(q('.rv-busy')).toBeNull();

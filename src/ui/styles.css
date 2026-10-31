@@ -1478,20 +1478,20 @@ body.route-on .route-view { display: grid; flex: 1; min-width: 0; min-height: 0;
 .rv-x { border: none; background: none; cursor: pointer; font-size: 16px; color: inherit; }
 .rv-body { display: grid; grid-template-columns: 180px minmax(0, 1fr) 260px; min-height: 0; }
 .rv-stops { overflow: auto; padding: 8px 6px 8px 8px; font-size: 12px; border-right: 1px solid var(--border, #ddd); }
-.rv-stops ol { list-style: none; margin: 0; padding: 0 0 0 16px; }
+.rv-stops ol { list-style: none; margin: 0; padding: 0; }
 .rv-pick { opacity: .7; }
-.rv-st { position: relative; padding: 1px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rv-st::before { content: ''; position: absolute; left: -15px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--bg-raised, #fff); border: 2px solid #1b8a4a; box-sizing: border-box; }
+/* Each stop numbered as on the map, in a circle on the leg line (user 2026-10-31); the line runs through x = 9 px */
+.rv-st { display: flex; align-items: center; gap: 6px; padding: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rv-n { flex: none; width: 18px; height: 18px; border-radius: 50%; background: var(--bg-raised, #fff); color: var(--text, #222); border: 2px solid #333; box-sizing: border-box; font-size: 9px; line-height: 1; display: flex; align-items: center; justify-content: center; }
 .rv-st.rv-nopos { opacity: .5; }
-.rv-st.rv-nopos::before { border-color: #999; }
-.rv-gap { height: 12px; margin-left: -11px; border-left: 3px solid #1b8a4a; cursor: pointer; }
+.rv-st.rv-nopos .rv-n { border-style: dashed; }
+.rv-gap { height: 12px; margin-left: 8px; border-left: 3px solid #1b8a4a; cursor: pointer; }
 .rv-gap.rv-bad { border-left: 3px dashed #c62828; }
-.rv-gap.on { border-left: 5px solid #0078d4; margin-left: -12px; }
+.rv-gap.on { border-left: 5px solid #0078d4; margin-left: 7px; }
 .rv-gap:not([data-key]) { cursor: default; }
 /* A row the pattern passes (user 2026-10-31): as in the timetable, a | instead of a stop */
-.rv-st.rv-pass { opacity: .55; font-style: italic; }
-.rv-st.rv-pass::before { display: none; }
-.rv-st.rv-pass.rv-in { margin-left: -11px; padding-left: 11px; border-left: 3px solid #1b8a4a; }
+.rv-st.rv-pass { display: block; opacity: .55; font-style: italic; padding-left: 24px; }
+.rv-st.rv-pass.rv-in { margin-left: 8px; padding-left: 16px; border-left: 3px solid #1b8a4a; }
 .rv-st.rv-pass.rv-in.rv-bad { border-left: 3px dashed #c62828; }
 .rv-busy { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-weight: 600; }
 .rv-spin { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: rv-spin .8s linear infinite; flex: none; }
