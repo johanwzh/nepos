@@ -51,7 +51,7 @@ function stateOf(link, cands) {
     return cands.length === 1 ? { state: 'new', pick: cands[0] } : { state: 'pick', pick: null };
   }
   const sameTrip = cands.filter((c) => c.line === link.line && c.trip === link.trip);
-  const same = sameTrip.find((c) => c.arr === link.arr);
+  const same = sameTrip.find((c) => c.arr === link.arr && c.stopId === link.stopId); // a feeder now at another quay is a change (final review I3)
   if (same) return { state: 'same', pick: same };
   if (sameTrip.length) return { state: 'changed', pick: sameTrip[0] };
   if (!cands.length) return { state: 'gone', pick: null };

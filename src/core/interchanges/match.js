@@ -37,7 +37,8 @@ function lineMatches(rs, c) {
  */
 export function candidates(hub, row, ourTrip, lines, { calendars, quayInfo, ownCode, memo }) {
   const ours = ourTrip?.calls.find((c) => c.ri === row);
-  if (!ours || !ours.board || ours.dep == null) return [];
+  // A trip that ends here waits for nobody: its last call is no departure (final review I7)
+  if (!ours || !ours.board || ours.dep == null || ours === ourTrip.calls[ourTrip.calls.length - 1]) return [];
   const ourDays = new Set(ourTrip.days);
   const here = quayInfo.get(hub.stopId);
   const places = new Set(hub.stops);
@@ -60,8 +61,10 @@ export function candidates(hub, row, ourTrip, lines, { calendars, quayInfo, ownC
         if (called.size && !trip.calls.slice(0, i).some((c) => called.has(c.stopId) || called.has(placeOf(c.stopId) ?? ''))) return;
         let transfer = ours.dep - call.arr;
         let shift = 0;
-        // Our trip just after midnight on its own date meets the evening before's feeder
+        // Our trip just after midnight on its own date meets the evening before's feeder; our trip past midnight
+        // (day offset) meets a feeder whose own day starts after midnight (final review I5)
         if (transfer < 0 && transfer + 1440 <= hub.window[1]) { transfer += 1440; shift = 1; }
+        else if (transfer > hub.window[1] && transfer - 1440 >= 0 && transfer - 1440 <= hub.window[1]) { transfer -= 1440; shift = -1; }
         if (transfer < hub.window[0] || transfer > hub.window[1] || transfer < hub.walk) return;
         const common = trip.days.filter((d) => ourDays.has(shift ? addDays(d, shift) : d)).length;
         if (!common) return;

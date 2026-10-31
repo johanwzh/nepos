@@ -1,5 +1,6 @@
 // The route state's structure (timetable structure spec §1–§4): table sets, each with periods that
 // reference calendars, and one grid per period.
+import { dropHubLinks } from '../core/interchanges/hub.js';
 const emptyGrid = () => ({ stops: [], cols: [] });
 /** A new line's first grid: 3 empty stops by 3 empty trips, ready to type into (user test 2026-10-16). @returns {{ stops: any[], cols: any[] }} */
 const starterGrid = () => ({
@@ -46,7 +47,7 @@ export function addPeriod(rs, copyTrips) {
   const from = src ? rs.grids[`${src.id}:${src.setId}`] : null;
   const copy = from ? JSON.parse(JSON.stringify(from)) : emptyGrid();
   if (!copyTrips) copy.cols = [];
-  for (const col of copy.cols) col.uid = crypto.randomUUID();
+  for (const col of copy.cols) { col.uid = crypto.randomUUID(); dropHubLinks(col); }
   rs.grids[`${id}:${rs.activeSet}`] = copy;
   return id;
 }
@@ -107,7 +108,7 @@ export function duplicateTableSet(rs, setId, name) {
     const id = rs.nextId++;
     rs.periods.push({ id, setId: newId, calendarIds: [...per.calendarIds] });
     const copy = JSON.parse(JSON.stringify(rs.grids[`${per.id}:${setId}`] ?? emptyGrid()));
-    for (const col of copy.cols) col.uid = crypto.randomUUID();
+    for (const col of copy.cols) { col.uid = crypto.randomUUID(); dropHubLinks(col); }
     rs.grids[`${id}:${newId}`] = copy;
   }
   if (!periodsOf(rs, newId).length) { const id = rs.nextId++; rs.periods.push({ id, setId: newId, calendarIds: [] }); rs.grids[`${id}:${newId}`] = emptyGrid(); }

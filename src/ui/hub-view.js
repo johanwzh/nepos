@@ -38,11 +38,18 @@ let view = null;
 const esc = (/** @type {unknown} */ s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
 const hhmm = (/** @type {number | null} */ m) => (m == null ? '—' : `${String(Math.floor((((m % 1440) + 1440) % 1440) / 60)).padStart(2, '0')}:${String((((m % 1440) + 1440) % 1440) % 60).padStart(2, '0')}${m >= 1440 ? ' +1' : ''}`);
 const root = () => /** @type {HTMLElement} */ (document.getElementById('hub-view'));
+/** StopPlace id → name, from the Quays Nepos knows; built once per render (final review I6). @type {Map<string, string>} */
+let placeNames = new Map();
+function readPlaceNames() {
+  placeNames = new Map();
+  for (const info of quayInfo.values()) if (info?.stopPlaceId && !placeNames.has(info.stopPlaceId)) placeNames.set(info.stopPlaceId, info.stopPlaceName || info.stopPlaceId);
+}
 /** A stop's name for people: the StopPlace's, else the id. @param {string} id */
-const placeName = (id) => {
-  for (const info of quayInfo.values()) if (info?.stopPlaceId === id) return info.stopPlaceName || id;
-  return quayInfo.get(id)?.stopPlaceName ?? id;
-};
+const placeName = (id) => placeNames.get(id) ?? quayInfo.get(id)?.stopPlaceName ?? id;
+/** The selected hub's proposals for this render: computed once (final review I6). @type {Proposal[]} */
+let current = [];
+/** What the timeline draws, kept so a pan or zoom redraws without matching again. @type {Parameters<typeof drawHubTimeline>[1] | null} */
+let tlData = null;
 
 /** Every exported line as it is now, ours included (the feeders, and our own trips). */
 function lines() {
@@ -57,7 +64,9 @@ const hub = () => (selRow != null ? grid.stops[selRow]?.hub ?? null : null);
 function oursAt(ri) {
   return grid.cols.flatMap((col, ci) => {
     const dep = col.virt ? null : cellToMins(col.cells[ri]);
-    return dep == null || !col.uid ? [] : [{ ci, col, dep, block: !!col.block }];
+    // A trip that ends at this stop waits for nobody (final review I7)
+    const goesOn = col.cells.slice(ri + 1).some((/** @type {any} */ c) => c?.time && c.time !== '|');
+    return dep == null || !col.uid || !goesOn ? [] : [{ ci, col, dep, block: !!col.block }];
   });
 }
 
@@ -72,6 +81,8 @@ function render() {
   if (!isOpen || !el || !app.routeState) return;
   const rs = app.routeState;
   if (selRow != null && !grid.stops[selRow]?.hub) selRow = null;
+  readPlaceNames();
+  current = selRow != null && hub() ? proposals(grid, selRow, lines(), ctx()) : [];
   const sets = (rs.tableSets ?? []).map((/** @type {any} */ s) => `<button type="button" class="rv-set hv-set${s.id === rs.activeSet ? ' on' : ''}" data-set="${s.id}">${esc(s.name || '—')}</button>`).join('');
   const pers = periodsOf(rs, rs.activeSet);
   const perChips = pers.length > 1 ? pers.map((/** @type {any} */ p) => `<button type="button" class="rv-set hv-per${p.id === rs.activePer ? ' on' : ''}" data-per="${p.id}">${esc(periodLabel(p))}</button>`).join('') : '';
@@ -80,6 +91,12 @@ function render() {
     + `<div class="hv-body"><div class="hv-stops">${stopList()}</div><div class="hv-mid">${middle()}</div><div class="hv-side">${side()}</div></div>`;
   const tl = /** @type {HTMLElement | null} */ (el.querySelector('.hv-timeline'));
   if (tl && hub() && selRow != null) drawTimeline(tl, selRow);
+}
+
+/** Redraw the timeline from what was computed (pan, zoom). @param {number} ri */
+function redrawTimeline(ri) {
+  const tl = /** @type {HTMLElement | null} */ (root().querySelector('.hv-timeline'));
+  if (tl && tlData) drawHubTimeline(tl, { ...tlData, view }, { onPick: (trip) => togglePick(ri, trip), onView: (v) => { view = v; redrawTimeline(ri); } });
 }
 
 /** The left list: every stop row of the table set, each with its switch. */
@@ -97,8 +114,8 @@ function stopList() {
   }).join('')}</ul>`;
 }
 
-/** The selected hub's proposals (the approval round), computed against the lines as they are now. @returns {Proposal[]} */
-const props = () => (selRow != null && hub() ? proposals(grid, selRow, lines(), ctx()) : []);
+/** The selected hub's proposals (the approval round), as computed for this render. @returns {Proposal[]} */
+const props = () => current;
 
 function middle() {
   const h = hub();
@@ -165,10 +182,8 @@ function drawTimeline(el, ri) {
     else if ((p.state === 'new' || p.state === 'changed') && p.pick) links.push({ line: p.pick.line, trip: p.pick.trip, arr: p.pick.arr, to: p.trip, kind: 'proposal' });
     else if (p.state === 'pick') for (const k of p.candidates) links.push({ line: k.line, trip: k.trip, arr: k.arr, to: p.trip, kind: 'pick' });
   }
-  drawHubTimeline(el, { ours, feeders: [...feeders.values()].map((f) => ({ ...f, arrs: [...f.arrs.values()] })), window: h.window, links, view, oursLabel: t('hvOurs') }, {
-    onPick: (trip) => togglePick(ri, trip),
-    onView: (v) => { view = v; const tl = /** @type {HTMLElement | null} */ (root().querySelector('.hv-timeline')); if (tl) drawTimeline(tl, ri); },
-  });
+  tlData = { ours, feeders: [...feeders.values()].map((f) => ({ ...f, arrs: [...f.arrs.values()] })), window: h.window, links, view, oursLabel: t('hvOurs') };
+  drawHubTimeline(el, tlData, { onPick: (trip) => togglePick(ri, trip), onView: (v) => { view = v; redrawTimeline(ri); } });
 }
 
 /** The right side: what our trips at the selected hub wait for. */
@@ -304,7 +319,7 @@ function build() {
     } else if (target.closest('.hv-find')) render();
     else if (target.closest('.hv-discard')) { choices = {}; render(); }
     else if (target.closest('.hv-approve')) {
-      const out = approve(props(), choices, new Date());
+      const out = approve(proposals(grid, ri, lines(), ctx()), choices, new Date());
       for (const col of grid.cols) if (col.uid && out[col.uid] && col.cells[ri]) col.cells[ri].hubLink = out[col.uid];
       choices = {};
       markDirty();

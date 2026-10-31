@@ -26,6 +26,11 @@ export function newHub(stopId, quayInfo) {
   return { stopId, stops: [sp || stopId], radiusM: null, window: [2, 15], maxWait: 5, walk: 0, criteria: {} };
 }
 
+/** A copied trip is another trip: it waits for nothing until approved (final review I4). @param {{ cells?: any[] }} col */
+export function dropHubLinks(col) {
+  for (const cell of col.cells ?? []) if (cell?.hubLink) delete cell.hubLink;
+}
+
 /** @param {{ stops: any[] }} grid @param {number} ri @returns {'none' | 'ok' | 'lost'} */
 export function hubState(grid, ri) {
   const stop = grid.stops[ri];

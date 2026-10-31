@@ -1,6 +1,7 @@
 // Actions on many lines at once, from the lines pane's maxi view (navigation spec §3.2). Edits are
 // unsaved until saved, like any other edit (§2): the open line is changed in place, every other
 // line is parked as a draft. Nepos never edits a damaged file: those are skipped and named.
+import { dropHubLinks } from '../core/interchanges/hub.js';
 import { app } from './state.js';
 import { markDirty, refreshAll, runAction } from './shell.js';
 import { t } from '../i18n/strings.js';
@@ -88,7 +89,7 @@ export async function duplicateLines(codes) {
     const rs = parseERN(current ? toText(code, current) : entry.text, { lang: lang() }); // a deep copy
     rs.routeName = `${rs.routeName} ${t('copySuffix')}`.trim();
     for (const set of rs.tableSets) set.uid = crypto.randomUUID();
-    for (const grid of Object.values(rs.grids)) for (const col of /** @type {any} */ (grid).cols) col.uid = crypto.randomUUID();
+    for (const grid of Object.values(rs.grids)) for (const col of /** @type {any} */ (grid).cols) { col.uid = crypto.randomUUID(); dropHubLinks(col); }
     const newCode = crypto.randomUUID();
     const text = toText(newCode, rs);
     if (!(await runAction(() => writeRoute(fs, newCode, text)))) break;

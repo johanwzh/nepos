@@ -17,13 +17,20 @@ import { UUID_PATTERN } from '../ern/serialize.js';
 export const setKeyOf = (set) => (set?.uid && UUID_PATTERN.test(set.uid) ? set.uid : String(set?.id ?? ''));
 
 /**
+ * Across rounds, by line state and calendars (final review I6: ~150 lines). A saved line's state is parsed once per text
+ * and not changed; the open line's comes new from lineState on each read. One changed in place must pass a memo.
+ * @type {WeakMap<object, { calendars: any, trips: Trip[] }>}
+ */
+const cache = new WeakMap();
+
+/**
  * @param {any} rs
  * @param {{ calendars: import('../calendars.js').Calendar[], memo?: WeakMap<object, Trip[]> }} ctx memo: one matching
  *   round's results, so a line is read once per round (route states can be changed in place between rounds)
  * @returns {Trip[]}
  */
 export function lineTrips(rs, { calendars, memo }) {
-  const hit = memo?.get(rs);
+  const hit = memo?.get(rs) ?? (cache.get(rs)?.calendars === calendars ? cache.get(rs)?.trips : undefined);
   if (hit) return hit;
   /** @type {Trip[]} */
   const out = [];
@@ -47,6 +54,6 @@ export function lineTrips(rs, { calendars, memo }) {
       }
     }
   }
-  if (memo && rs && typeof rs === 'object') memo.set(rs, out);
+  if (rs && typeof rs === 'object') { memo?.set(rs, out); cache.set(rs, { calendars, trips: out }); }
   return out;
 }

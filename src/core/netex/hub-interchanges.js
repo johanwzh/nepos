@@ -6,8 +6,9 @@ import { tripVariants, sjIdFor, variantSjIdOf } from './journeys.js';
 import { stopLocalId } from '../quays.js';
 import { uuid5 } from '../uuid5.js';
 import { hubState } from '../interchanges/hub.js';
+import { addDays } from '../calendars.js';
 
-/** @typedef {Map<string, Map<string, { sjId: string, calls: { ri: number, stopId: string }[] }[]>>} JourneyIndex line code → trip uid → its written variants */
+/** @typedef {Map<string, Map<string, { sjId: string, calls: { ri: number, stopId: string }[], days: Set<string> }[]>>} JourneyIndex line code → trip uid → its written variants */
 
 /**
  * Every ServiceJourney the line files write, by line and trip uid; the same loop as genLineXml.
@@ -18,16 +19,17 @@ export function journeyIndex(cs, routes, colDays) {
   /** @type {JourneyIndex} */
   const out = new Map();
   for (const { code, rs } of routes) {
-    /** @type {Map<string, { sjId: string, calls: { ri: number, stopId: string }[] }[]>} */
+    /** @type {Map<string, { sjId: string, calls: { ri: number, stopId: string }[], days: Set<string> }[]>} */
     const byTrip = new Map();
     (rs.tableSets ?? []).forEach((/** @type {any} */ set, /** @type {number} */ di) => {
       for (const per of (rs.periods ?? []).filter((/** @type {any} */ p) => p.setId === set.id)) {
         const grid = rs.grids[`${per.id}:${set.id}`] ?? { stops: [], cols: [] };
         grid.cols.forEach((/** @type {any} */ col, /** @type {number} */ ci) => {
           for (const v of tripVariants(grid, col, colDays.get(col) ?? [])) {
-            if (v.calls.length < 2 || !col.uid) continue;
+            // As genLineXml: a variant with no days is not written, so it must not be referred to (final review I1)
+            if (v.calls.length < 2 || !v.days.length || !col.uid) continue;
             const list = byTrip.get(col.uid) ?? [];
-            list.push({ sjId: variantSjIdOf(cs, sjIdFor(cs, code, col, di, per, ci), v), calls: v.calls.map((c) => ({ ri: c.ri, stopId: c.stopId })) });
+            list.push({ sjId: variantSjIdOf(cs, sjIdFor(cs, code, col, di, per, ci), v), calls: v.calls.map((c) => ({ ri: c.ri, stopId: c.stopId })), days: new Set(v.days) });
             byTrip.set(col.uid, list);
           }
         });
@@ -36,6 +38,12 @@ export function journeyIndex(cs, routes, colDays) {
     out.set(code, byTrip);
   }
   return out;
+}
+
+/** Two variants run on a common day, or on neighbouring days (a feeder the evening before our trip after midnight). @param {Set<string>} a @param {Set<string>} b */
+function shareDay(a, b) {
+  for (const d of a) if (b.has(d) || b.has(addDays(d, -1)) || b.has(addDays(d, 1))) return true;
+  return false;
 }
 
 /**
@@ -55,11 +63,14 @@ export function hubInterchangesXml(cs, code, rs, journeys) {
       for (const col of g.cols) {
         const link = col.cells[ri]?.hubLink;
         if (!link?.line || !col.uid) continue;
-        const to = journeys.get(code)?.get(col.uid)?.find((v) => v.calls.some((c) => c.ri === ri));
-        const from = journeys.get(link.line)?.get(link.trip ?? '')?.find((v) => v.calls.some((c) => c.stopId === link.stopId));
-        if (!to || !from) continue;
+        // Every variant of ours that leaves the hub, with every variant of the feeder that arrives there on one of its
+        // days: a time switched off on some dates splits a trip, and the promise holds on those days too (final review I2)
+        const tos = journeys.get(code)?.get(col.uid)?.filter((v) => v.calls.some((c) => c.ri === ri)) ?? [];
+        const froms = journeys.get(link.line)?.get(link.trip ?? '')?.filter((v) => v.calls.some((c) => c.stopId === link.stopId)) ?? [];
         const walk = hub.walk > 0 ? `\n        <MinimumTransferTime>PT${hub.walk}M</MinimumTransferTime>` : '';
-        out.push(`      <!-- knutepunkt: waits for line ${link.line} at ${stopLocalId(String(stop.stopId))} -->
+        for (const to of tos) for (const from of froms) {
+          if (!shareDay(to.days, from.days)) continue;
+          out.push(`      <!-- knutepunkt: waits for line ${link.line} at ${stopLocalId(String(stop.stopId))} -->
       <ServiceJourneyInterchange id="${cs}:ServiceJourneyInterchange:${uuid5(`${to.sjId}|${from.sjId}|${stop.stopId}`)}" version="1">
         <Guaranteed>true</Guaranteed>${walk}
         <MaximumWaitTime>PT${hub.maxWait}M</MaximumWaitTime>
@@ -68,6 +79,7 @@ export function hubInterchangesXml(cs, code, rs, journeys) {
         <FromJourneyRef ref="${from.sjId}" version="1"/>
         <ToJourneyRef ref="${to.sjId}" version="1"/>
       </ServiceJourneyInterchange>`);
+        }
       }
     });
   }
