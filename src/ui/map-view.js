@@ -1,5 +1,5 @@
-// The map (2.3): MapLibre GL on vector tiles. The only file that talks to MapLibre; the map panel and the
-// dashboard give it plain data (lines, dots, markers) and get plain events back. The data survives a style
+// The map (2.3): MapLibre GL on vector tiles. The only file that talks to MapLibre; the map panel, the dashboard and
+// the routing session give it plain data (lines, dots, markers, links) and get plain events back. The data survives a style
 // change (light/dark): every source is filled again when the new style has loaded.
 import maplibregl from 'maplibre-gl';
 import { t } from '../i18n/strings.js';
@@ -7,8 +7,10 @@ import { t } from '../i18n/strings.js';
 /** @typedef {[number, number]} LonLat */
 /**
  * @typedef {{ lon: number, lat: number, html: string, cls: string, size: number, height?: number, tooltip?: string, z?: number,
- *             anchor?: 'center' | 'bottom', onClick?: (ev: MouseEvent) => void, onContext?: (ev: MouseEvent) => void }} MapMarker
- *   anchor 'bottom': the marker's bottom edge is the point (a pin's tip, 2.5)
+ *             anchor?: 'center' | 'bottom', onClick?: (ev: MouseEvent) => void, onContext?: (ev: MouseEvent) => void,
+ *             draggable?: boolean, onDragEnd?: (lngLat: LonLat) => void }} MapMarker
+ *   anchor 'bottom': the marker's bottom edge is the point (a pin's tip, 2.5); draggable: a routing waypoint (2.6)
+ * @typedef {{ key: string, coords: LonLat[], state: 'routed' | 'flagged' | 'failed' | 'selected' }} MapLink
  * @typedef {{ lon: number, lat: number, r: number, tooltip: string }} MapDot
  */
 
@@ -44,7 +46,7 @@ export function createMapView(el, { style, dark = false }) {
   map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-left');
 
   /** What each source holds, so a new style can be filled again. @type {Record<string, any>} */
-  const data = { network: collection([]), netstops: collection([]), 'trip-line': collection([]), dashed: collection([]), dots: collection([]), ring: collection([]) };
+  const data = { network: collection([]), netstops: collection([]), links: collection([]), 'trip-line': collection([]), dashed: collection([]), dots: collection([]), ring: collection([]) };
   let isDark = dark;
   const size = { w: el.clientWidth, h: el.clientHeight };
   let ready = false;
@@ -60,6 +62,15 @@ export function createMapView(el, { style, dark = false }) {
     map.addLayer({ id: 'netstops', type: 'circle', source: 'netstops', paint: { 'circle-radius': ['get', 'r'], 'circle-color': isDark ? '#d8d0c0' : '#ffffff',
       'circle-stroke-color': isDark ? '#998a78' : '#606060', 'circle-stroke-width': 1.5 } });
     map.addLayer({ id: 'dashed', type: 'line', source: 'dashed', paint: { 'line-color': '#888', 'line-width': 2, 'line-opacity': 0.5, 'line-dasharray': [2, 2] } });
+    // A routing session's legs (2.6), by state; failed legs are a dashed straight line between the Quays
+    const link = (/** @type {string} */ state, /** @type {Record<string, any>} */ paint) => map.addLayer({ id: `links-${state}`, type: 'line', source: 'links',
+      filter: ['==', ['get', 'state'], state], layout: { 'line-join': 'round', 'line-cap': 'round' }, paint });
+    link('routed', { 'line-color': '#1b8a4a', 'line-width': 4, 'line-opacity': 0.85 });
+    link('flagged', { 'line-color': '#e08a00', 'line-width': 4, 'line-opacity': 0.95 });
+    link('failed', { 'line-color': '#c62828', 'line-width': 3, 'line-dasharray': [2, 2] });
+    link('selected', { 'line-color': BLUE, 'line-width': 6 });
+    // An invisible wide line over the legs: easy to point at
+    map.addLayer({ id: 'links-hit', type: 'line', source: 'links', paint: { 'line-color': '#000', 'line-width': 14, 'line-opacity': 0 } });
     map.addLayer({ id: 'trip-line', type: 'line', source: 'trip-line', paint: { 'line-color': BLUE, 'line-width': 3, 'line-opacity': 0.85 } });
     map.addLayer({ id: 'dots', type: 'circle', source: 'dots', paint: { 'circle-radius': ['get', 'r'], 'circle-color': BLUE,
       'circle-stroke-color': isDark ? '#2a2620' : '#ffffff', 'circle-stroke-width': 2 } });
@@ -86,6 +97,15 @@ export function createMapView(el, { style, dark = false }) {
     map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; popup.remove(); });
   }
 
+  /** @type {((key: string, lngLat: LonLat) => void)[]} */
+  const linkClick = [];
+  map.on('click', 'links-hit', (e) => {
+    const key = e.features?.[0]?.properties?.key;
+    if (key) for (const fn of linkClick) fn(String(key), [e.lngLat.lng, e.lngLat.lat]);
+  });
+  map.on('mouseenter', 'links-hit', () => { map.getCanvas().style.cursor = 'pointer'; });
+  map.on('mouseleave', 'links-hit', () => { map.getCanvas().style.cursor = ''; });
+
   return {
     /** @param {string | object} next @param {boolean} nextDark */
     setStyle(next, nextDark) {
@@ -104,6 +124,10 @@ export function createMapView(el, { style, dark = false }) {
       put('network', collection(net.lines.map((l) => lineFeature(l.coords, { w: l.w, c: l.c, tooltip: l.tooltip ?? '' }))));
       put('netstops', collection(net.stops.map((p) => pointFeature([p.lon, p.lat], { r: p.r, tooltip: p.tooltip ?? '' }))));
     },
+    /** A routing session's legs. @param {MapLink[]} links */
+    setLinks(links) { put('links', collection(links.map((l) => lineFeature(l.coords, { key: l.key, state: l.state })))); },
+    /** @param {(key: string, lngLat: LonLat) => void} fn */
+    onLinkClick(fn) { linkClick.push(fn); },
     /** @param {LonLat[]} line */
     setDashed(line) { put('dashed', collection(line.length > 1 ? [lineFeature(line)] : [])); },
     /** @param {MapMarker[]} list */
@@ -126,7 +150,8 @@ export function createMapView(el, { style, dark = false }) {
           box.addEventListener('mousedown', (e) => { if (e.shiftKey) e.stopPropagation(); });
         }
         if (m.onContext) box.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); m.onContext?.(e); });
-        const marker = new maplibregl.Marker({ element: box, anchor: m.anchor ?? 'center' }).setLngLat([m.lon, m.lat]).addTo(map);
+        const marker = new maplibregl.Marker({ element: box, anchor: m.anchor ?? 'center', draggable: !!m.draggable }).setLngLat([m.lon, m.lat]).addTo(map);
+        if (m.onDragEnd) marker.on('dragend', () => { const p = marker.getLngLat(); m.onDragEnd?.([p.lng, p.lat]); });
         if (m.z) marker.getElement().style.zIndex = String(m.z);
         return marker;
       });
@@ -156,17 +181,6 @@ export function createMapView(el, { style, dark = false }) {
       if (el.clientWidth === size.w && el.clientHeight === size.h) return;
       size.w = el.clientWidth; size.h = el.clientHeight;
       map.resize();
-    },
-    /** The vector source the style draws roads from: what the router fetches. Null for a raster style. */
-    styleSource() {
-      const style = map.getStyle();
-      for (const id of Object.keys(style?.sources ?? {})) {
-        const src = /** @type {any} */ (map.getSource(id));
-        if (src?.type !== 'vector' || !src.tiles?.length) continue;
-        const build = String(src.tiles[0]).match(/\/(\d{8}_\d{6}_[a-z]+)\//)?.[1] ?? '';
-        return { tiles: /** @type {string[]} */ (src.tiles), maxzoom: Number(src.maxzoom ?? 14), buildId: build || id };
-      }
-      return null;
     },
   };
 }
