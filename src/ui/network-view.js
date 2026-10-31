@@ -113,6 +113,7 @@ function close() {
   const el = root();
   el.hidden = true;
   el.replaceChildren();
+  try { view?.destroy(); } catch { /* already gone */ }
   view = null; scene = null;
 }
 

@@ -31,10 +31,13 @@ export function tripsAt(facts, date, minute, { legLine, stopPos }) {
   const before = addDays(date, -1);
   const out = [];
   for (const f of facts) {
-    const at = f.days.includes(date) ? minute : f.days.includes(before) && f.end > 1440 ? minute + 1440 : null;
-    if (at == null || at < f.start || at > f.end) continue;
-    const p = place(f, at, legLine, stopPos);
-    if (p) out.push({ line: f.line, lon: p.pos[0], lat: p.pos[1], waiting: p.waiting });
+    // Today's trip, and the evening before's still running after midnight: a daily late trip can be both (final review I1)
+    const ats = [f.days.includes(date) ? minute : null, f.end > 1440 && f.days.includes(before) ? minute + 1440 : null];
+    for (const at of ats) {
+      if (at == null || at < f.start || at > f.end) continue;
+      const p = place(f, at, legLine, stopPos);
+      if (p) out.push({ line: f.line, lon: p.pos[0], lat: p.pos[1], waiting: p.waiting });
+    }
   }
   return out;
 }

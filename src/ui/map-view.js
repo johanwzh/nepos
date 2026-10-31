@@ -141,6 +141,12 @@ export function createMapView(el, { style, dark = false }) {
       put('network', collection(net.lines.map((l) => lineFeature(l.coords, { w: l.w, c: l.c, tooltip: l.tooltip ?? '' }))));
       put('netstops', collection(net.stops.map((p) => pointFeature([p.lon, p.lat], { r: p.r, tooltip: p.tooltip ?? '' }))));
     },
+    /** Remove the map and its WebGL context (a view opened and closed often: Nettverkskart, final review I2). */
+    destroy() {
+      popup.remove();
+      for (const m of [...markers, ...labels]) m.remove();
+      map.remove();
+    },
     /** Trips at a moment (Nettverkskart): { lon, lat, c, waiting, tooltip }. @param {{ line?: string, lon: number, lat: number, c: string, waiting: boolean, tooltip?: string }[]} trips */
     setTrips(trips) { put('mtrips', collection(trips.map((p) => pointFeature([p.lon, p.lat], { c: p.c, waiting: p.waiting, tooltip: p.tooltip ?? '' })))); },
     /** A routing session's legs. @param {MapLink[]} links */

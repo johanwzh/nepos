@@ -58,6 +58,9 @@ export function receipt(facts, { period, today }) {
     sunday: { dates: new Set(), departures: 0, hours: 0, first: null, last: null }, holiday: { dates: new Set(), departures: 0, hours: 0, first: null, last: null } };
   /** @type {Set<string>} */ const allStops = new Set();
 
+  /** @type {Map<string, DayType>} each date's day type once, however many trips run on it (final review I3) */
+  const typeOf = new Map();
+  const dayType = (/** @type {string} */ d) => { let x = typeOf.get(d); if (!x) { x = dayTypeOf(d); typeOf.set(d, x); } return x; };
   for (const { f, days } of live) {
     const n = days.length, h = f.runMin / 60;
     for (const d of days) allDates.add(d);
@@ -68,9 +71,11 @@ export function receipt(facts, { period, today }) {
     const g = groups.get(f.profile ?? '') ?? { profile: f.profile ?? '', keys: new Map() };
     for (const l of f.legs) if (l.km != null || !g.keys.has(l.key)) g.keys.set(l.key, l.km ?? g.keys.get(l.key) ?? null);
     groups.set(f.profile ?? '', g);
-    for (const [p, ds] of /** @type {[Prod, string[]][]} */ ([[planned, days], [done, days.filter((d) => d < today)], [remaining, days.filter((d) => d >= today)]])) {
-      p.departures += ds.length; p.hours += ds.length * h;
-      if (f.km != null) p.km += ds.length * f.km; else p.unknownKmDepartures += ds.length;
+    let before = 0;
+    for (const d of days) if (d < today) before++;
+    for (const [p, k] of /** @type {[Prod, number][]} */ ([[planned, n], [done, before], [remaining, n - before]])) {
+      p.departures += k; p.hours += k * h;
+      if (f.km != null) p.km += k * f.km; else p.unknownKmDepartures += k;
     }
     if (f.km != null) knownKmHours += n * h;
     const fu = fuels.get(f.fuel) ?? { fuel: f.fuel, departures: 0, hours: 0, km: 0, seatKm: null };
@@ -83,7 +88,7 @@ export function receipt(facts, { period, today }) {
     fuels.set(f.fuel, fu);
     if (f.booked) booked++;
     for (const d of days) {
-      const t = types[dayTypeOf(d)];
+      const t = types[dayType(d)];
       t.dates.add(d); t.departures++; t.hours += h;
       t.first = t.first == null ? f.start : Math.min(t.first, f.start);
       t.last = t.last == null ? f.end : Math.max(t.last, f.end);

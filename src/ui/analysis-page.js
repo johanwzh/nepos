@@ -25,10 +25,12 @@ import { openNetworkView } from './network-view.js';
 /** @typedef {import('../core/analysis/tree.js').TreeNode} TreeNode */
 
 const KEY = 'nepos.analyse';
-/** @type {{ sub: 'todo' | 'analyse', node: string }} */
+/** The node is remembered; the sub-page is not: Oversikt lands on Gjøremål (spec; final review M4). @type {{ sub: 'todo' | 'analyse', node: string }} */
 let saved = { sub: 'todo', node: 'project' };
-try { saved = { ...saved, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }; } catch { /* no storage: defaults */ }
-const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch { /* no storage */ } };
+try { saved = { ...saved, node: JSON.parse(localStorage.getItem(KEY) ?? '{}').node ?? 'project', sub: 'todo' }; } catch { /* no storage: defaults */ }
+const keep = () => { try { localStorage.setItem(KEY, JSON.stringify({ node: saved.node })); } catch { /* no storage */ } };
+/** The project Analyse was last shown for: another one opens on Gjøremål. @type {any} */
+let shownFor = null;
 /** @type {Period} */
 let period = null;
 let picking = false;
@@ -64,6 +66,23 @@ export function factsFor(codes) {
   });
 }
 
+/** @type {Map<string, { facts: TripFact[][], r: Receipt }>} receipts by lines, period and today; valid while each line's facts are the same */
+const receipts = new Map();
+/** The receipt of these lines, cached (final review I3: a render is several receipts). @param {string[]} codes @returns {Receipt} */
+function receiptFor(codes) {
+  const today = ymd(new Date());
+  const per = codes.map((c) => factsFor([c]));
+  const key = `${codes.join(',')}|${period?.from ?? ''}-${period?.to ?? ''}|${today}`;
+  const hit = receipts.get(key);
+  if (hit && hit.facts.length === per.length && hit.facts.every((f, i) => f === per[i])) return hit.r;
+  if (receipts.size > 500) receipts.clear();
+  const r = receipt(per.flat(), { period, today });
+  receipts.set(key, { facts: per, r });
+  return r;
+}
+/** The lines that have trips in the period (final review I4: a line with none is not part of the plan). @param {string[]} codes */
+const liveLines = (codes) => codes.filter((c) => receiptFor([c]).scope.sum.trips > 0);
+
 /** The exported lines, as the tree and the receipt count them. */
 const exportedRows = () => lineRows().filter((r) => r.exported && !r.damaged);
 const treeOf = () => analysisTree(exportedRows(), { projectName: t('anProject'), unknownAuthority: t('anUnknownAuthority'), unknownOperator: t('anUnknownOperator') });
@@ -82,8 +101,10 @@ const block = (/** @type {string} */ title, /** @type {string} */ note, /** @typ
 
 /** The children of a node with their totals: authorities, operators, or lines. @param {TreeNode} node */
 function childRows(node) {
-  if (node.kind === 'operator') return node.lines.map((code) => ({ id: '', name: lineLabel(code), unknown: false, r: receipt(factsFor([code]), { period, today: ymd(new Date()) }) }));
-  return node.children.map((c) => ({ id: c.id, name: c.name, unknown: c.unknown, r: receipt(factsFor(c.lines), { period, today: ymd(new Date()) }) }));
+  const rows = node.kind === 'operator'
+    ? node.lines.map((code) => ({ id: '', name: lineLabel(code), unknown: false, r: receiptFor([code]) }))
+    : node.children.map((c) => ({ id: c.id, name: c.name, unknown: c.unknown, r: receiptFor(c.lines) }));
+  return rows.filter((k) => k.r.scope.sum.trips > 0); // nothing in the period: not part of the plan (final review I4)
 }
 
 /** @param {Receipt} r */
@@ -142,7 +163,7 @@ function overChart(rows) {
 
 /** @param {TreeNode} tree @param {string} sel */
 function treeHtml(tree, sel) {
-  const item = (/** @type {TreeNode} */ n, /** @type {number} */ level) => `<button type="button" class="an-node an-l${level}${n.id === sel ? ' on' : ''}${n.unknown ? ' an-unk' : ''}" data-node="${esc(n.id)}">${esc(n.name)}<span class="an-n">${n.lines.length}</span></button>`
+  const item = (/** @type {TreeNode} */ n, /** @type {number} */ level) => `<button type="button" class="an-node an-l${level}${n.id === sel ? ' on' : ''}${n.unknown ? ' an-unk' : ''}" data-node="${esc(n.id)}">${esc(n.name)}<span class="an-n">${liveLines(n.lines).length}</span></button>`
     + n.children.map((c) => item(c, level + 1)).join('');
   return item(tree, 0);
 }
@@ -159,6 +180,7 @@ export function renderAnalysisPage() {
   if (tabs) for (const b of tabs.querySelectorAll('[data-sub]')) b.classList.toggle('on', /** @type {HTMLElement} */ (b).dataset.sub === saved.sub);
   const body = $('home-body'), page = $('home-analyse');
   if (!body || !page) return;
+  if (app.meta !== shownFor) { shownFor = app.meta; saved.sub = 'todo'; period = null; picking = false; motionDate = null; if (tabs) for (const b of tabs.querySelectorAll('[data-sub]')) b.classList.toggle('on', /** @type {HTMLElement} */ (b).dataset.sub === 'todo'); }
   body.hidden = saved.sub === 'analyse';
   page.hidden = saved.sub !== 'analyse';
   if (currentPage() !== 'home' || saved.sub !== 'analyse') return;
@@ -168,7 +190,7 @@ export function renderAnalysisPage() {
   const node = findNode(tree, saved.node) ?? tree;
   const facts = factsFor(node.lines);
   const today = ymd(new Date());
-  const r = receipt(facts, { period, today });
+  const r = receiptFor(node.lines);
   const crumb = pathTo(tree, node.id).map((n, i, a) => (i === a.length - 1 ? `<b>${esc(n.name)}</b>` : `<button type="button" class="an-crumb" data-node="${esc(n.id)}">${esc(n.name)}</button> ›`)).join(' ');
   const pick = picking ? `<input type="date" class="an-from" value="${iso(period?.from ?? '')}"> – <input type="date" class="an-to" value="${iso(period?.to ?? '')}">` : '';
   const dates = r.dates.count ? t('anDates3', dateText(r.dates.first), dateText(r.dates.last), r.dates.count, dateText(today)) : t('anToday', dateText(today));
@@ -184,7 +206,7 @@ export function renderAnalysisPage() {
 function current() {
   const tree = treeOf();
   const node = findNode(tree, saved.node) ?? tree;
-  const r = receipt(factsFor(node.lines), { period, today: ymd(new Date()) });
+  const r = receiptFor(node.lines);
   const periodText = r.dates.count ? `${dateText(r.dates.first)} – ${dateText(r.dates.last)} (${r.dates.count})` : '—';
   return { node, r, periodText };
 }

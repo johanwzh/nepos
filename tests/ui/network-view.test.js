@@ -4,12 +4,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 /** What the view draws on the (mocked) map. */
-const drawn = { network: /** @type {any} */ (null), trips: /** @type {any[]} */ ([]) };
+const drawn = { network: /** @type {any} */ (null), trips: /** @type {any[]} */ ([]), destroyed: 0 };
 vi.mock('../../src/ui/map-view.js', () => ({
   createMapView: () => new Proxy({
     setNetwork: (/** @type {any} */ n) => { drawn.network = n; },
     setTrips: (/** @type {any[]} */ t) => { drawn.trips = t; },
     whenReady: (/** @type {Function} */ fn) => fn(),
+    destroy: () => { drawn.destroyed++; },
   }, { get: (t, k) => (k in t ? /** @type {any} */ (t)[k] : () => {}) }),
 }));
 
@@ -112,5 +113,15 @@ describe('Nettverkskart', () => {
     expect(drawn.trips).toEqual([]);
     await setTime('07:05');
     expect(drawn.trips.map((p) => p.line)).toEqual(['50']);
+  });
+
+  it('closing removes its map (final review I2: no WebGL context left behind)', async () => {
+    await toAnalyse();
+    drawn.destroyed = 0;
+    click(an().querySelector('.an-network'));
+    await settle();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settle();
+    expect(drawn.destroyed).toBe(1);
   });
 });

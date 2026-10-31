@@ -137,4 +137,23 @@ describe('Analyse', () => {
     expect(files).toHaveLength(1);
     expect(files[0]).toMatch(/^\d{8}-\d{4} Hele prosjektet\.xlsx$/);
   });
+
+  it('a line with no trips is left out of the tree counts and the children (final review I4)', async () => {
+    await open({ 50: route('50'), 60: route('60').replace('#TUR;0;D;', '#TUR;0;;') });
+    await toAnalyse();
+    expect(page().querySelector('.an-node[data-node="project"] .an-n')?.textContent).toBe('1');
+    const op = /** @type {Element} */ ([...page().querySelectorAll('.an-node')].pop());
+    click(op);
+    await settle();
+    expect(tableAfter('Under').querySelectorAll('tr:not(.an-sum)').length - 1).toBe(1);
+  });
+
+  it('Oversikt opens on Gjøremål when a project is opened, even after Analyse was used', async () => {
+    await open({ 50: route('50') });
+    await toAnalyse();
+    await open({ 50: route('50') });
+    expect(page().hidden).toBe(true);
+    expect(/** @type {HTMLElement} */ (document.getElementById('home-body')).hidden).toBe(false);
+  });
 });
+

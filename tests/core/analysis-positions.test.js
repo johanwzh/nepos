@@ -48,3 +48,11 @@ describe('trip positions', () => {
     expect(tripsAt([fact()], '20260105', 616, { ...opts, stopPos: (s) => (s === 'C' ? null : /** @type {any} */ (POS[s])) })).toEqual([]);
   });
 });
+
+describe('final review: a daily late trip', () => {
+  it('a trip running every day 23:40 → 00:30 is on the map at 00:10, from the evening before', () => {
+    const daily = fact({ days: ['20260104', '20260105'], start: 1420, end: 1470, calls: [{ stopId: 'A', arr: 1420, dep: 1420 }, { stopId: 'B', arr: 1450, dep: 1452 }, { stopId: 'C', arr: 1470, dep: 1470 }] });
+    expect(tripsAt([daily], '20260105', 10, opts)).toHaveLength(1);
+    expect(tripsAt([daily], '20260105', 1430, opts)).toHaveLength(1);
+  });
+});
