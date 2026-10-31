@@ -47,7 +47,7 @@ export function renderEnturSettings() {
   box.appendChild(note);
 
   const urls = el('dl', 'set-urls');
-  for (const [label, url] of [[t('settingsOrgUrl'), ORG_REGISTER_URL], [t('settingsGeocoderUrl'), app.settings.geocoderUrl], [t('settingsStopsUrl'), app.settings.stopPlacesUrl]]) {
+  for (const [label, url] of [[t('settingsOrgUrl'), ORG_REGISTER_URL], [t('settingsGeocoderUrl'), app.settings.geocoderUrl], [t('settingsStopsUrl'), app.settings.stopPlacesUrl], [t('settingsRoutingUrl'), app.settings.routingTilesUrl]]) {
     urls.append(el('dt', '', label), el('dd', '', url ?? ''));
   }
   box.appendChild(urls);

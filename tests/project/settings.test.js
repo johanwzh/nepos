@@ -9,6 +9,10 @@ describe('settings', () => {
     expect(await readSettings(createMemoryFs())).toEqual({ settings: { ...DEFAULT_SETTINGS }, recovered: false });
   });
 
+  it('has the published road tiles as the routing tiles address (2.6)', () => {
+    expect(DEFAULT_SETTINGS.routingTilesUrl).toBe('https://johanwzh.github.io/nepos-tiles/road/');
+  });
+
   it('fills in missing keys and keeps unknown ones', async () => {
     const fs = createMemoryFs({ 'private/settings.json': '{"lang":"en","futureThing":42}' });
     const { settings } = await readSettings(fs);

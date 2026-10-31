@@ -18,6 +18,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   // Before 2.3: a raster tile URL with {z}/{x}/{y}. A custom one still works, as a raster style.
   tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   tileAttribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  // Routing (2.6): the published road graph tiles (nepos-tiles), cached in the project's cache/routing/road/.
+  routingTilesUrl: 'https://johanwzh.github.io/nepos-tiles/road/',
 });
 
 /** @type {Record<string, string[]>} */
