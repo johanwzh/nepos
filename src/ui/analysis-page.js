@@ -17,6 +17,7 @@ import { inMotion, perDate, busiestDate } from '../core/analysis/time.js';
 import { receiptText, int, dec1, clock } from '../core/analysis/text.js';
 import { buildXlsx } from '../core/xlsx.js';
 import { renderDashboardPage } from './dashboard-page.js';
+import { openNetworkView } from './network-view.js';
 
 /** @typedef {import('../core/analysis/facts.js').TripFact} TripFact */
 /** @typedef {import('../core/analysis/receipt.js').Receipt} Receipt */
@@ -43,6 +44,8 @@ const iso = (/** @type {string} */ d) => (d ? `${d.slice(0, 4)}-${d.slice(4, 6)}
 
 /** The node and the period on screen (the network view follows them). @returns {{ nodeId: string, period: Period }} */
 export const analysisSelection = () => ({ nodeId: saved.node, period });
+/** The node on screen and its lines. @returns {TreeNode} */
+export function selectedNode() { const tree = treeOf(); return findNode(tree, saved.node) ?? tree; }
 
 /** @type {Map<string, { key: any[], facts: TripFact[] }>} per line, recomputed when the line or what it reads changes */
 const cache = new Map();
@@ -172,7 +175,7 @@ export function renderAnalysisPage() {
   page.innerHTML = `<div class="an-page-grid"><nav class="an-tree">${treeHtml(tree, node.id)}</nav><div class="an-main">`
     + `<div class="an-bar-top"><span class="an-crumbs">${crumb}</span><span class="an-grow"></span>`
     + `<button type="button" class="an-chip an-all${picking ? '' : ' on'}">${esc(t('anAll'))}</button><button type="button" class="an-chip an-pick${picking ? ' on' : ''}">${esc(t('anPick'))}</button>${pick}`
-    + `<button type="button" class="pop-btn an-xlsx">Excel</button><button type="button" class="pop-btn an-text">${esc(t('anText'))}</button></div>`
+    + `<button type="button" class="pop-btn an-network">${esc(t('anNetwork'))}</button><button type="button" class="pop-btn an-xlsx">Excel</button><button type="button" class="pop-btn an-text">${esc(t('anText'))}</button></div>`
     + `<p class="an-note an-dates">${esc(dates)}</p>`
     + (r.scope.sum.trips ? blocks(r, node, facts) : `<p class="home-empty an-empty">${esc(t('anNothing'))}</p>`) + '</div></div>';
 }
@@ -230,6 +233,7 @@ export function initAnalysisPage() {
     if (el.closest('.an-all')) { picking = false; period = null; motionDate = null; renderAnalysisPage(); }
     else if (el.closest('.an-pick')) { picking = true; renderAnalysisPage(); }
     else if (el.closest('.an-by')) { byKm = /** @type {HTMLElement} */ (el.closest('.an-by')).dataset.by === 'km'; renderAnalysisPage(); }
+    else if (el.closest('.an-network')) openNetworkView();
     else if (el.closest('.an-text')) void exportText();
     else if (el.closest('.an-xlsx')) void exportXlsx();
   });

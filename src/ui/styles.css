@@ -1759,3 +1759,15 @@ body.marey-on .marey { display: block; }
 .an-barv { fill: var(--accent); opacity: .75; }
 .an-empty { margin-top: 24px; }
 @media (max-width: 760px) { .an-page-grid { grid-template-columns: 1fr; } .an-tree { border-right: none; border-bottom: 1px solid var(--border); padding-bottom: 6px; } }
+/* Nettverkskart (Analyse part 2): the network and its trips over the whole page, like the visual timetable takes over */
+body.network-on #network-view { display: flex; }
+.nv { position: fixed; inset: 0; z-index: 40; flex-direction: column; background: var(--bg-page); }
+.nv[hidden] { display: none !important; }
+.nv-top { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.nv-title { font-weight: 600; }
+.nv-time { flex: 1; min-width: 160px; }
+.nv-at { font-variant-numeric: tabular-nums; font-size: 12px; min-width: 150px; }
+.nv-date { height: 24px; padding: 0 5px; border: 1px solid var(--border); border-radius: 3px; background: var(--bg-panel); color: var(--text); font-size: 11px; }
+[data-theme="dark"] .nv-date { color-scheme: dark; }
+.nv-map { flex: 1; min-height: 0; position: relative; }
+.nv-none { padding: 24px; }

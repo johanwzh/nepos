@@ -109,14 +109,10 @@ describe('Oversikt', () => {
     expect(body().querySelectorAll('.home-bar')).toHaveLength(1);
   });
 
-  it("the network section follows a change of language (user 2026-10-30)", async () => {
+  it('the network map has left Gjøremål for Analyse (2026-10-31)', async () => {
     await openProject(200);
-    const sec = /** @type {HTMLElement} */ (body().querySelector('.home-network'));
-    expect(sec.querySelector('h3')?.textContent).toBe('Nettverket');
-    app.settings.lang = 'en'; applyLang();
-    expect(sec.querySelector('h3')?.textContent).toBe('The network');
-    expect(sec.textContent).toContain('Every line that is exported');
-    app.settings.lang = 'no'; applyLang();
+    expect(body().querySelector('.home-network')).toBeNull();
+    expect(document.getElementById('home-map')).toBeNull();
   });
 
   it('without a project, says so', async () => {

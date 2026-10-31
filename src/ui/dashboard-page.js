@@ -10,11 +10,8 @@ import { lineIssues, lineState, lineLabel } from './line-info.js';
 import { lineErn } from './line-text.js';
 import { textHash } from '../core/hash.js';
 import { buildDashboard, VALIDITY_MARKS } from '../core/dashboard.js';
-import { networkOf } from '../core/network.js';
 import { quayInfo, onQuaysLoaded } from './quays.js';
 import { selectRoute } from './route-editor.js';
-import { createMapView } from './map-view.js';
-import { styleUrlFor } from '../core/map-style.js';
 
 /** @param {string} s */
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -101,45 +98,13 @@ function greeting() {
   return t(h < 10 ? 'homeMorning' : h < 17 ? 'homeDay' : 'homeEvening');
 }
 
-// ─── The network map ────────────────────────────────────────────────────────
-/** @type {ReturnType<typeof createMapView> | null} */
-let view = null;
-/** @type {HTMLElement | null} */
-let mapEl = null;
-let fittedFor = '';
-
-/** @param {import('../core/dashboard.js').DashLine[]} lines */
-function drawNetwork(lines) {
-  const host = document.getElementById('home-map');
-  const none = document.getElementById('home-map-none');
-  if (!host) return;
-  const routes = lines.filter((l) => l.exported).map((l) => ({ code: l.code, rs: lineState(l.code), problem: l.issues.some((i) => i.level === 'error'),
-    links: app.lineLinks.get(l.code)?.links })).filter((r) => r.rs);
-  const net = networkOf(routes, quayInfo);
-  if (none) none.hidden = net.stops.length > 0;
-  if (!net.stops.length) return;
-  try {
-    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-    if (!view || mapEl !== host) { view = createMapView(host, { style: styleUrlFor(app.settings, dark ? 'dark' : 'light'), dark }); mapEl = host; fittedFor = ''; }
-    const most = Math.max(...net.segments.map((s) => s.trips), 1);
-    view.setNetwork({
-      lines: net.segments.map((s) => ({ coords: s.coords, w: 2 + 6 * Math.log1p(s.trips) / Math.log1p(most), c: s.problem ? '#d9534f' : '#3d7ebf', tooltip: `${esc(s.lines.map(lineLabel).join(', '))} · ${s.trips}` })),
-      // Only the main stops (bold in a timetable), small: every stop crowded the map (user 2026-10-31)
-      stops: net.stops.filter((p) => p.main).map((p) => ({ lon: p.lon, lat: p.lat, r: p.lines > 1 ? 3 : 2.5, tooltip: esc(p.name) })),
-    });
-    const key = `${app.meta?.name}|${net.stops.length}`;
-    if (key !== fittedFor) { view.whenReady(() => view?.fit(net.stops.map((p) => /** @type {[number, number]} */ ([p.lon, p.lat])), { padding: 30, maxZoom: 13 })); fittedFor = key; }
-    view.resize();
-  } catch { /* no map here (no WebGL): the rest of the page still works */ }
-}
-
 // ─── The page ───────────────────────────────────────────────────────────────
 export function renderDashboardPage() {
   if (currentPage() !== 'home') return;
   const body = $('home-body');
   if (body.hidden) return; // Analyse is shown (Oversikt's sub-pages, 2026-10-31)
-  if (!app.meta) { body.innerHTML = `<p class="home-empty">${esc(t('homeNoProject'))}</p>`; mapEl = null; return; }
-  if (!app.routes.length) { body.innerHTML = `<p class="home-empty">${esc(t('homeNoLines'))}</p>`; mapEl = null; return; }
+  if (!app.meta) { body.innerHTML = `<p class="home-empty">${esc(t('homeNoProject'))}</p>`; return; }
+  if (!app.routes.length) { body.innerHTML = `<p class="home-empty">${esc(t('homeNoLines'))}</p>`; return; }
   const lines = dashLines();
   const d = buildDashboard({ lines, exports: app.exports ?? {}, today: new Date() });
   // One card per line: a line that ends soon shows its errors on the same card
@@ -150,20 +115,12 @@ export function renderDashboardPage() {
   const flagged = d.today.length + d.soon.length > 0;
   const ok = d.ok.count && d.ok.until ? `<div class="home-ok">✓ ${esc(flagged ? t('homeOkSome', d.ok.count, dateText(d.ok.until)) : t('homeOkAll', d.ok.count, dateText(d.ok.until)))}</div>` : '';
   const never = d.soon.some((s) => s.kind === 'stale' && s.never) ? `<p class="home-sub">${esc(t('homeNeverNote'))}</p>` : '';
-  // The map's container stays between renders: only the text around it is rebuilt; its own texts follow a change of language by data-lk
-  let main = /** @type {HTMLElement | null} */ (body.querySelector('.home-main'));
-  if (!main || !body.querySelector('#home-map')) {
-    body.innerHTML = `<div class="home-main"></div>
-      <section class="home-section home-network"><h3 data-lk="homeNetwork">${esc(t('homeNetwork'))}</h3><p class="home-sub" data-lk="homeNetworkNote">${esc(t('homeNetworkNote'))}</p>
-        <div class="home-map" id="home-map"></div><p class="home-sub" id="home-map-none" data-lk="homeNetworkNone" hidden>${esc(t('homeNetworkNone'))}</p></section>`;
-    main = /** @type {HTMLElement} */ (body.querySelector('.home-main'));
-  }
-  main.innerHTML = `<p class="home-hello">${esc(greeting())}</p><p class="home-summary">${esc(summary)}</p>
+  // The network map has moved to Analyse → Nettverkskart (2026-10-31)
+  body.innerHTML = `<p class="home-hello">${esc(greeting())}</p><p class="home-summary">${esc(summary)}</p>
     ${cards.length ? `<div class="home-cards">${cards.join('')}</div>` : ''}
     ${d.soon.length ? `<section class="home-soon"><h3>${esc(t('homeSoon'))}</h3>${d.soon.map(soonItem).join('')}${never}</section>` : ''}
     ${ok}
     ${d.validity.length ? validityStrip(d.validity) : ''}`;
-  drawNetwork(lines);
 }
 
 /** @param {string} action "line:<code>" or "export" */

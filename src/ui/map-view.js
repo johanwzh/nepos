@@ -48,7 +48,7 @@ export function createMapView(el, { style, dark = false }) {
   map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-left');
 
   /** What each source holds, so a new style can be filled again. @type {Record<string, any>} */
-  const data = { network: collection([]), netstops: collection([]), links: collection([]), 'trip-line': collection([]), dashed: collection([]), dots: collection([]), ring: collection([]) };
+  const data = { network: collection([]), netstops: collection([]), links: collection([]), 'trip-line': collection([]), dashed: collection([]), dots: collection([]), ring: collection([]), mtrips: collection([]) };
   let isDark = dark;
   const size = { w: el.clientWidth, h: el.clientHeight };
   let ready = false;
@@ -82,6 +82,9 @@ export function createMapView(el, { style, dark = false }) {
     map.addLayer({ id: 'trip-line', type: 'line', source: 'trip-line', paint: { 'line-color': BLUE, 'line-width': 3, 'line-opacity': 0.85 } });
     map.addLayer({ id: 'dots', type: 'circle', source: 'dots', paint: { 'circle-radius': ['get', 'r'], 'circle-color': ['coalesce', ['get', 'c'], BLUE],
       'circle-stroke-color': isDark ? '#2a2620' : '#ffffff', 'circle-stroke-width': 2 } });
+    // Trips moving on the network (Analyse's Nettverkskart): a dot per trip in its line's colour, a ring while it waits
+    map.addLayer({ id: 'mtrips', type: 'circle', source: 'mtrips', paint: { 'circle-radius': 5, 'circle-color': ['get', 'c'],
+      'circle-stroke-color': ['case', ['get', 'waiting'], isDark ? '#ffffff' : '#000000', isDark ? '#2a2620' : '#ffffff'], 'circle-stroke-width': ['case', ['get', 'waiting'], 2.5, 1.5] } });
     map.addLayer({ id: 'ring', type: 'circle', source: 'ring', paint: { 'circle-radius': 12, 'circle-opacity': 0,
       'circle-stroke-color': ['get', 'ink'], 'circle-stroke-width': 3 } });
   }
@@ -95,7 +98,7 @@ export function createMapView(el, { style, dark = false }) {
   }
 
   // Hover texts: the trip's stops and the network
-  for (const layer of ['dots', 'netstops', 'network']) {
+  for (const layer of ['dots', 'netstops', 'network', 'mtrips']) {
     map.on('mousemove', layer, (e) => {
       const tip = e.features?.[0]?.properties?.tooltip;
       if (!tip) return;
@@ -138,6 +141,8 @@ export function createMapView(el, { style, dark = false }) {
       put('network', collection(net.lines.map((l) => lineFeature(l.coords, { w: l.w, c: l.c, tooltip: l.tooltip ?? '' }))));
       put('netstops', collection(net.stops.map((p) => pointFeature([p.lon, p.lat], { r: p.r, tooltip: p.tooltip ?? '' }))));
     },
+    /** Trips at a moment (Nettverkskart): { lon, lat, c, waiting, tooltip }. @param {{ line?: string, lon: number, lat: number, c: string, waiting: boolean, tooltip?: string }[]} trips */
+    setTrips(trips) { put('mtrips', collection(trips.map((p) => pointFeature([p.lon, p.lat], { c: p.c, waiting: p.waiting, tooltip: p.tooltip ?? '' })))); },
     /** A routing session's legs. @param {MapLink[]} links */
     setLinks(links) { put('links', collection(links.map((l) => lineFeature(l.coords, { key: l.key, state: l.state })))); },
     /** @param {(key: string, lngLat: LonLat) => void} fn */

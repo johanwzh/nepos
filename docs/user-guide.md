@@ -56,9 +56,6 @@ vanlige ord hva som trenger deg:
   Her står også linjer som ikke er eksportert på et halvt år, og linjer som bare har advarsler.
 - En grønn linje når resten er i orden.
 - **Gyldighet**: hver linje som eksporteres, frem til sin siste dag, med merker ved 30, 60, 90 og 120 dager.
-- **Nettverket**: alle linjene som eksporteres på ett kart. Hver strekning tegnes én gang, langs veien der den er
-  rutet, tykkere der flere turer går, og rødt der en linje har feil. Bare hovedstoppene (uthevet i en rutetabell) har
-  en liten prikk.
 
 Linjer som er satt til **Eksporteres ikke**, er ikke med. Nepos husker hver eksport (`data/exports.json`) fra denne
 versjonen; før den første eksporten står linjene som «ingen eksport registrert».
@@ -87,6 +84,12 @@ første operatøren i linjedataene. Bare linjer som eksporteres, telles. Velg et
 Øverst velger du **Alt planlagt** eller **Velg periode…** (fra–til). **Excel** lagrer tallene i
 `analyse/<tidspunkt> <navn>.xlsx` i prosjektmappa, ett ark per blokk; **Tekst** kopierer kvitteringen, klar til å
 limes inn i en e-post.
+
+**Nettverkskart** åpner nettverket over hele siden, for nivået du står på: hver strekning én gang, langs veien der den
+er rutet og tykkere der flere turer går, og hovedstoppene (uthevet i en rutetabell) som små prikker. På kartet kjører
+turene: velg en dato (den travleste først) og flytt tiden med hjulet eller glidebryteren, eller trykk ▶. En tur er en
+prikk i linjens farge som går langs strekningen, med ring mens den venter på et stopp, og forsvinner ved siste stopp.
+Her ser du hvor bussene klumper seg og hvor det er hull. **Esc** lukker.
 
 ---
 

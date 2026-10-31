@@ -35,7 +35,9 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   (km, hours, seat-km, low-floor and booking shares), per day type, vehicles on the road at once (per 15 minutes) and
   production through the period. km counts only where every stretch is routed; missing data is a grey "Ukjent" row in
   the sum, never a warning. Pick a period, or everything planned. **Excel** saves `analyse/<time> <name>.xlsx` in the
-  project; **Tekst** copies the receipt for an e-mail.
+  project; **Tekst** copies the receipt for an e-mail. **Nettverkskart** shows the network over the whole page for the
+  picked level, with the trips moving on it at a date and time (a jog, a slider, ▶): a dot per trip along the road,
+  a ring while it waits. The network map has moved there from the overview.
 - **Knutepunkt** (Alt+K, interchanges between lines): our trips can wait at a stop for a feeder from another line in the
   project. The tool takes over the timetable like Ruting: every stop of the table set with a switch; for a stop that is
   on, **what we wait for** (the stops for the transfer or a radius, a window before our departure, the maximum wait,
