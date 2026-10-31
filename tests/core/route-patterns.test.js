@@ -113,6 +113,18 @@ describe('the state of each pattern (spec "The user is in control")', () => {
     ]);
   });
 
+  it('final review 2: a pattern and its "doesn’t run" variant share trips; a Quay replaced shows both orange, each traced to its own', () => {
+    const S4 = [stop('A', 'NSR:Quay:1'), stop('B', 'NSR:Quay:2'), stop('C', 'NSR:Quay:3'), stop('D', 'NSR:Quay:5')];
+    const off = () => cell('0720', { dates: [{ from: '20260105', to: '20260105', on: false }] });
+    const before = pats(line([t('u1', ['0700', '0710', off(), '0730'])], S4));
+    expect(before).toHaveLength(2);
+    const S4b = [stop('A', 'NSR:Quay:1'), stop('B', 'NSR:Quay:4'), stop('C', 'NSR:Quay:3'), stop('D', 'NSR:Quay:5')];
+    const now = pats(line([t('u1', ['0700', '0710', off(), '0730'])], S4b));
+    const s = states(now, accepted(before));
+    expect(s.map((x) => x.state)).toEqual(['orange', 'orange']);
+    expect(s[1].legs).toEqual([{ key: k('1', '4'), state: 'changed', oldKey: k('1', '2') }, { key: k('4', '5'), state: 'changed', oldKey: k('2', '5') }]);
+  });
+
   it('an extra call is a new pattern: red', () => {
     const stops = [...STOPS, stop('D', 'NSR:Quay:5')];
     const now = pats(line([t('u1', ['0700', '0710', '0720', '0730'])], stops));

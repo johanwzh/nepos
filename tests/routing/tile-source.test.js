@@ -139,4 +139,12 @@ describe('tile source', () => {
     s.offline = true;
     expect((await createTileSource({ fs, baseUrl: BASE, fetch }).published())?.built).toBe('2026-10-01T00:00:00Z');
   });
+
+  it('final review 1: open(points, { latest: true }) routes on a newer published build even when the cache covers the area', async () => {
+    const fs = createMemoryFs(), { s, fetch } = server(v1());
+    await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS);
+    s.b = build('2026-11-01T00:00:00Z', { '40_472': tile(10.1, 59.05, 1), '41_472': tile(10.3, 59.05, 1) });
+    const r = await createTileSource({ fs, baseUrl: BASE, fetch }).open(POINTS, { latest: true });
+    expect([r.manifest.built, r.newer]).toEqual(['2026-11-01T00:00:00Z', false]);
+  });
 });

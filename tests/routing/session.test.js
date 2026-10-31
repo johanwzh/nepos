@@ -254,6 +254,23 @@ describe('routing session: failures stay contained', () => {
     expect(/** @type {any} */ (s.proposal(pid(SARPSBORG))).via.get(key('4455', '5181')) ?? []).toEqual([]);
   });
 
+  it('final review 1: newer road data, Route then Accept on an unchanged route turns it green without changing a metre', async () => {
+    const first = session([SARPSBORG]);
+    await first.open();
+    await first.route(pid(SARPSBORG));
+    const saved = /** @type {any} */ (await first.accept(pid(SARPSBORG)));
+    for (const k of Object.keys(saved.links)) saved.links[k] = { ...saved.links[k], tiles: { ...saved.links[k].tiles, built: '2000-01-01T00:00:00Z' } };
+    const s = session([SARPSBORG], saved);
+    await s.open();
+    expect(stateOf(s, pid(SARPSBORG)).state).toBe('orange');
+    await s.route(pid(SARPSBORG));
+    expect(/** @type {any} */ (s.tiles.open.mock.calls[0])[1]).toEqual({ latest: true });
+    const file = await s.accept(pid(SARPSBORG));
+    expect(stateOf(s, pid(SARPSBORG)).state).toBe('green');
+    const k = key('4455', '5181');
+    expect([file.links[k].polyline, file.links[k].distanceM]).toEqual([saved.links[k].polyline, saved.links[k].distanceM]);
+  });
+
   it('says when newer map data exists than the build it routes on', async () => {
     const tiles = fixtureTiles();
     tiles.open.mockResolvedValue({ manifest, newer: true });

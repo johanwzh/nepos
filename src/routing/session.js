@@ -82,7 +82,8 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
       for (const s of p.stops) if (s.quay) points.push({ lon: s.quay.lon, lat: s.quay.lat });
       for (const k of p.keys) if (k) for (const [lon, lat] of viaOf(proposals.get(p.id), k)) points.push({ lon, lat });
     }
-    const opened = await tiles.open(points);
+    // The newest published build: Route on an orange "newer map data" pattern compares with that (final review 1)
+    const opened = await tiles.open(points, { latest: true });
     manifest = opened.manifest; newer = opened.newer;
   }
 
@@ -126,7 +127,10 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
         status: 'OK', from: pos(stops[k]), to: pos(stops[k + 1]), ferryM: Math.round(leg.ferryMetres * 10) / 10, seconds: Math.round(leg.seconds),
         via: viaOf(pr, key), roads: leg.roads, flags, routedAt: now().toISOString(), tiles: tilesOf };
       const saved = file.links[key];
-      pr.legs.set(key, saved && sameLink(link, saved) ? saved : link);
+      if (!saved || !sameLink(link, saved)) { pr.legs.set(key, link); return; }
+      // The same route on a newer build: kept as it is, marked checked against that build (not a metre changes)
+      const built = [saved.tiles?.built ?? '', saved.reviewed?.built ?? ''].sort().pop() ?? '';
+      pr.legs.set(key, manifest?.built && built < manifest.built ? { ...saved, reviewed: { ...saved.reviewed, built: manifest.built } } : saved);
     });
     return true;
   }

@@ -314,6 +314,40 @@ describe('the routing view', () => {
     expect(await readText(fs, 'data/links/50.json')).not.toBeNull();
   });
 
+  it('final review 3: while it routes, picking another pattern does nothing (no hidden proposal left behind)', async () => {
+    /** @type {(v?: any) => void} */
+    let finish = () => {};
+    await open();
+    thumbs()[0].click();
+    await settle();
+    session.route = vi.fn(() => new Promise((r) => { finish = r; }));
+    /** @type {HTMLButtonElement} */ (btn('.rv-route')).click();
+    await settle();
+    thumbs()[1].click();
+    await settle();
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(thumbs()[0].classList.contains('on')).toBe(true);
+    finish();
+    await settle();
+  });
+
+  it('final review 3: leaving while Update all runs asks; its result is not written once the view has closed', async () => {
+    /** @type {(v?: any) => void} */
+    let finish = () => {};
+    app.settings.autoRoute = true;
+    await open();
+    session.updateAll = vi.fn(() => new Promise((r) => { finish = r; }));
+    /** @type {HTMLButtonElement} */ (btn('.rv-all')).click();
+    await settle();
+    /** @type {HTMLButtonElement} */ (btn('.rv-x')).click();
+    await settle();
+    expect(window.confirm).toHaveBeenCalledWith('Gå ut uten å godta rutingen?');
+    expect(activeTool()).toBe('');
+    finish(session.file());
+    await settle();
+    expect(await readText(fs, 'data/links/50.json')).toBeNull();
+  });
+
   it('while open, Ctrl+S saves nothing', async () => {
     const before = await readRoute(fs, '50');
     app.dirty = true;

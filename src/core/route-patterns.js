@@ -49,12 +49,16 @@ export function tablePatterns(rs, { calendars, quayInfo, setId }) {
 function traced(p, saved) {
   if (!saved) return null;
   if (saved[p.id]) return saved[p.id];
-  let best = null, most = 0;
+  // Only as many stops; a pattern and its "doesn't run" variant share their trips, so ties go to the most stops in
+  // common (final review 2, 2026-10-31)
+  let best = null, most = 0, common = -1;
   for (const s of Object.values(saved)) {
+    if (s.stops.length !== p.stops.length) continue;
     const n = s.trips.filter((u) => p.trips.includes(u)).length;
-    if (n > most) { best = s; most = n; }
+    const c = s.stops.filter((id, i) => id === p.stops[i].stopId).length;
+    if (n && (n > most || (n === most && c > common))) { best = s; most = n; common = c; }
   }
-  return best && best.stops.length === p.stops.length ? best : null;
+  return best;
 }
 
 /**

@@ -128,11 +128,19 @@ function enqueue(fn) {
   return queue;
 }
 
-/** Write the file accept / keep / update all returned. @param {import('../project/links-store.js').LineLinks} data */
-async function write(data) {
+/** The last write of the links file: a new session waits for it, so it starts from what was saved (final review 3). */
+let writing = Promise.resolve();
+
+/**
+ * Write the file accept / keep / update all returned — only for the session still open: a result that comes in after
+ * the user left (and was asked) is not saved. @param {Session} s @param {import('../project/links-store.js').LineLinks} data
+ */
+async function write(s, data) {
   const fs = app.fs, c = code;
-  if (!fs) return;
-  if (await runAction(() => writeLineLinks(fs, c, data))) app.lineLinks = new Map(app.lineLinks).set(c, data);
+  if (!fs || session !== s) return;
+  const w = runAction(() => writeLineLinks(fs, c, data)).then((ok) => { if (ok) app.lineLinks = new Map(app.lineLinks).set(c, data); });
+  writing = w.catch(() => {});
+  await w;
 }
 
 // ─── Selection ──────────────────────────────────────────────────────────────
@@ -363,23 +371,30 @@ function build() {
     const el = /** @type {HTMLElement} */ (e.target);
     const id = selPattern;
     if (el.closest('.rv-x')) setTool('');
+    // While it routes or saves, the selection stays (final review 3: no switch from under a write, no hidden proposal)
+    else if (busy && el.closest('.rv-set, .rv-thumb, .rv-gap, .rv-check li')) return;
     else if (el.closest('.rv-set')) selectSet(Number(/** @type {HTMLElement} */ (el.closest('.rv-set')).dataset.set));
     else if (el.closest('.rv-thumb')) selectPattern(/** @type {HTMLElement} */ (el.closest('.rv-thumb')).dataset.id ?? null);
     else if (el.closest('.rv-gap[data-key]')) selectLeg(/** @type {HTMLElement} */ (el.closest('.rv-gap')).dataset.key ?? null);
     else if (el.closest('.rv-check li[data-key]')) selectLeg(/** @type {HTMLElement} */ (el.closest('li')).dataset.key || null);
     else if (busy || !id) {
-      if (el.closest('.rv-all')) enqueue(async (s) => write(await s.updateAll()));
+      if (el.closest('.rv-all')) enqueue(async (s) => write(s, await s.updateAll()));
     } else if (el.closest('.rv-route')) { const leg = selLeg ?? undefined; enqueue((s) => s.route(id, leg)); }
-    else if (el.closest('.rv-accept')) enqueue(async (s) => write(await s.accept(id)));
+    else if (el.closest('.rv-accept')) enqueue(async (s) => write(s, await s.accept(id)));
     else if (el.closest('.rv-discard')) { session?.discard(id); render(); }
-    else if (el.closest('.rv-keep')) enqueue(async (s) => write(s.keep(id)));
-    else if (el.closest('.rv-all')) enqueue(async (s) => write(await s.updateAll()));
+    else if (el.closest('.rv-keep')) enqueue(async (s) => write(s, s.keep(id)));
+    else if (el.closest('.rv-all')) enqueue(async (s) => write(s, await s.updateAll()));
   });
 }
 
-/** A session on table set `id`. @param {number} id */
-function start(id) {
+let starts = 0;
+/** A session on table set `id`, once the last write has landed. @param {number} id */
+async function start(id) {
   session?.close();
+  session = null;
+  const n = ++starts;
+  await writing;
+  if (n !== starts || !isOpen) return;
   setId = id;
   selPattern = null; selLeg = null; selWp = null; error = ''; busy = false; fitFor = '';
   queue = Promise.resolve();
@@ -389,16 +404,20 @@ function start(id) {
   enqueue(() => s.open());
 }
 
+let isOpen = false;
+
 function open() {
   rs = app.activeRoute ? lineState(app.activeRoute) : null;
   if (!rs || !app.activeRoute) { setTool(''); return; }
   code = app.activeRoute;
+  isOpen = true;
   document.body.classList.add('route-on');
   build();
   start(rs.activeSet);
 }
 
 function close() {
+  isOpen = false;
   session?.close();
   session = null;
   document.body.classList.remove('route-on');
@@ -418,8 +437,9 @@ function stepBack() {
 /** @param {{ createSession?: SessionFactory }} [opts] a test can hand in its own session */
 export function initRouteView({ createSession } = {}) {
   makeSession = createSession ?? defaultSession;
-  if (session) close();
-  setLeaveGuard('route', () => !session || !session.pending().length || confirm(t('rvLeave')));
+  if (isOpen) close();
+  // Leaving with a proposal, or while it routes or saves, asks first
+  setLeaveGuard('route', () => !session || (!busy && !session.pending().length) || confirm(t('rvLeave')));
   setToolEsc('route', stepBack);
   const available = () => setToolAvailable('route', isRoadLine(app.routeState), t('ptRouteNoRoad'));
   available();
@@ -427,8 +447,8 @@ export function initRouteView({ createSession } = {}) {
   wired = true;
   onRefresh(available);
   onToolChange((name) => {
-    if (name === 'route' && !session) open();
-    else if (name !== 'route' && session) close();
+    if (name === 'route' && !isOpen) open();
+    else if (name !== 'route' && isOpen) close();
   });
   // Delete or Backspace removes the selected waypoint (only while one is selected)
   document.addEventListener('keydown', (e) => {
