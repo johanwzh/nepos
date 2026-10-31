@@ -1,5 +1,6 @@
 // NeTEx data collection, ported from Nepos 1.5.7 (nepos.html lines 5818–6040).
 // Pure: takes the parsed routes and stop database as input instead of reading app state.
+import { journeyIndex } from './hub-interchanges.js';
 import { journeyStops, routeHasTrips } from './journeys.js';
 import { expandRoute } from '../blocks.js';
 import { unionDays, tripDays, isoDate } from '../calendars.js';
@@ -117,5 +118,7 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
         for (const l of found) if (!usedLinks.has(l.key)) usedLinks.set(l.key, l);
         return found.map((l) => l.id);
     }
-    return { cs, routes, orgs, orgFor, orgMode, brandings, usedStops, destDisps, destDispId, operDays, colDays, overallFrom, overallTo, usedLinks, linkRefsFor };
+    // Every ServiceJourney the line files will write, so Knutepunkt links can refer to another line's trips
+    const journeys = journeyIndex(cs, routes, colDays);
+    return { cs, routes, orgs, orgFor, orgMode, brandings, usedStops, destDisps, destDispId, operDays, colDays, overallFrom, overallTo, usedLinks, linkRefsFor, journeys };
 }

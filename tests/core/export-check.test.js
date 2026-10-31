@@ -448,3 +448,55 @@ describe('routed links in the check (2.6: a warning, never an error)', () => {
     expect(codes(check(rs, { links: new Map() })).filter((c) => c.endsWith('link-missing'))).toEqual([]);
   });
 });
+
+// Knutepunkt (interchanges spec 2026-10-31): an approved link whose match changed is a warning, never an error
+describe('Knutepunkt links', () => {
+  const FEED_TRIP = 'cccccccc-0000-4000-8000-0000000000f1';
+  /** Our route (Jernbanetorget 07:00 → Oslo bussterminal) with a hub at Jernbanetorget, row 0, and the trip's link. */
+  const withHub = (/** @type {string} */ link, hubStop = 'NSR:Quay:7203') => {
+    const rs = route();
+    const g = grid0(rs);
+    g.cols[0].uid = 'cccccccc-0000-4000-8000-0000000000a1'; // a trip is picked by its uid
+    g.stops[0].hub = { stopId: hubStop, stops: ['NSR:StopPlace:1'], radiusM: null, window: [2, 15], maxWait: 5, walk: 0, criteria: {} };
+    g.cols[0].cells[0].hubLink = link ? { line: 'F', trip: FEED_TRIP, stopId: 'NSR:Quay:11972', arr: link === 'same' ? 412 : 410, at: 'x' } : {};
+    return rs;
+  };
+  /** A feeder line F arriving at Oslo bussterminal (same StopPlace in NSR here) at 06:52. */
+  const feederLine = () => {
+    const rs = route();
+    const g = grid0(rs);
+    g.cols[0].uid = FEED_TRIP;
+    g.cols[0].cells[0].time = '0640'; g.cols[0].cells[1].time = '0652';
+    return rs;
+  };
+  const run = (/** @type {any} */ ours, /** @type {any[]} */ more = []) => checkForExport({ routes: [{ code: '50', rs: ours, status: 'ok' }, ...more], orgs: ORGS, register: registerCompanies(), orgMode: 'codespace', codespace: 'TST', brandings: [], calendars: CALENDARS, orgsProblem: '', quayInfo: NSR })
+    .filter((i) => i.code.startsWith('hub-'));
+  const F = { code: 'F', rs: feederLine(), status: 'ok' };
+
+  it('no hubs, no issues; an approved link that still matches, none', () => {
+    expect(run(route(), [F])).toEqual([]);
+    expect(run(withHub('same'), [F])).toEqual([]);
+    expect(run(withHub(''), [F])).toEqual([]);
+  });
+
+  it('hub-stale: the feeder arrives at another time', () => {
+    expect(run(withHub('changed'), [F])).toEqual([{ level: 'warning', code: 'hub-stale', route: '50', where: expect.objectContaining({ row: 0 }), detail: '1|Jernbanetorget' }]);
+  });
+
+  it('hub-lost: the row\'s stop was changed', () => {
+    expect(run(withHub('same', 'NSR:Quay:1'), [F]).map((i) => [i.code, i.detail])).toEqual([['hub-lost', 'Jernbanetorget']]);
+  });
+
+  it('hub-missing-feeder: the feeder line is not exported, said once per hub', () => {
+    const rs = withHub('same');
+    grid0(rs).cols.push({ ...grid0(rs).cols[0], uid: 'cccccccc-0000-4000-8000-0000000000a2', cells: grid0(rs).cols[0].cells.map((/** @type {any} */ c) => c && { ...c }) });
+    expect(run(rs).map((i) => [i.code, i.detail])).toEqual([['hub-missing-feeder', 'Jernbanetorget|F']]);
+  });
+
+  it('has texts for its codes in both languages', () => {
+    for (const code of ['hub-lost', 'hub-stale', 'hub-missing-feeder']) {
+      expect(CHECK_CODES).toContain(code);
+      for (const lang of Object.keys(STRINGS)) expect(STRINGS[lang][`chk:${code}`]).toBeTruthy();
+    }
+  });
+});

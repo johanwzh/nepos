@@ -50,8 +50,17 @@ function check(routes) {
     brandingsProblem: app.brandingsError ? 'unreadable' : '', calendars: app.calendars,
     calendarsProblem: app.calendarsError ? 'unreadable' : '', quayInfo, speedLimits: app.meta?.speedLimits ?? null, vehicles: app.vehicles ?? [],
     links: routedLinks(app.lineLinks),
+    hubLines: exportedLines, // a line's Knutepunkt links are checked against the other lines (2026-10-31)
   });
 }
+
+/** Every exported line as it is now: the feeders a Knutepunkt can wait for. */
+function exportedLines() {
+  return app.routes.filter((r) => r.status !== 'damaged').map((r) => ({ code: r.code, rs: lineState(r.code) })).filter((r) => r.rs && r.rs.exported !== false);
+}
+
+/** A line with a Knutepunkt: its check depends on other lines too, so it is not cached. @param {any} rs */
+const hasHubs = (rs) => Object.values(rs?.grids ?? {}).some((/** @type {any} */ g) => g.stops?.some((/** @type {any} */ s) => s.hub));
 
 /** @type {Map<string, { key: any, issues: import('../core/export-check.js').CheckIssue[] }>} */
 const cache = new Map();
@@ -65,7 +74,7 @@ export function lineIssues(code) {
   const entry = app.routes.find((r) => r.code === code);
   if (!entry) return [];
   const rs = lineState(code);
-  const live = code === app.activeRoute || app.drafts.has(code);
+  const live = code === app.activeRoute || app.drafts.has(code) || hasHubs(rs);
   // Saved lines: cached by their text and by the project data the check reads.
   const key = [entry.text, app.orgs, app.orgRegister, app.brandings, app.calendars, app.vehicles, app.meta, quayInfo.size, app.lineLinks.get(code)];
   const hit = cache.get(code);

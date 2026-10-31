@@ -14,6 +14,8 @@ import { ERN_MODES } from './ern/modes.js';
 import { expandRoute } from './blocks.js';
 import { normalizeBooking, bookingProblems } from './booking.js';
 import { lineLinkSummary } from './link-status.js';
+import { hubState } from './interchanges/hub.js';
+import { proposals } from './interchanges/proposals.js';
 
 /** Every code the check can give; each has a text 'chk:<code>' in both languages. */
 export const CHECK_CODES = [
@@ -22,7 +24,7 @@ export const CHECK_CODES = [
   'calendar-missing', 'calendar-empty', 'day-code', 'no-operating-days', 'calendars-unreadable', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'cell-dates-also', 'cell-dates-short', 'route-no-trips',
   'route-changed-on-disk', 'org-alias-missing', 'no-submode', 'speed-over', 'speed-limit-high', 'dest-missing', 'dest-last-dropped', 'dest-via-text', 'dest-unserved', 'dest-not-on-route', 'vehicle-mode',
-  'link-missing',
+  'link-missing', 'hub-lost', 'hub-stale', 'hub-missing-feeder',
 ];
 
 /**
@@ -44,11 +46,13 @@ const minutes = (cell) => (cell.dayOffset || 0) * 1440 + Number(cell.time.slice(
  *           brandings: { id: string }[], brandingsProblem?: '' | 'unreadable',
  *           calendars: import('./calendars.js').Calendar[], calendarsProblem?: '' | 'unreadable',
  *           quayInfo: Map<string, any>, changedOnDisk?: string[], speedLimits?: Record<string, number> | null,
- *           vehicles?: { name: string, transportMode?: string }[], links?: Map<string, import('../project/links-store.js').LineLinks> }} input
- *   vehicles: the project's (a trip's vehicle must run the line's mode); links: each line's routed links (2.6)
+ *           vehicles?: { name: string, transportMode?: string }[], links?: Map<string, import('../project/links-store.js').LineLinks>,
+ *           hubLines?: () => { code: string, rs: any }[] }} input
+ *   vehicles: the project's (a trip's vehicle must run the line's mode); links: each line's routed links (2.6);
+ *   hubLines: the exported lines a Knutepunkt's feeders come from (default: `routes`)
  * @returns {CheckIssue[]} errors first, then warnings
  */
-export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', calendars = [], calendarsProblem = '', quayInfo, changedOnDisk = [], speedLimits = null, vehicles = [], links = undefined }) {
+export function checkForExport({ routes, orgs, register, orgMode, codespace, orgsProblem, brandings, brandingsProblem = '', calendars = [], calendarsProblem = '', quayInfo, changedOnDisk = [], speedLimits = null, vehicles = [], links = undefined, hubLines = undefined }) {
   /** @type {CheckIssue[]} */
   const issues = [];
   /** @param {'error' | 'warning'} level @param {string} code @param {Partial<CheckIssue>} [extra] */
@@ -77,6 +81,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     checkVehicles(code, rs, vehicles, add);
     checkBookings(code, rs, add);
     if (links) checkLinks(code, rs, links.get(code), { calendars, quayInfo, add });
+    checkHubs(code, rs, () => hubLines?.() ?? routes.filter((x) => x.rs && x.status !== 'damaged'), { calendars, quayInfo, add });
     trips += routeTrips;
   }
   if (orgMode === 'codespace') {
@@ -324,6 +329,40 @@ function checkCellDates(grid, col, periodDays, at, add) {
   if (col.cells.some((/** @type {any} */ c) => c?.dates?.some((/** @type {any} */ d) => d.on))) add('warning', 'cell-dates-also', { where: at });
   const short = tripVariants(grid, col, tripDays(periodDays, col)).filter((v) => v.calls.length < 2).reduce((n, v) => n + v.days.length, 0);
   if (short && journeyStops(grid, col).length >= 2) add('warning', 'cell-dates-short', { where: at, detail: String(short) });
+}
+
+/**
+ * Knutepunkt links (interchanges spec 2026-10-31) that no longer hold: a hub whose row's stop was changed (hub-lost),
+ * approved links whose feeder arrives otherwise or not at all (hub-stale), a feeder line not in the export
+ * (hub-missing-feeder). Warnings only: no interchanges is never an error, and a link is written while both journeys
+ * exist. `lines`: the exported lines, read only when the line has a hub.
+ * @param {string} code @param {any} rs @param {() => { code: string, rs: any }[]} lines
+ * @param {{ calendars: import('./calendars.js').Calendar[], quayInfo: Map<string, any>, add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void }} ctx
+ */
+function checkHubs(code, rs, lines, { calendars, quayInfo, add }) {
+  /** @type {{ code: string, rs: any }[] | null} */
+  let all = null;
+  for (const set of rs.tableSets ?? []) {
+    for (const per of (rs.periods ?? []).filter((/** @type {any} */ p) => p.setId === set.id)) {
+      const grid = rs.grids?.[`${per.id}:${per.setId}`];
+      if (!grid) continue;
+      grid.stops.forEach((/** @type {any} */ stop, /** @type {number} */ ri) => {
+        if (!stop.hub) return;
+        const linked = grid.cols.map((/** @type {any} */ c) => c.cells[ri]?.hubLink).filter((/** @type {any} */ l) => l?.line);
+        if (!linked.length) return;
+        const r = { route: code, where: { tableSet: set.name, period: '', setId: set.id, periodId: per.id, row: ri } };
+        const name = stop.name || `#${ri + 1}`;
+        if (hubState(grid, ri) === 'lost') { add('warning', 'hub-lost', { ...r, detail: name }); return; }
+        all ??= lines();
+        const codes = new Set(all.map((l) => l.code));
+        for (const missing of new Set(linked.map((/** @type {any} */ l) => l.line).filter((/** @type {string} */ c) => !codes.has(c)))) add('warning', 'hub-missing-feeder', { ...r, detail: `${name}|${missing}` });
+        const withOurs = codes.has(code) ? all.map((l) => (l.code === code ? { code, rs } : l)) : [...all, { code, rs }];
+        const stale = proposals(grid, ri, withOurs, { calendars, quayInfo, ownCode: code })
+          .filter((p) => p.link.line && codes.has(p.link.line) && (p.state === 'changed' || p.state === 'gone' || p.state === 'pick')).length;
+        if (stale) add('warning', 'hub-stale', { ...r, detail: `${stale}|${name}` });
+      });
+    }
+  }
 }
 
 /**

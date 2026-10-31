@@ -1,6 +1,18 @@
 // Which stops a column (one trip) calls at, and which DayType it runs on — exactly as the export
 // writes it. Shared by collect.js, line.js and the export check so they can never disagree.
 import { rangeDays } from '../calendars.js';
+import { uuid5 } from '../uuid5.js';
+import { UUID_PATTERN } from '../ern/serialize.js';
+
+/**
+ * A column's ServiceJourney ID: its #UID when it has one, else the old position-based ID. Here so the Knutepunkt links
+ * (another line's trips) get the very IDs the line files write.
+ * @param {string} cs @param {string} routeCode @param {any} col @param {number} di the table set's index @param {any} per @param {number} ci
+ */
+export const sjIdFor = (cs, routeCode, col, di, per, ci) => (col?.uid && UUID_PATTERN.test(col.uid) ? `${cs}:ServiceJourney:${col.uid}` : `${cs}:ServiceJourney:${routeCode}-${di}-${per.id}-${ci}`);
+
+/** A variant's ServiceJourney ID: the usual one keeps the column's, the others are derived from it. @param {string} cs @param {string} base @param {{ calls: any[], main: boolean }} v */
+export const variantSjIdOf = (cs, base, v) => (v.main ? base : `${cs}:ServiceJourney:${uuid5(`${base}|calls:${v.calls.map((c) => c.ri).join(',')}`)}`);
 
 /** @param {any} cell */
 const timed = (cell) => !!cell?.time && cell.time !== '|';

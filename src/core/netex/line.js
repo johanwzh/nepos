@@ -2,7 +2,8 @@
 import { xe, hhmm2t, ernModeNeTEx, pubDelivery, compositeFrame } from './xml.js';
 import { authorityNetworkLocalId } from '../orgs.js';
 import { stopLocalId } from '../quays.js';
-import { tripVariants } from './journeys.js';
+import { tripVariants, sjIdFor, variantSjIdOf } from './journeys.js';
+import { hubInterchangesXml } from './hub-interchanges.js';
 import { uuid5 } from '../uuid5.js';
 import { isoDate } from '../calendars.js';
 import { submodeElement } from '../modes.js';
@@ -72,12 +73,12 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
     const ixs = []; // interchanges: written only when both journeys exist
     const dsjs = []; // DatedServiceJourneys, one per trip per operating day
 
-    /** A column's ServiceJourney ID: its #UID when it has one, else the old position-based ID. @param {any} col @param {number} di @param {any} per @param {number} ci */
-    const sjIdOf = (col, di, per, ci) => col?.uid && UUID_PATTERN.test(col.uid) ? `${cs}:ServiceJourney:${col.uid}` : `${cs}:ServiceJourney:${routeCode}-${di}-${per.id}-${ci}`;
+    /** @param {any} col @param {number} di @param {any} per @param {number} ci */
+    const sjIdOf = (col, di, per, ci) => sjIdFor(cs, routeCode, col, di, per, ci);
 
     const jpRegistry = new Map(); // "dirIdx:stopSeqKey" → jpId
-    /** A variant's ServiceJourney ID: the usual one keeps the column's, the others are derived from it. @param {string} base @param {{ calls: any[], main: boolean }} v */
-    const variantSjId = (base, v) => (v.main ? base : `${cs}:ServiceJourney:${uuid5(`${base}|calls:${v.calls.map((c) => c.ri).join(',')}`)}`);
+    /** @param {string} base @param {{ calls: any[], main: boolean }} v */
+    const variantSjId = (base, v) => variantSjIdOf(cs, base, v);
 
     // One Route per table set (timetable structure spec §7); its JourneyPatterns are the distinct
     // stop sequences of its trips. A pattern another table set already has (the same line in another season) is
@@ -297,7 +298,9 @@ ${jpsXml.join('\n')}
 
     // Interchanges only between journeys that were written (no dangling FromJourneyRef/ToJourneyRef)
     const sjOnly  = sjs;
-    const ixOnly  = ixs.filter(x=>sjIds.has(x.fromSjId) && sjIds.has(x.toSjId)).map(x=>x.xml);
+    const ixOnly  = ixs.filter(x=>sjIds.has(x.fromSjId) && sjIds.has(x.toSjId)).map(x=>x.xml)
+    // Knutepunkt links: the feeder is in another line file; the journey index knows it is in the delivery
+    ixOnly.push(...hubInterchangesXml(cs, routeCode, rs, data.journeys));
 
     const ttFrame = `    <TimetableFrame id="${cs}:TimetableFrame:Line_${routeCode}" version="1">
       <vehicleJourneys>

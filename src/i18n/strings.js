@@ -295,6 +295,9 @@ export const STRINGS = {
     destToggle: 'Destinations',
     rlNewLine: '+ New line',
     'chk:speed-over': (d) => `Faster than the mode's speed limit (straight line): ${d}. Check the times or the stops.`, 'chk:speed-limit-high': (d) => `The project's speed limit is set far above normal (${d}). Entur may not accept trips this fast.`,
+    'chk:hub-lost': (d) => `Knutepunkt ${d}: the row's stop has changed, so its links are not exported — open Hubs on the line.`,
+    'chk:hub-stale': (d) => { const [n, name] = d.split('|'); return `Knutepunkt ${name}: ${n} ${n === '1' ? 'link has' : 'links have'} changed — open Hubs and approve.`; },
+    'chk:hub-missing-feeder': (d) => { const [name, line] = d.split('|'); return `Knutepunkt ${name}: line ${line} is not exported, so its links are left out.`; },
     'chk:link-missing': (d) => {
       const [n, o] = d.split('|').map(Number), legs = (/** @type {number} */ k) => `${k} ${k === 1 ? 'leg' : 'legs'}`;
       const text = n ? `${legs(n)} not routed${o ? `, ${o} out of date` : ''}` : `${legs(o)} out of date`;
@@ -709,6 +712,9 @@ export const STRINGS = {
     destToggle: 'Destinasjoner',
     rlNewLine: '+ Ny linje',
     'chk:speed-over': (d) => `Raskere enn fartsgrensen for transportmiddelet (i luftlinje): ${d}. Sjekk tidene eller stoppene.`, 'chk:speed-limit-high': (d) => `Prosjektets fartsgrense er satt langt over det vanlige (${d}). Entur godtar kanskje ikke så raske turer.`,
+    'chk:hub-lost': (d) => `Knutepunkt ${d}: stoppet på raden er endret, så koblingene eksporteres ikke — åpne Knutepunkt på linjen.`,
+    'chk:hub-stale': (d) => { const [n, name] = d.split('|'); return `Knutepunkt ${name}: ${n} ${n === '1' ? 'kobling er' : 'koblinger er'} endret — åpne Knutepunkt og godkjenn.`; },
+    'chk:hub-missing-feeder': (d) => { const [name, line] = d.split('|'); return `Knutepunkt ${name}: linje ${line} eksporteres ikke, så koblingene til den utelates.`; },
     'chk:link-missing': (d) => {
       const [n, o] = d.split('|').map(Number), legs = (/** @type {number} */ k) => `${k} ${k === 1 ? 'strekning er' : 'strekninger er'}`;
       const text = n ? `${legs(n)} ikke rutet${o ? `, ${o} er utdatert` : ''}` : `${legs(o)} utdatert`;
