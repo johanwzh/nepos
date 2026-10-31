@@ -5,7 +5,7 @@
 // overview draws only those, small, so the map is not crowded with dots.
 import { tripCols } from './blocks.js';
 import { isExportable } from './link-state.js';
-import { isRoutedLine } from '../routing/profiles.js';
+import { profileFor } from '../routing/profiles.js';
 import { decodePolyline } from '../routing/geometry.js';
 
 /**
@@ -29,9 +29,10 @@ export function networkOf(routes, quayInfo) {
   const stops = new Map();
   /** @param {string} id */
   const pos = (id) => { const q = quayInfo.get(id); return q && (q.lon || q.lat) ? /** @type {[number, number]} */ ([q.lon, q.lat]) : null; };
-  /** A stretch along the line's routed link (either way round), or null. @param {Record<string, any> | undefined} links @param {string} a @param {string} b */
-  const routed = (links, a, b) => {
-    for (const [key, flip] of /** @type {[string, boolean][]} */ ([[`${a}|${b}|bus`, false], [`${b}|${a}|bus`, true]])) {
+  /** A stretch along the line's routed link on its own network (either way round), or null.
+   *  @param {Record<string, any> | undefined} links @param {string} a @param {string} b @param {string} profile */
+  const routed = (links, a, b, profile) => {
+    for (const [key, flip] of /** @type {[string, boolean][]} */ ([[`${a}|${b}|${profile}`, false], [`${b}|${a}|${profile}`, true]])) {
       const l = links?.[key];
       if (l && isExportable(key, l, quayInfo)) {
         const c = /** @type {[number, number][]} */ (decodePolyline(l.polyline, l.precision ?? 6));
@@ -41,7 +42,8 @@ export function networkOf(routes, quayInfo) {
     return null;
   };
   for (const { code, rs, problem, links: all } of routes) {
-    const links = isRoutedLine(rs) ? all : undefined;
+    const profile = profileFor(rs?.mode ?? '', rs?.submode ?? '');
+    const links = profile ? all : undefined;
     for (const grid of Object.values(rs?.grids ?? {})) {
       const g = /** @type {any} */ (grid);
       for (const col of g.cols ? tripCols(g) : []) { // a block's trips count too
@@ -69,7 +71,7 @@ export function networkOf(routes, quayInfo) {
           if (!pa || !pb) continue;
           const key = a < b ? `${a}|${b}` : `${b}|${a}`;
           const seg = segments.get(key) ?? { from: a, to: b, coords: [pa, pb], trips: 0, problem: false, lines: [], lineSet: new Set() };
-          const road = seg.coords.length > 2 ? null : routed(links, a, b);
+          const road = seg.coords.length > 2 ? null : routed(links, a, b, /** @type {string} */ (profile));
           if (road) seg.coords = seg.from === a ? road : road.reverse();
           seg.trips++;
           seg.problem ||= problem;

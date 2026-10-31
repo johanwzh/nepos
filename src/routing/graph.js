@@ -10,7 +10,7 @@ import { secondsPerMetre } from './cost.js';
  * @typedef {{ profile: import('./profiles.js').Profile, nodes: number, edges: number, lon: Int32Array, lat: Int32Array, from: Uint32Array, to: Uint32Array,
  *   len: Float32Array, spm: Float32Array, ferry: Uint8Array, dir: Uint8Array, way: Uint32Array, road: (e: number) => string,
  *   geo: Int32Array, geoStart: Uint32Array, out: { start: Uint32Array, de: Uint32Array },
- *   open: Uint8Array, restrict: Map<number, { no: Set<number>, only: number }>, cells: Map<number, number[]>, keys: Set<string>,
+ *   open: Uint8Array, cross: Uint8Array, restrict: Map<number, { no: Set<number>, only: number }>, cells: Map<number, number[]>, keys: Set<string>,
  *   entries: TileEntry[] }} Graph
  */
 
@@ -25,7 +25,7 @@ export function buildGraph(entries, profile = 'bus') {
     nodes += tile.lon.length; edges += tile.from.length;
     for (let e = 0; e < tile.from.length; e++) points += tile.ptCount[e] + 2;
   }
-  const lon = new Int32Array(nodes), lat = new Int32Array(nodes), open = new Uint8Array(nodes);
+  const lon = new Int32Array(nodes), lat = new Int32Array(nodes), open = new Uint8Array(nodes), cross = new Uint8Array(nodes);
   const from = new Uint32Array(edges), to = new Uint32Array(edges), len = new Float32Array(edges), spm = new Float32Array(edges);
   const ferry = new Uint8Array(edges), dir = new Uint8Array(edges), way = new Uint32Array(edges);
   const tileOf = new Uint16Array(edges), nameOf = new Uint32Array(edges);
@@ -36,7 +36,9 @@ export function buildGraph(entries, profile = 'bus') {
   entries.forEach(({ tile }, ti) => {
     const local = new Uint32Array(tile.lon.length);
     for (let i = 0; i < tile.lon.length; i++) {
-      if (tile.border[i]) {
+      // node byte: bit 0 on the tile border, bit 1 a level crossing of tracks (routing for all modes)
+      if (tile.border[i] & 2) cross[n] = 1;
+      if (tile.border[i] & 1) {
         const k = `${tile.lon[i]},${tile.lat[i]}`, known = border.get(k);
         if (known !== undefined) { local[i] = known; open[known] = 0; continue; }
         border.set(k, n);
@@ -88,7 +90,7 @@ export function buildGraph(entries, profile = 'bus') {
   }
 
   return {
-    profile, nodes: n, edges: e, lon: lon.subarray(0, n), lat: lat.subarray(0, n), open: open.subarray(0, n), from, to, len, spm, ferry, dir, way,
+    profile, nodes: n, edges: e, lon: lon.subarray(0, n), lat: lat.subarray(0, n), open: open.subarray(0, n), cross: cross.subarray(0, n), from, to, len, spm, ferry, dir, way,
     road: (i) => entries[tileOf[i]].tile.names[nameOf[i]] ?? '',
     geo, geoStart, out: { start, de }, restrict, cells, keys: new Set(entries.map((t) => t.key)), entries,
   };

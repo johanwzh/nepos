@@ -122,7 +122,8 @@ export function pruneLineLinks(rs, lineLinks) {
   }
   const patterns = Object.fromEntries(Object.entries(lineLinks.patterns ?? {}).filter(([, sp]) => sp.trips.some((u) => uids.has(u))));
   for (const sp of Object.values(patterns)) for (const key of sp.keys) if (key) used.add(key);
-  const links = Object.fromEntries(Object.entries(lineLinks.links).filter(([key]) => used.has(key)));
+  // another network's links stay: a line switched from bus to tram keeps its bus routes (final review I4)
+  const links = Object.fromEntries(Object.entries(lineLinks.links).filter(([key]) => used.has(key) || !key.endsWith(`|${profile}`)));
   const quays = new Set(Object.keys(links).flatMap((key) => key.split('|').slice(0, 2)));
   const snaps = Object.fromEntries(Object.entries(lineLinks.snaps).filter(([id]) => quays.has(id)));
   const same = (/** @type {object} */ a, /** @type {object | undefined} */ b) => Object.keys(a).length === Object.keys(b ?? {}).length;

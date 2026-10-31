@@ -14,7 +14,7 @@ import { quayInfo, onQuaysLoaded } from './quays.js';
 import { speedProfile } from '../core/speed-profile.js';
 import { ERN_MODES } from '../core/ern/modes.js';
 import { isExportable } from '../core/link-state.js';
-import { isRoutedLine } from '../routing/profiles.js';
+import { profileFor } from '../routing/profiles.js';
 
 const H = 64;          // the strip's height
 const BASE = H - 12;   // the line the dots sit on
@@ -33,10 +33,11 @@ function lineMode() {
 
 /** The open bus line's routed km between two stops, or null. @type {() => ((a: string, b: string) => number | null) | undefined} */
 function roadKm() {
-  const links = app.activeRoute && isRoutedLine(app.routeState) ? app.lineLinks.get(app.activeRoute)?.links : undefined;
+  const profile = profileFor(app.routeState?.mode ?? '', app.routeState?.submode ?? '');
+  const links = app.activeRoute && profile ? app.lineLinks.get(app.activeRoute)?.links : undefined;
   if (!links) return undefined;
   return (a, b) => {
-    const key = `${a}|${b}|bus`, l = links[key];
+    const key = `${a}|${b}|${profile}`, l = links[key];
     return l && isExportable(key, l, /** @type {any} */ (quayInfo)) ? l.distanceM / 1000 : null;
   };
 }

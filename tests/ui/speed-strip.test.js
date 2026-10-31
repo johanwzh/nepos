@@ -140,6 +140,16 @@ describe('the speed strip, 2.6: routed legs (user 2026-10-31)', () => {
     expect(hover()).toEqual(['90', 'A → B · 3 km langs veien · 2 min · 60–90 km/t']);
   });
 
+  it('a tram line measures its tram route, never a bus route on the same stops (final review C1)', () => {
+    app.routeState.mode = 'tram';
+    route();
+    expect(hover()[1]).toContain('luftlinje');
+    const ll = /** @type {any} */ (app.lineLinks.get('61'));
+    ll.links = { 'NSR:Quay:1|NSR:Quay:2|tram': ll.links['NSR:Quay:1|NSR:Quay:2|bus'] };
+    refreshAll();
+    expect(hover()[0]).toBe('90');
+  });
+
   it('a leg whose stop has moved since it was routed stays a straight line', () => {
     route(true);
     expect(hover()).toEqual(['33', 'A → B · 1,1 km luftlinje · 2 min · 22–33 km/t']);

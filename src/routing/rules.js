@@ -21,3 +21,5 @@ export const rulesFor = (profile) => RULES[profile] ?? RULES.bus;
 
 /** On track (rail, tram, metro, cable) the route may not turn more than this at a node. */
 export const MAX_TURN_DEG = 90;
+/** At a level crossing of two tracks (node byte bit 1, nepos-tiles) track only goes straight through. */
+export const CROSSING_MAX_DEG = 30;

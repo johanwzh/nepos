@@ -56,6 +56,13 @@ describe('the selected trip along its saved routes (routing editor, 2026-10-31)'
     expect(tripRouteLegs(grid, grid.cols[0], { [K1]: link }, moved).links[0].state).toBe('stale');
   });
 
+  it('a tram line draws its tram routes, never a bus route on the same stops (final review C1)', () => {
+    const tram = 'NSR:Quay:1|NSR:Quay:2|tram';
+    const r = tripRouteLegs(grid, grid.cols[0], { [K1]: link, [tram]: link }, info, 'tram');
+    expect(r.links.map((l) => l.key)).toEqual([tram]);
+    expect(tripRouteLegs(grid, grid.cols[0], { [K1]: link }, info, 'tram').links).toEqual([]);
+  });
+
   it('no links: every leg straight', () => {
     expect(tripRouteLegs(grid, grid.cols[0], undefined, info).straight.map((s) => s.coords)).toEqual([[[10, 60], [10.1, 60]], [[10.1, 60], [10.2, 60]]]);
   });

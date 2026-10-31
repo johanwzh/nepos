@@ -69,6 +69,28 @@ describe('track: no sharp turns', () => {
   });
 });
 
+describe('track: a level crossing (final review I2)', () => {
+  // Two tram lines cross at X(500,0): W(0,0) - X - E(1000,0) and S(500,-500) - X - N(500,500)
+  const cross = (/** @type {number[]} */ crossings) => makeGraph({
+    nodes: [P(0, 0), P(500, 0), P(1000, 0), P(500, -500), P(500, 500)], attrs: TRACK, crossings,
+    edges: [{ from: 0, to: 1 }, { from: 1, to: 2 }, { from: 3, to: 1 }, { from: 1, to: 4 }],
+  }, 'tram');
+
+  it('a tram cannot turn onto the track it crosses; it goes straight through', () => {
+    expect(routeChain(cross([1]), [stop(200, -5), stop(495, 300)]).ok).toBe(false);
+    const straight = routeChain(cross([1]), [stop(200, -5), stop(800, -5)]);
+    expect(straight.ok && total(straight)).toBeCloseTo(600, -1);
+  });
+
+  it('a node that is not a crossing still lets track turn up to 90°', () => {
+    expect(routeChain(cross([]), [stop(200, -5), stop(495, 300)]).ok).toBe(true);
+  });
+
+  it('a crossing node is not a tile border', () => {
+    expect(cross([1]).open[1]).toBe(0);
+  });
+});
+
 describe('speeds, snaps and flags per profile', () => {
   it('rail runs at 100 km/h where the track has no maxspeed; the bus defaults are as before', () => {
     const g = { nodes: [P(0, 0), P(1000, 0)], attrs: TRACK, edges: [{ from: 0, to: 1 }] };

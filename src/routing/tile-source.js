@@ -81,6 +81,8 @@ export function createTileSource({ fs, baseUrl, set = 'road', fetch = globalThis
   async function get(name) {
     let res;
     try { res = await fetch(`${base}${name}`, { cache: 'no-cache' }); } catch { throw new Error('routing-offline'); }
+    // no manifest: the set is not published (yet); anything else is no connection
+    if (res.status === 404 && name === 'manifest.json') throw new Error('routing-missing');
     if (!res.ok) throw new Error('routing-offline');
     return new Uint8Array(await res.arrayBuffer());
   }
@@ -130,11 +132,11 @@ export function createTileSource({ fs, baseUrl, set = 'road', fetch = globalThis
       const files = new Set((await fs.list(DIR)).filter((e) => e.kind === 'file').map((e) => e.name));
       const inCache = (/** @type {Manifest} */ m, /** @type {string} */ k) => k in m.tiles && files.has(`${k}.bin.gz`);
       /** @type {Manifest | null} */
-      let published = null;
-      try { published = JSON.parse(new TextDecoder().decode(await get('manifest.json'))); } catch { published = null; }
+      let published = null, missing = false;
+      try { published = JSON.parse(new TextDecoder().decode(await get('manifest.json'))); } catch (e) { published = null; missing = /** @type {any} */ (e)?.message === 'routing-missing'; }
 
       if (!published) {
-        if (!cached || !tilesForChain(cached, points, 1).every((k) => inCache(cached, k) || pageTiles.has(`${set}|${cached.built}|${k}`))) throw new Error('routing-offline');
+        if (!cached || !tilesForChain(cached, points, 1).every((k) => inCache(cached, k) || pageTiles.has(`${set}|${cached.built}|${k}`))) throw new Error(missing ? 'routing-no-set' : 'routing-offline');
         session = cached;
         onDisk = (k) => inCache(cached, k);
         return { manifest: cached, newer };

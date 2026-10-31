@@ -50,6 +50,14 @@ describe('networkOf', () => {
     expect(networkOf([{ code: '2', rs: back, problem: false, links: { 'A|B|bus': link } }], QUAYS).segments[0].coords).toEqual([...road].reverse());
   });
 
+  it('a tram line follows its tram links, not a bus link on the same stops (final review C1)', () => {
+    const road = /** @type {[number, number][]} */ ([[10, 60], [10.05, 60.03], [10.1, 60]]);
+    const link = /** @type {any} */ ({ polyline: encodePolyline(road, 6), precision: 6, distanceM: 6000, status: 'OK', from: [10, 60], to: [10.1, 60] });
+    const tram = { ...rs([stop('A'), stop('B')], [['0700', '0710']]), mode: 'tram' };
+    expect(networkOf([{ code: '1', rs: tram, problem: false, links: { 'A|B|bus': link } }], QUAYS).segments[0].coords).toEqual([[10, 60], [10.1, 60]]);
+    expect(networkOf([{ code: '1', rs: tram, problem: false, links: { 'A|B|tram': link } }], QUAYS).segments[0].coords).toEqual(road);
+  });
+
   it('marks the main stops (bold in a timetable): the overview draws only those, small (user 2026-10-31)', () => {
     const r = rs([stop('A', { bold: true }), stop('B'), stop('C')], [['0700', '0710', '0720']]);
     expect(networkOf([{ code: '1', rs: r, problem: false }], QUAYS).stops.map((x) => [x.id, x.main])).toEqual([['A', true], ['B', false], ['C', false]]);

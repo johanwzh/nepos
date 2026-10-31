@@ -185,6 +185,12 @@ describe('unused links are dropped when a line is saved (spec Goal 6)', () => {
     expect(pruneLineLinks(line([t('u1', ['0700', off, '0720'])]), f)).toBeNull();
   });
 
+  it('a line switched to another mode keeps the old mode\'s links: only its own network\'s are pruned (final review I4)', () => {
+    const tram = line([t('u9', ['0700', '0710', '0720'])], B4, 'tram');
+    const out = pruneLineLinks(tram, file());
+    expect(Object.keys(out?.links ?? file().links).sort()).toEqual(Object.keys(file().links).sort());
+  });
+
   it('a line not routed (air) keeps its file', () => {
     expect(pruneLineLinks(line([t('u9', ['0700', '0710'])], STOPS, 'air'), file())).toBeNull();
   });

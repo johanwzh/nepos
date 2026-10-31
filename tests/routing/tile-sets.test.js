@@ -78,10 +78,12 @@ describe('one tile set per network', () => {
     expect(new Uint8Array(await rail.loadTile('40_472'))).toEqual(raw(1));
   });
 
-  it('a set not published yet and not cached: routing-offline, as with no network', async () => {
+  it('a set not published yet and not cached: routing-no-set, not offline (final review I3)', async () => {
     const fs = createMemoryFs(), { fetch } = server({ road: raw() });
     const src = createTileSource({ fs, baseUrl: 'https://tiles.test/', set: 'cable', fetch });
-    await expect(src.open(POINTS)).rejects.toThrow('routing-offline');
+    await expect(src.open(POINTS)).rejects.toThrow('routing-no-set');
+    const offline = createTileSource({ fs, baseUrl: 'https://tiles.test/', set: 'cable', fetch: /** @type {any} */ (async () => { throw new TypeError('offline'); }) });
+    await expect(offline.open(POINTS)).rejects.toThrow('routing-offline');
   });
 });
 

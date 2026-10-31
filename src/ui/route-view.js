@@ -79,6 +79,7 @@ const REASON = /** @type {Record<string, string>} */ ({ none: 'rvNone', unroutab
 function message(e) {
   const m = String(e?.message ?? e);
   if (m === 'routing-offline') return t('rtOffline');
+  if (m === 'routing-no-set') return t('rtNoSet');
   if (m === 'routing-bad-tile') return t('rtBadTile');
   return t('rtFailed', m);
 }

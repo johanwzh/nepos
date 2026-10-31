@@ -7,7 +7,7 @@ import { createHeap } from './heap.js';
 import { OFFROAD_S_PER_M } from './cost.js';
 import { candidatesWidening, fromRef } from './snap.js';
 import { scaleAt, sliceEdge, turnDeg } from './edge-geometry.js';
-import { rulesFor, MAX_TURN_DEG } from './rules.js';
+import { rulesFor, MAX_TURN_DEG, CROSSING_MAX_DEG } from './rules.js';
 
 /**
  * @typedef {import('./graph.js').Graph} Graph
@@ -202,7 +202,8 @@ function searchLeg(G, from, start, to, target, offroad, canDrive, vmax, track) {
       const de2 = G.out.de[k], e2 = de2 >> 1, d2 = de2 & 1;
       if (de2 === back && !deadEnd) continue;
       if (r && (r.no.has(e2) || (r.only >= 0 && r.only !== e2))) continue;
-      if (track && de2 !== back && turnDeg(G, de, de2) > MAX_TURN_DEG) continue; // a train does not reverse through a switch
+      // a train does not reverse through a switch, nor turn onto the track it crosses
+      if (track && de2 !== back && turnDeg(G, de, de2) > (G.cross[v] ? CROSSING_MAX_DEG : MAX_TURN_DEG)) continue;
       relax(de2, g + G.len[e2] * G.spm[e2], de);
       targetsOn(e2, d2, d2 ? G.len[e2] : 0, g, de, de2, -1);
     }

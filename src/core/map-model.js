@@ -41,14 +41,15 @@ export function tripOnMap(grid, col, quayInfo) {
  * @param {{ stops: any[] }} grid @param {{ cells: any[] }} col
  * @param {Record<string, import('./link-state.js').SavedLink> | undefined} links the line's links
  * @param {Map<string, { lat: number | null, lon: number | null } | null>} quayInfo
+ * @param {import('../routing/profiles.js').Profile} [profile] the line's network: its links only (routing for all modes)
  * @returns {{ links: { key: string, coords: [number, number][], state: 'routed' | 'stale' }[], straight: { key: string, coords: [number, number][] }[] }}
  */
-export function tripRouteLegs(grid, col, links, quayInfo) {
+export function tripRouteLegs(grid, col, links, quayInfo, profile = 'bus') {
   /** @type {{ key: string, coords: [number, number][], state: 'routed' | 'stale' }[]} */
   const out = [];
   /** @type {{ key: string, coords: [number, number][] }[]} */
   const straight = [];
-  for (const { key } of tripLinks(grid, col, 'bus')) {
+  for (const { key } of tripLinks(grid, col, profile)) {
     const l = links?.[key];
     if (l?.status === 'OK') {
       out.push({ key, coords: /** @type {[number, number][]} */ (decodePolyline(l.polyline, l.precision ?? 6)), state: linkMoved(key, l, /** @type {any} */ (quayInfo)) ? 'stale' : 'routed' });
