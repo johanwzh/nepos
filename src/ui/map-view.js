@@ -10,7 +10,9 @@ import { t } from '../i18n/strings.js';
  *             anchor?: 'center' | 'bottom', onClick?: (ev: MouseEvent) => void, onContext?: (ev: MouseEvent) => void,
  *             draggable?: boolean, onDragEnd?: (lngLat: LonLat) => void }} MapMarker
  *   anchor 'bottom': the marker's bottom edge is the point (a pin's tip, 2.5); draggable: a routing waypoint (2.6)
- * @typedef {{ key: string, coords: LonLat[], state: 'routed' | 'flagged' | 'failed' | 'selected' }} MapLink
+ * @typedef {{ key: string, coords: LonLat[], state: 'routed' | 'flagged' | 'failed' | 'selected' | 'via' | 'old' | 'faint' | 'stale' }} MapLink
+ *   via: a leg through waypoints; old: the saved route under a proposal; faint: the table set's other patterns; stale: a
+ *   saved route out of date (the timetable's map) — routing editor, 2026-10-31
  * @typedef {{ lon: number, lat: number, r: number, tooltip: string }} MapDot
  */
 
@@ -52,6 +54,8 @@ export function createMapView(el, { style, dark = false }) {
   let ready = false;
   /** @type {maplibregl.Marker[]} */
   let markers = [];
+  /** @type {maplibregl.Marker[]} */
+  let labels = [];
   const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
 
   function addLayers() {
@@ -65,7 +69,11 @@ export function createMapView(el, { style, dark = false }) {
     // A routing session's legs (2.6), by state; failed legs are a dashed straight line between the Quays
     const link = (/** @type {string} */ state, /** @type {Record<string, any>} */ paint) => map.addLayer({ id: `links-${state}`, type: 'line', source: 'links',
       filter: ['==', ['get', 'state'], state], layout: { 'line-join': 'round', 'line-cap': 'round' }, paint });
+    link('faint', { 'line-color': '#9a9a9a', 'line-width': 2, 'line-opacity': 0.45 });
+    link('old', { 'line-color': '#777', 'line-width': 4, 'line-opacity': 0.7, 'line-dasharray': [1.5, 1.5] });
     link('routed', { 'line-color': '#1b8a4a', 'line-width': 4, 'line-opacity': 0.85 });
+    link('via', { 'line-color': '#6a3fc4', 'line-width': 4, 'line-opacity': 0.9 });
+    link('stale', { 'line-color': '#e08a00', 'line-width': 4, 'line-opacity': 0.85 });
     link('flagged', { 'line-color': '#e08a00', 'line-width': 4, 'line-opacity': 0.95 });
     link('failed', { 'line-color': '#c62828', 'line-width': 3, 'line-dasharray': [2, 2] });
     link('selected', { 'line-color': BLUE, 'line-width': 6 });
@@ -100,7 +108,9 @@ export function createMapView(el, { style, dark = false }) {
   /** @type {((key: string, lngLat: LonLat) => void)[]} */
   const linkClick = [];
   map.on('click', 'links-hit', (e) => {
-    const key = e.features?.[0]?.properties?.key;
+    // Where legs overlap (there and back), the selected one wins (final review M4, 2026-10-31)
+    const f = e.features ?? [];
+    const key = (f.find((x) => x.properties?.state === 'selected') ?? f[0])?.properties?.key;
     if (key) for (const fn of linkClick) fn(String(key), [e.lngLat.lng, e.lngLat.lat]);
   });
   map.on('mouseenter', 'links-hit', () => { map.getCanvas().style.cursor = 'pointer'; });
@@ -128,6 +138,23 @@ export function createMapView(el, { style, dark = false }) {
     setLinks(links) { put('links', collection(links.map((l) => lineFeature(l.coords, { key: l.key, state: l.state })))); },
     /** @param {(key: string, lngLat: LonLat) => void} fn */
     onLinkClick(fn) { linkClick.push(fn); },
+    /**
+     * The stops of a routing pattern with their number and name (2026-10-31): HTML labels, so they work on every map
+     * style (raster styles have no fonts). @param {{ lon: number, lat: number, name: string, n: number }[]} stops
+     */
+    setStopLabels(stops) {
+      for (const m of labels) m.remove();
+      labels = stops.map((s) => {
+        const box = document.createElement('div');
+        box.className = 'map-stop';
+        const n = document.createElement('b');
+        n.textContent = String(s.n);
+        const name = document.createElement('span');
+        name.textContent = s.name;
+        box.append(n, name);
+        return new maplibregl.Marker({ element: box, anchor: 'left', offset: [-7, 0] }).setLngLat([s.lon, s.lat]).addTo(map);
+      });
+    },
     /** @param {LonLat[]} line */
     setDashed(line) { put('dashed', collection(line.length > 1 ? [lineFeature(line)] : [])); },
     /** @param {MapMarker[]} list */

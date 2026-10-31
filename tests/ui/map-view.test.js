@@ -26,7 +26,7 @@ vi.mock('maplibre-gl', () => {
     setLngLat(/** @type {[number, number]} */ p) { this.at = p; return this; }
     getLngLat() { return { lng: this.at[0], lat: this.at[1] }; }
     addTo() { return this; }
-    remove() {}
+    remove() { this.removed = true; }
     on(/** @type {string} */ ev, /** @type {Function} */ f) { this.handlers[ev] = f; return this; }
     getElement() { return this.opts.element; }
   }
@@ -82,5 +82,36 @@ describe('routing on the map', () => {
 
   it('the 2.3 style source lookup is gone', () => {
     expect(/** @type {any} */ (view().v).styleSource).toBeUndefined();
+  });
+
+  it('the routing editor’s states get their layers: via, old (dashed), faint, stale (2026-10-31)', () => {
+    const { map } = view();
+    const ids = map.layers.map((/** @type {any} */ l) => l.id);
+    expect(ids).toEqual(expect.arrayContaining(['links-via', 'links-old', 'links-faint', 'links-stale']));
+    expect(map.layers.find((/** @type {any} */ l) => l.id === 'links-old').paint['line-dasharray']).toBeDefined();
+    // the faint and old routes lie under the pattern's own legs
+    expect(ids.indexOf('links-faint')).toBeLessThan(ids.indexOf('links-routed'));
+    expect(ids.indexOf('links-old')).toBeLessThan(ids.indexOf('links-routed'));
+  });
+
+  it('stop labels are markers with the stop’s number and name, apart from the other markers (any map style)', () => {
+    const { v } = view();
+    v.setMarkers([{ lon: 10, lat: 59, html: '', cls: 'wp', size: 12 }]);
+    const before = markers.length;
+    v.setStopLabels([{ lon: 10, lat: 59, name: 'Torget <1>', n: 1 }]);
+    const m = markers.at(-1);
+    expect(markers.length).toBe(before + 1);
+    expect(m.getElement().className).toBe('map-stop');
+    expect(m.getElement().textContent).toBe('1Torget <1>');
+    v.setStopLabels([]);
+    expect(m.removed).toBe(true);
+  });
+
+  it('a click over two legs reports the selected one (final review M4)', () => {
+    const { v, map } = view();
+    const fn = vi.fn();
+    v.onLinkClick(fn);
+    map.fire('click:links-hit', { features: [{ properties: { key: 'a|b|bus', state: 'routed' } }, { properties: { key: 'b|a|bus', state: 'selected' } }], lngLat: { lng: 10, lat: 59 } });
+    expect(fn).toHaveBeenCalledWith('b|a|bus', [10, 59]);
   });
 });
