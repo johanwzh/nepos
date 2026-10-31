@@ -23,7 +23,8 @@ export function quayRef(id, quayInfo) {
  * periods of table set `setId` when given. `uid`: the column's UUID (a block's generated trips: their parent's), '' when
  * it has none yet.
  * @param {any} rs @param {{ calendars: import('./calendars.js').Calendar[], setId?: number }} ctx
- * @param {(calls: { stopId: string, name?: string }[], uid: string) => void} fn
+ * @param {(calls: ReturnType<typeof journeyStops>, uid: string, trip: { col: any, days: string[] }) => void} fn the trip's calls, its
+ *   uid (a block's generated trips have their parent's) and its column (the expanded one) with this variant's days
  */
 export function eachTrip(rs, { calendars, setId }, fn) {
   const ex = expandRoute(rs);
@@ -36,7 +37,7 @@ export function eachTrip(rs, { calendars, setId }, fn) {
       const days = tripDays(periodDays, col);
       const variants = days.length ? tripVariants(grid, col, days) : [{ calls: journeyStops(grid, col) }];
       const uid = (col.parentCi != null ? grid.cols[col.parentCi]?.uid : col.uid) ?? '';
-      for (const v of variants) fn(v.calls, uid);
+      for (const v of variants) fn(v.calls, uid, { col, days: /** @type {any} */ (v).days ?? [] });
     }
   }
 }
