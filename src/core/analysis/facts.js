@@ -10,7 +10,8 @@ import { profileFor } from '../../routing/profiles.js';
 /**
  * @typedef {{ line: string, mode: string, profile: import('../../routing/profiles.js').Profile | null, days: string[],
  *   start: number, end: number, runMin: number, calls: FactCall[], legs: FactLeg[], km: number | null,
- *   stopPlaces: string[], fuel: string, seats: number | null, lowFloor: boolean, booked: boolean }} TripFact
+ *   stopPlaces: string[], fuel: string, seats: number | null, lowFloor: boolean | null, booked: boolean }} TripFact
+ * lowFloor null: the trip has no vehicle, so it is not known
  */
 
 /** A cell's clock: day offset, hours and minutes. @param {any} cell */
@@ -52,7 +53,7 @@ export function lineFacts(code, rs, { calendars, quayInfo, links, vehicles }) {
     out.push({ line: code, mode, profile, days, start, end, runMin: end - start, calls, legs,
       km: known ? legs.reduce((n, l) => n + /** @type {number} */ (l.km), 0) : null,
       stopPlaces: [...new Set(calls.map((c) => quayInfo.get(c.stopId)?.stopPlaceId ?? c.stopId))],
-      fuel: v?.fuelType ?? '', seats: v?.seats ?? null, lowFloor: v?.lowFloor === true,
+      fuel: v?.fuelType ?? '', seats: v?.seats ?? null, lowFloor: v ? v.lowFloor === true : null,
       booked: !!(rs.booking || col.booking || stops.some((c) => c.depCell?.booking || c.arrCell?.booking)) });
   });
   return out;

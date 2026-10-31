@@ -53,7 +53,8 @@ describe('trip facts', () => {
   it('vehicle, fuel, seats, low floor and booking come from the column', () => {
     const vehicles = [{ id: 'v', name: 'E1', colour: '', shortCode: '', transportMode: 'bus', fuelType: 'battery', lowFloor: true, seats: 40, length: null, width: null, height: null }];
     expect(facts(line([trip(['0700', '0710', '0720'], { vehicle: 'E1' })]), { vehicles })[0]).toMatchObject({ fuel: 'battery', seats: 40, lowFloor: true, booked: false });
-    expect(facts(line([trip(['0700', '0710', '0720'], { vehicle: 'X9' })]), { vehicles })[0]).toMatchObject({ fuel: '', seats: null, lowFloor: false });
+    expect(facts(line([trip(['0700', '0710', '0720'], { vehicle: 'X9' })]), { vehicles })[0]).toMatchObject({ fuel: '', seats: null, lowFloor: null }); // no vehicle: low floor unknown
+    expect(facts(line([trip(['0700', '0710', '0720'], { vehicle: 'E1' })]), { vehicles: [{ ...vehicles[0], lowFloor: false }] })[0].lowFloor).toBe(false);
     expect(facts(line([trip(['0700', '0710', '0720'], { booking: { phone: '1' } })]))[0].booked).toBe(true);
     const onStop = trip(['0700', '0710', '0720']);
     onStop.cells[1] = cell('0710', { booking: { phone: '1' } });

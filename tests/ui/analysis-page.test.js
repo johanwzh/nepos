@@ -100,6 +100,19 @@ describe('Analyse', () => {
     expect(page().querySelector('.an-node.an-unk')?.textContent).toContain('Ukjent oppdragsgiver');
   });
 
+  it('Tilgjengelighet has its own block with a bar each for low floor and booking; the fuel block has only its own bar', async () => {
+    await open({ 50: route('50') });
+    await toAnalyse();
+    const blocks = [...page().querySelectorAll('.an-block')];
+    const access = /** @type {HTMLElement} */ (blocks.find((b) => b.querySelector('h4')?.textContent?.startsWith('Tilgjengelighet')));
+    expect(access.querySelectorAll('.an-bar')).toHaveLength(2);
+    expect(access.textContent).toContain('Lavgulv');
+    expect(access.textContent).toContain('Bestilling');
+    const fuel = /** @type {HTMLElement} */ (blocks.find((b) => b.querySelector('h4')?.textContent?.startsWith('Per drivstoff')));
+    expect(fuel.textContent).not.toContain('Lavgulv');
+    expect(fuel.querySelectorAll('.an-bar').length).toBeLessThanOrEqual(1);
+  });
+
   it('a chosen period with no trips says so in a sentence instead of empty tables', async () => {
     await open({ 50: route('50') });
     await toAnalyse();

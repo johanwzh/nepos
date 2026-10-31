@@ -27,5 +27,9 @@ describe('receiptText', () => {
     expect(sum).toContain('1 202');
     expect(text).toContain('Vy Buss AS');
     expect(text.endsWith('\n')).toBe(true);
+    // Tilgjengelighet is its own block, after Per drivstoff
+    const access = lines.findIndex((l) => l === 'anAccessHead');
+    expect(access).toBeGreaterThan(lines.findIndex((l) => l === 'anFuelHead'));
+    expect(lines.slice(access + 2, access + 4).map((l) => l.split(/\s{2,}/)[0])).toEqual(['anLowFloor', 'anBooking']);
   });
 });

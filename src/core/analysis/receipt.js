@@ -14,7 +14,8 @@ import { weekdayOf } from '../calendars.js';
  *   network: { groups: { profile: string, routed: { stretches: number, km: number }, unknown: number }[], sum: { stretches: number, km: number } },
  *   production: { planned: Prod, done: Prod, remaining: Prod, avgKmh: number | null },
  *   fuel: { rows: { fuel: string, departures: number, hours: number, km: number, seatKm: number | null }[], sum: { departures: number, hours: number, km: number, seatKm: number },
- *           unknownKm: { departures: number, hours: number }, lowFloorShare: number | null, bookedShare: number | null },
+ *           unknownKm: { departures: number, hours: number } },
+ *   access: { lowFloor: { yes: number, no: number, unknown: number }, booked: { yes: number, no: number } },
  *   dayTypes: { type: DayType, dates: number, departures: number, hours: number, first: number | null, last: number | null }[] }} Receipt
  */
 
@@ -52,7 +53,8 @@ export function receipt(facts, { period, today }) {
   let knownKmHours = 0;
   /** @type {Map<string, { fuel: string, departures: number, hours: number, km: number, seatKm: number | null }>} */ const fuels = new Map();
   const unknownKm = { departures: 0, hours: 0 };
-  let lowFloorKm = 0, booked = 0;
+  /** Tilgjengelighet: low floor in known km (unknown: no vehicle), booking in departures */
+  const lowFloor = { yes: 0, no: 0, unknown: 0 }, booked = { yes: 0, no: 0 };
   /** @type {Record<DayType, { dates: Set<string>, departures: number, hours: number, first: number | null, last: number | null }>} */
   const types = { weekday: { dates: new Set(), departures: 0, hours: 0, first: null, last: null }, saturday: { dates: new Set(), departures: 0, hours: 0, first: null, last: null },
     sunday: { dates: new Set(), departures: 0, hours: 0, first: null, last: null }, holiday: { dates: new Set(), departures: 0, hours: 0, first: null, last: null } };
@@ -83,10 +85,10 @@ export function receipt(facts, { period, today }) {
     if (f.km != null) {
       fu.km += n * f.km;
       if (f.fuel && f.seats != null) fu.seatKm = (fu.seatKm ?? 0) + n * f.km * f.seats;
-      if (f.lowFloor) lowFloorKm += n * f.km;
+      lowFloor[f.lowFloor == null ? 'unknown' : f.lowFloor ? 'yes' : 'no'] += n * f.km;
     } else { unknownKm.departures += n; unknownKm.hours += n * h; }
     fuels.set(f.fuel, fu);
-    if (f.booked) booked++;
+    booked[f.booked ? 'yes' : 'no'] += n;
     for (const d of days) {
       const t = types[dayType(d)];
       t.dates.add(d); t.departures++; t.hours += h;
@@ -112,8 +114,9 @@ export function receipt(facts, { period, today }) {
     fuel: {
       rows: fuelRows,
       sum: { departures: planned.departures, hours: planned.hours, km: planned.km, seatKm: fuelRows.reduce((n, r) => n + (r.seatKm ?? 0), 0) },
-      unknownKm, lowFloorShare: planned.km ? lowFloorKm / planned.km : null, bookedShare: live.length ? booked / live.length : null,
+      unknownKm,
     },
+    access: { lowFloor, booked },
     dayTypes: /** @type {DayType[]} */ (['weekday', 'saturday', 'sunday', 'holiday']).map((type) => {
       const t = types[type], n = t.dates.size;
       return { type, dates: n, departures: n ? t.departures / n : 0, hours: n ? t.hours / n : 0, first: t.first, last: t.last };

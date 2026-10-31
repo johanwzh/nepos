@@ -20,6 +20,14 @@ describe('trip positions', () => {
     expect(near([p.lon, p.lat], CORNER)).toBe(true);
   });
 
+  it('a moment between whole minutes is between their positions (10-second steps glide)', () => {
+    const at = (/** @type {number} */ m) => tripsAt([fact()], '20260105', m, opts)[0];
+    const a = at(605), b = at(605 + 1 / 6), c = at(605 + 2 / 6);
+    expect(b.lat).toBeGreaterThan(a.lat);
+    expect(c.lat).toBeGreaterThan(b.lat);
+    expect(c.lat - b.lat).toBeCloseTo(b.lat - a.lat, 6);
+  });
+
   it('a trip waiting at a stop sits on the stop, waiting', () => {
     const [p] = tripsAt([fact()], '20260105', 611, opts);
     expect(p).toMatchObject({ line: 'L1', waiting: true });

@@ -66,9 +66,10 @@ beforeEach(async () => {
   drawn.network = null; drawn.trips = [];
 });
 const toAnalyse = async () => { click(document.querySelector('#home-tabs [data-sub="analyse"]')); await settle(); click(an().querySelector('.an-node[data-node="project"]')); await settle(); };
-const setTime = async (/** @type {string} */ hhmm) => {
+/** The slider is in seconds. @param {string} hhmm HH:MM or HH:MM:SS */
+const setTime = async (hhmm) => {
   const input = /** @type {HTMLInputElement} */ (nv().querySelector('.nv-time'));
-  input.value = String(+hhmm.slice(0, 2) * 60 + +hhmm.slice(3, 5));
+  input.value = String((+hhmm.slice(0, 2) * 60 + +hhmm.slice(3, 5)) * 60 + +(hhmm.slice(6, 8) || 0));
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await settle();
 };
@@ -113,6 +114,28 @@ describe('Nettverkskart', () => {
     expect(drawn.trips).toEqual([]);
     await setTime('07:05');
     expect(drawn.trips.map((p) => p.line)).toEqual(['50']);
+  });
+
+  it('time moves in 10-second steps: the slider, the readout, and ▶ at a plan-minute per 0.6 s, faster with the speed chip', async () => {
+    await toAnalyse();
+    click(an().querySelector('.an-network'));
+    await settle();
+    const slider = /** @type {HTMLInputElement} */ (nv().querySelector('.nv-time'));
+    expect(slider.step).toBe('10');
+    expect(slider.max).toBe(String(24 * 3600));
+    await setTime('07:05:10');
+    expect(nv().querySelector('.nv-at')?.textContent).toContain('07:05:10');
+    expect(drawn.trips.map((p) => p.line)).toEqual(['50']);
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    try {
+      click(nv().querySelector('.nv-play'));
+      vi.advanceTimersByTime(600);
+      expect(nv().querySelector('.nv-at')?.textContent).toContain('07:06:10');
+      click(nv().querySelector('.nv-speed')); // ×5
+      vi.advanceTimersByTime(600);
+      expect(nv().querySelector('.nv-at')?.textContent).toContain('07:11:10');
+      click(nv().querySelector('.nv-play'));
+    } finally { vi.useRealTimers(); }
   });
 
   it('closing removes its map (final review I2: no WebGL context left behind)', async () => {

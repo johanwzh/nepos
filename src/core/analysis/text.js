@@ -18,6 +18,9 @@ export const clock = (m) => {
   return `${String(Math.floor(v / 60)).padStart(2, '0')}:${String(v % 60).padStart(2, '0')}${d ? ` +${d}` : ''}`;
 };
 
+/** A share in whole percent, — of nothing. @param {number} part @param {number} whole */
+export const pct = (part, whole) => (whole ? `${Math.round((100 * part) / whole)} %` : '—');
+
 /** Fixed-width columns: the first left-aligned, the rest right-aligned. @param {string[]} head @param {string[][]} rows */
 function table(head, rows) {
   const all = [head, ...rows];
@@ -34,6 +37,7 @@ export function receiptText(r, { title, periodText, labels: L, children = [] }) 
   const t = L.t;
   const km = (/** @type {number | null} */ n) => (n == null ? '—' : int(n));
   const p = r.production;
+  const lf = r.access.lowFloor, bk = r.access.booked;
   const blocks = [
     [t('anScopeHead'), table(['', t('anLines'), t('anTrips'), t('anDepartures'), t('anStops')], [
       ...r.scope.rows.map((x) => [L.mode(x.mode), int(x.lines), int(x.trips), int(x.departures), int(x.stops)]),
@@ -50,7 +54,10 @@ export function receiptText(r, { title, periodText, labels: L, children = [] }) 
     [t('anFuelHead'), `${table(['', t('anDepartures'), t('anKm'), t('anHours'), t('anSeatKm')], [
       ...r.fuel.rows.map((x) => [L.fuel(x.fuel), int(x.departures), int(x.km), int(x.hours), km(x.seatKm)]),
       [t('anSum'), int(r.fuel.sum.departures), int(r.fuel.sum.km), int(r.fuel.sum.hours), int(r.fuel.sum.seatKm)],
-      [`  ${t('anOfWhichUnknownKm')}`, int(r.fuel.unknownKm.departures), '—', int(r.fuel.unknownKm.hours), '—']])}\n${t('anLowFloor')}: ${r.fuel.lowFloorShare == null ? '—' : `${Math.round(r.fuel.lowFloorShare * 100)} %`} · ${t('anBooked')}: ${r.fuel.bookedShare == null ? '—' : `${Math.round(r.fuel.bookedShare * 100)} %`}`],
+      [`  ${t('anOfWhichUnknownKm')}`, int(r.fuel.unknownKm.departures), '—', int(r.fuel.unknownKm.hours), '—']])}`],
+    [t('anAccessHead'), table(['', t('anAccYes'), t('anAccNo'), t('anAccUnknown'), t('anAccShare')], [
+      [t('anLowFloor'), int(lf.yes), int(lf.no), int(lf.unknown), pct(lf.yes, lf.yes + lf.no + lf.unknown)],
+      [t('anBooking'), int(bk.yes), int(bk.no), '—', pct(bk.yes, bk.yes + bk.no)]])],
     [t('anDayHead'), table(['', t('anDates'), t('anDepartures'), t('anHours'), t('anFirstLast')],
       r.dayTypes.map((d) => [t(`anDay_${d.type}`), int(d.dates), int(d.departures), int(d.hours), d.first == null ? '—' : `${clock(d.first)} – ${clock(d.last)}`]))],
   ];

@@ -87,8 +87,18 @@ describe('the receipt', () => {
     expect(r.fuel.rows.find((x) => x.fuel === '')?.seatKm).toBeNull();
     expect(r.fuel.sum).toEqual({ departures: 19, hours: 9.5, km: 216, seatKm: 1920 });
     expect(r.fuel.unknownKm).toEqual({ departures: 1, hours: 0.5 });
-    expect(r.fuel.lowFloorShare).toBe(0);
-    expect(r.fuel.bookedShare).toBe(0.25);
+    expect(r.fuel).not.toHaveProperty('lowFloorShare');
+  });
+
+  it('Tilgjengelighet: low floor by known km (yes / no / unknown vehicle), booking by departures', () => {
+    const r = receipt([
+      fact({ lowFloor: true, days: daysFrom('20260105', 3) }), // 36 km
+      fact({ lowFloor: false, days: daysFrom('20260105', 2), booked: true }), // 24 km, 2 booked departures
+      fact({ lowFloor: null, days: daysFrom('20260105', 1) }), // 12 km, no vehicle
+      fact({ lowFloor: true, km: null, legs: [{ key: 'A|B|bus', km: null }], days: daysFrom('20260105', 4), booked: true }), // unknown km: not in the km shares
+    ], ALL);
+    expect(r.access.lowFloor).toEqual({ yes: 36, no: 24, unknown: 12 });
+    expect(r.access.booked).toEqual({ yes: 6, no: 4 });
   });
 
   it('day types: 1 January is a holiday, not a Thursday; per-date figures; a time past midnight stays above 1440', () => {

@@ -74,7 +74,9 @@ første operatøren i linjedataene. Bare linjer som eksporteres, telles. Velg et
   Hver strekning telles én gang.
 - **Produksjon**: avganger, rutetimer og km, **planlagt**, **utført** (datoer før i dag) og **gjenstår**, og
   snittfarten. En tur har kjent km bare når alle strekningene er rutet; ellers telles den som «ukjent km».
-- **Per drivstoff** (fra kjøretøyet på turen): avganger, km, timer og setekm, med andelen lavgulv og bestilling.
+- **Per drivstoff** (fra kjøretøyet på turen): avganger, km, timer og setekm.
+- **Tilgjengelighet**: én stolpe for **lavgulv** (andel av kjent km: lavgulv, ikke lavgulv, og ukjent for turer uten
+  kjøretøy) og én for **bestilling** (andel av avgangene som kan eller må bestilles).
 - **Per dagtype**: hverdag, lørdag, søndag og helligdag, per dato.
 - **Kjøretøy på veien samtidig**: hvor mange turer som er i gang hvert kvarter på en dato (den travleste først), med
   toppen merket. Det er det minste antallet kjøretøy planen trenger.
@@ -87,8 +89,9 @@ limes inn i en e-post.
 
 **Nettverkskart** åpner nettverket over hele siden, for nivået du står på: hver strekning én gang, langs veien der den
 er rutet og tykkere der flere turer går, og hovedstoppene (uthevet i en rutetabell) som små prikker. På kartet kjører
-turene: velg en dato (den travleste først) og flytt tiden med hjulet eller glidebryteren, eller trykk ▶. En tur er en
-prikk i linjens farge som går langs strekningen, med ring mens den venter på et stopp, og forsvinner ved siste stopp.
+turene: velg en dato (den travleste først) og flytt tiden med hjulet eller glidebryteren, 10 sekunder om gangen (hold
+Shift på hjulet for ett minutt), eller trykk ▶: et planminutt per 0,6 sekund, eller ×5 og ×20 med fartsknappen. En
+tur er en prikk i linjens farge som glir langs strekningen, med ring mens den venter på et stopp, og forsvinner ved siste stopp.
 Her ser du hvor bussene klumper seg og hvor det er hull. **Esc** lukker.
 
 ---

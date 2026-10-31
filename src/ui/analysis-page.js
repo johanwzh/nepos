@@ -14,7 +14,7 @@ import { lineFacts } from '../core/analysis/facts.js';
 import { receipt } from '../core/analysis/receipt.js';
 import { analysisTree, findNode } from '../core/analysis/tree.js';
 import { inMotion, perDate, busiestDate } from '../core/analysis/time.js';
-import { receiptText, int, dec1, clock } from '../core/analysis/text.js';
+import { receiptText, int, dec1, clock, pct } from '../core/analysis/text.js';
 import { buildXlsx } from '../core/xlsx.js';
 import { renderDashboardPage } from './dashboard-page.js';
 import { openNetworkView } from './network-view.js';
@@ -124,12 +124,21 @@ function blocks(r, /** @type {TreeNode} */ node, /** @type {TripFact[]} */ facts
     { cells: [t('anAvgSpeed'), p.avgKmh == null ? '—' : `${dec1(p.avgKmh)} km/t`, '', ''] }]) + `<p class="an-note">${esc(t('anKmNote'))}</p>`);
   const known = r.fuel.sum.km;
   const bar = known ? `<div class="an-bar">${r.fuel.rows.filter((x) => x.km).map((x, i) => `<span class="an-bar-${x.fuel ? i % 6 : 'unk'}" style="width:${(100 * x.km) / known}%" title="${esc(fuelName(x.fuel))}"></span>`).join('')}</div>` : '';
-  const share = (/** @type {number | null} */ v) => (v == null ? '—' : `${Math.round(v * 100)} %`);
   const fuel = block(t('anFuelHead'), t('anFuelNote'), table(['', t('anDepartures'), t('anKm'), t('anHours'), t('anSeatKm')], [
     ...r.fuel.rows.map((x) => ({ cells: [fuelName(x.fuel), int(x.departures), int(x.km), int(x.hours), x.seatKm == null ? '—' : int(x.seatKm)], unk: !x.fuel })),
     { cells: [t('anSum'), int(r.fuel.sum.departures), int(r.fuel.sum.km), int(r.fuel.sum.hours), int(r.fuel.sum.seatKm)], sum: true },
     { cells: [`  ${t('anOfWhichUnknownKm')}`, int(r.fuel.unknownKm.departures), '—', int(r.fuel.unknownKm.hours), '—'], unk: true }])
-    + bar + `<p class="an-note">${esc(t('anFuelShares', share(r.fuel.lowFloorShare), share(r.fuel.bookedShare)))}</p>`);
+    + bar);
+  const lf = r.access.lowFloor, bk = r.access.booked;
+  /** A labelled bar of parts, the share of the first one beside it. @param {string} label @param {[string, number][]} parts class, amount */
+  const shareBar = (label, parts) => {
+    const whole = parts.reduce((n, [, v]) => n + v, 0);
+    return `<div class="an-share"><span class="an-share-label">${esc(label)}</span>${whole ? `<div class="an-bar">${parts.filter(([, v]) => v).map(([c, v]) => `<span class="${c}" style="width:${(100 * v) / whole}%"></span>`).join('')}</div>` : '<div class="an-bar"></div>'}<span class="an-share-pct">${esc(pct(parts[0][1], whole))}</span></div>`;
+  };
+  const access = block(t('anAccessHead'), t('anAccessNote'),
+    shareBar(t('anLowFloor'), [['an-bar-0', lf.yes], ['an-bar-2', lf.no], ['an-bar-unk', lf.unknown]])
+    + shareBar(t('anBooking'), [['an-bar-3', bk.yes], ['an-bar-unk', bk.no]])
+    + `<p class="an-note">${esc(t('anAccessLegend'))}</p>`);
   const days = block(t('anDayHead'), t('anDayNote'), table(['', t('anDates'), t('anDepartures'), t('anHours'), t('anFirstLast')],
     r.dayTypes.map((d) => ({ cells: [t(`anDay_${d.type}`), int(d.dates), int(d.departures), int(d.hours), d.first == null ? '—' : `${clock(d.first)} – ${clock(d.last)}`] }))));
   const date = motionDate ?? busiestDate(facts, period);
@@ -141,7 +150,7 @@ function blocks(r, /** @type {TreeNode} */ node, /** @type {TripFact[]} */ facts
   const children = kids.length ? block(t('anChildrenHead', node.name), t('anChildrenNote'), table(['', t('anDepartures'), t('anKm'), t('anHours')], [
     ...kids.map((k) => ({ cells: [k.name, int(k.r.production.planned.departures), int(k.r.production.planned.km), int(k.r.production.planned.hours)], unk: k.unknown, id: k.id || undefined })),
     { cells: [t('anSum'), int(p.planned.departures), int(p.planned.km), int(p.planned.hours)], sum: true }])) : '';
-  return `<div class="an-cols"><div>${scope}${network}${production}</div><div>${fuel}${days}${motion}${over}${children}</div></div>`;
+  return `<div class="an-cols"><div>${scope}${network}${production}</div><div>${fuel}${access}${days}${motion}${over}${children}</div></div>`;
 }
 
 /** Trips in motion per 15 minutes, the peak marked. @param {ReturnType<typeof inMotion>} m */
@@ -230,6 +239,7 @@ async function exportXlsx() {
     { name: t('anNetworkHead'), rows: [...head, ['', t('anRouted'), t('anKm'), t('anUnknown')], ...r.network.groups.map((g) => [profileName(g.profile), g.routed.stretches, Math.round(g.routed.km), g.unknown]), [t('anSumKnown'), r.network.sum.stretches, Math.round(r.network.sum.km), null]] },
     { name: t('anProdHead'), rows: [...head, ['', t('anPlanned'), t('anDone'), t('anRemaining')], ...(/** @type {[string, (x: import('../core/analysis/receipt.js').Prod) => number][]} */ ([[t('anDepartures'), (x) => x.departures], [t('anHours'), (x) => x.hours], [t('anKmKnown'), (x) => x.km], [t('anUnknownKmDeps'), (x) => x.unknownKmDepartures]])).map(([n, f]) => [n, Math.round(f(p.planned)), Math.round(f(p.done)), Math.round(f(p.remaining))]), [t('anAvgSpeed'), p.avgKmh == null ? null : Math.round(p.avgKmh * 10) / 10]] },
     { name: t('anFuelHead'), rows: [...head, ['', t('anDepartures'), t('anKm'), t('anHours'), t('anSeatKm')], ...r.fuel.rows.map((x) => [fuelName(x.fuel), x.departures, Math.round(x.km), Math.round(x.hours), x.seatKm == null ? null : Math.round(x.seatKm)]), [t('anSum'), r.fuel.sum.departures, Math.round(r.fuel.sum.km), Math.round(r.fuel.sum.hours), Math.round(r.fuel.sum.seatKm)], [t('anOfWhichUnknownKm'), r.fuel.unknownKm.departures, null, Math.round(r.fuel.unknownKm.hours), null]] },
+    { name: t('anAccessHead'), rows: [...head, ['', t('anAccYes'), t('anAccNo'), t('anAccUnknown')], [t('anLowFloor'), Math.round(r.access.lowFloor.yes), Math.round(r.access.lowFloor.no), Math.round(r.access.lowFloor.unknown)], [t('anBooking'), r.access.booked.yes, r.access.booked.no, null]] },
     { name: t('anDayHead'), rows: [...head, ['', t('anDates'), t('anDepartures'), t('anHours'), t('anFirstLast')], ...r.dayTypes.map((d) => [t(`anDay_${d.type}`), d.dates, Math.round(d.departures), Math.round(d.hours), d.first == null ? null : `${clock(d.first)} – ${clock(d.last)}`])] },
     { name: t('anOverHead'), rows: [...head, [t('anDate'), t('anDepartures'), t('anKm')], ...perDate(factsFor(node.lines), period).map((d) => [dateText(d.date), d.departures, Math.round(d.km)])] },
   ];
