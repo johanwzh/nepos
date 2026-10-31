@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { tripOnMap } from '../../src/core/map-model.js';
+import { tripOnMap, tripRouteLegs } from '../../src/core/map-model.js';
+import { encodePolyline } from '../../src/routing/geometry.js';
 
 const stop = (/** @type {string} */ name, /** @type {string | null} */ stopId, extra = {}) => ({ name, stopId, bold: false, sep: false, isDwellArr: false, price: null, ...extra });
 const cell = (/** @type {string} */ time) => ({ time, dayOffset: 0, suffix: '', interchange: null, footnoteId: null });
@@ -34,5 +35,28 @@ describe('tripOnMap', () => {
     };
     const info = new Map([['NSR:Quay:1', at(60, 10)], ['NSR:Quay:3', at(60.1, 10.1)]]);
     expect(tripOnMap(grid, grid.cols[0], info).points.map((p) => `${p.name} ${p.time}`)).toEqual(['A 0700', 'B 0715']);
+  });
+});
+
+describe('the selected trip along its saved routes (routing editor, 2026-10-31)', () => {
+  const grid = { stops: [stop('A', 'NSR:Quay:1'), stop('B', 'NSR:Quay:2'), stop('C', 'NSR:Quay:3')], cols: [{ cells: [cell('0700'), cell('0710'), cell('0720')] }] };
+  const info = new Map([['NSR:Quay:1', at(60, 10)], ['NSR:Quay:2', at(60, 10.1)], ['NSR:Quay:3', at(60, 10.2)]]);
+  const K1 = 'NSR:Quay:1|NSR:Quay:2|bus';
+  const route = /** @type {[number, number][]} */ ([[10, 60], [10.05, 60.02], [10.1, 60]]);
+  const link = { polyline: encodePolyline(route, 6), precision: 6, distanceM: 6000, status: 'OK', from: /** @type {[number, number]} */ ([10, 60]), to: /** @type {[number, number]} */ ([10.1, 60]) };
+
+  it('a leg with a saved route follows it; a leg without one is a straight line', () => {
+    const r = tripRouteLegs(grid, grid.cols[0], { [K1]: link }, info);
+    expect(r.links).toEqual([{ key: K1, coords: route, state: 'routed' }]);
+    expect(r.straight).toEqual([[[10.1, 60], [10.2, 60]]]);
+  });
+
+  it('a Quay moved since it was routed: the route is drawn stale', () => {
+    const moved = new Map(info).set('NSR:Quay:2', at(60.001, 10.1));
+    expect(tripRouteLegs(grid, grid.cols[0], { [K1]: link }, moved).links[0].state).toBe('stale');
+  });
+
+  it('no links: every leg straight', () => {
+    expect(tripRouteLegs(grid, grid.cols[0], undefined, info)).toEqual({ links: [], straight: [[[10, 60], [10.1, 60]], [[10.1, 60], [10.2, 60]]] });
   });
 });

@@ -4,7 +4,7 @@
 import { eachTrip, quayRef } from './link-pairs.js';
 import { journeyStops } from './netex/journeys.js';
 import { expandRoute } from './blocks.js';
-import { quayMoved } from './link-state.js';
+import { linkMoved } from './link-state.js';
 import { profileFor } from '../routing/profiles.js';
 
 /** @typedef {import('./link-pairs.js').QuayRef} QuayRef */
@@ -70,10 +70,8 @@ export function patternStates(patterns, lineLinks, { quayInfo, publishedBuilt = 
       if (key === null) return { key, state: 'unroutable' };
       const link = lineLinks?.links[key];
       if (link?.status === 'OK') {
-        const r = link.reviewed;
-        const at = r?.from || r?.to ? { ...link, from: r.from ?? link.from, to: r.to ?? link.to } : link;
-        if (quayMoved(key, at, quayInfo)) return { key, state: 'moved' };
-        const built = [link.tiles?.built ?? '', r?.built ?? ''].sort().pop() ?? '';
+        if (linkMoved(key, link, quayInfo)) return { key, state: 'moved' };
+        const built = [link.tiles?.built ?? '', link.reviewed?.built ?? ''].sort().pop() ?? '';
         if (publishedBuilt && built < publishedBuilt) return { key, state: 'map' };
         return { key, state: 'routed' };
       }

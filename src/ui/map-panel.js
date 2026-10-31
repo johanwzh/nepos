@@ -6,7 +6,8 @@ import { $, onRefresh, currentPage, panelOpen, onPanelToggle, runAction, persist
 import { t } from '../i18n/strings.js';
 import { grid, selectedColumn, selectedRowIndex, onGridRender } from './grid.js';
 import { quayInfo, onQuaysLoaded } from './quays.js';
-import { tripOnMap } from '../core/map-model.js';
+import { tripOnMap, tripRouteLegs } from '../core/map-model.js';
+import { isRoadLine } from '../routing/profiles.js';
 import { styleUrlFor } from '../core/map-style.js';
 import { pickerState, setPickerMap } from './stop-picker.js';
 import { pickerMapModel } from '../core/picker-map-model.js';
@@ -16,9 +17,6 @@ import { placeMenu } from './place-menu.js';
 import { createMapView } from './map-view.js';
 
 /** @type {import('./map-view.js').MapView | null} */ let view = null;
-/** The routing session draws the map itself while it is open (2.6). @type {((v: import('./map-view.js').MapView) => void) | null} */
-let extra = null;
-let extraShown = false;
 let styleKey = '';
 let lastKey = '';
 let scheduled = false;
@@ -115,14 +113,7 @@ function update() {
   const v = /** @type {import('./map-view.js').MapView} */ (view);
   v.resize(); // only when the size changed (map-view): a real resize repaints and fires move events (final review I6)
 
-  if (extra) {
-    lastKey = ''; pickKey = ''; extraShown = true;
-    $('map-missing').hidden = true;
-    /** @type {HTMLElement | null} */ (document.querySelector('#map-inner .map-hint-overlay')).style.display = 'none';
-    extra(v);
-    return;
-  }
-  if (extraShown) { extraShown = false; v.setLinks([]); }
+  v.setLinks([]);
   if (pickerState().row != null || pickerState().recording) { lastKey = ''; drawPicker(); return; }
   pickKey = '';
   v.setMarkers([]);
@@ -141,7 +132,12 @@ function update() {
   const ri = selectedRowIndex();
   const here = trip.points.find((p) => p.ri === ri || (grid.stops[/** @type {number} */ (ri)]?.isDwellArr && p.ri === /** @type {number} */ (ri) + 1));
   const ink = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#000';
+  // The legs with a saved route follow it, the rest stay straight (routing editor, 2026-10-31)
+  const routed = col && app.activeRoute && isRoadLine(app.routeState)
+    ? tripRouteLegs(grid, col, app.lineLinks.get(app.activeRoute)?.links, quayInfo) : null;
+  if (routed?.links.length) v.setLinks(routed.links);
   v.setTrip({
+    ...(routed?.links.length ? { segments: routed.straight } : {}),
     // Bold stops (the main stops in the timetable) are the larger dots
     line, ink, ring: here ? [here.lon, here.lat] : null,
     dots: trip.points.map((p) => ({ lon: p.lon, lat: p.lat, r: p.bold ? 7 : 5, tooltip: `<b>${esc(p.name)}</b> ${esc(p.time.slice(0, 2))}:${esc(p.time.slice(2))}` })),
@@ -167,12 +163,6 @@ function refitAfterSlide() {
   schedule();
   setTimeout(() => { lastKey = ''; schedule(); }, 250);
 }
-
-/** Let the routing session draw the map (null: back to the trip). @param {((v: import('./map-view.js').MapView) => void) | null} fn */
-export function drawExtra(fn) { extra = fn; schedule(); }
-
-/** Draw again soon (the session changed). */
-export function redraw() { schedule(); }
 
 /** The map layer switch (2.5): today's map, OpenStreetMap, aerial; hidden when the settings name a style of their own. */
 function renderLayerSwitch() {

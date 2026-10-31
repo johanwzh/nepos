@@ -123,9 +123,13 @@ export function createMapView(el, { style, dark = false }) {
       ready = false;
       map.setStyle(/** @type {any} */ (next), { diff: false }); // a full load: style.load adds our layers again
     },
-    /** @param {{ line: LonLat[], dots: MapDot[], ring: (LonLat & any) | null, ink?: string }} trip */
+    /**
+     * @param {{ line: LonLat[], segments?: LonLat[][], dots: MapDot[], ring: (LonLat & any) | null, ink?: string }} trip
+     *   segments: drawn in place of line, the legs without a saved route (routing editor, 2026-10-31)
+     */
     setTrip(trip) {
-      put('trip-line', collection(trip.line.length > 1 ? [lineFeature(trip.line)] : []));
+      const lines = trip.segments ?? (trip.line.length > 1 ? [trip.line] : []);
+      put('trip-line', collection(lines.map((l) => lineFeature(l))));
       put('dots', collection(trip.dots.map((d) => pointFeature([d.lon, d.lat], { r: d.r, tooltip: d.tooltip }))));
       put('ring', collection(trip.ring ? [pointFeature(trip.ring, { ink: trip.ink ?? '#000' })] : []));
     },

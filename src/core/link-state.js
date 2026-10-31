@@ -31,7 +31,16 @@ export function quayMoved(key, s, quays) {
   return false;
 }
 
+/**
+ * Out of date: a Quay moved since the link was routed, or since the user kept it there (Keep, routing editor
+ * 2026-10-31: reviewed holds the positions it was checked at). @param {string} key @param {SavedLink} s @param {Map<string, any>} quays
+ */
+export function linkMoved(key, s, quays) {
+  const r = s.reviewed;
+  return quayMoved(key, r?.from || r?.to ? { ...s, from: r.from ?? s.from, to: r.to ?? s.to } : s, quays);
+}
+
 /** Exported as a ServiceLink: routed (OK) and its Quays where they were. @param {string} key @param {SavedLink} s @param {Map<string, any>} quays */
 export function isExportable(key, s, quays) {
-  return s.status === 'OK' && !quayMoved(key, s, quays);
+  return s.status === 'OK' && !linkMoved(key, s, quays);
 }

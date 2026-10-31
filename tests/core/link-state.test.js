@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { quayMoved, isExportable } from '../../src/core/link-state.js';
+import { quayMoved, linkMoved, isExportable } from '../../src/core/link-state.js';
 
 const KEY = 'NSR:Quay:1|NSR:Quay:2|bus';
 /** @param {string} status */
@@ -24,5 +24,13 @@ describe('whether a saved link is exported', () => {
 
   it('a Quay without a known position does not count as moved', () => {
     expect(quayMoved(KEY, saved('OK'), new Map([['NSR:Quay:2', { lat: null, lon: null }]]))).toBe(false);
+  });
+
+  it('Keep: a moved Quay reviewed at its new place is exported again, the route unchanged (routing editor, 2026-10-31)', () => {
+    const kept = { ...saved('OK'), reviewed: { from: /** @type {[number, number]} */ ([10.75, 59.91]), to: /** @type {[number, number]} */ ([10.7601, 59.91]) } };
+    expect(linkMoved(KEY, kept, quays(10.7601))).toBe(false);
+    expect(isExportable(KEY, kept, quays(10.7601))).toBe(true);
+    // moved again after the review: out of date again
+    expect(isExportable(KEY, kept, quays(10.7603))).toBe(false);
   });
 });

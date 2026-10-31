@@ -1,6 +1,6 @@
 // A link's status, computed live and cheaply, without routing (spec §6): routed, not routed, or out of date (a Quay
 // has moved more than 5 m since it was routed). Newer map data is only a notice in the session, never a status. Pure.
-import { quayMoved } from './link-state.js';
+import { linkMoved } from './link-state.js';
 import { linkPairs } from './link-pairs.js';
 import { isRoadLine } from '../routing/profiles.js';
 
@@ -12,7 +12,7 @@ import { isRoadLine } from '../routing/profiles.js';
  */
 export function linkStatus(key, link, quayInfo) {
   if (!link || link.status !== 'OK') return 'not-routed';
-  return quayMoved(key, link, quayInfo) ? 'out-of-date' : 'routed';
+  return linkMoved(key, link, quayInfo) ? 'out-of-date' : 'routed';
 }
 
 /**
