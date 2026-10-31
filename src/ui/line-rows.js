@@ -9,7 +9,7 @@ import { normalizeRanges } from '../core/calendars.js';
 
 /**
  * @typedef {{ code: string, name: string, publicCode: string, privateCode: string, label: string, mode: string, submode: string,
- *   brandingId: string, brand: string, authority: string, operator: string, orgIds: string[], calendarIds: string[],
+ *   brandingId: string, brand: string, authority: string, operator: string, authorityId: string, operatorId: string, orgIds: string[], calendarIds: string[],
  *   firstDay: string, lastDay: string, expired: boolean, exported: boolean, isPublic: boolean,
  *   unsaved: boolean, damaged: boolean, errors: number, warnings: number }} LineRow
  * @typedef {{ col: string, dir: 1 | -1 }} LineSort
@@ -74,7 +74,7 @@ export function lineRows() {
       // What the lines pane shows: public code, branding, private code, name, ID — the first there is.
       label: s.publicCode || brand || s.privateCode || s.name || r.code,
       mode: s.mode, submode: s.submode, brandingId: s.brandingId, brand,
-      authority: authId ? orgName(authId) : '', operator: operId ? orgName(operId) : '', orgIds: s.orgIds, calendarIds: s.calendarIds,
+      authority: authId ? orgName(authId) : '', operator: operId ? orgName(operId) : '', authorityId: authId, operatorId: operId, orgIds: s.orgIds, calendarIds: s.calendarIds,
       firstDay, lastDay, expired: !!lastDay && lastDay < now, exported: s.exported, isPublic: s.isPublic,
       unsaved: isUnsaved(r.code), damaged: r.status === 'damaged', errors, warnings: issues.length - errors,
     };
