@@ -38,6 +38,12 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   project; **Tekst** copies the receipt for an e-mail. **Nettverkskart** shows the network over the whole page for the
   picked level, with the trips moving on it at a date and time (a jog and a slider in 10-second steps, ▶ at a
   plan-minute per 0.6 s, ×5 or ×20 faster): a dot per trip gliding along the road, a ring while it waits. The network map has moved there from the overview.
+- **Routing for every mode:** rail, tram, metro, boats and ferries, cableways, funiculars and lifts are routed along
+  OpenStreetMap like buses (air is not): each network is its own map data set from nepos-tiles, cached in
+  `cache/routing/<set>/`. Trains, trams and cableways never turn sharply at a switch; a ferry quay may lie further from
+  the route (up to 500 m, flagged past 170 m). Ruting, Linjer's Ruting column, the map, the speed strip, Analyse's km
+  and the export's ServiceLinks treat these lines as they treat bus lines. The routing address in the settings is now
+  the nepos-tiles root (an old `…/road/` address still works).
 - **Knutepunkt** (Alt+K, interchanges between lines): our trips can wait at a stop for a feeder from another line in the
   project. The tool takes over the timetable like Ruting: every stop of the table set with a switch; for a stop that is
   on, **what we wait for** (the stops for the transfer or a radius, a window before our departure, the maximum wait,

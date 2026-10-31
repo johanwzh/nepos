@@ -267,8 +267,12 @@ Nederst i linjenavigatoren står **kraftverktøyene**. Å se dem endrer ingentin
   ramme; dra den tilbake til første tur for å fjerne den, eller **Pakk ut blokk** for å gjøre den til vanlige kolonner.
   Eksporten skriver alle turene. Intervaller som ikke går opp i en time (40 minutter), lager du med **Kopier med
   intervall**. En tur med korrespondanse kan ikke bli en blokk ennå.
-- **Ruting** (busslinjer, **Alt+L**) — en egen visning i stedet for rutetabellen, der du ruter linjens mønstre langs
-  veiene i OpenStreetMap. Øverst velger du tabellsett; nederst er ett lite bilde per mønster (hver unike rekke stopp),
+- **Ruting** (alle linjer unntatt fly, **Alt+L**) — en egen visning i stedet for rutetabellen, der du ruter linjens
+  mønstre langs nettet i OpenStreetMap: buss, ekspressbuss og taxi langs veiene (med bilferjene), tog langs jernbanen,
+  trikk og T-bane langs sine spor, båt og ferje langs ferjerutene, og taubane, kabelbane og heis langs sine liner. Tog,
+  trikk og taubane svinger aldri skarpt i et sporveksel. Et ferjekaistopp kan ligge et stykke fra ruten (opptil
+  500 m; over 170 m merkes strekningen for sjekk). Finnes det ikke noe nett i nærheten, blir strekningen stående som
+  rett linje. Øverst velger du tabellsett; nederst er ett lite bilde per mønster (hver unike rekke stopp),
   med ramme etter tilstand: **rød** — ikke rutet (et nytt mønster, eller et stopp uten NSR-posisjon), **oransje** — må
   sjekkes (et stopp er flyttet i NSR, nyere kartdata, eller et annet stopp på en rad), **grønn** — rutet — og hvor
   mange turer som kjører mønsteret. Velg et mønster: alle radene i tabellen står til venstre, og stopp mønsteret
@@ -350,8 +354,8 @@ en før eksport.
 
 ### Fartsprofilen
 
-Stripen under rutetabellen viser farten mellom stoppene for turen du står i. På en busslinje måles en rutet
-strekning langs veien, resten i luftlinje (statuslinjen sier hvilken når du holder over en bue). Fargen regnes alltid
+Stripen under rutetabellen viser farten mellom stoppene for turen du står i. En rutet strekning måles
+langs ruten, resten i luftlinje (statuslinjen sier hvilken når du holder over en bue). Fargen regnes alltid
 i luftlinje, som fartsgrensene i prosjektinnstillingene: rødt betyr at selv luftlinjen er for rask for
 transportmåten — da er en tid eller et stopp feil. Klikk en bue for å gå til raden.
 
@@ -403,10 +407,10 @@ valget.
 
 ### Strekninger på kartet
 
-Kartet bruker OpenFreeMap (lyst eller mørkt etter Nepos' utseende), eller kartlaget du har valgt. På en busslinje har
-strekningene samme farger som i Ruting: grønn langs den rutede veien, oransje der et stopp er flyttet siden den ble
-rutet, og rød stiplet rett linje der den ikke er rutet; et stopp på en strekning uten rute er en rød prikk. Andre linjer
-tegnes som rette linjer mellom stoppene. Når du velger stopp, viser kartet stoppene i nærheten først når du har zoomet
+Kartet bruker OpenFreeMap (lyst eller mørkt etter Nepos' utseende), eller kartlaget du har valgt. Strekningene har
+samme farger som i Ruting: grønn langs den rutede veien (eller sporet, sjøen, linen), oransje der et stopp er flyttet
+siden den ble rutet, og rød stiplet rett linje der den ikke er rutet; et stopp på en strekning uten rute er en rød
+prikk. Fly tegnes som rette linjer mellom stoppene. Når du velger stopp, viser kartet stoppene i nærheten først når du har zoomet
 nok inn; en merknad øverst på kartet sier fra. Rutene lages i **Ruting** (kraftverktøyene); eksporten skriver dem som
 ServiceLinks for hvert mønster der alle strekningene er rutet.
 
