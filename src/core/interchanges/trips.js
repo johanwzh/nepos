@@ -16,12 +16,14 @@ import { UUID_PATTERN } from '../ern/serialize.js';
 /** A table set's key in hubs and trips. @param {any} set */
 export const setKeyOf = (set) => (set?.uid && UUID_PATTERN.test(set.uid) ? set.uid : String(set?.id ?? ''));
 
-/** @type {WeakMap<object, Trip[]>} lines do not change while their state object lives (edits make a new one) */
-const cache = new WeakMap();
-
-/** @param {any} rs @param {{ calendars: import('../calendars.js').Calendar[] }} ctx @returns {Trip[]} */
-export function lineTrips(rs, { calendars }) {
-  const hit = cache.get(rs);
+/**
+ * @param {any} rs
+ * @param {{ calendars: import('../calendars.js').Calendar[], memo?: WeakMap<object, Trip[]> }} ctx memo: one matching
+ *   round's results, so a line is read once per round (route states can be changed in place between rounds)
+ * @returns {Trip[]}
+ */
+export function lineTrips(rs, { calendars, memo }) {
+  const hit = memo?.get(rs);
   if (hit) return hit;
   /** @type {Trip[]} */
   const out = [];
@@ -45,6 +47,6 @@ export function lineTrips(rs, { calendars }) {
       }
     }
   }
-  if (rs && typeof rs === 'object') cache.set(rs, out);
+  if (memo && rs && typeof rs === 'object') memo.set(rs, out);
   return out;
 }

@@ -32,10 +32,10 @@ function lineMatches(rs, c) {
  * @param {Hub} hub @param {number} row the hub's row in our grid
  * @param {Trip} ourTrip a variant of our trip that calls at the row
  * @param {{ code: string, rs: any }[]} lines the project's lines (ours included; the caller leaves out the ones not exported)
- * @param {{ calendars: import('../calendars.js').Calendar[], quayInfo: Map<string, any>, ownCode: string }} ctx
+ * @param {{ calendars: import('../calendars.js').Calendar[], quayInfo: Map<string, any>, ownCode: string, memo?: WeakMap<object, Trip[]> }} ctx
  * @returns {Candidate[]} by transfer, then line code
  */
-export function candidates(hub, row, ourTrip, lines, { calendars, quayInfo, ownCode }) {
+export function candidates(hub, row, ourTrip, lines, { calendars, quayInfo, ownCode, memo }) {
   const ours = ourTrip?.calls.find((c) => c.ri === row);
   if (!ours || !ours.board || ours.dep == null) return [];
   const ourDays = new Set(ourTrip.days);
@@ -52,7 +52,7 @@ export function candidates(hub, row, ourTrip, lines, { calendars, quayInfo, ownC
   const out = new Map();
   for (const { code, rs } of lines) {
     if (!lineMatches(rs, hub.criteria ?? {})) continue;
-    for (const trip of lineTrips(rs, { calendars })) {
+    for (const trip of lineTrips(rs, { calendars, memo })) {
       if (code === ownCode && trip.set === ourTrip.set) continue; // inside one table set the timetable's own marks do it
       trip.calls.forEach((call, i) => {
         if (!call.alight || call.arr == null || !atHub(call.stopId)) return;
