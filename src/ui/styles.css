@@ -1515,7 +1515,9 @@ body.hub-on .hub-view { display: grid; flex: 1; min-width: 0; min-height: 0; gri
 .hv-pill { border: 1px solid var(--border, #bbb); border-radius: 10px; padding: 0 2px 0 7px; font-size: 11px; }
 .hv-x { border: none; background: none; cursor: pointer; color: inherit; font-size: 10px; }
 .hv-nums { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 6px 0; }
+.hv-criteria input:not([type=checkbox]), .hv-criteria select { height: 24px; padding: 0 5px; border: 1px solid var(--border); border-radius: 3px; background: var(--bg-panel); color: var(--text); font-size: 11px; }
 .hv-nums input, .hv-radius { width: 46px; }
+.hv-addstop, .hv-addcalled, .hv-public { width: 100%; box-sizing: border-box; margin: 2px 0; }
 .hv-crit { display: block; margin: 4px 0; }
 .hv-crit b { display: block; font-weight: 600; font-size: 11px; opacity: .8; }
 .hv-check { display: block; }

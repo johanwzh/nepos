@@ -55,7 +55,8 @@ export function candidates(hub, row, ourTrip, lines, { calendars, quayInfo, ownC
     for (const trip of lineTrips(rs, { calendars, memo })) {
       if (code === ownCode && trip.set === ourTrip.set) continue; // inside one table set the timetable's own marks do it
       trip.calls.forEach((call, i) => {
-        if (!call.alight || call.arr == null || !atHub(call.stopId)) return;
+        // Nobody gets off where a trip starts: its first call is no arrival
+        if (i === 0 || !call.alight || call.arr == null || !atHub(call.stopId)) return;
         if (called.size && !trip.calls.slice(0, i).some((c) => called.has(c.stopId) || called.has(placeOf(c.stopId) ?? ''))) return;
         let transfer = ours.dep - call.arr;
         let shift = 0;

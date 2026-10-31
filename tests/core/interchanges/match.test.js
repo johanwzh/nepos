@@ -76,6 +76,11 @@ describe('candidates', () => {
     expect(find('1000', [weekend], hub(), col(['1000', '1100'], { dayCode: '12345' }))).toEqual([]);
   });
 
+  it("a feeder's first stop is not an arrival: nobody gets off where a trip starts", () => {
+    const starts = { code: 'F', rs: line([stop('Hub', 'NSR:Quay:2'), stop('A', 'NSR:Quay:1')], [col(['0952', '1010'])]) };
+    expect(find('1000', [starts])).toEqual([]);
+  });
+
   it('a call that only lets passengers board is not a feeder arrival', () => {
     const f = line(FEED_STOPS, [{ dayCode: 'D', uid: uid(), cells: [cell('0900'), cell('0952', { suffix: 'p' })] }]);
     expect(find('1000', [{ code: 'F', rs: f }])).toEqual([]);

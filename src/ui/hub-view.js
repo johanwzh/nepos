@@ -7,7 +7,7 @@
 import { app } from './state.js';
 import { t, getLang } from '../i18n/strings.js';
 import { onRefresh, refreshAll, markDirty } from './shell.js';
-import { onToolChange, setTool, setLeaveGuard, setToolEsc, activeTool } from './power-tools.js';
+import { onToolChange, setTool, setLeaveGuard, setToolEsc, setToolAvailable, activeTool } from './power-tools.js';
 import { grid } from './grid.js';
 import { quayInfo } from './quays.js';
 import { lineState } from './line-info.js';
@@ -128,7 +128,7 @@ function middle() {
     : `<p class="rv-note">${esc(t('hvNoTrips'))}</p>`;
   return `<div class="rv-head">${esc(grid.stops[selRow].name || '')}</div><div class="hv-timeline"></div>`
     + `<div class="rv-sub">${esc(t('hvProposals'))}</div>${table}`
-    + `<div class="hv-actions"><button type="button" class="hv-find">${esc(t('hvFind'))}</button><button type="button" class="hv-approve primary">${esc(t('hvApprove'))}</button><button type="button" class="hv-discard">${esc(t('hvDiscard'))}</button><span class="rv-note">${esc(t('hvOnlyApproved'))}</span></div>`;
+    + `<div class="hv-actions"><button type="button" class="pop-btn hv-find">${esc(t('hvFind'))}</button><button type="button" class="pop-btn primary hv-approve">${esc(t('hvApprove'))}</button><button type="button" class="pop-btn hv-discard">${esc(t('hvDiscard'))}</button><span class="rv-note">${esc(t('hvOnlyApproved'))}</span></div>`;
 }
 
 /** @param {HTMLElement} el @param {number} ri */
@@ -206,7 +206,7 @@ function side() {
     + `<label class="hv-crit"><b>${esc(t('hvPublicCode'))}</b> <input class="hv-public" value="${esc(c.publicCode ?? '')}"></label>`
     + `<div class="hv-crit"><b>${esc(t('hvCalledAt'))}</b><div class="hv-pills">${pills(c.calledAt ?? [], 'called')}</div><input class="hv-addcalled" list="hv-places" placeholder="${esc(t('hvAddStop'))}"></div>`
     + `<div class="rv-sub">${esc(t('hvTrips'))}</div><p class="rv-note">${esc(t('hvTripsNote', picked, oursAt(selRow).filter((o) => !o.block).length))}</p>`
-    + '<div class="hv-actions"><button type="button" class="hv-all">' + esc(t('hvAll')) + '</button><button type="button" class="hv-none">' + esc(t('hvNone')) + '</button></div></div>';
+    + '<div class="hv-actions"><button type="button" class="pop-btn hv-all">' + esc(t('hvAll')) + '</button><button type="button" class="pop-btn hv-none">' + esc(t('hvNone')) + '</button></div></div>';
 }
 
 /** Pick or unpick one of our trips at a row. @param {number} ri @param {string} uid */
@@ -349,9 +349,11 @@ export function initHubView() {
   // Leaving with a pick chosen but not approved asks first
   setLeaveGuard('hub', () => !Object.keys(choices).length || confirm(t('hvLeave')));
   setToolEsc('hub', stepBack);
+  const available = () => setToolAvailable('hub', !!app.routeState && !!app.activeRoute, t('ptHubNoLine'));
+  available();
   if (wired) return;
   wired = true;
-  onRefresh(() => { if (isOpen && activeTool() === 'hub') render(); });
+  onRefresh(() => { available(); if (isOpen && activeTool() === 'hub') render(); });
   onToolChange((name) => {
     if (name === 'hub' && !isOpen) open();
     else if (name !== 'hub' && isOpen) close();
