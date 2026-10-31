@@ -7,7 +7,7 @@ import { t } from '../i18n/strings.js';
 import { grid, selectedColumn, selectedRowIndex, onGridRender } from './grid.js';
 import { quayInfo, onQuaysLoaded } from './quays.js';
 import { tripOnMap, tripRouteLegs } from '../core/map-model.js';
-import { isRoadLine } from '../routing/profiles.js';
+import { isRoutedLine } from '../routing/profiles.js';
 import { styleUrlFor } from '../core/map-style.js';
 import { pickerState, setPickerMap } from './stop-picker.js';
 import { pickerMapModel, zoomNote } from '../core/picker-map-model.js';
@@ -145,7 +145,7 @@ function update() {
   const ink = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#000';
   // A bus line's legs as in Ruting (user 2026-10-31): along their saved route, orange when a stop has moved, red dashed
   // without a route; other modes keep the trip line
-  const routed = col && app.activeRoute && isRoadLine(app.routeState)
+  const routed = col && app.activeRoute && isRoutedLine(app.routeState)
     ? tripRouteLegs(grid, col, app.lineLinks.get(app.activeRoute)?.links, quayInfo) : null;
   if (routed) v.setLinks([...routed.links, ...routed.straight.map((s) => ({ ...s, state: /** @type {const} */ ('failed') }))]);
   const unrouted = new Set((routed?.straight ?? []).flatMap((s) => s.key.split('|').slice(0, 2)));

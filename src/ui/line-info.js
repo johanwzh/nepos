@@ -6,7 +6,7 @@ import { parseERN } from '../core/ern/parse.js';
 import { checkForExport } from '../core/export-check.js';
 import { routedLinks } from '../core/features.js';
 import { tablePatterns, patternStates } from '../core/route-patterns.js';
-import { isRoadLine } from '../routing/profiles.js';
+import { isRoutedLine } from '../routing/profiles.js';
 import { orgExportMode } from '../project/meta.js';
 import { quayInfo } from './quays.js';
 import { routeSummary } from './route-summary.js';
@@ -103,7 +103,7 @@ const routingCache = new Map();
  */
 export function lineRouting(code) {
   const rs = lineState(code);
-  if (!rs || !isRoadLine(rs)) return null;
+  if (!rs || !isRoutedLine(rs)) return null;
   const entry = app.routes.find((r) => r.code === code);
   const live = code === app.activeRoute || app.drafts.has(code);
   const ids = [...new Set(Object.values(rs.grids ?? {}).flatMap((g) => /** @type {any} */ (g).stops.map((/** @type {any} */ s) => String(s.stopId ?? ''))))];

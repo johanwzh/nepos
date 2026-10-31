@@ -34,4 +34,13 @@ describe('a line\'s routing summary', () => {
     const ll = { version: 1, line: 'L', snaps: {}, links: { [KEY]: saved(), 'NSR:Quay:2|NSR:Quay:3|bus': saved([10.01, 59], [10.03, 59]) } };
     expect(lineLinkSummary(rs, ll, { calendars, quayInfo: quays })).toEqual({ pairs: 2, routed: 1, notRouted: 0, outOfDate: 1 });
   });
+
+  it('a tram line counts its tram legs; a bus link on the same stops does not count for it (Review Focus 5)', () => {
+    const tram = { ...rs, mode: 'tram', submode: 'cityTram' };
+    expect(lineLinkSummary(tram, undefined, { calendars, quayInfo: quays })).toEqual({ pairs: 2, routed: 0, notRouted: 2, outOfDate: 0 });
+    /** @type {any} */
+    const ll = { version: 1, line: 'L', snaps: {}, links: { [KEY]: saved(), 'NSR:Quay:2|NSR:Quay:3|tram': saved([10.01, 59], [10.02, 59]) } };
+    expect(lineLinkSummary(tram, ll, { calendars, quayInfo: quays })).toEqual({ pairs: 2, routed: 1, notRouted: 1, outOfDate: 0 });
+    expect(lineLinkSummary({ ...rs, mode: 'air', submode: '' }, ll, { calendars, quayInfo: quays }).pairs).toBe(0);
+  });
 });

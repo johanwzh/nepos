@@ -24,7 +24,7 @@ import { profileFor } from '../routing/profiles.js';
  */
 export function tablePatterns(rs, { calendars, quayInfo, setId }) {
   const profile = profileFor(rs?.mode ?? '', rs?.submode ?? '');
-  if (profile !== 'bus') return [];
+  if (!profile) return [];
   /** @type {Map<string, Pattern>} */
   const out = new Map();
   eachTrip(rs, { calendars, setId }, (calls, uid) => {
@@ -98,11 +98,11 @@ const skippable = (c) => [c.arrCell, c.depCell].some((cell) => cell?.dates?.some
  * only — never by NSR positions, so an offline lookup drops nothing; without calendars, every pair a "doesn't run" date
  * could make counts as used. A saved pattern stays while one of its trips exists, and so do its legs' links (the
  * comparison needs them); snaps go with the last link of their Quay.
- * @param {any} rs @param {LineLinks} lineLinks @returns {LineLinks | null} null: nothing to drop, or not a road line
+ * @param {any} rs @param {LineLinks} lineLinks @returns {LineLinks | null} null: nothing to drop, or a line that is not routed (air)
  */
 export function pruneLineLinks(rs, lineLinks) {
   const profile = profileFor(rs?.mode ?? '', rs?.submode ?? '');
-  if (profile !== 'bus') return null;
+  if (!profile) return null;
   /** @type {Set<string>} */
   const used = new Set();
   /** @type {Set<string>} */

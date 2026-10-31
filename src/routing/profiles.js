@@ -1,8 +1,9 @@
 // Which network a line is routed on, by its Transmodel mode (kept from the 2.3 engine, 2026-10-30). The profile is
 // part of a link's key (fromQuay|toQuay|profile), so a stop pair served by a bus and a tram line keeps two links.
+// Routing for all modes (2026-11-01): every profile has its own network; cableway, funicular and lift are 'cable'.
 // Pure.
 
-/** @typedef {'bus' | 'tram' | 'rail' | 'metro' | 'ferry'} Profile */
+/** @typedef {'bus' | 'tram' | 'rail' | 'metro' | 'ferry' | 'cable'} Profile */
 
 /**
  * The profile for a line's Transmodel mode; null: not routed (a straight line).
@@ -16,9 +17,10 @@ export function profileFor(mode, submode) {
   if (mode === 'rail') return 'rail';
   if (mode === 'metro') return 'metro';
   if (mode === 'water' || mode === 'ferry') return 'ferry';
+  if (mode === 'cableway' || mode === 'funicular' || mode === 'lift') return 'cable';
   return null;
 }
 
-/** Routed in a routing session: only the road profile has tiles (2.6; rail, tram, metro and ferry draw straight).
+/** Routed in a routing session: every mode with a profile (all but air, snow and ice, and other).
  *  @param {{ mode?: string, submode?: string } | null | undefined} rs */
-export const isRoadLine = (rs) => profileFor(rs?.mode ?? '', rs?.submode ?? '') === 'bus';
+export const isRoutedLine = (rs) => profileFor(rs?.mode ?? '', rs?.submode ?? '') != null;

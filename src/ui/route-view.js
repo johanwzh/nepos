@@ -11,7 +11,7 @@ import { onToolChange, setTool, setLeaveGuard, setToolAvailable, setToolEsc, act
 import { createMapView } from './map-view.js';
 import { quayInfo } from './quays.js';
 import { lineState } from './line-info.js';
-import { isRoadLine } from '../routing/profiles.js';
+import { isRoutedLine } from '../routing/profiles.js';
 import { decodePolyline } from '../routing/geometry.js';
 import { createRoutingSession } from '../routing/session.js';
 import { createRoutingClient } from '../routing/client.js';
@@ -499,7 +499,7 @@ export function initRouteView({ createSession } = {}) {
   // Leaving with a proposal, or while it routes or saves, asks first
   setLeaveGuard('route', () => !session || (!busy && !session.pending().length) || confirm(t('rvLeave')));
   setToolEsc('route', stepBack);
-  const available = () => setToolAvailable('route', isRoadLine(app.routeState), t('ptRouteNoRoad'));
+  const available = () => setToolAvailable('route', isRoutedLine(app.routeState), t('ptRouteNoRoad'));
   available();
   if (wired) return;
   wired = true;

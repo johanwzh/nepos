@@ -367,7 +367,7 @@ function checkHubs(code, rs, lines, { calendars, quayInfo, add }) {
 
 /**
  * Legs of a line not routed or out of date: one warning with the counts (2.6). Such a pattern is exported without
- * ServiceLinks, so this never blocks the export. Lines without a road profile (rail, ferry) have no legs.
+ * ServiceLinks, so this never blocks the export. Air lines are not routed and have no legs.
  * @param {string} code @param {any} rs @param {import('../project/links-store.js').LineLinks | undefined} lineLinks
  * @param {{ calendars: import('./calendars.js').Calendar[], quayInfo: Map<string, any>, add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void }} ctx
  */

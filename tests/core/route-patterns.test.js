@@ -59,8 +59,10 @@ describe('the journey patterns of a table set (routing editor, 2026-10-31)', () 
     expect(p[0].keys).toEqual([null, null]);
   });
 
-  it('no patterns for a line not routed on roads', () => {
-    expect(pats(line([t('u1', ['0700', '0710'])], STOPS, 'rail'))).toEqual([]);
+  it('a rail line has patterns keyed on its own network; an air line has none (routing for all modes)', () => {
+    const [p] = pats(line([t('u1', ['0700', '0710'])], STOPS, 'rail'));
+    expect(p.keys.every((k) => k?.endsWith('|rail'))).toBe(true);
+    expect(pats(line([t('u1', ['0700', '0710'])], STOPS, 'air'))).toEqual([]);
   });
 });
 
@@ -183,7 +185,7 @@ describe('unused links are dropped when a line is saved (spec Goal 6)', () => {
     expect(pruneLineLinks(line([t('u1', ['0700', off, '0720'])]), f)).toBeNull();
   });
 
-  it('a line not routed on roads keeps its file', () => {
-    expect(pruneLineLinks(line([t('u9', ['0700', '0710'])], STOPS, 'rail'), file())).toBeNull();
+  it('a line not routed (air) keeps its file', () => {
+    expect(pruneLineLinks(line([t('u9', ['0700', '0710'])], STOPS, 'air'), file())).toBeNull();
   });
 });

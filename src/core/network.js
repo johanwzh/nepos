@@ -5,7 +5,7 @@
 // overview draws only those, small, so the map is not crowded with dots.
 import { tripCols } from './blocks.js';
 import { isExportable } from './link-state.js';
-import { isRoadLine } from '../routing/profiles.js';
+import { isRoutedLine } from '../routing/profiles.js';
 import { decodePolyline } from '../routing/geometry.js';
 
 /**
@@ -41,7 +41,7 @@ export function networkOf(routes, quayInfo) {
     return null;
   };
   for (const { code, rs, problem, links: all } of routes) {
-    const links = isRoadLine(rs) ? all : undefined;
+    const links = isRoutedLine(rs) ? all : undefined;
     for (const grid of Object.values(rs?.grids ?? {})) {
       const g = /** @type {any} */ (grid);
       for (const col of g.cols ? tripCols(g) : []) { // a block's trips count too

@@ -2,7 +2,7 @@
 // has moved more than 5 m since it was routed). Newer map data is only a notice in the session, never a status. Pure.
 import { linkMoved } from './link-state.js';
 import { linkPairs } from './link-pairs.js';
-import { isRoadLine } from '../routing/profiles.js';
+import { isRoutedLine } from '../routing/profiles.js';
 
 /** @typedef {'routed' | 'not-routed' | 'out-of-date'} LinkStatus */
 
@@ -22,7 +22,7 @@ export function linkStatus(key, link, quayInfo) {
  */
 export function lineLinkSummary(rs, lineLinks, { calendars, quayInfo }) {
   const sum = { pairs: 0, routed: 0, notRouted: 0, outOfDate: 0 };
-  if (!isRoadLine(rs)) return sum;
+  if (!isRoutedLine(rs)) return sum;
   for (const p of linkPairs(rs, { calendars, quayInfo })) {
     sum.pairs++;
     const s = linkStatus(p.key, lineLinks?.links[p.key], quayInfo);

@@ -154,7 +154,7 @@ async function open() {
 }
 
 describe('the routing view', () => {
-  it('Alt+L opens it in place of the timetable, for a line on roads only', async () => {
+  it('Alt+L opens it in place of the timetable, for any line but air (routing for all modes)', async () => {
     expect(toolBtn().title).toBe('Alt+L');
     await open();
     expect(activeTool()).toBe('route');
@@ -167,6 +167,9 @@ describe('the routing view', () => {
     expect(document.body.classList.contains('route-on')).toBe(false);
     expect(session.close).toHaveBeenCalled();
     app.routeState.mode = 'rail';
+    refreshAll();
+    expect(toolBtn().disabled).toBe(false);
+    app.routeState.mode = 'air';
     refreshAll();
     expect(toolBtn().disabled).toBe(true);
     press('l', { altKey: true });

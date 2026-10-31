@@ -442,9 +442,11 @@ describe('routed links in the check (2.6: a warning, never an error)', () => {
     expect(check(route())).toEqual([]);
   });
 
-  it('nothing for a line without a road profile (rail)', () => {
+  it('a rail line is routed too (routing for all modes); an air line has nothing', () => {
     const rs = route();
     rs.mode = 'rail'; rs.submode = 'regionalRail';
+    expect(codes(check(rs, { links: new Map() })).filter((c) => c.endsWith('link-missing'))).toHaveLength(1);
+    rs.mode = 'air'; rs.submode = 'domesticFlight';
     expect(codes(check(rs, { links: new Map() })).filter((c) => c.endsWith('link-missing'))).toEqual([]);
   });
 });
