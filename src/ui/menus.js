@@ -80,6 +80,7 @@ const MENUS = [
       { label: t('themeCustom'), checked: !!loadColourTheme(), action: openThemeDialog },
     ] },
     { label: t('showPrivateCodes'), checked: !!app.settings.showPrivateCode, action: () => { app.settings.showPrivateCode = !app.settings.showPrivateCode; refreshAll(); renderGridIfOpen(); runAction(persistSettings); } },
+    { label: t('autoRoute'), checked: !!app.settings.autoRoute, action: () => { app.settings.autoRoute = !app.settings.autoRoute; runAction(persistSettings); } },
   ] },
   { label: () => t('menuHelp'), items: () => [
     { label: t('helpShortcuts'), action: showShortcuts },

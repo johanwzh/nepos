@@ -5,7 +5,7 @@ import { app } from './state.js';
 import { parseERN } from '../core/ern/parse.js';
 import { checkForExport } from '../core/export-check.js';
 import { routedLinks } from '../core/features.js';
-import { lineLinkSummary } from '../core/link-status.js';
+import { tablePatterns, patternStates } from '../core/route-patterns.js';
 import { isRoadLine } from '../routing/profiles.js';
 import { orgExportMode } from '../project/meta.js';
 import { quayInfo } from './quays.js';
@@ -83,14 +83,30 @@ export function projectIssues() {
   return check(routes);
 }
 
+/** @type {Map<string, { key: any[], value: { patterns: number, green: number, orange: number, red: number } }>} */
+const routingCache = new Map();
+
 /**
- * How much of a line is routed (2.6): its legs by status, or null for a line not routed on roads (or damaged).
+ * How much of a line is routed (routing editor, 2026-10-31): its journey patterns by state, or null for a line not
+ * routed on roads (or damaged). The published road build is not known here (no download outside Ruting): newer map
+ * data does not count. Cached for saved lines by their text, the links and their stops' positions (final review M6).
  * @param {string} code
  */
 export function lineRouting(code) {
   const rs = lineState(code);
   if (!rs || !isRoadLine(rs)) return null;
-  return lineLinkSummary(rs, app.lineLinks.get(code), { calendars: app.calendars, quayInfo });
+  const entry = app.routes.find((r) => r.code === code);
+  const live = code === app.activeRoute || app.drafts.has(code);
+  const ids = [...new Set(Object.values(rs.grids ?? {}).flatMap((g) => /** @type {any} */ (g).stops.map((/** @type {any} */ s) => String(s.stopId ?? ''))))];
+  const where = ids.map((id) => { const q = quayInfo.get(id); return q ? `${q.lat},${q.lon}` : ''; }).join(';');
+  const key = [entry?.text, app.calendars, app.lineLinks.get(code), where];
+  const hit = routingCache.get(code);
+  if (!live && hit && hit.key.every((v, i) => v === key[i])) return hit.value;
+  const states = patternStates(tablePatterns(rs, { calendars: app.calendars, quayInfo }), app.lineLinks.get(code), { quayInfo });
+  const n = (/** @type {string} */ s) => states.filter((x) => x.state === s).length;
+  const value = { patterns: states.length, green: n('green'), orange: n('orange'), red: n('red') };
+  if (!live) routingCache.set(code, { key, value });
+  return value;
 }
 
 /**

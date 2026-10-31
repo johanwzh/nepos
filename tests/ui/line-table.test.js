@@ -56,7 +56,7 @@ beforeEach(async () => {
 });
 
 describe('Linjer on the shared list frame', () => {
-  it('shows how much of each line is routed (2.6)', () => {
+  it('shows how many of each line’s journey patterns are routed (2.6, by pattern since the routing editor)', () => {
     quayInfo.set('NSR:Quay:1', /** @type {any} */ ({ lon: 10, lat: 59 }));
     quayInfo.set('NSR:Quay:2', /** @type {any} */ ({ lon: 10.01, lat: 59 }));
     setPage('lines');
@@ -68,7 +68,7 @@ describe('Linjer on the shared list frame', () => {
     expect(routing('Alta')).toBe('1 / 1');
     quayInfo.set('NSR:Quay:2', /** @type {any} */ ({ lon: 10.02, lat: 59 })); // moved since it was routed
     refreshAll();
-    expect(routing('Alta')).toBe('0 / 1, 1 utdatert');
+    expect(routing('Alta')).toBe('0 / 1, 1 å sjekke');
     quayInfo.clear();
   });
 

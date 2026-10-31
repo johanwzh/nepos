@@ -234,15 +234,28 @@ Nederst i linjenavigatoren står **kraftverktøyene**. Å se dem endrer ingentin
   ramme; dra den tilbake til første tur for å fjerne den, eller **Pakk ut blokk** for å gjøre den til vanlige kolonner.
   Eksporten skriver alle turene. Intervaller som ikke går opp i en time (40 minutter), lager du med **Kopier med
   intervall**. En tur med korrespondanse kan ikke bli en blokk ennå.
-- **Ruting** (busslinjer) — ruter alle strekningene i tabellsettet som vises langs veiene i OpenStreetMap. Kartet
-  åpnes, og tabellen hviler. Boksen over kartet viser fremdriften, hvor mange strekninger som er rutet, og dem som bør
-  sjekkes: ingen rute, ingen vei nær stoppet, lang omvei eller stopp langt fra veien. Klikk en strekning for å se
-  lengde, tid, veiene og hvor langt stoppene ligger fra veien; klikk den igjen for å legge til et punkt ruten skal gå
-  gjennom. Dra punktet for å flytte det; høyreklikk eller **Delete** fjerner det. **Bruk** lagrer linjens strekninger;
-  ✕ eller **Esc** går ut uten å lagre (Nepos spør først om du har endret noe). Kartdataene lastes ned første gang og
-  ligger så i prosjektets `cache/`, så du kan rute uten nett der du har rutet før. En lagret strekning endres aldri
-  uten at du ruter den på nytt; flytter NSR et stopp mer enn 5 m, blir den utdatert. **Linjer** viser hvor mye av
-  hver linje som er rutet, og eksportkontrollen varsler om strekninger som mangler. Kartdata © OpenStreetMap-bidragsytere.
+- **Ruting** (busslinjer, **Alt+L**) — en egen visning i stedet for rutetabellen, der du ruter linjens mønstre langs
+  veiene i OpenStreetMap. Øverst velger du tabellsett; nederst er ett lite bilde per mønster (hver unike rekke stopp),
+  med ramme etter tilstand: **rød** — ikke rutet (et nytt mønster, eller et stopp uten NSR-posisjon), **oransje** — må
+  sjekkes (et stopp er flyttet i NSR, nyere kartdata, eller et annet stopp på en rad), **grønn** — rutet. Velg et
+  mønster: stoppene står til venstre, kartet viser strekningene med stoppenes navn (de andre mønstrene svakt), og
+  infofeltet til høyre viser mønsteret. Klikk en strekning på kartet eller mellom to stopp i listen for å se lengde,
+  tid, veiene og hvor langt stoppene ligger fra veien. **Esc** går ett steg tilbake: strekning, mønster, ut.
+
+  Du har kontrollen: ingenting rutes og ingen lagret avstand endres uten deg. **Finn rute** lager et forslag for
+  mønsteret (eller den valgte strekningen); forslaget vises sammen med den gamle ruten (grå, stiplet), og infofeltet
+  viser hvordan km og minutter endres. Klikk den valgte strekningen for å legge til et punkt ruten skal gå gjennom, dra
+  punktet for å flytte det, høyreklikk eller **Delete** fjerner det. På en lang strekning kan du sette punktene før du
+  trykker **Finn rute**. **Godta** lagrer forslaget i `data/links/<linje>.json`; **Forkast** dropper det. Et oransje
+  mønster kan du **Behold**e som det er: ruten merkes som sjekket og blir grønn uten å endre en meter. Med
+  **Automatisk ruting** på (Visning-menyen) får visningen **Oppdater alle**, som ruter og godtar alle røde og oransje
+  mønstre i tabellsettet. Mens Ruting er åpen, er resten av Nepos låst; ✕ eller **Esc** går ut (Nepos spør først om et
+  forslag ikke er godtatt).
+
+  Kartdataene lastes ned første gang du ruter og ligger så i prosjektets `cache/`, så du kan rute uten nett der du har
+  rutet før. Når du lagrer en linje, fjernes strekninger ingen tur bruker lenger (bare ut fra stoppene i turene, aldri
+  fordi NSR ikke svarte). **Linjer** viser hvor mange mønstre som er rutet, og eksportkontrollen varsler om strekninger
+  som mangler. Kartdata © OpenStreetMap-bidragsytere.
 
 ### Visuell rutetabell (Alt+V)
 
@@ -334,8 +347,9 @@ valget.
 
 ### Strekninger på kartet
 
-Kartet bruker OpenFreeMap (lyst eller mørkt etter Nepos' utseende), eller kartlaget du har valgt. Turen tegnes som rette linjer mellom
-stoppene. De rutede strekningene langs veien ser du i **Ruting** (kraftverktøyene); eksporten skriver dem som
+Kartet bruker OpenFreeMap (lyst eller mørkt etter Nepos' utseende), eller kartlaget du har valgt. Turen følger de
+rutede strekningene langs veien; en strekning der et stopp er flyttet siden den ble rutet, er oransje, og en strekning
+uten rute er en rett linje mellom stoppene. Rutene lages i **Ruting** (kraftverktøyene); eksporten skriver dem som
 ServiceLinks for hvert mønster der alle strekningene er rutet.
 
 ---

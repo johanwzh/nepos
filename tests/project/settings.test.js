@@ -9,6 +9,10 @@ describe('settings', () => {
     expect(await readSettings(createMemoryFs())).toEqual({ settings: { ...DEFAULT_SETTINGS }, recovered: false });
   });
 
+  it('automatic routing (Update all in Ruting) is off unless the user turns it on (routing editor, 2026-10-31)', () => {
+    expect(DEFAULT_SETTINGS.autoRoute).toBe(false);
+  });
+
   it('has the published road tiles as the routing tiles address (2.6)', () => {
     expect(DEFAULT_SETTINGS.routingTilesUrl).toBe('https://johanwzh.github.io/nepos-tiles/road/');
   });

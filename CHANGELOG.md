@@ -6,15 +6,20 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 **New features**
 
-- **Routing:** a new power tool, **Ruting** (Alt+L, bus lines), routes every leg of the shown table set along
-  OpenStreetMap's roads, on the map. It lists the legs worth a look (no route, no road near the stop, long detour,
-  stop far from the road); click a leg to see it, click again to add a waypoint, drag it to move it, right-click or
-  Delete removes it. **Apply** saves the line's legs in `data/links/<line>.json`; Esc leaves without saving. The map
-  data comes from Nepos's own road tiles (nepos-tiles, rebuilt monthly) and is kept in the project's `cache/`, so
-  routing works offline where it has run before. A saved leg never changes until it is routed again.
+- **Routing:** **Ruting** (Alt+L, bus lines) is a view of its own in place of the timetable: the line's journey
+  patterns as small pictures framed red (not routed), orange (to check: a stop moved in NSR, newer map data, another
+  stop on a row) or green; the selected pattern's stops beside a large map with the stops' names; and an info pane
+  for the table set, the pattern and the selected leg. Nothing routes and no saved distance changes without you:
+  **Route** makes a proposal, drawn over the old route with the change in km and minutes; add or drag waypoints on a
+  leg; **Accept** saves it in `data/links/<line>.json`, **Discard** drops it, and **Keep** marks an orange pattern
+  checked without changing a metre. An **Automatic routing** setting (View menu) adds **Update all**. The map data
+  comes from Nepos's own road tiles (nepos-tiles, rebuilt monthly) and is kept in the project's `cache/`, so routing
+  works offline where it has run before. Saving a line drops the links no trip uses any more.
+- **Map:** the selected trip follows its routed legs; a leg whose stop has moved is orange, a leg without a route
+  stays straight.
 - **Export:** each pattern whose legs are all routed gets its ServiceLinks (per line); legs not routed or out of date
   (a stop moved more than 5 m) are a warning in the check, never an error. The old routing (off since 2.3) is removed.
-- **Lines:** a Ruting column shows how much of each bus line is routed.
+- **Lines:** a Ruting column shows how many of each bus line's journey patterns are routed, and how many to check.
 
 **Bug fixes**
 

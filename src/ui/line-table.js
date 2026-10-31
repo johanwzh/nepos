@@ -43,15 +43,18 @@ function rows() {
   return lineRows().map((r) => ({ ...r, days: daysOf(r.calendarIds) }));
 }
 
-/** How much of the line is routed (2.6): "37 / 40", "Not routed", or nothing for a line not routed on roads. @param {string} code */
+/**
+ * How many of the line's journey patterns are routed (routing editor, 2026-10-31): "3 / 5, 1 to check", "Not routed", or
+ * nothing for a line not routed on roads. @param {string} code
+ */
 function routingText(code) {
   const s = lineRouting(code);
-  if (!s || !s.pairs) return '';
-  if (!s.routed && !s.outOfDate) return t('ltRoutingNone');
-  return `${s.routed} / ${s.pairs}${s.outOfDate ? t('ltRoutingOld', s.outOfDate) : ''}`;
+  if (!s || !s.patterns) return '';
+  if (!s.green && !s.orange) return t('ltRoutingNone');
+  return `${s.green} / ${s.patterns}${s.orange ? t('ltRoutingCheck', s.orange) : ''}`;
 }
 /** @param {string} code */
-const routingSort = (code) => { const s = lineRouting(code); return s?.pairs ? s.routed / s.pairs : -1; };
+const routingSort = (code) => { const s = lineRouting(code); return s?.patterns ? s.green / s.patterns : -1; };
 
 /** The status tag: validity, unsaved, problems (export and public are the switches). @param {Row} r */
 function status(r) {

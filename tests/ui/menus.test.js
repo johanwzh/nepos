@@ -50,7 +50,7 @@ describe('menu bar', () => {
     expect(document.querySelector('.mb-menu[data-menu="1"]')?.textContent).toBe('Rediger');
     expect(items()).toEqual(['Ny linje', 'Ny kalender', 'Lagre', 'Lagre alle endringer', 'Forkast alle endringer']);
     openMenu(2);
-    expect(items()).toEqual(['Språk', 'Lys/mørk', 'Fargetema', 'Vis stoppenes privatkode']);
+    expect(items()).toEqual(['Språk', 'Lys/mørk', 'Fargetema', 'Vis stoppenes privatkode', 'Automatisk ruting (Oppdater alle i Ruting)']);
     openMenu(3);
     expect(items()).toEqual(['Hurtigtaster', 'Brukerveiledning', 'Versjonshistorikk', 'Levering til Entur', 'GitHub']);
   });
@@ -62,6 +62,15 @@ describe('menu bar', () => {
     item('Vis stoppenes privatkode').click();
     expect(app.settings.showPrivateCode).toBe(!was);
     app.settings.showPrivateCode = was;
+  });
+
+  it('turns automatic routing on and off from Visning (routing editor, 2026-10-31)', () => {
+    openMenu(0);
+    openMenu(2);
+    const was = !!app.settings.autoRoute;
+    item('Automatisk ruting (Oppdater alle i Ruting)').click();
+    expect(app.settings.autoRoute).toBe(!was);
+    app.settings.autoRoute = was;
   });
 
   it('shows the private codes in the open timetable at once, with no reload (user 2026-10-19)', async () => {

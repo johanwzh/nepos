@@ -8,7 +8,8 @@ import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
-import { lineIssues, lineState, projectIssues, lineLabel } from '../../src/ui/line-info.js';
+import { lineIssues, lineState, projectIssues, lineLabel, lineRouting } from '../../src/ui/line-info.js';
+import { quayInfo } from '../../src/ui/quays.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
@@ -102,5 +103,19 @@ describe('line labels', () => {
     app.routes = app.routes.map((r) => (r.code === '20' ? { ...r, text: r.text.replace('#RUT;-1;20;', '#RUT;-1;;') } : r));
     expect(lineLabel('20')).toBe('A - B');
     expect(lineLabel('nope')).toBe('nope');
+  });
+});
+
+describe('a line’s routing by pattern (routing editor, 2026-10-31)', () => {
+  it('counts the patterns by state, and is cached for a saved line until its stops move (final review M6)', () => {
+    quayInfo.set('NSR:Quay:1', /** @type {any} */ ({ lon: 10, lat: 59 }));
+    quayInfo.set('NSR:Quay:2', /** @type {any} */ ({ lon: 10.01, lat: 59 }));
+    const first = lineRouting('20');
+    expect(first).toEqual({ patterns: 1, green: 0, orange: 0, red: 1 });
+    expect(lineRouting('20')).toBe(first);
+    quayInfo.set('NSR:Quay:2', /** @type {any} */ ({ lon: 10.02, lat: 59 }));
+    expect(lineRouting('20')).not.toBe(first);
+    expect(lineRouting('22')).toBeNull();
+    quayInfo.clear();
   });
 });

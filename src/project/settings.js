@@ -20,6 +20,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   tileAttribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   // Routing (2.6): the published road graph tiles (nepos-tiles), cached in the project's cache/routing/road/.
   routingTilesUrl: 'https://johanwzh.github.io/nepos-tiles/road/',
+  /** Automatic routing (routing editor, 2026-10-31): Ruting offers Update all, which routes and accepts every pattern */
+  autoRoute: false,
 });
 
 /** @type {Record<string, string[]>} */
@@ -61,6 +63,7 @@ export async function readSettings(fs) {
     }
   }
   if (typeof settings.showPrivateCode !== 'boolean') settings.showPrivateCode = DEFAULT_SETTINGS.showPrivateCode;
+  if (typeof settings.autoRoute !== 'boolean') settings.autoRoute = DEFAULT_SETTINGS.autoRoute;
   if (typeof settings.exportAsZip !== 'boolean') {
     settings.exportAsZip = DEFAULT_SETTINGS.exportAsZip;
     recovered = true;
