@@ -251,6 +251,9 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
 
     newerMap: () => newer,
 
+    /** The links file as accepted and kept so far in this session. */
+    file: () => file,
+
     /** Auto routing (a setting): routes and accepts every red and orange pattern. @returns {Promise<LineLinks>} */
     async updateAll() {
       for (const s of states()) {

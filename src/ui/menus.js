@@ -108,6 +108,7 @@ export function initMenus() {
       if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.key.toLowerCase() !== 's' || document.querySelector('dialog[open]')) return;
       e.preventDefault();
       e.stopImmediatePropagation();
+      if (document.body.classList.contains('route-on')) return; // Ruting locks the app (routing editor, 2026-10-31)
       void saveEverything();
     }, true);
   }

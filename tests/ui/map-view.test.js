@@ -101,7 +101,7 @@ describe('routing on the map', () => {
     v.setStopLabels([{ lon: 10, lat: 59, name: 'Torget <1>', n: 1 }]);
     const m = markers.at(-1);
     expect(markers.length).toBe(before + 1);
-    expect(m.getElement().className).toBe('map-stop');
+    expect(m.getElement().className).toBe('rv-stop');
     expect(m.getElement().textContent).toBe('1Torget <1>');
     v.setStopLabels([]);
     expect(m.removed).toBe(true);

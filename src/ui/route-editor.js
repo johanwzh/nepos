@@ -644,6 +644,7 @@ export function initRouteEditor() {
     e.preventDefault(); // never the browser's own Save dialog, also in a window or on another page
     if (document.querySelector('dialog[open]')) return;
     if (currentPage() !== 'edit') return; // the calendar page and Ctrl+Shift+S handle their own
+    if (document.body.classList.contains('route-on')) return; // Ruting locks the app (routing editor, 2026-10-31)
     e.stopPropagation();
     if (currentPage() === 'edit' && app.activeRoute) { commitFocusedField(); void saveRoute(); }
   }, true);

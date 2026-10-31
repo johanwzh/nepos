@@ -80,6 +80,11 @@ export function setEscGuard(fn) { escGuard = fn; }
 /** @param {ToolName} name @param {() => boolean} fn true: the tool may be turned off */
 export function setLeaveGuard(name, fn) { leaveGuards[name] = fn; }
 
+/** A tool whose Esc steps back first (Ruting: leg → pattern → off). @type {Partial<Record<ToolName, () => boolean>>} */
+const toolEsc = {};
+/** @param {ToolName} name @param {() => boolean} fn true: the tool took the Esc; false: Esc turns it off */
+export function setToolEsc(name, fn) { toolEsc[name] = fn; }
+
 /** Whether a tool can be turned on now; its button follows. @param {ToolName} name @param {boolean} ok @param {string} [why] the button's title when not */
 export function setToolAvailable(name, ok, why = '') {
   if (ok) unavailable.delete(name); else unavailable.add(name);
@@ -214,7 +219,11 @@ export function initPowerTools() {
   keysWired = true;
   document.addEventListener('keydown', (e) => {
     if (currentPage() !== 'edit' || document.querySelector('dialog[open]')) return;
-    if (e.key === 'Escape' && active && !document.querySelector('.float-box') && !escGuard()) { e.preventDefault(); e.stopPropagation(); setTool(''); return; }
+    if (e.key === 'Escape' && active && !document.querySelector('.float-box') && !escGuard()) {
+      e.preventDefault(); e.stopPropagation();
+      if (!toolEsc[active]?.()) setTool('');
+      return;
+    }
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
     const x = TOOLS.find((tool) => tool.key && !tool.disabled && tool.key === e.key.toLowerCase());
     if (x) { e.preventDefault(); e.stopPropagation(); setTool(active === x.name ? '' : x.name); }

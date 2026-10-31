@@ -1466,23 +1466,58 @@ body.pt-on :is(#menubar, #tabbar, #route-hdr, #kom-bar, #ts-tabs, #cal-bar, #cal
 body.pt-on #edit-footer > :not(#ef-save):not(#ef-discard):not(#ef-state) { opacity: .4; pointer-events: none; }
 /* Registrer stopp works on the map: the map pane stays usable while it is on (stop picking 2) */
 body.pt-on.pt-record :is(#panel-right, #map-strip) { opacity: 1; pointer-events: auto; }
-/* Ruting (2.6): the map is the tool; the timetable rests */
-body.pt-on.pt-route :is(#panel-right, #map-strip) { opacity: 1; pointer-events: auto; }
-body.pt-route #tbl { opacity: .55; pointer-events: none; }
-body.pt-route #map-stop { display: none; }
-/* Above the map, never over it (an overlay hid the legs on a narrow map), and of a fixed height so the map does not move when a leg is selected (2026-10-31) */
-.rt-box { position: relative; flex: none; margin: 6px; height: 210px; overflow: auto; box-sizing: border-box; padding: 8px 30px 8px 10px; font-size: 12px; background: var(--bg-raised, #fff); color: var(--text, #222); border: 2px solid var(--accent, #d63384); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
-.rt-box .rt-head { font-weight: 600; margin-bottom: 4px; }
-.rt-box .rt-x { position: absolute; top: 4px; right: 4px; border: none; background: none; cursor: pointer; font-size: 14px; color: inherit; }
-.rt-box .rt-check { list-style: none; margin: 6px 0; padding: 0; }
-.rt-box .rt-check li { padding: 2px 4px; border-radius: 4px; cursor: pointer; }
-.rt-box .rt-check li:hover { background: var(--bg-hover, rgba(0,0,0,.06)); }
-.rt-box .rt-check .rt-failed { color: #c62828; }
-.rt-box .rt-check .rt-flagged { color: #b36b00; }
-.rt-box .rt-leg { margin: 6px 0; padding: 4px 6px; border-left: 3px solid #0078d4; }
-.rt-box .rt-hint, .rt-box .rt-attr, .rt-box .rt-newer { font-size: 11px; opacity: .8; margin-top: 4px; }
-.rt-box .rt-error { color: #c62828; margin-top: 4px; }
-.rt-box .rt-foot { position: sticky; bottom: -8px; display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; padding: 4px 0 8px; background: var(--bg-raised, #fff); }
+/* Ruting (routing editor, 2026-10-31): a view of its own in place of the rest of the edit page; 1280×720 works */
+.route-view { display: none; }
+body.route-on #page-edit > :not(#route-view) { display: none !important; }
+body.route-on .route-view { display: grid; flex: 1; min-width: 0; min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; }
+.rv-top { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-bottom: 1px solid var(--border, #ddd); }
+.rv-title { font-weight: 600; }
+.rv-sets { display: flex; gap: 4px; flex: 1; overflow-x: auto; }
+.rv-set { border: 1px solid var(--border, #ccc); background: none; color: inherit; border-radius: 4px; padding: 2px 10px; cursor: pointer; font-size: 12px; }
+.rv-set.on { background: var(--accent, #d63384); color: #fff; border-color: transparent; }
+.rv-x { border: none; background: none; cursor: pointer; font-size: 16px; color: inherit; }
+.rv-body { display: grid; grid-template-columns: 180px minmax(0, 1fr) 260px; min-height: 0; }
+.rv-stops { overflow: auto; padding: 8px 6px 8px 8px; font-size: 12px; border-right: 1px solid var(--border, #ddd); }
+.rv-stops ol { list-style: none; margin: 0; padding: 0 0 0 16px; }
+.rv-pick { opacity: .7; }
+.rv-st { position: relative; padding: 1px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-st::before { content: ''; position: absolute; left: -15px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--bg-raised, #fff); border: 2px solid #1b8a4a; box-sizing: border-box; }
+.rv-st.rv-nopos { opacity: .5; }
+.rv-st.rv-nopos::before { border-color: #999; }
+.rv-gap { height: 12px; margin-left: -11px; border-left: 3px solid #1b8a4a; cursor: pointer; }
+.rv-gap.rv-bad { border-left: 3px dashed #c62828; }
+.rv-gap.on { border-left: 5px solid #0078d4; margin-left: -12px; }
+.rv-gap:not([data-key]) { cursor: default; }
+.rv-mapwrap { position: relative; min-width: 0; min-height: 0; }
+#rv-map { position: absolute; inset: 0; }
+.rv-attr { position: absolute; left: 4px; bottom: 2px; font-size: 10px; background: rgba(255,255,255,.8); color: #333; padding: 0 4px; border-radius: 3px; pointer-events: none; }
+.rv-side { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--border, #ddd); }
+.rv-info { flex: 1; overflow: auto; padding: 8px 10px; font-size: 12px; }
+.rv-head { font-weight: 600; margin-bottom: 4px; }
+.rv-sub { font-weight: 600; margin-top: 8px; }
+.rv-check { list-style: none; margin: 4px 0; padding: 0; }
+.rv-check li { cursor: pointer; padding: 1px 3px; border-radius: 3px; }
+.rv-check li:hover { background: var(--bg-hover, rgba(0,0,0,.06)); }
+.rv-check .rv-failed { color: #c62828; }
+.rv-check .rv-flagged { color: #b36b00; }
+.rv-proposal { margin-top: 8px; padding: 4px 6px; border-left: 3px solid #6a3fc4; }
+.rv-proposal ul { margin: 2px 0; padding-left: 16px; }
+.rv-leg-info { margin-top: 8px; padding: 4px 6px; border-left: 3px solid #0078d4; }
+.rv-why, .rv-error { color: #c62828; }
+.rv-note, .rv-hint { font-size: 11px; opacity: .8; margin-top: 6px; }
+.rv-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--border, #ddd); }
+.rv-strip { display: flex; gap: 6px; overflow-x: auto; padding: 6px 8px; border-top: 1px solid var(--border, #ddd); min-height: 80px; }
+.rv-thumb { flex: none; width: 98px; display: flex; flex-direction: column; align-items: center; padding: 2px; border: 3px solid; border-radius: 6px; background: var(--bg-raised, #fff); color: inherit; cursor: pointer; font-size: 10px; }
+.rv-thumb svg { width: 90px; height: 56px; }
+.rv-thumb path { fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.rv-thumb.rv-red { border-color: #c62828; }
+.rv-thumb.rv-orange { border-color: #e08a00; }
+.rv-thumb.rv-green { border-color: #1b8a4a; }
+.rv-thumb.on { box-shadow: 0 0 0 2px var(--bg, #fff), 0 0 0 4px #0078d4; }
+.rv-thumb.rv-pending span::after { content: ' •'; color: #6a3fc4; font-weight: 700; }
+.rv-stop { display: flex; align-items: center; gap: 4px; pointer-events: none; font-size: 11px; white-space: nowrap; }
+.rv-stop b { width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #333; box-sizing: border-box; font-size: 9px; display: grid; place-items: center; color: #333; }
+.rv-stop span { background: rgba(255,255,255,.85); color: #222; padding: 0 3px; border-radius: 2px; }
 .pm.rt-wp { border-radius: 50%; background: #fff; border: 3px solid #0078d4; box-sizing: border-box; cursor: grab; }
 .pm.rt-wp.on { background: #0078d4; }
 body.pt-on #tbl :is(.g-row-ins, .g-row-bot, .g-td-name, .g-td-btn, .g-td-ins, .g-dc-cell, .g-fn-cell, .g-lb-cell, .g-tn-cell, .cw-dest, .cw-ins) { pointer-events: none; opacity: .55; }

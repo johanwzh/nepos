@@ -146,7 +146,7 @@ export function createMapView(el, { style, dark = false }) {
       for (const m of labels) m.remove();
       labels = stops.map((s) => {
         const box = document.createElement('div');
-        box.className = 'map-stop';
+        box.className = 'rv-stop';
         const n = document.createElement('b');
         n.textContent = String(s.n);
         const name = document.createElement('span');

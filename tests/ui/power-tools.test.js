@@ -276,12 +276,12 @@ describe('Registrer stopp and Optimalisering in the toolbox (stop picking 2, 2.5
     expect(document.body.classList.contains('pt-record')).toBe(true);
   });
 
-  it('while recording or routing, the map pane is not locked', () => {
+  it('while recording, the map pane is not locked; Ruting is a view of its own (routing editor, 2026-10-31)', () => {
     const css = readFileSync('src/ui/styles.css', 'utf8');
     // as heavy as the lock rule (body.pt-on + an ID + a class), and after it: the lock's footer part has its own rule,
     // or its four IDs would outweigh this (2026-10-31: the map stayed locked)
     expect(css).toMatch(/body\.pt-on\.pt-record :is\(#panel-right, #map-strip\) \{ opacity: 1; pointer-events: auto; \}/);
-    expect(css).toMatch(/body\.pt-on\.pt-route :is\(#panel-right, #map-strip\) \{ opacity: 1; pointer-events: auto; \}/);
+    expect(css).toMatch(/body\.route-on #page-edit > :not\(#route-view\) \{ display: none !important; \}/);
     expect(css).not.toMatch(/body\.pt-on :is\([^)]*#edit-footer/);
   });
 });
