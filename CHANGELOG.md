@@ -29,6 +29,15 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Export:** each pattern whose legs are all routed gets its ServiceLinks (per line); legs not routed or out of date
   (a stop moved more than 5 m) are a warning in the check, never an error. The old routing (off since 2.3) is removed.
 - **Lines:** a Ruting column shows how many of each bus line's journey patterns are routed, and how many to check.
+- **Knutepunkt** (Alt+K, interchanges between lines): our trips can wait at a stop for a feeder from another line in the
+  project. The tool takes over the timetable like Ruting: every stop of the table set with a switch; for a stop that is
+  on, **what we wait for** (the stops for the transfer or a radius, a window before our departure, the maximum wait,
+  the walk, and the feeder's authority, operator, mode, line number and earlier stops); a **timeline** at the stop
+  where you pick our trips and see the feeders arrive; and **Forslag**, a proposal per trip (ny, uendret, endret,
+  borte, velg én, ingen treff) that you approve with **Godkjenn**. Only approved links are exported, as guaranteed
+  interchanges (our trip waits; the feeder never does). The hubs are saved in the line file (`#KNP`, `#KNL`); a
+  trip in the timetable with an approved link has a small ⇄. The export check warns when a link has changed, the
+  feeder's line is not exported, or the hub's stop has changed. Between lines of the same project only, for now.
 
 **Bug fixes**
 

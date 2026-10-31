@@ -316,6 +316,49 @@ feeding trip, at most. One per guaranteed interchange; it belongs to the time ce
 | 1 | int | Y position (its row). |
 | 2 | int | Minutes, 1–60. |
 
+### #KNP
+
+Knutepunkt record (2.6). A hub on a row: the line's trips at this stop wait for feeders from other lines (an interchange
+between lines, not inside one table). One per row at most, written after the table's `#MVT` records. The trips that wait,
+and the feeder each one was approved with, are `#KNL` records. Lists inside a field are separated by commas; an empty
+field means not set.
+
+| Field | Type | Description |
+|---|---|---|
+| 0 | int | Y position (its row): the departure row of the stop's call. |
+| 1 | text | The row's stop (NSR Quay ID) when the hub was made. A row whose stop has changed since keeps the hub, but its links are not exported. |
+| 2 | list | Where the feeder may arrive: NSR StopPlace IDs (or Quay IDs). |
+| 3 | int | Or within this many metres of the row's stop. Empty: only the stops in field 2. |
+| 4 | int | The window: a feeder's arrival counts from this many minutes before our departure … |
+| 5 | int | … up to this many. |
+| 6 | int | Maximum wait time in minutes: how long our trip may be held for the feeder. |
+| 7 | int | Walk in minutes: the minimum transfer time. |
+| 8 | list | The feeder's authority: NeTEx organisation IDs. |
+| 9 | list | The feeder's operator: NeTEx organisation IDs. |
+| 10 | text | The feeder's transport mode (Transmodel). |
+| 11 | text | The feeder's submode (Transmodel). |
+| 12 | text | The feeder's line number (public code). |
+| 13 | list | Stops the feeder must have called at before it arrives: NSR StopPlace IDs. |
+
+### #KNL
+
+Knutepunkt link record (2.6). A trip that waits at a hub (`#KNP` on the same row), and the feeder it was approved with.
+It belongs to the time cell at its position. With fields 2–6 empty, the trip is picked but has no link yet.
+
+| Field | Type | Description |
+|---|---|---|
+| 0 | int | X position (our trip's column). |
+| 1 | int | Y position (the hub's row). |
+| 2 | text | The feeder's line: its code (the line file's name) in the same project. |
+| 3 | text | The feeder trip's `#UID`. |
+| 4 | text | The feeder's stop (NSR Quay ID). |
+| 5 | int | The feeder's arrival, in minutes after midnight (a later day adds 1440). |
+| 6 | text | When the link was approved (ISO 8601). |
+
+The export writes each link as a guaranteed `ServiceJourneyInterchange` in our line's file: the feeder is the From
+journey, our trip the To journey, with `MaximumWaitTime` (field 6 of `#KNP`) and `MinimumTransferTime` (field 7, when
+above 0); only when both journeys are in the delivery.
+
 ### #TUT
 
 Text column record. A column of text instead of times; one per text column and language.
@@ -1164,6 +1207,8 @@ What the record codes stand for, in alphabetical order. Most are Norwegian; a (?
 | `#DAG` | dag | Days |
 | `#INT` | intervall | Interval (virtual-interval block) |
 | `#MVT` | maks ventetid | Maximum wait time of a guaranteed interchange |
+| `#KNP` | knutepunkt | A hub: our trips wait here for feeders from other lines |
+| `#KNL` | knutepunktlenke | A trip waiting at a hub, and its approved feeder |
 | `#DSK` | destinasjonskobling | Destination link |
 | `#DSS` | destinasjonsskilt | Destination sign |
 | `#DST` | destinasjon | Destination |
