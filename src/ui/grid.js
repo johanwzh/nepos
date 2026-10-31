@@ -2237,6 +2237,7 @@ function insertColumnsAfter(ci, cols) {
   if (!cols.length) return;
   while (locked(ci + 1)) ci++; // after a block's end
   for (const c of cols) { delete c.block; delete c.virt; delete c.of; } // a copy of a parent is a trip, not a block
+  for (const c of cols) for (const cell of c.cells ?? []) if (cell?.hubLink) delete cell.hubLink; // a copy is another trip: no knutepunkt link
   for (const col of grid.cols) for (const cell of col.cells) if (cell?.interchange && cell.interchange.targetC > ci) cell.interchange.targetC += cols.length;
   grid.cols.splice(ci + 1, 0, ...cols);
   if (ancC > ci) ancC += cols.length;

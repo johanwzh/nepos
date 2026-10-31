@@ -1,4 +1,5 @@
 // ERN parser, ported from Nepos 1.5.7 (nepos.html lines 2812–3005). See docs/ern/ern-format.md.
+import { decodeHub, decodeLink } from '../interchanges/hub.js';
 import { orgRole } from '../orgs.js';
 import { modeFromErn } from '../modes.js';
 import { UUID_PATTERN } from './serialize.js';
@@ -25,6 +26,8 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
     let cols = [], rows = [], cellMap = {};
     // Notes (#FOT) and dates (#UNT) for the current table, put on their column or cell once it is built
     let _pendingNotes = [];
+    /** Knutepunkter (#KNP) of the current table, put on their rows once it is built. @type {{ ri: number, hub: import('../interchanges/hub.js').Hub }[]} */
+    let _pendingHubs = [];
     // The trip-number row (#TTL) of the current table; numbers (#TTC) go on the columns
     let _tripRow = false, _ttlRow = NaN;
     // The label row (#TTL with field 5 bit 0, user 2026-10-19) and the vehicle row (bit 1, user 2026-10-20): their
@@ -69,19 +72,23 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
         }
         const grid = { stops: stopsCopy, cols: gCols2, tripRow: _tripRow, labelRow: _labelRow, vehicleRow: _vehicleRow };
         // Notes and dates from #FOT/#UNT: on the column (row -1) or on a cell that has a time
-        _pendingNotes.forEach(({ ci, ri, note, date, booking, maxWait }) => {
+        // Knutepunkt (#KNP) on its row
+        for (const { ri, hub } of _pendingHubs) if (ri >= 0 && ri < stopsCopy.length) stopsCopy[ri].hub = hub;
+        _pendingNotes.forEach(({ ci, ri, note, date, booking, maxWait, hubLink }) => {
             if (ci < 0 || ci >= grid.cols.length) return;
             const target = ri === -1 ? grid.cols[ci] : (ri >= 0 && ri < grid.stops.length ? grid.cols[ci].cells[ri] : null);
             if (!target) return;
             if (note != null) target.note = note;
             if (date) (target.dates ??= []).push(date);
             if (maxWait != null && target.interchange) target.interchange.maxWait = maxWait;
+            if (hubLink && ri >= 0) target.hubLink = hubLink;
             if (booking) { const b = normalizeBooking({ ...(target.booking ?? {}), ...booking }); if (b) target.booking = b; }
         });
         rs.grids[key] = grid;
         dskByGrid.push({ grid, links: _pendingDsk });
         cols=[]; rows=[]; cellMap={};
         _pendingNotes = [];
+        _pendingHubs = [];
         _pendingDsk = [];
         _tripRow = false; _ttlRow = NaN; _labelRow = false; _vehicleRow = false; _ttlIsLabel = false; _ttlIsVehicle = false;
     }
@@ -137,6 +144,12 @@ export function parseERN(text, { lang: _lang = 'en' } = {}) {
                 if (m >= 0) _pendingNotes.push({ ci: buildXtoIdx()[parseInt(f[1])] ?? parseInt(f[1]), ri: parseInt(f[2]), maxWait: m });
                 break;
             }
+            case '#KNP': // a knutepunkt on a row (interchanges spec 2026-10-31)
+                _pendingHubs.push({ ri: parseInt(f[1]), hub: decodeHub(f) });
+                break;
+            case '#KNL': // a picked trip at a knutepunkt, and its approved link (empty: picked, no link yet)
+                _pendingNotes.push({ ci: buildXtoIdx()[parseInt(f[1])] ?? parseInt(f[1]), ri: parseInt(f[2]), hubLink: decodeLink(f) });
+                break;
             case '#OFF': // Offentlig
                 rs.isPublic = (f[1]||'').trim() !== '0';
                 break;

@@ -47,7 +47,7 @@ function shifted(col, offset) {
     if (!timed(c)) return c;
     const v = abs(c) + offset;
     const d = Math.floor(v / 1440);
-    return { ...c, time: hhmm(v - d * 1440), dayOffset: d, interchange: null };
+    return { ...c, time: hhmm(v - d * 1440), dayOffset: d, interchange: null, hubLink: null };
   });
   return copy;
 }

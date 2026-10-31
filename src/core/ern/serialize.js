@@ -1,4 +1,5 @@
 // ERN serializer, ported from Nepos 1.5.7 (nepos.html lines 2720–2809). See docs/ern/ern-format.md.
+import { encodeHub, encodeLink } from '../interchanges/hub.js';
 import { ernCodeFor } from '../modes.js';
 import { servedRows, destKey } from '../destinations.js';
 import { normalizeBooking, toBits, BOOKING_METHODS, BUY_WHEN } from '../booking.js';
@@ -180,6 +181,9 @@ export function serializeERN(rs, routeCode, { delivery = {}, orgs = [] } = {}) {
             // A guaranteed interchange's maximum wait time, in minutes, at its cell (#MVT)
             grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => { const ix = col.cells[ri]?.interchange; if (ix?.maxWait != null) lines.push(`#MVT;${ci};${ri};${ix.maxWait}`); }));
             grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => bookingOf(col.cells[ri]?.booking, ci, ri)));
+            // Knutepunkter (#KNP) on their rows, then the picked trips and their links (#KNL) on our cells
+            grid.stops.forEach((stop, ri) => { if (stop.hub) lines.push(`#KNP;${ri};${encodeHub(stop.hub, esc)}`); });
+            grid.stops.forEach((stop, ri) => grid.cols.forEach((col, ci) => { const l = col.cells[ri]?.hubLink; if (l && stop.hub) lines.push(`#KNL;${ci};${ri};${encodeLink(l)}`); }));
             lines.push(...(dskLines.get(grid) ?? []));
         }
     }

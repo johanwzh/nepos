@@ -42,11 +42,11 @@ export function copiesAtInterval(col, interval, lastStart) {
       dates: moveDates(col.dates, copyDay - startDay), // its own dates move with it
       cells: col.cells.map((/** @type {any} */ c) => {
         if (!c) return null;
-        if (!timed(c)) return { ...c, interchange: null, dates: moveDates(c.dates, copyDay - startDay) };
+        if (!timed(c)) return { ...c, interchange: null, hubLink: null, dates: moveDates(c.dates, copyDay - startDay) };
         const rel = abs(c) + shift - base;
         const dayOffset = Math.floor(rel / 1440);
         const m = rel - dayOffset * 1440;
-        return { ...c, time: String(Math.floor(m / 60)).padStart(2, '0') + String(m % 60).padStart(2, '0'), dayOffset, interchange: null, dates: moveDates(c.dates, copyDay - startDay) };
+        return { ...c, time: String(Math.floor(m / 60)).padStart(2, '0') + String(m % 60).padStart(2, '0'), dayOffset, interchange: null, hubLink: null, dates: moveDates(c.dates, copyDay - startDay) };
       }),
     });
   }
