@@ -8,6 +8,8 @@ import { routeWithTiles } from './router-core.js';
 import { encodePolyline, haversineM } from './geometry.js';
 import { MOVED_M } from '../core/link-state.js';
 import { tablePatterns, patternStates, pruneLineLinks } from '../core/route-patterns.js';
+import { profileFor } from './profiles.js';
+import { rulesFor } from './rules.js';
 
 /** @typedef {import('../core/link-pairs.js').QuayRef} QuayRef */
 /** @typedef {import('../core/link-state.js').SavedLink} SavedLink */
@@ -40,6 +42,8 @@ const isLink = (/** @type {any} */ l) => l?.status === 'OK';
  */
 export function createRoutingSession({ code, rs, setId, calendars, lineLinks, quayInfo, router, tiles, now = () => new Date(), onProgress }) {
   const patterns = tablePatterns(rs, { calendars, quayInfo, setId });
+  /** The tile set the line routes on (routing for all modes): its tiles source and router are made for it by the caller. */
+  const set = rulesFor(profileFor(rs?.mode ?? '', rs?.submode ?? '') ?? 'bus').set;
   const byId = new Map(patterns.map((p) => [p.id, p]));
   let file = lineLinks;
   let publishedBuilt = '';
@@ -123,7 +127,7 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
       const s = r.snaps[at[i]];
       if (!snaps[q.quayId] || s.refLost) snaps[q.quayId] = { way: s.way, lon: s.lon, lat: s.lat, along: s.along, off: s.off, road: s.road };
     });
-    const tilesOf = { set: /** @type {'road'} */ ('road'), built: manifest?.built ?? '', dataDate: manifest?.dataDate ?? '',
+    const tilesOf = { set, built: manifest?.built ?? '', dataDate: manifest?.dataDate ?? '',
       hashes: Object.fromEntries([...loaded].sort().map((k) => [k, manifest?.tiles[k]?.hash ?? ''])) };
     keys.forEach((key, k) => {
       const leg = r.legs[k], flags = r.flags?.[k] ?? [];

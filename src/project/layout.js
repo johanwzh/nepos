@@ -11,7 +11,9 @@ export const ROUTES_DIR = 'data/routes';
 export const BACKUPS_DIR = 'data/backups';
 export const LINKS_DIR = 'data/links'; // routed links, one file per line (2.6)
 export const CACHE_DIR = 'cache'; // downloads Nepos can fetch again; can be deleted at any time
-export const ROUTING_CACHE_DIR = 'cache/routing/road';
+/** A routing tile set's cache (routing for all modes, 2026-11-01: one folder per set; road stays where it was). @param {string} set */
+export const routingCacheDir = (set) => `cache/routing/${set}`;
+export const ROUTING_CACHE_DIR = routingCacheDir('road');
 export const EXPORTS_DIR = 'exports'; // generated NeTEx deliveries; can be deleted at any time
 export const SETTINGS_FILE = 'private/settings.json';
 export const SECRETS_FILE = 'private/secrets.json';

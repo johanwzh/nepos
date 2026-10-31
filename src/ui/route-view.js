@@ -11,7 +11,8 @@ import { onToolChange, setTool, setLeaveGuard, setToolAvailable, setToolEsc, act
 import { createMapView } from './map-view.js';
 import { quayInfo } from './quays.js';
 import { lineState } from './line-info.js';
-import { isRoutedLine } from '../routing/profiles.js';
+import { isRoutedLine, profileFor } from '../routing/profiles.js';
+import { rulesFor } from '../routing/rules.js';
 import { decodePolyline } from '../routing/geometry.js';
 import { createRoutingSession } from '../routing/session.js';
 import { createRoutingClient } from '../routing/client.js';
@@ -30,8 +31,11 @@ import { pruneLineLinks } from '../core/route-patterns.js';
 
 /** The real session: the table set's patterns, the router worker, the project's tile cache. @type {SessionFactory} */
 function defaultSession({ code, rs, setId, onProgress }) {
+  // the line's network (routing for all modes): its worker and its tile set
+  const profile = profileFor(rs?.mode ?? '', rs?.submode ?? '') ?? 'bus';
   return createRoutingSession({ code, rs, setId, onProgress, calendars: app.calendars, lineLinks: app.lineLinks.get(code) ?? emptyLineLinks(code), quayInfo,
-    router: createRoutingClient(), tiles: createTileSource({ fs: /** @type {any} */ (app.fs), baseUrl: app.settings.routingTilesUrl || DEFAULT_SETTINGS.routingTilesUrl }) });
+    router: createRoutingClient(undefined, profile),
+    tiles: createTileSource({ fs: /** @type {any} */ (app.fs), baseUrl: app.settings.routingTilesUrl || DEFAULT_SETTINGS.routingTilesUrl, set: rulesFor(profile).set }) });
 }
 
 /** @type {SessionFactory} */

@@ -19,7 +19,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   tileAttribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   // Routing (2.6): the published road graph tiles (nepos-tiles), cached in the project's cache/routing/road/.
-  routingTilesUrl: 'https://johanwzh.github.io/nepos-tiles/road/',
+  routingTilesUrl: 'https://johanwzh.github.io/nepos-tiles/',
   /** Automatic routing (routing editor, 2026-10-31): Ruting offers Update all, which routes and accepts every pattern */
   autoRoute: false,
 });

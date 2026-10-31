@@ -14,7 +14,7 @@ describe('settings', () => {
   });
 
   it('has the published road tiles as the routing tiles address (2.6)', () => {
-    expect(DEFAULT_SETTINGS.routingTilesUrl).toBe('https://johanwzh.github.io/nepos-tiles/road/');
+    expect(DEFAULT_SETTINGS.routingTilesUrl).toBe('https://johanwzh.github.io/nepos-tiles/');
   });
 
   it('fills in missing keys and keeps unknown ones', async () => {
