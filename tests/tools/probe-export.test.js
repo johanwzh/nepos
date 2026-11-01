@@ -42,6 +42,13 @@ describe('the export probe', () => {
     expect(stats.interchanges).toBe(1);
   });
 
+  it('a line not exported (#EKS;0) is left out of what it expects (PRT VY190, 2026-11-01)', () => {
+    const off = text.replace('#RUT;-1;50;A - C;;1;', '#RUT;-1;51;A - C;;1;\r\n#EKS;0');
+    const { errors, stats } = probeExport({ files: exported(), project: { ...project, routes: [{ code: '50', text }, { code: '51', text: off }] } });
+    expect(errors).toEqual([]);
+    expect(stats.expected).toBe(5);
+  });
+
   it('catches a wrong day offset', () => {
     const { errors } = probeExport({ files: broken('<DepartureDayOffset>1</DepartureDayOffset>', '<DepartureDayOffset>2</DepartureDayOffset>'), project });
     expect(errors.some((e) => /departs .*\+2 in the export/.test(e))).toBe(true);

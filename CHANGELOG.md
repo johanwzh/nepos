@@ -6,7 +6,7 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 **New features**
 
-- **Routing:** **Ruting** (Alt+L, bus lines) is a view of its own in place of the timetable: the line's journey
+- **Routing:** **Routing** (Alt+L, bus lines) is a view of its own in place of the timetable: the line's journey
   patterns as small pictures framed red (not routed), orange (to check: a stop moved in NSR, newer map data, another
   stop on a row) or green; the selected pattern's stops beside a large map with the stops' names; and an info pane
   for the table set, the pattern and the selected leg. The stop list shows every row of the table, each stop numbered
@@ -18,9 +18,9 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   comes from Nepos's own road tiles (nepos-tiles, rebuilt monthly) and is kept in the project's `cache/`, so routing
   works offline where it has run before. A link no trip uses any more is not exported but kept until you remove it
   (**Remove unused**), so fixing a typo in the timetable brings the same route back.
-- **Speed strip:** on a bus line a routed leg is measured along the road (the status bar says "langs veien" or
-  "luftlinje"); the colours still follow the straight line, as the speed limits and the export check do.
-- **Map:** on a bus line the selected trip's legs have Ruting's colours: along the routed road, orange where a stop has
+- **Speed strip:** on a bus line a routed leg is measured along the road (the status bar says "by road" or
+  "straight line"); the colours still follow the straight line, as the speed limits and the export check do.
+- **Map:** on a bus line the selected trip's legs have Routing's colours: along the routed road, orange where a stop has
   moved, red dashed where there is no route, and a stop on a leg without a route is a red dot. While you pick a stop,
   a note says how close to zoom before stops (and then their platforms) show.
 - **Overview:** the network follows the routed roads, and shows only the main stops (bold in a timetable), as small dots.
@@ -28,28 +28,27 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   quay (and the other way round); other modes use their own stops.
 - **Export:** each pattern whose legs are all routed gets its ServiceLinks (per line); legs not routed or out of date
   (a stop moved more than 5 m) are a warning in the check, never an error. The old routing (off since 2.3) is removed.
-- **Lines:** a Ruting column shows how many of each bus line's journey patterns are routed, and how many to check.
-- **Tabs:** **Oppgaver** (Tasks, Alt+1) is a tab of its own, the first one and where a project opens: what needs you
-  today, as Oversikt's to-do part was. The other tabs move one up (Rediger rutetabell Alt+2 … Eksport Alt+6), and
-  Oversikt is now **Analyse** (Alt+7) with two sub-tabs, **Statistikk** and **Nettverkskart**.
-- **Analyse → Statistikk:** the plan's numbers as a receipt, for
+- **Manage lines:** a Routing column shows how many of each bus line's journey patterns are routed, and how many to check.
+- **Tabs:** **Tasks** (Alt+1) is a tab of its own, the first one and where a project opens: what needs you today, as
+  Overview's to-do part was. The other tabs move one up (Edit timetable Alt+2 … Export Alt+6), and Overview is now
+  **Analysis** (Alt+7) with two sub-tabs, **Statistics** and **Network map**.
+- **Analysis → Statistics:** the plan's numbers as a receipt, for
   the whole project, an authority or an operator (a tree on the left). Scope per mode (lines, trips, departures,
   stops), the routed network per routing group, production planned / done / remaining with average speed, per fuel
   (km, hours, seat-km), accessibility (low floor by km, booking by departures, each its own bar), per day type, vehicles on the road at once (per 15 minutes) and
-  production through the period. km counts only where every stretch is routed; missing data is a grey "Ukjent" row in
+  production through the period. km counts only where every stretch is routed; missing data is a grey "Unknown" row in
   the sum, never a warning. Pick a period, or everything planned. **Download as Excel** saves
   `analyse/<time> <name>.xlsx` in the project; **Copy as plain text** puts the figures on the clipboard.
-- **Analyse → Nettverkskart:** the network for the level picked on Statistikk, with the trips moving on it at a date and time (a jog and a slider in 10-second steps, ▶ at a
-  plan-minute per 0.6 s, ×5 or ×20 faster): a dot per trip gliding along the road, a ring while it waits. Switch back to Statistikk at any time; there is
+- **Analysis → Network map:** the network for the level picked on Statistics, with the trips moving on it at a date and time (a jog and a slider in 10-second steps, ▶ at a
+  plan-minute per 0.6 s, ×5 or ×20 faster): a dot per trip gliding along the road, a ring while it waits. Switch back to Statistics at any time; there is
   nothing to close.
 - **Routing for every mode:** rail, tram, metro, boats and ferries, cableways, funiculars and lifts are routed along
   OpenStreetMap like buses (air is not): each network is its own map data set from nepos-tiles, cached in
   `cache/routing/<set>/`. Trains, trams and cableways never turn sharply at a switch; a ferry quay may lie further from
-  the route (up to 500 m, flagged past 170 m). Ruting, Linjer's Ruting column, the map, the speed strip, Analyse's km
+  the route (up to 500 m, flagged past 170 m). Routing, the Routing column in Manage lines, the map, the speed strip, Analysis's km
   and the export's ServiceLinks treat these lines as they treat bus lines. The routing address in the settings is now
   the nepos-tiles root (an old `…/road/` address still works).
-- **Table sets:** a new table set you do not name is called Tab1, Tab2 … (the first number not taken), not "Uten
-  navn"; type over it as before.
+- **Table sets:** a new table set you do not name is called Tab1, Tab2 … (the first number not taken), not "Unnamed"; type over it as before.
 
 **Bug fixes**
 
@@ -60,7 +59,7 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   data at once and fills the cache in the background; the info pane says "Routing…" once the download is done.
   Each Route fetches only the map data its own pattern needs (a short branch fetched the whole line's), and map data
   fetched once is kept while the page is open.
-- **Registrer stopp:** the map was dimmed and locked like the rest of the page while the tool was on; it stays usable now.
+- **Record stops:** the map was dimmed and locked like the rest of the page while the tool was on; it stays usable now.
 
 ## 2.5.1 — 2026-10-30
 

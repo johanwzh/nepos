@@ -128,6 +128,7 @@ export function expectedTrips({ codespace: cs, routes, calendars }) {
   const parsed = [];
   for (const { code, text } of routes) {
     const rs = expandRoute(parseERN(text));
+    if (rs.exported === false) continue; // Eksporteres off (#EKS;0): not in the export, so nothing to expect
     parsed.push({ code, rs });
     const uids = new Map();
     byUid.set(code, uids);
