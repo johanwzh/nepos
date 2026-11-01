@@ -57,10 +57,16 @@ export function readExport(files) {
   const jpPoints = new Map();
   /** @type {Map<string, string>} StopPointInJourneyPattern → ScheduledStopPoint */
   const spOf = new Map();
+  /** StopPointInJourneyPatterns where nobody may get off, or on (ForAlighting / ForBoarding false) @type {Set<string>} */
+  const noAlight = new Set(), noBoard = new Set();
   for (const { id, body } of blocks(all, 'JourneyPattern')) {
     const pts = blocks(body, 'StopPointInJourneyPattern');
     jpPoints.set(id, pts.map((p) => p.id));
-    for (const p of pts) spOf.set(p.id, /** @type {string} */ (refOf(p.body, 'ScheduledStopPointRef')));
+    for (const p of pts) {
+      spOf.set(p.id, /** @type {string} */ (refOf(p.body, 'ScheduledStopPointRef')));
+      if (val(p.body, 'ForAlighting') === 'false') noAlight.add(p.id);
+      if (val(p.body, 'ForBoarding') === 'false') noBoard.add(p.id);
+    }
   }
   /** @type {Map<string, string>} Notice → text */
   const noticeText = new Map(blocks(all, 'Notice').map(({ id, body }) => [id, val(body, 'Text') ?? '']));
@@ -103,8 +109,9 @@ export function readExport(files) {
     const refs = blocks(body, 'ServiceLinkInJourneyPattern').map((l) => /** @type {string} */ (refOf(l.body, 'ServiceLinkRef')));
     if (refs.length) jpLinks.set(id, refs);
   }
-  const interchanges = blocks(all, 'ServiceJourneyInterchange').map(({ id, body }) => ({ id, from: refOf(body, 'FromJourneyRef'), to: refOf(body, 'ToJourneyRef'), fromPt: refOf(body, 'FromPointRef'), toPt: refOf(body, 'ToPointRef') }));
-  return { ids, duplicates, refs, quayOf, jpPoints, spOf, notesOn, sjs, daysOf, dsjDuplicates, interchanges, links, jpLinks };
+  const interchanges = blocks(all, 'ServiceJourneyInterchange').map(({ id, body }) => ({ id, from: refOf(body, 'FromJourneyRef'), to: refOf(body, 'ToJourneyRef'), fromPt: refOf(body, 'FromPointRef'), toPt: refOf(body, 'ToPointRef'),
+    fromVisit: Number(val(body, 'FromVisitNumber') ?? 1), toVisit: Number(val(body, 'ToVisitNumber') ?? 1) }));
+  return { ids, duplicates, refs, quayOf, jpPoints, spOf, noAlight, noBoard, notesOn, sjs, daysOf, dsjDuplicates, interchanges, links, jpLinks };
 }
 
 /**
@@ -242,10 +249,14 @@ export function probeExport({ files, project }) {
     if (!x.daysOf.get(id)?.length) errors.push(`${id}: runs on no day (no DatedServiceJourney)`);
   }
   for (const ix of x.interchanges) {
-    for (const [sj, pt, side] of /** @type {const} */ ([[ix.from, ix.fromPt, 'from'], [ix.to, ix.toPt, 'to']])) {
+    for (const [sj, pt, visit, side] of /** @type {const} */ ([[ix.from, ix.fromPt, ix.fromVisit, 'from'], [ix.to, ix.toPt, ix.toVisit, 'to']])) {
       const j = sj ? x.sjs.get(sj) : undefined;
       if (!j) { errors.push(`${ix.id}: its ${side} journey is not in the export`); continue; }
-      if (!j.pts.some((p) => x.spOf.get(p.sp) === pt)) errors.push(`${ix.id}: the ${side} journey does not call at ${pt}`);
+      // the visit the interchange means (VisitNumber, default 1): the feeder must let people off there, ours on (as Antu checks)
+      const call = j.pts.filter((p) => x.spOf.get(p.sp) === pt)[visit - 1];
+      if (!call) { errors.push(`${ix.id}: the ${side} journey does not call at ${pt}${visit > 1 ? ` a ${visit}. time` : ''}`); continue; }
+      if (side === 'from' && x.noAlight.has(call.sp)) errors.push(`${ix.id}: passengers cannot get off the feeder at ${pt} (visit ${visit})`);
+      if (side === 'to' && x.noBoard.has(call.sp)) errors.push(`${ix.id}: passengers cannot get on our journey at ${pt} (visit ${visit})`);
     }
   }
 

@@ -9,8 +9,9 @@ import { stopLocalId } from '../quays.js';
 import { uuid5 } from '../uuid5.js';
 import { hubState } from '../interchanges/hub.js';
 import { addDays } from '../calendars.js';
+import { cellToMins } from '../interpolate.js';
 
-/** @typedef {Map<string, Map<string, { sjId: string, calls: { ri: number, stopId: string }[], days: Set<string> }[]>>} JourneyIndex line code → trip uid → its written variants */
+/** @typedef {Map<string, Map<string, { sjId: string, calls: { ri: number, stopId: string, arr: number | null }[], days: Set<string> }[]>>} JourneyIndex line code → trip uid → its written variants */
 
 /**
  * Every ServiceJourney the line files write, by line and trip uid; the same loop as genLineXml.
@@ -21,7 +22,7 @@ export function journeyIndex(cs, routes, colDays) {
   /** @type {JourneyIndex} */
   const out = new Map();
   for (const { code, rs } of routes) {
-    /** @type {Map<string, { sjId: string, calls: { ri: number, stopId: string }[], days: Set<string> }[]>} */
+    /** @type {Map<string, { sjId: string, calls: { ri: number, stopId: string, arr: number | null }[], days: Set<string> }[]>} */
     const byTrip = new Map();
     (rs.tableSets ?? []).forEach((/** @type {any} */ set, /** @type {number} */ di) => {
       for (const per of (rs.periods ?? []).filter((/** @type {any} */ p) => p.setId === set.id)) {
@@ -31,7 +32,7 @@ export function journeyIndex(cs, routes, colDays) {
             // As genLineXml: a variant with no days is not written, so it must not be referred to (final review I1)
             if (v.calls.length < 2 || !v.days.length || !col.uid) continue;
             const list = byTrip.get(col.uid) ?? [];
-            list.push({ sjId: variantSjIdOf(cs, sjIdFor(cs, code, col, di, per, ci), v), calls: v.calls.map((c) => ({ ri: c.ri, stopId: c.stopId })), days: new Set(v.days) });
+            list.push({ sjId: variantSjIdOf(cs, sjIdFor(cs, code, col, di, per, ci), v), calls: v.calls.map((c) => ({ ri: c.ri, stopId: c.stopId, arr: cellToMins(c.arrCell) ?? cellToMins(c.depCell) })), days: new Set(v.days) });
             byTrip.set(col.uid, list);
           }
         });
@@ -40,6 +41,23 @@ export function journeyIndex(cs, routes, colDays) {
     out.set(code, byTrip);
   }
   return out;
+}
+
+/**
+ * Which visit to its stop a call is (1: the first time the journey calls there). NeTEx's From/ToVisitNumber tell a
+ * stop called at twice apart, as on a boat that goes out and back (Antu, user 2026-11-01).
+ * @param {{ stopId: string }[]} calls @param {number} k
+ */
+const visitOf = (calls, k) => calls.slice(0, k + 1).filter((c) => c.stopId === calls[k].stopId).length;
+
+/**
+ * The feeder's arriving call at the link's stop: never its first call (nobody gets off where a trip starts); the one at
+ * the link's arrival time when the stop is called at more than once. @param {{ stopId: string, arr: number | null }[]} calls
+ * @param {{ stopId?: string, arr?: number }} link @returns {number} -1: none
+ */
+function arrivingCall(calls, link) {
+  const at = calls.map((c, k) => k).filter((k) => k > 0 && calls[k].stopId === link.stopId);
+  return at.find((k) => calls[k].arr === link.arr) ?? at[at.length - 1] ?? -1;
 }
 
 /** Two variants run on a common day, or on neighbouring days (a feeder the evening before our trip after midnight). @param {Set<string>} a @param {Set<string>} b */
@@ -68,16 +86,20 @@ export function hubInterchangesXml(cs, code, rs, journeys) {
         // Every variant of ours that leaves the hub, with every variant of the feeder that arrives there on one of its
         // days: a time switched off on some dates splits a trip, and the promise holds on those days too (final review I2)
         const tos = journeys.get(code)?.get(col.uid)?.filter((v) => v.calls.some((c) => c.ri === ri)) ?? [];
-        const froms = journeys.get(link.line)?.get(link.trip ?? '')?.filter((v) => v.calls.some((c) => c.stopId === link.stopId)) ?? [];
+        const froms = journeys.get(link.line)?.get(link.trip ?? '')?.filter((v) => arrivingCall(v.calls, link) >= 0) ?? [];
         const walk = hub.walk > 0 ? `\n        <MinimumTransferTime>PT${hub.walk}M</MinimumTransferTime>` : '';
         for (const to of tos) for (const from of froms) {
           if (!shareDay(to.days, from.days)) continue;
+          const fromVisit = visitOf(from.calls, arrivingCall(from.calls, link));
+          const toVisit = visitOf(to.calls, to.calls.findIndex((c) => c.ri === ri));
+          const fromNo = fromVisit > 1 ? `\n        <FromVisitNumber>${fromVisit}</FromVisitNumber>` : '';
+          const toNo = toVisit > 1 ? `\n        <ToVisitNumber>${toVisit}</ToVisitNumber>` : '';
           out.push(`      <!-- knutepunkt: waits for line ${link.line} at ${stopLocalId(String(stop.stopId))} -->
       <ServiceJourneyInterchange id="${cs}:ServiceJourneyInterchange:${uuid5(`${to.sjId}|${from.sjId}|${stop.stopId}`)}" version="1">
         <Guaranteed>true</Guaranteed>${walk}
         <MaximumWaitTime>PT${hub.maxWait}M</MaximumWaitTime>
-        <FromPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(link.stopId ?? '')}"/>
-        <ToPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(String(stop.stopId))}"/>
+        <FromPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(link.stopId ?? '')}"/>${fromNo}
+        <ToPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(String(stop.stopId))}"/>${toNo}
         <FromJourneyRef ref="${from.sjId}"/>
         <ToJourneyRef ref="${to.sjId}" version="1"/>
       </ServiceJourneyInterchange>`);

@@ -89,4 +89,18 @@ describe('Knutepunkt links in the export', () => {
   it('a picked trip without a link writes nothing', () => {
     expect(ixs(build([{ code: 'OUR', rs: ours({ link: ';;;;' }) }, { code: 'F', rs: feeder() }]).our)).toEqual([]);
   });
+
+  it('a feeder that calls at the stop twice: FromVisitNumber says which visit it arrives at (Antu, user 2026-11-01)', () => {
+    const loop = parseERN(['#LEV;Test;TST', '#RUT;-1;2;Hub - Hub;;6;', '#TRA;Fram', '#PER;;;;;;', '#KAL;h1', '#TAB;0;;;;',
+      '#TUR;0;D;0;0;0;0', `#UID;${FEED_TRIP}`,
+      '#TRL;0;NSR:Quay:2;Hub;0;-1;-1;-1;0;-1', '#TRC;0;0850;0;0;0;0;0',
+      '#TRL;1;NSR:Quay:1;A;0;-1;-1;-1;0;-1', '#TRC;0;0900;0;0;0;0;0',
+      '#TRL;2;NSR:Quay:2;Hub;0;-1;-1;-1;0;-1', '#TRC;0;0952;0;0;0;0;0',
+      '#TRL;3;NSR:Quay:4;D;0;-1;-1;-1;0;-1', '#TRC;0;1010;0;0;0;0;0'].join('\r\n') + '\r\n');
+    const [ix] = ixs(build([{ code: 'OUR', rs: ours() }, { code: 'F', rs: loop }]).our);
+    expect(ix).toMatch(/<FromPointRef ref="TST:ScheduledStopPoint:NSR-Quay-2"\/>\s*<FromVisitNumber>2<\/FromVisitNumber>\s*<ToPointRef /);
+    expect(ix).not.toContain('ToVisitNumber');
+    // a feeder that calls there once needs no number
+    expect(ixs(build([{ code: 'OUR', rs: ours() }, { code: 'F', rs: feeder() }]).our)[0]).not.toContain('VisitNumber');
+  });
 });

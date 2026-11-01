@@ -146,6 +146,22 @@ describe('the export probe on Knutepunkt links', () => {
     expect(stats.interchanges).toBe(1);
   });
 
+  it('a feeder calling at the hub twice: clean with FromVisitNumber, caught without it (alighting at its first call is not allowed)', () => {
+    const loop = ['#LEV;Test;TST', '#RUT;-1;2;Hub - Hub;;6;', '#TRA;Fram', '#PER;;;;;;', '#KAL;h1', '#TAB;0;;;;',
+      '#TUR;0;D;0;0;0;0', `#UID;${FEED_TRIP}`,
+      '#TRL;0;NSR:Quay:2;Hub;0;-1;-1;-1;0;-1', '#TRC;0;0850;0;0;0;0;0',
+      '#TRL;1;NSR:Quay:1;A;0;-1;-1;-1;0;-1', '#TRC;0;0900;0;0;0;0;0',
+      '#TRL;2;NSR:Quay:2;Hub;0;-1;-1;-1;0;-1', '#TRC;0;0952;0;0;0;0;0',
+      '#TRL;3;NSR:Quay:4;D;0;-1;-1;-1;0;-1', '#TRC;0;1010;0;0;0;0;0'].join('\r\n') + '\r\n';
+    const proj = { ...hubProject, routes: [{ code: 'OUR', text: ours }, { code: 'F', text: loop }] };
+    const f = new Map(buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'OUR', rs: parseERN(ours) }, { code: 'F', rs: parseERN(loop) }], orgs: [], calendars: cal })
+      .map((x) => [x.name, x.xml]));
+    expect(probeExport({ files: f, project: proj }).errors).toEqual([]);
+    const name = /** @type {string} */ ([...f.keys()].find((n) => n.includes('-Line-OUR')));
+    f.set(name, /** @type {string} */ (f.get(name)).replace(/\s*<FromVisitNumber>2<\/FromVisitNumber>/, ''));
+    expect(probeExport({ files: f, project: proj }).errors.some((e) => e.includes('cannot get off'))).toBe(true);
+  });
+
   it('catches a Knutepunkt interchange missing from the export', () => {
     const f = files();
     const name = /** @type {string} */ ([...f.keys()].find((n) => n.includes('-Line-OUR')));
