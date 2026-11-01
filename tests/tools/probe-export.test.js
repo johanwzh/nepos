@@ -154,3 +154,14 @@ describe('the export probe on Knutepunkt links', () => {
     expect(errors.some((e) => e.includes('Knutepunkt') && e.includes(OUR_TRIP))).toBe(true);
   });
 });
+
+describe('the export probe on references across files', () => {
+  it('a reference with a version must point into its own file, as the XSD keyrefs demand (Antu, user 2026-11-01)', () => {
+    const files = new Map([
+      ['_TST-shared.xml', '<PublicationDelivery><ServiceJourney id="TST:ServiceJourney:1" version="1"/></PublicationDelivery>'],
+      ['TST-Line-A.xml', '<PublicationDelivery><X><FromJourneyRef ref="TST:ServiceJourney:1" version="1"/><ToJourneyRef ref="TST:ServiceJourney:1"/></X></PublicationDelivery>'],
+    ]);
+    const { errors } = probeExport({ files });
+    expect(errors.filter((e) => e.includes('version'))).toEqual(['TST-Line-A.xml: FromJourneyRef TST:ServiceJourney:1 has a version but is in another file (the XSD keyref fails)']);
+  });
+});

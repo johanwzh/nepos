@@ -211,6 +211,13 @@ export function probeExport({ files, project }) {
   const unresolved = [...new Set(x.refs.filter((r) => own.test(r) && !x.ids.has(r)))];
   for (const r of unresolved) errors.push(`reference to nothing: ${r}`);
   for (const d of x.dsjDuplicates) errors.push(`a trip twice on one day: ${d}`);
+  // The XSD's keyrefs match ref + version within one PublicationDelivery: a versioned reference must point into its own file
+  for (const [name, xml] of files) {
+    const here = new Set([...xml.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
+    for (const m of xml.matchAll(/<(\w+Ref) ref="([^"]+)" version="[^"]*"/g)) {
+      if (own.test(m[2]) && !here.has(m[2]) && x.ids.has(m[2])) errors.push(`${name}: ${m[1]} ${m[2]} has a version but is in another file (the XSD keyref fails)`);
+    }
+  }
   let maxOffset = 0, afterMidnight = 0, passingTimes = 0;
   for (const [id, sj] of x.sjs) {
     const pts = x.jpPoints.get(sj.jp) ?? [];

@@ -36,7 +36,9 @@ describe('Knutepunkt links in the export', () => {
     const { our } = build([{ code: 'OUR', rs: ours() }, { code: 'F', rs: feeder() }]);
     const [ix] = ixs(our);
     expect(ixs(our)).toHaveLength(1);
-    expect(ix).toContain(`<FromJourneyRef ref="TST:ServiceJourney:${FEED_TRIP}" version="1"/>`);
+    // the feeder's journey is in another line's file: no version, so the XSD's Journey_KeyRef (ref + version, within
+    // one file) does not apply to it (Antu, user 2026-11-01); our own journey is in this file and keeps its version
+    expect(ix).toContain(`<FromJourneyRef ref="TST:ServiceJourney:${FEED_TRIP}"/>`);
     expect(ix).toContain(`<ToJourneyRef ref="TST:ServiceJourney:${OUR_TRIP}" version="1"/>`);
     expect(ix).toContain('<FromPointRef ref="TST:ScheduledStopPoint:NSR-Quay-2"/>');
     expect(ix).toContain('<Guaranteed>true</Guaranteed>');
@@ -69,7 +71,7 @@ describe('Knutepunkt links in the export', () => {
     const split = feeder(['#UNT;0;2;20260107;16384;20260107;16384;0;0;']);
     const { our, all } = build([{ code: 'OUR', rs: ours() }, { code: 'F', rs: split }]);
     expect([...all.matchAll(/<ServiceJourney id="([^"]+)"/g)].length).toBe(3);
-    expect(ixs(our)[0]).toContain(`<FromJourneyRef ref="TST:ServiceJourney:${FEED_TRIP}" version="1"/>`);
+    expect(ixs(our)[0]).toContain(`<FromJourneyRef ref="TST:ServiceJourney:${FEED_TRIP}"/>`);
     // Off at the hub itself: only the variant that calls there can be referred to, and on that day there is none
     const offAtHub = feeder(['#UNT;0;1;20260105;16384;20260111;16384;0;0;']);
     expect(ixs(build([{ code: 'OUR', rs: ours() }, { code: 'F', rs: offAtHub }]).our)).toEqual([]);

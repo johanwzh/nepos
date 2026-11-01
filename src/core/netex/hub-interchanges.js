@@ -1,7 +1,9 @@
 // Knutepunkt links in the export (interchanges spec 2026-10-31, "Export"): a guaranteed ServiceJourneyInterchange in
 // our line's file, the feeder (another line of the delivery) as From, our trip as To. The feeder's ServiceJourney ID
 // comes from a delivery-wide index built with the line files' own ID rules, so the reference always points at a
-// journey the delivery writes; a link whose journeys are not both there is left out.
+// journey the delivery writes; a link whose journeys are not both there is left out. The feeder's journey is in another
+// line's file, so its reference has no version: the XSD's Journey_KeyRef (ref + version) only holds within one file
+// (Antu's schema check, user 2026-11-01).
 import { tripVariants, sjIdFor, variantSjIdOf } from './journeys.js';
 import { stopLocalId } from '../quays.js';
 import { uuid5 } from '../uuid5.js';
@@ -76,7 +78,7 @@ export function hubInterchangesXml(cs, code, rs, journeys) {
         <MaximumWaitTime>PT${hub.maxWait}M</MaximumWaitTime>
         <FromPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(link.stopId ?? '')}"/>
         <ToPointRef ref="${cs}:ScheduledStopPoint:${stopLocalId(String(stop.stopId))}"/>
-        <FromJourneyRef ref="${from.sjId}" version="1"/>
+        <FromJourneyRef ref="${from.sjId}"/>
         <ToJourneyRef ref="${to.sjId}" version="1"/>
       </ServiceJourneyInterchange>`);
         }
