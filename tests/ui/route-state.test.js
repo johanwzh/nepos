@@ -5,7 +5,7 @@ describe('route state', () => {
   it('starts a new route without a mode, with one table set and one period', () => {
     const rs = newRouteState('no');
     expect([rs.mode, rs.transportMode]).toEqual(['', 0]);
-    expect(rs.tableSets).toEqual([{ id: 1, name: '', uid: null }]);
+    expect(rs.tableSets).toEqual([{ id: 1, name: 'Tab1', uid: null }]);
     expect(rs.periods).toEqual([{ id: 2, setId: 1, calendarIds: [] }]);
     expect(gridKey(rs)).toBe('2:1');
     // a new line starts with a small grid to type into: 3 stops by 3 trips (user test 2026-10-16)
@@ -95,5 +95,27 @@ describe('reversing keeps the divider between the same two stops (48)', () => {
     rs.grids[`${rs.activePer}:${rs.activeSet}`].stops = [st('A'), st('B', true), st('B'), st('C')];
     const setId = addTableSet(rs, 'Retur', { reversed: true });
     expect(rs.grids[`${rs.activePer}:${setId}`].stops.map((/** @type {any} */ s) => s.isDwellArr)).toEqual([false, true, false, false]);
+  });
+});
+
+describe('a new table set has a name (backlog 50, user 2026-11-01)', () => {
+  it('an unnamed new set is Tab<n>, the first number not taken', () => {
+    const rs = newRouteState('no');
+    const b = addTableSet(rs, '', { reversed: false });
+    expect(rs.tableSets.find((s) => s.id === b).name).toBe('Tab2');
+    rs.tableSets[0].name = 'Oslo - Bergen';
+    const c = addTableSet(rs, '  ', { reversed: false });
+    expect(rs.tableSets.find((s) => s.id === c).name).toBe('Tab1');
+  });
+  it('a name the user typed is kept', () => {
+    const rs = newRouteState('no');
+    const b = addTableSet(rs, 'Bergen - Oslo', { reversed: true });
+    expect(rs.tableSets.find((s) => s.id === b).name).toBe('Bergen - Oslo');
+  });
+  it('a line that lost all its sets gets Tab1', () => {
+    const rs = newRouteState('no');
+    rs.tableSets = [];
+    fillMissingPeriod(rs);
+    expect(rs.tableSets[0].name).toBe('Tab1');
   });
 });

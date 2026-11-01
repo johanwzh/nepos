@@ -15,7 +15,7 @@ export const blankGrid = () => starterGrid();
 export function newRouteState(_lang) {
   return {
     routeName: '', publicCode: '', privateCode: '', mode: '', submode: '', brandingId: '', exported: true, isPublic: true, transportMode: 0,
-    tableSets: [{ id: 1, name: '', uid: null }],
+    tableSets: [{ id: 1, name: 'Tab1', uid: null }],
     periods: [{ id: 2, setId: 1, calendarIds: [] }],
     activeSet: 1, activePer: 2, nextId: 3,
     grids: { '2:1': starterGrid() },
@@ -32,7 +32,7 @@ export function gridOf(rs, per) { return rs.grids[`${per.id}:${per.setId}`] ?? (
 
 /** Make sure there is a table set, a period in the active set, and a grid for it. @param {any} rs */
 export function fillMissingPeriod(rs) {
-  if (!rs.tableSets?.length) { rs.tableSets = [{ id: rs.nextId++, name: '', uid: null }]; }
+  if (!rs.tableSets?.length) { rs.tableSets = [{ id: rs.nextId++, name: 'Tab1', uid: null }]; }
   if (!rs.tableSets.some((/** @type {any} */ s) => s.id === rs.activeSet)) rs.activeSet = rs.tableSets[0].id;
   if (!periodsOf(rs, rs.activeSet).length) rs.periods.push({ id: rs.nextId++, setId: rs.activeSet, calendarIds: [] });
   if (!periodsOf(rs, rs.activeSet).some((/** @type {any} */ p) => p.id === rs.activePer)) rs.activePer = periodsOf(rs, rs.activeSet)[0].id;
@@ -79,9 +79,20 @@ function reverseStops(stops) {
   return stops.slice().reverse().map((s, k) => ({ ...s, sep: k < n - 1 ? !!stops[n - 2 - k].sep : false, isDwellArr: k < n - 1 ? !!stops[n - 2 - k].isDwellArr : false }));
 }
 
+/**
+ * A name for a set the user did not name (backlog 50, user 2026-11-01): Tab1, Tab2 … the first not taken. It reads the
+ * same in both languages, and an unnamed set is easy to miss. @param {any} rs
+ */
+function tabName(rs) {
+  const taken = new Set(rs.tableSets.map((/** @type {any} */ s) => s.name));
+  let n = 1;
+  while (taken.has(`Tab${n}`)) n++;
+  return `Tab${n}`;
+}
+
 export function addTableSet(rs, name, { reversed, from = rs.activeSet }) {
   const setId = rs.nextId++;
-  rs.tableSets.push({ id: setId, name, uid: crypto.randomUUID() });
+  rs.tableSets.push({ id: setId, name: name.trim() || tabName(rs), uid: crypto.randomUUID() });
   for (const per of periodsOf(rs, from)) {
     const id = rs.nextId++;
     rs.periods.push({ id, setId, calendarIds: [...per.calendarIds] });

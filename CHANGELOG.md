@@ -48,6 +48,8 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   the route (up to 500 m, flagged past 170 m). Ruting, Linjer's Ruting column, the map, the speed strip, Analyse's km
   and the export's ServiceLinks treat these lines as they treat bus lines. The routing address in the settings is now
   the nepos-tiles root (an old `…/road/` address still works).
+- **Table sets:** a new table set you do not name is called Tab1, Tab2 … (the first number not taken), not "Uten
+  navn"; type over it as before.
 
 **Bug fixes**
 
