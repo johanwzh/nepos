@@ -262,7 +262,7 @@ På en dagkode:
 ### Kraftverktøy
 
 Nederst i linjenavigatoren står **kraftverktøyene**. Å se dem endrer ingenting; slår du et verktøy på (klikk, eller
-**Alt+J** / **Alt+I** / **Alt+L** / **Alt+K**), virker bare det verktøyet i tabellen — skriving, innliming og menyer er av, og resten av siden er dempet og låst (bare Lagre og Forkast virker). **Esc** slår det av. Med verktøyet av ser en blokk ut som vanlige kolonner, svakt skravert der du ikke kan skrive; med Virtuelle intervall på lyser alle blokkene opp.
+**Alt+J** / **Alt+I** / **Alt+L**), virker bare det verktøyet i tabellen — skriving, innliming og menyer er av, og resten av siden er dempet og låst (bare Lagre og Forkast virker). **Esc** slår det av. Med verktøyet av ser en blokk ut som vanlige kolonner, svakt skravert der du ikke kan skrive; med Virtuelle intervall på lyser alle blokkene opp.
 
 - **Tidsforskyver** — et hjul (joggen) som flytter de valgte tidene ett minutt per hakk (Shift: ti): dra **ned** for senere, opp for tidligere (også hjulet og piltastene). Tallet (+8 min) gjelder de valgte tidene; velger du andre, toner det ut og starter på 0.
 - **Virtuelle intervall** — dra en tur mot høyre for å gjenta den. Ett steg: en dialog der du skriver intervallet og
@@ -304,6 +304,7 @@ Nederst i linjenavigatoren står **kraftverktøyene**. Å se dem endrer ingentin
   mønster valgt viser Ruting hvor mange ubrukte strekninger som er beholdt, og **Fjern ubrukte** fjerner dem (Nepos
   spør først). **Linjer** viser hvor mange mønstre som er rutet, og eksportkontrollen varsler om strekninger
   som mangler. Kartdata © OpenStreetMap-bidragsytere.
+<!-- Knutepunkt: skjult i 2.6 til Antu støtter korrespondanser (bruker 2026-11-01)
 - **Knutepunkt** (**Alt+K**) — korrespondanser mellom linjer: turene på denne linjen venter på et stopp på en tur fra en
   annen linje i prosjektet (materen). Vi lover bare for vår egen linje: vår tur venter, aldri den andre. Knutepunkt er en
   egen visning i stedet for rutetabellen, som Ruting. Til venstre står alle stoppene i tabellsettet med en bryter; slå
@@ -321,6 +322,7 @@ Nederst i linjenavigatoren står **kraftverktøyene**. Å se dem endrer ingentin
   koblinger eksporteres, som garanterte korrespondanser. En tur med en godkjent kobling har en liten ⇄ i rutetabellen.
   Eksportkontrollen varsler når en kobling er endret, når materens linje ikke eksporteres, eller når stoppet på raden er
   byttet. Foreløpig bare mellom linjer i samme prosjekt; korrespondanser til andre kodeområder kommer senere.
+-->
 
 ### Visuell rutetabell (Alt+V)
 

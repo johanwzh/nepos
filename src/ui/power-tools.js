@@ -8,6 +8,7 @@
 import { t } from '../i18n/strings.js';
 import { jogDial } from './jog/jogDial.js';
 import { currentPage } from './shell.js';
+import { HUBS } from './features.js';
 
 /** @typedef {'' | 'jog' | 'intervals' | 'record' | 'route' | 'hub' | 'optimize'} ToolName */
 
@@ -16,8 +17,9 @@ const TOOLS = /** @type {{ name: ToolName, icon: string, label: string, key: str
   { name: 'intervals', icon: '⋯', label: 'ptIntervals', key: 'i' },
   { name: 'record', icon: '⊕', label: 'ptRecord', key: 'r' },
   { name: 'route', icon: '⛙', label: 'ptRoute', key: 'l' },
-  // Knutepunkt (2.6, interchanges spec 2026-10-31): our trips wait for feeders from other lines
-  { name: 'hub', icon: '⇄', label: 'ptHub', key: 'k' },
+  // Knutepunkt (2.6, interchanges spec 2026-10-31): our trips wait for feeders from other lines. Dev builds only until
+  // Antu handles interchanges (VisitNumber, other codespaces; user 2026-11-01)
+  { name: 'hub', icon: '⇄', label: 'ptHub', key: 'k', disabled: !HUBS },
   // Where the passing-seconds tools will live (backlog 87): shown, not wired
   { name: 'optimize', icon: '⚙', label: 'ptOptimize', key: '', disabled: true },
 ]);

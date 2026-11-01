@@ -3,6 +3,7 @@
 import { $ } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { VERSION } from '../version.js';
+import { HUBS } from './features.js';
 import CHANGELOG from '../../CHANGELOG.md?raw';
 
 export const GITHUB_URL = 'https://github.com/johanwzh/nepos';
@@ -18,7 +19,7 @@ function show(title, html) {
 }
 
 export function showShortcuts() {
-  const rows = /** @type {[string, string][]} */ (/** @type {unknown} */ (t('helpKeys')));
+  const rows = /** @type {[string, string][]} */ (/** @type {unknown} */ (t('helpKeys'))).filter(([k]) => HUBS || k !== 'Alt+K');
   show(t('helpShortcuts'), `<table class="help-keys">${rows.map(([k, what]) => `<tr><td><kbd>${esc(k)}</kbd></td><td>${esc(what)}</td></tr>`).join('')}</table>`);
 }
 

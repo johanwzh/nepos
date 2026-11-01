@@ -2,7 +2,7 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
-## 2.6.1 — not released yet
+## 2.6.0 — not released yet
 
 **New features**
 
@@ -48,15 +48,6 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   the route (up to 500 m, flagged past 170 m). Ruting, Linjer's Ruting column, the map, the speed strip, Analyse's km
   and the export's ServiceLinks treat these lines as they treat bus lines. The routing address in the settings is now
   the nepos-tiles root (an old `…/road/` address still works).
-- **Knutepunkt** (Alt+K, interchanges between lines): our trips can wait at a stop for a feeder from another line in the
-  project. The tool takes over the timetable like Ruting: every stop of the table set with a switch; for a stop that is
-  on, **what we wait for** (the stops for the transfer or a radius, a window before our departure, the maximum wait,
-  the walk, and the feeder's authority, operator, mode, line number and earlier stops); a **timeline** at the stop
-  where you pick our trips and see the feeders arrive; and **Forslag**, a proposal per trip (ny, uendret, endret,
-  borte, velg én, ingen treff) that you approve with **Godkjenn**. Only approved links are exported, as guaranteed
-  interchanges (our trip waits; the feeder never does). The hubs are saved in the line file (`#KNP`, `#KNL`); a
-  trip in the timetable with an approved link has a small ⇄. The export check warns when a link has changed, the
-  feeder's line is not exported, or the hub's stop has changed. Between lines of the same project only, for now.
 
 **Bug fixes**
 

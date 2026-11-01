@@ -171,7 +171,7 @@ export function expectedTrips({ codespace: cs, routes, calendars }) {
 }
 
 /**
- * The Knutepunkt interchanges the export should write (2.6.1), worked out as the spec says, not with the export's code:
+ * The Knutepunkt interchanges the export should write (2.6), worked out as the spec says, not with the export's code:
  * for each approved link on a hub row whose stop is unchanged, every variant of our trip that calls at the row with
  * every variant of the feeder's trip that calls at the link's stop, when they run on a common or neighbouring day.
  * @param {{ code: string, rs: any }[]} parsed @param {Map<string, Map<string, { id: string, label: string, calls: { ri: number, stopId: string }[], days: Set<string> }[]>>} byUid
@@ -287,7 +287,7 @@ export function probeExport({ files, project }) {
       }
     }
     for (const id of x.sjs.keys()) if (!exp.trips.has(id)) errors.push(`in the export but not in the timetable: ${id}`);
-    // Knutepunkt (2.6.1): each approved link's interchange, From the feeder To our trip
+    // Knutepunkt (2.6): each approved link's interchange, From the feeder To our trip
     const written = new Set(x.interchanges.map((ix) => `${ix.from}|${ix.to}`));
     for (const h of exp.hubs) if (!written.has(`${h.from}|${h.to}`)) errors.push(`Knutepunkt: ${h.label} — no interchange in the export (${h.to} ← ${h.from})`);
     const want = exp.interchanges + exp.hubs.length;

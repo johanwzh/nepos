@@ -122,7 +122,7 @@ describe('the export probe on routed links (2.6)', () => {
   });
 });
 
-// Knutepunkt (2.6.1): the probe works out the approved links' interchanges itself and finds each in the export
+// Knutepunkt (2.6): the probe works out the approved links' interchanges itself and finds each in the export
 describe('the export probe on Knutepunkt links', () => {
   const OUR_TRIP = '5f0c2e1a-1111-4aaa-8bbb-00000000000a', FEED_TRIP = '5f0c2e1a-1111-4aaa-8bbb-00000000000f';
   const cal = [{ id: 'h1', name: 'Vår', ranges: /** @type {[string, string][]} */ ([['20260105', '20260111']]) }];
