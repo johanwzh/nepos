@@ -84,11 +84,11 @@ function build() {
   scene = { codes, facts, colour: new Map(codes.map((c, i) => [c, PALETTE[i % PALETTE.length]])), legs, last: Math.max(m.slots.length * 15, 1440) };
   second = (m.peak.count ? m.peak.slot * 15 : 7 * 60) * 60;
   const el = root();
-  el.innerHTML = `<div class="nv-top"><span class="nv-title">${esc(t('nvTitle'))}</span><span>${esc(node.name)}</span>`
+  el.innerHTML = `<div class="nv-top"><span class="nv-title">${esc(node.name)}</span>`
     + `<input type="date" class="nv-date" value="${iso(date)}"><span class="nv-jog"></span>`
     + `<input type="range" class="nv-time" min="0" max="${scene.last * 60}" step="${STEP}" value="${second}"><button type="button" class="pop-btn nv-play" title="${esc(t('nvPlay'))}">▶</button>`
     + `<button type="button" class="an-chip nv-speed" title="${esc(t('nvSpeed'))}">×${speed}</button>`
-    + `<span class="nv-at"></span><button type="button" class="rv-x nv-close" title="${esc(t('nvClose'))}">✕</button></div><div class="nv-map"></div>`;
+    + `<span class="nv-at"></span></div><div class="nv-map"></div>`;
   const dial = jogDial({ size: 26, detents: true, pxPerNotch: 8, onNudge: (/** @type {1 | -1} */ dir, /** @type {boolean} */ coarse) => { stop(); setSecond(second + dir * (coarse ? 60 : STEP)); } });
   el.querySelector('.nv-jog')?.append(dial);
   const host = /** @type {HTMLElement} */ (el.querySelector('.nv-map'));
@@ -111,36 +111,32 @@ function build() {
   placeTrips();
 }
 
-/** Open the view for the node on Analyse. */
+/** Draw the map for the node picked on Statistikk (Analyse → Nettverkskart, user 2026-11-01: a sub-page, not a lock-in). */
 export function openNetworkView() {
   isOpen = true;
-  document.body.classList.add('network-on');
-  root().hidden = false;
   build();
 }
 
-function close() {
+/** Remove the map and its WebGL context (Statistikk is shown, or another page). */
+export function closeNetworkView() {
   isOpen = false;
   stop();
-  document.body.classList.remove('network-on');
-  const el = root();
-  el.hidden = true;
-  el.replaceChildren();
+  root().replaceChildren();
   try { view?.destroy(); } catch { /* already gone */ }
   view = null; scene = null;
 }
 
+export const isNetworkOpen = () => isOpen;
+
 let wired = false;
 export function initNetworkView() {
-  if (isOpen) close();
+  if (isOpen) closeNetworkView();
   if (wired) return;
   wired = true;
-  document.addEventListener('keydown', (e) => { if (isOpen && e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } }, true);
   document.addEventListener('click', (e) => {
     const el = /** @type {HTMLElement} */ (e.target);
     if (!isOpen || !el.closest?.('#network-view')) return;
-    if (el.closest('.nv-close')) close();
-    else if (el.closest('.nv-play')) {
+    if (el.closest('.nv-play')) {
       if (timer) { stop(); return; }
       /** @type {HTMLElement} */ (el.closest('.nv-play')).textContent = '⏸';
       timer = setInterval(() => { if (second >= (scene?.last ?? 1440) * 60) stop(); else setSecond(second + STEP * speed); }, TICK);

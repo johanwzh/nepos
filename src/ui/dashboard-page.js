@@ -100,9 +100,8 @@ function greeting() {
 
 // ─── The page ───────────────────────────────────────────────────────────────
 export function renderDashboardPage() {
-  if (currentPage() !== 'home') return;
+  if (currentPage() !== 'tasks') return;
   const body = $('home-body');
-  if (body.hidden) return; // Analyse is shown (Oversikt's sub-pages, 2026-10-31)
   if (!app.meta) { body.innerHTML = `<p class="home-empty">${esc(t('homeNoProject'))}</p>`; return; }
   if (!app.routes.length) { body.innerHTML = `<p class="home-empty">${esc(t('homeNoLines'))}</p>`; return; }
   const lines = dashLines();

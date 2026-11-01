@@ -1,4 +1,4 @@
-// Analyse (spec 2026-10-31): Oversikt's second sub-page, the plan's numbers as a receipt. A tree on the left
+// Analyse (spec 2026-10-31; its own tab with Statistikk and Nettverkskart, user 2026-11-01): the plan's numbers as a receipt. A tree on the left
 // (project → authority → operator); for the node picked, the same blocks: scope per mode, the routed network, production,
 // per fuel, per day type, vehicles on the road at once, production through the period, and the node's children. It is
 // not validation: missing data is a grey Ukjent row that is part of the sum. Exports: Excel into the project's
@@ -16,8 +16,7 @@ import { analysisTree, findNode } from '../core/analysis/tree.js';
 import { inMotion, perDate, busiestDate } from '../core/analysis/time.js';
 import { receiptText, int, dec1, clock, pct } from '../core/analysis/text.js';
 import { buildXlsx } from '../core/xlsx.js';
-import { renderDashboardPage } from './dashboard-page.js';
-import { openNetworkView } from './network-view.js';
+import { openNetworkView, closeNetworkView, isNetworkOpen } from './network-view.js';
 
 /** @typedef {import('../core/analysis/facts.js').TripFact} TripFact */
 /** @typedef {import('../core/analysis/receipt.js').Receipt} Receipt */
@@ -25,11 +24,11 @@ import { openNetworkView } from './network-view.js';
 /** @typedef {import('../core/analysis/tree.js').TreeNode} TreeNode */
 
 const KEY = 'nepos.analyse';
-/** The node is remembered; the sub-page is not: Oversikt lands on Gjøremål (spec; final review M4). @type {{ sub: 'todo' | 'analyse', node: string }} */
-let saved = { sub: 'todo', node: 'project' };
-try { saved = { ...saved, node: JSON.parse(localStorage.getItem(KEY) ?? '{}').node ?? 'project', sub: 'todo' }; } catch { /* no storage: defaults */ }
+/** The node is remembered; the sub-page is not: Analyse lands on Statistikk (spec; final review M4). @type {{ sub: 'stats' | 'network', node: string }} */
+let saved = { sub: 'stats', node: 'project' };
+try { saved = { ...saved, node: JSON.parse(localStorage.getItem(KEY) ?? '{}').node ?? 'project', sub: 'stats' }; } catch { /* no storage: defaults */ }
 const keep = () => { try { localStorage.setItem(KEY, JSON.stringify({ node: saved.node })); } catch { /* no storage */ } };
-/** The project Analyse was last shown for: another one opens on Gjøremål. @type {any} */
+/** The project Analyse was last shown for: another one opens on Statistikk. @type {any} */
 let shownFor = null;
 /** @type {Period} */
 let period = null;
@@ -185,14 +184,17 @@ function pathTo(tree, id) {
 }
 
 export function renderAnalysisPage() {
-  const tabs = $('home-tabs');
+  const tabs = $('home-tabs'), page = $('home-analyse'), net = $('network-view');
+  if (!page || !net) return;
+  if (app.meta !== shownFor) { shownFor = app.meta; saved.sub = 'stats'; period = null; picking = false; motionDate = null; }
   if (tabs) for (const b of tabs.querySelectorAll('[data-sub]')) b.classList.toggle('on', /** @type {HTMLElement} */ (b).dataset.sub === saved.sub);
-  const body = $('home-body'), page = $('home-analyse');
-  if (!body || !page) return;
-  if (app.meta !== shownFor) { shownFor = app.meta; saved.sub = 'todo'; period = null; picking = false; motionDate = null; if (tabs) for (const b of tabs.querySelectorAll('[data-sub]')) b.classList.toggle('on', /** @type {HTMLElement} */ (b).dataset.sub === 'todo'); }
-  body.hidden = saved.sub === 'analyse';
-  page.hidden = saved.sub !== 'analyse';
-  if (currentPage() !== 'home' || saved.sub !== 'analyse') return;
+  // Nettverkskart: the map lives only while it is on screen (one WebGL context; it follows the node picked on Statistikk)
+  const showMap = currentPage() === 'home' && saved.sub === 'network' && !!app.meta;
+  if (!showMap && isNetworkOpen()) closeNetworkView();
+  page.hidden = saved.sub !== 'stats';
+  net.hidden = saved.sub !== 'network';
+  if (showMap && !isNetworkOpen()) openNetworkView();
+  if (currentPage() !== 'home' || saved.sub !== 'stats') return;
   if (!app.meta) { page.innerHTML = `<p class="home-empty">${esc(t('homeNoProject'))}</p>`; return; }
   const tree = treeOf();
   if (!tree.lines.length) { page.innerHTML = `<p class="home-empty an-empty">${esc(t('anNoLines'))}</p>`; return; }
@@ -206,7 +208,7 @@ export function renderAnalysisPage() {
   page.innerHTML = `<div class="an-page-grid"><nav class="an-tree">${treeHtml(tree, node.id)}</nav><div class="an-main">`
     + `<div class="an-bar-top"><span class="an-crumbs">${crumb}</span><span class="an-grow"></span>`
     + `<button type="button" class="an-chip an-all${picking ? '' : ' on'}">${esc(t('anAll'))}</button><button type="button" class="an-chip an-pick${picking ? ' on' : ''}">${esc(t('anPick'))}</button>${pick}`
-    + `<button type="button" class="pop-btn an-network">${esc(t('anNetwork'))}</button><button type="button" class="pop-btn an-xlsx">Excel</button><button type="button" class="pop-btn an-text">${esc(t('anText'))}</button></div>`
+    + `<button type="button" class="pop-btn an-xlsx">${esc(t('anXlsx'))}</button><button type="button" class="pop-btn an-text">${esc(t('anText'))}</button></div>`
     + `<p class="an-note an-dates">${esc(dates)}</p>`
     + (r.scope.sum.trips ? blocks(r, node, facts) : `<p class="home-empty an-empty">${esc(t('anNothing'))}</p>`) + '</div></div>';
 }
@@ -252,20 +254,20 @@ async function exportXlsx() {
 let wired = false;
 export function initAnalysisPage() {
   onRefresh(renderAnalysisPage);
-  onQuaysLoaded(renderAnalysisPage);
+  // new stop positions: Statistikk counts them, and a map on screen is drawn again so it fits the whole network
+  onQuaysLoaded(() => { if (isNetworkOpen()) closeNetworkView(); renderAnalysisPage(); });
   if (wired) return;
   wired = true;
   document.addEventListener('click', (e) => {
     const el = /** @type {HTMLElement} */ (e.target);
     const sub = /** @type {HTMLElement | null} */ (el.closest?.('#home-tabs [data-sub]'));
-    if (sub) { saved.sub = sub.dataset.sub === 'analyse' ? 'analyse' : 'todo'; keep(); renderAnalysisPage(); if (saved.sub === 'todo') renderDashboardPage(); return; }
+    if (sub) { saved.sub = sub.dataset.sub === 'network' ? 'network' : 'stats'; keep(); renderAnalysisPage(); return; }
     if (!el.closest?.('#home-analyse')) return;
     const nodeEl = /** @type {HTMLElement | null} */ (el.closest('[data-node]'));
     if (nodeEl?.dataset.node && (el.closest('.an-node, .an-crumb, .an-open'))) { saved.node = nodeEl.dataset.node; motionDate = null; keep(); renderAnalysisPage(); return; }
     if (el.closest('.an-all')) { picking = false; period = null; motionDate = null; renderAnalysisPage(); }
     else if (el.closest('.an-pick')) { picking = true; renderAnalysisPage(); }
     else if (el.closest('.an-by')) { byKm = /** @type {HTMLElement} */ (el.closest('.an-by')).dataset.by === 'km'; renderAnalysisPage(); }
-    else if (el.closest('.an-network')) openNetworkView();
     else if (el.closest('.an-text')) void exportText();
     else if (el.closest('.an-xlsx')) void exportXlsx();
   });

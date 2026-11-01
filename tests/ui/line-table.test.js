@@ -72,8 +72,8 @@ describe('Linjer on the shared list frame', () => {
     quayInfo.clear();
   });
 
-  it('is its own page (Alt+2), sorted by public code, with Finn and Verktøy in a left pane', () => {
-    key('2', { altKey: true });
+  it('is its own page (Alt+3), sorted by public code, with Finn and Verktøy in a left pane', () => {
+    key('3', { altKey: true });
     expect(currentPage()).toBe('lines');
     expect(table().querySelector('.lv-pane .lv-find #lt-search')).not.toBeNull();
     expect(table().querySelector('.lv-pane .lv-tools #lt-edit')).not.toBeNull();

@@ -45,7 +45,7 @@ async function openProject(endsIn, extra, text = route('50')) {
   if (extra) await extra(fs);
   await openFs(fs, { landing: true });
   app.orgRegister = { companies: registerCompanies(), fetchedAt: new Date().toISOString() };
-  setPage('lines'); setPage('home');
+  setPage('lines'); setPage('tasks');
   /** @type {any} */ (document.getElementById('check-dlg')).close();
   await settle();
   return fs;
@@ -63,13 +63,16 @@ beforeEach(async () => {
   window.confirm = vi.fn(() => true);
 });
 
-describe('Oversikt', () => {
-  it('is where a project opens, and Alt+6 goes there', async () => {
+describe('Oppgaver', () => {
+  it('is where a project opens, and Alt+1 goes there; its tab reads Oppgaver (user 2026-11-01)', async () => {
     await openProject(200);
-    expect(currentPage()).toBe('home');
+    expect(currentPage()).toBe('tasks');
     setPage('lines');
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: '6', altKey: true, bubbles: true }));
-    expect(currentPage()).toBe('home');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '1', altKey: true, bubbles: true }));
+    expect(currentPage()).toBe('tasks');
+    expect(document.querySelector('.tab[data-page="tasks"]')?.textContent).toBe('Oppgaver');
+    expect(document.querySelector('.tab[data-page="home"]')?.textContent).toBe('Analyse');
+    expect(document.getElementById('home-body')?.closest('.page')?.id).toBe('page-tasks');
   });
 
   it('says a line stops running soon, and its button opens the line', async () => {
@@ -98,7 +101,7 @@ describe('Oversikt', () => {
     await openProject(200);
     app.exports = { 50: { at: new Date().toISOString(), hash: textHash(lineErn('50', lineState('50'))) } };
     routeAllLegs('50');
-    setPage('lines'); setPage('home');
+    setPage('lines'); setPage('tasks');
     expect(body().textContent).toContain('Alt ser bra ut');
     expect(body().querySelector('.home-ok')?.textContent).toContain('Linjen er gyldig til minst');
   });
@@ -109,7 +112,7 @@ describe('Oversikt', () => {
     expect(body().querySelectorAll('.home-bar')).toHaveLength(1);
   });
 
-  it('the network map has left Gjøremål for Analyse (2026-10-31)', async () => {
+  it('the network map is not on Oppgaver (it is under Analyse)', async () => {
     await openProject(200);
     expect(body().querySelector('.home-network')).toBeNull();
     expect(document.getElementById('home-map')).toBeNull();
@@ -118,12 +121,12 @@ describe('Oversikt', () => {
   it('without a project, says so', async () => {
     await openProject(200);
     await closeProject();
-    setPage('home');
+    setPage('tasks');
     expect(body().textContent).toMatch(/prosjekt/i);
   });
 });
 
-describe('Oversikt: one card per line', () => {
+describe('Oppgaver: one card per line', () => {
   it('a line that ends soon and has errors gets one card, with both', async () => {
     await openProject(12, undefined, route('50').replace('#DSK;0;0;;1\r\n', '')); // a trip without a destination: an error
     const cards = [...body().querySelectorAll('.home-card')];

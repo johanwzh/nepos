@@ -38,17 +38,17 @@ som må rettes, eller som har feil filnavn — og tilbyr å rette det som kan re
 
 | Fane | Hurtigtast | Hva du gjør der |
 |---|---|---|
-| **Rediger rutetabell** | Alt+1 | Linjens detaljer, tabellsett, kalendere og selve rutetabellen. Kartet ligger til venstre. |
-| **Linjer** | Alt+2 | Alle linjene i én liste: finn, sorter, endre flere samtidig. |
-| **Kalendere** | Alt+3 | Prosjektets kalendere (hvilke datoer noe kjører). |
-| **Ressurser** | Alt+4 | Merkevarer og organisasjoner (autoriteter og operatører). |
-| **Eksport** | Alt+5 | Kontroll og eksport til NeTEx. |
-| **Oversikt** | Alt+6 | Det som trenger deg i dag: linjer som snart slutter å gå, linjer med feil, endringer som ikke er eksportert. Prosjektet åpner her. |
+| **Oppgaver** | Alt+1 | Det som trenger deg i dag: linjer som snart slutter å gå, linjer med feil, endringer som ikke er eksportert. Prosjektet åpner her. |
+| **Rediger rutetabell** | Alt+2 | Linjens detaljer, tabellsett, kalendere og selve rutetabellen. Kartet ligger til venstre. |
+| **Linjer** | Alt+3 | Alle linjene i én liste: finn, sorter, endre flere samtidig. |
+| **Kalendere** | Alt+4 | Prosjektets kalendere (hvilke datoer noe kjører). |
+| **Ressurser** | Alt+5 | Merkevarer og organisasjoner (autoriteter og operatører). |
+| **Eksport** | Alt+6 | Kontroll og eksport til NeTEx. |
+| **Analyse** | Alt+7 | Tallene i planen (**Statistikk**) og nettverket med turene i bevegelse (**Nettverkskart**). |
 
-### Oversikt
+### Oppgaver
 
-Når du åpner et prosjekt, kommer du til **Oversikt**. Den har to faner: **Gjøremål** og **Analyse**. Gjøremål sier med
-vanlige ord hva som trenger deg:
+Når du åpner et prosjekt, kommer du til **Oppgaver**. Den sier med vanlige ord hva som trenger deg:
 
 - **I dag** (store kort, hvert med én knapp): en linje som slutter å gå om under 30 dager (eller alt har sluttet), en
   linje med feil (feilene samlet etter type), og linjer som er endret siden forrige eksport.
@@ -60,9 +60,13 @@ vanlige ord hva som trenger deg:
 Linjer som er satt til **Eksporteres ikke**, er ikke med. Nepos husker hver eksport (`data/exports.json`) fra denne
 versjonen; før den første eksporten står linjene som «ingen eksport registrert».
 
-#### Analyse
+### Analyse
 
-**Analyse** viser tallene i planen, satt opp som et regnskap eller en kvittering: rader som summerer seg, og hver sum
+**Analyse** har to faner, **Statistikk** og **Nettverkskart**, og du bytter fritt mellom dem.
+
+#### Statistikk
+
+**Statistikk** viser tallene i planen, satt opp som et regnskap eller en kvittering: rader som summerer seg, og hver sum
 delt i sine deler. Det er ingen kontroll: mangler noe, havner det i en grå **Ukjent**-rad som er med i summen.
 
 Til venstre er et tre: **Hele prosjektet**, oppdragsgiverne under det, og operatørene under hver oppdragsgiver (en
@@ -83,16 +87,18 @@ første operatøren i linjedataene. Bare linjer som eksporteres, telles. Velg et
 - **Produksjon gjennom perioden**: én stolpe per dato, avganger eller km.
 - **Under …**: oppdragsgiverne, operatørene eller linjene under nivået du står på; klikk for å gå dit.
 
-Øverst velger du **Alt planlagt** eller **Velg periode…** (fra–til). **Excel** lagrer tallene i
-`analyse/<tidspunkt> <navn>.xlsx` i prosjektmappa, ett ark per blokk; **Tekst** kopierer kvitteringen, klar til å
-limes inn i en e-post.
+Øverst velger du **Alt planlagt** eller **Velg periode…** (fra–til). **Last ned som Excel** lagrer tallene i
+`analyse/<tidspunkt> <navn>.xlsx` i prosjektmappa, ett ark per blokk; **Kopier som ren tekst** legger tallene på
+utklippstavlen med kolonnene på linje.
 
-**Nettverkskart** åpner nettverket over hele siden, for nivået du står på: hver strekning én gang, langs veien der den
+#### Nettverkskart
+
+**Nettverkskart** viser nettverket for nivået du har valgt under Statistikk: hver strekning én gang, langs veien der den
 er rutet og tykkere der flere turer går, og hovedstoppene (uthevet i en rutetabell) som små prikker. På kartet kjører
 turene: velg en dato (den travleste først) og flytt tiden med hjulet eller glidebryteren, 10 sekunder om gangen (hold
 Shift på hjulet for ett minutt), eller trykk ▶: et planminutt per 0,6 sekund, eller ×5 og ×20 med fartsknappen. En
 tur er en prikk i linjens farge som glir langs strekningen, med ring mens den venter på et stopp, og forsvinner ved siste stopp.
-Her ser du hvor bussene klumper seg og hvor det er hull. **Esc** lukker.
+Her ser du hvor bussene klumper seg og hvor det er hull.
 
 ---
 

@@ -24,7 +24,7 @@ const { initRouteEditor } = await import('../../src/ui/route-editor.js');
 const { initDashboardPage } = await import('../../src/ui/dashboard-page.js');
 const { initAnalysisPage } = await import('../../src/ui/analysis-page.js');
 const { initNetworkView } = await import('../../src/ui/network-view.js');
-const { setQuayLookup } = await import('../../src/ui/quays.js');
+const { setQuayLookup, loadQuays } = await import('../../src/ui/quays.js');
 const { createMemoryFs } = await import('../../src/project/fs.js');
 const { createProject } = await import('../../src/project/create.js');
 const { writeRoute } = await import('../../src/project/routes.js');
@@ -65,7 +65,10 @@ beforeEach(async () => {
   await settle();
   drawn.network = null; drawn.trips = [];
 });
-const toAnalyse = async () => { click(document.querySelector('#home-tabs [data-sub="analyse"]')); await settle(); click(an().querySelector('.an-node[data-node="project"]')); await settle(); };
+/** Analyse → Statistikk at the whole project. */
+const toAnalyse = async () => { setPage('home'); click(document.querySelector('#home-tabs [data-sub="stats"]')); await settle(); click(an().querySelector('.an-node[data-node="project"]')); await settle(); };
+/** Analyse → Nettverkskart. */
+const toNetwork = async () => { setPage('home'); click(document.querySelector('#home-tabs [data-sub="network"]')); await settle(); };
 /** The slider is in seconds. @param {string} hhmm HH:MM or HH:MM:SS */
 const setTime = async (hhmm) => {
   const input = /** @type {HTMLInputElement} */ (nv().querySelector('.nv-time'));
@@ -75,41 +78,48 @@ const setTime = async (hhmm) => {
 };
 
 describe('Nettverkskart', () => {
-  it('Oversikt → Gjøremål no longer has the network map', async () => {
+  it('Oppgaver has no network map', async () => {
     expect(document.getElementById('home-map')).toBeNull();
     expect(document.querySelector('#home-body .home-network')).toBeNull();
   });
 
-  it('Nettverkskart on Analyse takes over the page and Esc closes it', async () => {
+  it('is a sub-page of Analyse beside Statistikk: the map shows in place, no lock-in, no Esc, no close button (user 2026-11-01)', async () => {
     await toAnalyse();
-    click(an().querySelector('.an-network'));
-    await settle();
-    expect(document.body.classList.contains('network-on')).toBe(true);
+    expect(an().querySelector('.an-network')).toBeNull();
+    drawn.destroyed = 0;
+    await toNetwork();
     expect(nv().hidden).toBe(false);
+    expect(an().hidden).toBe(true);
+    expect(nv().closest('.page')?.id).toBe('page-home');
+    expect(document.body.classList.contains('network-on')).toBe(false);
+    expect(nv().querySelector('.nv-close')).toBeNull();
     expect(drawn.network.lines.length).toBeGreaterThan(0);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await settle();
-    expect(document.body.classList.contains('network-on')).toBe(false);
+    expect(nv().hidden).toBe(false);
+    // back to Statistikk: the map goes (no WebGL context left behind)
+    click(document.querySelector('#home-tabs [data-sub="stats"]'));
+    await settle();
     expect(nv().hidden).toBe(true);
+    expect(an().hidden).toBe(false);
+    expect(drawn.destroyed).toBe(1);
   });
 
-  it('moving the time places the node\'s trips; another node shows only its own lines', async () => {
+  it('moving the time places the node\'s trips; another node picked on Statistikk shows only its own lines', async () => {
     await toAnalyse();
-    click(an().querySelector('.an-network'));
-    await settle();
+    await toNetwork();
     await setTime('07:05');
     expect(drawn.trips.map((p) => p.line)).toEqual(['50']);
     expect(nv().querySelector('.nv-at')?.textContent).toContain('07:05');
     await setTime('08:05');
     expect(drawn.trips.map((p) => p.line)).toEqual(['60']);
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    await settle();
     // The operator of line 50 only
+    click(document.querySelector('#home-tabs [data-sub="stats"]'));
+    await settle();
     const op = [...an().querySelectorAll('.an-node')].find((n) => /** @type {HTMLElement} */ (n).dataset.node?.endsWith('bbbbbbbbbb2'));
     click(/** @type {Element} */ (op));
     await settle();
-    click(an().querySelector('.an-network'));
-    await settle();
+    await toNetwork();
     await setTime('08:05');
     expect(drawn.trips).toEqual([]);
     await setTime('07:05');
@@ -118,8 +128,7 @@ describe('Nettverkskart', () => {
 
   it('time moves in 10-second steps: the slider, the readout, and ▶ at a plan-minute per 0.6 s, faster with the speed chip', async () => {
     await toAnalyse();
-    click(an().querySelector('.an-network'));
-    await settle();
+    await toNetwork();
     const slider = /** @type {HTMLInputElement} */ (nv().querySelector('.nv-time'));
     expect(slider.step).toBe('10');
     expect(slider.max).toBe(String(24 * 3600));
@@ -138,13 +147,25 @@ describe('Nettverkskart', () => {
     } finally { vi.useRealTimers(); }
   });
 
-  it('closing removes its map (final review I2: no WebGL context left behind)', async () => {
+  it('stop positions that arrive while the map is shown redraw it, so it fits the network (user check 2026-11-01)', async () => {
     await toAnalyse();
-    drawn.destroyed = 0;
-    click(an().querySelector('.an-network'));
+    await toNetwork();
+    drawn.network = null;
+    await loadQuays(['NSR:Quay:9']);
     await settle();
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(drawn.network?.lines.length).toBeGreaterThan(0);
+  });
+
+  it('leaving Analyse removes its map; coming back draws it again', async () => {
+    await toAnalyse();
+    await toNetwork();
+    drawn.destroyed = 0; drawn.network = null;
+    setPage('lines');
     await settle();
     expect(drawn.destroyed).toBe(1);
+    setPage('home');
+    await settle();
+    expect(nv().hidden).toBe(false);
+    expect(drawn.network.lines.length).toBeGreaterThan(0);
   });
 });

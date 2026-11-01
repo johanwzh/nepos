@@ -261,7 +261,7 @@ function togglePanel(side) {
   for (const fn of panelListeners) fn();
 }
 
-// ─── Pages (Alt+2…5) ───────────────────────────────────────────────────
+// ─── Pages (Alt+1…7) ───────────────────────────────────────────────────
 let curPage = 'edit';
 
 /** @param {string} id */
@@ -376,7 +376,7 @@ export function initShell() {
   if (!keysWired) document.addEventListener('keydown', (e) => {
     if (document.querySelector('dialog[open]')) return;
     /** @type {Record<string, string>} */
-    const byDigit = { 1: 'edit', 2: 'lines', 3: 'calendars', 4: 'assets', 5: 'export', 6: 'home' };
+    const byDigit = { 1: 'tasks', 2: 'edit', 3: 'lines', 4: 'calendars', 5: 'assets', 6: 'export', 7: 'home' };
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
     // A power tool on: finish with it first (Esc) — nothing else opens or changes page (user 2026-10-24)
     if (document.body.classList.contains('pt-on')) { if (!['j', 'i', 'l'].includes(e.key.toLowerCase())) { e.preventDefault(); e.stopPropagation(); } return; }

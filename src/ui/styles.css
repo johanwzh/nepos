@@ -1715,7 +1715,9 @@ body.marey-on .marey { display: block; }
 
 /* Oversikt's sub-pages (2026-10-31): Gjøremål and Analyse */
 #page-home.active { flex-direction: column; }
-#page-home > .home-body, #page-home > .an-page { flex: 1; min-height: 0; overflow: auto; }
+#page-tasks.active { flex-direction: column; }
+#page-tasks > .home-body, #page-home > .an-page { flex: 1; min-height: 0; overflow: auto; }
+#page-home > .an-page[hidden] { display: none; }
 .home-tabs { flex: none; display: flex; gap: 4px; padding: 8px 16px 0; }
 .home-tab { border: 1px solid var(--border); border-bottom: none; background: none; color: inherit; border-radius: 4px 4px 0 0; padding: 4px 14px; cursor: pointer; font-size: 13px; }
 .home-tab.on { background: var(--bg-raised); font-weight: 600; }
@@ -1763,8 +1765,7 @@ body.marey-on .marey { display: block; }
 .an-empty { margin-top: 24px; }
 @media (max-width: 760px) { .an-page-grid { grid-template-columns: 1fr; } .an-tree { border-right: none; border-bottom: 1px solid var(--border); padding-bottom: 6px; } }
 /* Nettverkskart (Analyse part 2): the network and its trips over the whole page, like the visual timetable takes over */
-body.network-on #network-view { display: flex; }
-.nv { position: fixed; inset: 0; z-index: 40; flex-direction: column; background: var(--bg-page); }
+.nv { display: flex; flex: 1; min-height: 0; flex-direction: column; border-top: 1px solid var(--border); }
 .nv[hidden] { display: none !important; }
 .nv-top { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .nv-title { font-weight: 600; }

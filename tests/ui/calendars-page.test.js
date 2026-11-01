@@ -42,9 +42,9 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('Kalendere: a page of its own', () => {
-  it('is the Alt+3 tab, and Ressurser no longer lists calendars', () => {
+  it('is the Alt+4 tab, and Ressurser no longer lists calendars', () => {
     setPage('edit');
-    key('3');
+    key('4');
     expect(currentPage()).toBe('calendars');
     expect(document.getElementById('resources-body')).not.toBeNull();
   });

@@ -46,7 +46,7 @@ async function open(/** @type {Record<string, string>} */ lines) {
   await settle();
 }
 /** Analyse, at the whole project (the page keeps the node picked earlier in the session). */
-const toAnalyse = async () => { click(document.querySelector('#home-tabs [data-sub="analyse"]')); await settle(); const top = page().querySelector('.an-node[data-node="project"]'); if (top) { click(top); await settle(); } };
+const toAnalyse = async () => { setPage('home'); click(document.querySelector('#home-tabs [data-sub="stats"]')); await settle(); const top = page().querySelector('.an-node[data-node="project"]'); if (top) { click(top); await settle(); } };
 const tableAfter = (/** @type {string} */ head) => /** @type {HTMLElement} */ ([...page().querySelectorAll('.an-block')].find((b) => b.querySelector('h4')?.textContent?.startsWith(head)));
 
 let wired = false;
@@ -63,13 +63,12 @@ beforeEach(async () => {
 });
 
 describe('Analyse', () => {
-  it('Oversikt opens on Gjøremål; Analyse shows the tree with the project, its authority and operator, and line counts', async () => {
+  it('Analyse has two sub-pages, Statistikk and Nettverkskart; Statistikk shows the tree with the project, its authority and operator, and line counts', async () => {
     await open({ 50: route('50'), 60: route('60') });
-    expect(page().hidden).toBe(true);
-    expect(/** @type {HTMLElement} */ (document.getElementById('home-body')).hidden).toBe(false);
+    expect([...document.querySelectorAll('#home-tabs [data-sub]')].map((b) => b.textContent)).toEqual(['Statistikk', 'Nettverkskart']);
     await toAnalyse();
     expect(page().hidden).toBe(false);
-    expect(/** @type {HTMLElement} */ (document.getElementById('home-body')).hidden).toBe(true);
+    expect(/** @type {HTMLElement} */ (document.getElementById('network-view')).hidden).toBe(true);
     const nodes = [...page().querySelectorAll('.an-node')].map((n) => [/** @type {HTMLElement} */ (n).dataset.node?.split(':')[0], n.querySelector('.an-n')?.textContent]);
     expect(nodes).toEqual([['project', '2'], ['authority', '2'], ['authority', '2']]);
     expect(tableAfter('Omfang').querySelector('tr.an-sum')?.textContent).toContain('2');
@@ -133,9 +132,12 @@ describe('Analyse', () => {
     expect(page().querySelector('table')).toBeNull();
   });
 
-  it('Tekst copies the receipt to the clipboard; Excel writes analyse/<stamp> <name>.xlsx into the project', async () => {
+  it('Kopier som ren tekst copies the figures; Last ned som Excel writes analyse/<stamp> <name>.xlsx into the project (user 2026-11-01)', async () => {
     await open({ 50: route('50') });
     await toAnalyse();
+    expect(page().querySelector('.an-text')?.textContent).toBe('Kopier som ren tekst');
+    expect(page().querySelector('.an-xlsx')?.textContent).toBe('Last ned som Excel');
+    expect(page().querySelector('.an-network')).toBeNull();
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     click(page().querySelector('.an-text'));
@@ -144,6 +146,7 @@ describe('Analyse', () => {
     const text = /** @type {string} */ (/** @type {any} */ (writeText.mock.calls[0])[0]);
     expect(text.split('\n')[0]).toBe('Hele prosjektet');
     expect(text).toContain('Omfang');
+    expect(document.getElementById('msg-text')?.textContent).toBe('Innholdet er kopiert til utklippstavlen.');
     click(page().querySelector('.an-xlsx'));
     await settle();
     const files = (await fs.list('analyse')).map((/** @type {any} */ e) => e.name);
@@ -161,12 +164,16 @@ describe('Analyse', () => {
     expect(tableAfter('Under').querySelectorAll('tr:not(.an-sum)').length - 1).toBe(1);
   });
 
-  it('Oversikt opens on Gjøremål when a project is opened, even after Analyse was used', async () => {
+  it('a project opens on Oppgaver, and Analyse on Statistikk, even after Nettverkskart was used', async () => {
     await open({ 50: route('50') });
     await toAnalyse();
-    await open({ 50: route('50') });
-    expect(page().hidden).toBe(true);
-    expect(/** @type {HTMLElement} */ (document.getElementById('home-body')).hidden).toBe(false);
+    click(document.querySelector('#home-tabs [data-sub="network"]'));
+    await settle();
+    await open({ 50: route('50') }); // (opening lands on Oppgaver: dashboard-page.test.js)
+    setPage('home');
+    await settle();
+    expect(page().hidden).toBe(false);
+    expect(/** @type {HTMLElement} */ (document.getElementById('network-view')).hidden).toBe(true);
   });
 });
 

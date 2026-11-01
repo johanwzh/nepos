@@ -35,7 +35,7 @@ const supported = () => typeof (/** @type {any} */ (window)).showDirectoryPicker
 /**
  * Load a project folder into the app.
  * @param {import('../project/fs.js').ProjectFs} fs
- * @param {{ handle?: any, sample?: boolean, landing?: boolean }} [opts] landing: show Oversikt (when the user opens it, not on a reload)
+ * @param {{ handle?: any, sample?: boolean, landing?: boolean }} [opts] landing: show Oppgaver (when the user opens it, not on a reload)
  * @returns {Promise<boolean>} whether the project opened
  */
 export async function openFs(fs, { handle = null, sample = false, landing = false } = {}) {
@@ -70,7 +70,7 @@ export async function openFs(fs, { handle = null, sample = false, landing = fals
     await onRecentChanged();
     app.lastHandle = handle;
   }
-  if (landing) setPage('home'); // Oversikt is a project's first page (dashboard design 2026-10-21)
+  if (landing) setPage('tasks'); // Oppgaver is a project's first page (dashboard design 2026-10-21; its own tab, user 2026-11-01)
   refreshAll();
   showProjectCheck();
   void syncProjectCopy(); // the organisation copy follows Entur's register (organisations spec §3.2)

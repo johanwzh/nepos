@@ -29,15 +29,19 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Export:** each pattern whose legs are all routed gets its ServiceLinks (per line); legs not routed or out of date
   (a stop moved more than 5 m) are a warning in the check, never an error. The old routing (off since 2.3) is removed.
 - **Lines:** a Ruting column shows how many of each bus line's journey patterns are routed, and how many to check.
-- **Analyse:** Oversikt has two tabs, **Gjøremål** (as before) and **Analyse**: the plan's numbers as a receipt, for
+- **Tabs:** **Oppgaver** (Tasks, Alt+1) is a tab of its own, the first one and where a project opens: what needs you
+  today, as Oversikt's to-do part was. The other tabs move one up (Rediger rutetabell Alt+2 … Eksport Alt+6), and
+  Oversikt is now **Analyse** (Alt+7) with two sub-tabs, **Statistikk** and **Nettverkskart**.
+- **Analyse → Statistikk:** the plan's numbers as a receipt, for
   the whole project, an authority or an operator (a tree on the left). Scope per mode (lines, trips, departures,
   stops), the routed network per routing group, production planned / done / remaining with average speed, per fuel
   (km, hours, seat-km), accessibility (low floor by km, booking by departures, each its own bar), per day type, vehicles on the road at once (per 15 minutes) and
   production through the period. km counts only where every stretch is routed; missing data is a grey "Ukjent" row in
-  the sum, never a warning. Pick a period, or everything planned. **Excel** saves `analyse/<time> <name>.xlsx` in the
-  project; **Tekst** copies the receipt for an e-mail. **Nettverkskart** shows the network over the whole page for the
-  picked level, with the trips moving on it at a date and time (a jog and a slider in 10-second steps, ▶ at a
-  plan-minute per 0.6 s, ×5 or ×20 faster): a dot per trip gliding along the road, a ring while it waits. The network map has moved there from the overview.
+  the sum, never a warning. Pick a period, or everything planned. **Download as Excel** saves
+  `analyse/<time> <name>.xlsx` in the project; **Copy as plain text** puts the figures on the clipboard.
+- **Analyse → Nettverkskart:** the network for the level picked on Statistikk, with the trips moving on it at a date and time (a jog and a slider in 10-second steps, ▶ at a
+  plan-minute per 0.6 s, ×5 or ×20 faster): a dot per trip gliding along the road, a ring while it waits. Switch back to Statistikk at any time; there is
+  nothing to close.
 - **Routing for every mode:** rail, tram, metro, boats and ferries, cableways, funiculars and lifts are routed along
   OpenStreetMap like buses (air is not): each network is its own map data set from nepos-tiles, cached in
   `cache/routing/<set>/`. Trains, trams and cableways never turn sharply at a switch; a ferry quay may lie further from
