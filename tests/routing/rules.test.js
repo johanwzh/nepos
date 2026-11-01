@@ -29,7 +29,7 @@ describe('the rules table', () => {
     expect(rulesFor('rail')).toEqual({ set: 'rail', kmh: 100, radius: 75, vmax: 70, farSnap: 25, track: true });
     expect(rulesFor('tram')).toEqual({ set: 'tram', kmh: 40, radius: 75, vmax: 25, farSnap: 25, track: true });
     expect(rulesFor('metro')).toEqual({ set: 'metro', kmh: 60, radius: 75, vmax: 30, farSnap: 25, track: true });
-    expect(rulesFor('ferry')).toEqual({ set: 'ferry', kmh: 30, radius: 500, vmax: 25, farSnap: 170, track: false });
+    expect(rulesFor('ferry')).toEqual({ set: 'ferry', kmh: 30, radius: 500, vmax: 25, farSnap: 170, track: false, turnAtStops: true });
     expect(rulesFor('cable')).toEqual({ set: 'cable', kmh: 15, radius: 150, vmax: 15, farSnap: 50, track: true });
     expect(rulesFor('bus')).toEqual({ set: 'road', kmh: null, radius: 75, vmax: 25, farSnap: 25, track: false });
   });
@@ -106,6 +106,24 @@ describe('speeds, snaps and flags per profile', () => {
     expect(boat.ok).toBe(true);
     const bus = routeChain(makeGraph(g, 'bus'), [stop(0, -400), stop(3000, -400)]);
     expect(bus).toMatchObject({ ok: false, error: 'no-road' });
+  });
+
+  it('a boat turns round at a quay: A → B → A goes straight back; a bus drives on to where it can turn (user 2026-11-01)', () => {
+    const g = { nodes: [P(0, 0), P(3000, 0)], attrs: [{ cls: 4, ferry: true }], edges: [{ from: 0, to: 1 }] };
+    const chain = [stop(500, -5), stop(1500, -5), stop(500, -5)];
+    const boat = routeChain(makeGraph(g, 'ferry'), chain);
+    expect(boat.ok && total(boat)).toBeCloseTo(2000, -1);
+    const bus = routeChain(makeGraph(g, 'bus'), chain);
+    expect(bus.ok && total(bus)).toBeCloseTo(5000, -1); // on to the end at 3000, round, and back
+  });
+
+  it('routed again from the saved snaps, the boat still turns at the quay (a saved snap fixes no direction for a boat)', () => {
+    const G = makeGraph({ nodes: [P(0, 0), P(3000, 0)], attrs: [{ cls: 4, ferry: true }], edges: [{ from: 0, to: 1 }] }, 'ferry');
+    const chain = [stop(500, -5), stop(1500, -5), stop(500, -5)];
+    const first = routeChain(G, chain);
+    if (!first.ok) throw new Error('first route failed');
+    const again = routeChain(G, chain.map((p, i) => ({ ...p, fixed: first.snaps[i] })));
+    expect(again.ok && total(again)).toBeCloseTo(2000, -1);
   });
 
   it('the far-snap flag follows the profile', () => {

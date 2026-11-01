@@ -60,6 +60,8 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 **Bug fixes**
 
+- **Routing a boat out and back** (A–B–A on the same quays): the boat had to leave a quay the way it came in, as a
+  bus must, and went far round to turn. A boat now turns at the quay.
 - **Routing a new area:** after the map data was downloaded, Nepos wrote every tile into the project's `cache/`
   and read it back before routing began, which took minutes in a OneDrive folder. It now routes from the downloaded
   data at once and fills the cache in the background; the info pane says "Routing…" once the download is done.

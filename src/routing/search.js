@@ -30,11 +30,11 @@ const scratch = new WeakMap();
 
 /**
  * The graph's profile sets the snap radius, the top speed and whether track turns are checked (rules.js).
- * @param {Graph} G @param {ChainPoint[]} points @param {{ offroad?: number, radius?: number, vmax?: number, track?: boolean }} [opts] @returns {ChainResult}
+ * @param {Graph} G @param {ChainPoint[]} points @param {{ offroad?: number, radius?: number, vmax?: number, track?: boolean, turnAtStops?: boolean }} [opts] @returns {ChainResult}
  */
 export function routeChain(G, points, opts = {}) {
   const rules = rulesFor(G.profile);
-  const { offroad = OFFROAD_S_PER_M, radius: radius0 = rules.radius, vmax = rules.vmax, track = rules.track } = opts;
+  const { offroad = OFFROAD_S_PER_M, radius: radius0 = rules.radius, vmax = rules.vmax, track = rules.track, turnAtStops = !!rules.turnAtStops } = opts;
   const t0 = performance.now();
   /** @type {Candidate[][]} */
   const cands = [];
@@ -42,7 +42,9 @@ export function routeChain(G, points, opts = {}) {
   const canDrive = (e, d) => G.dir[e] === 0 || G.dir[e] === (d ? 2 : 1);
   for (let i = 0; i < points.length; i++) {
     const p = points[i];
-    const ref = p.fixed ? fromRef(G, p.fixed) : null;
+    const fixed = p.fixed ? fromRef(G, p.fixed) : null;
+    // a boat may arrive and leave either way at a quay: its saved snap keeps the place, not the direction
+    const ref = fixed && turnAtStops ? { ...fixed, d: undefined } : fixed;
     if (ref && canDrive(ref.edge, ref.d)) { cands.push([ref]); radius.push(0); refLost.push(false); continue; }
     const w = candidatesWidening(G, [p.lon, p.lat], radius0);
     if (!w.list.length) return { ok: false, error: 'no-road', point: i };
@@ -66,6 +68,19 @@ export function routeChain(G, points, opts = {}) {
       let stops = 0;
       for (let j = 0; j <= i; j++) if (j === 0 || !points[j].via) stops++;
       return { ok: false, error: 'no-route', leg: stops - 1 };
+    }
+    // A boat may leave a stop (never a waypoint) the way it came: it turns at the quay (user 2026-11-01)
+    if (turnAtStops && i + 1 < points.length - 1 && !points[i + 1].via) {
+      const cs = cands[i + 1];
+      for (let c = 0; c < cs.length; c++) {
+        const best = leg.cost[c * 2] <= leg.cost[c * 2 + 1] ? c * 2 : c * 2 + 1;
+        for (const d of [0, 1]) {
+          const s = c * 2 + d;
+          if (s !== best && Number.isFinite(leg.cost[best]) && leg.cost[best] < leg.cost[s] && canDrive(cs[c].edge, d)) {
+            leg.cost[s] = leg.cost[best]; leg.back[s] = leg.back[best];
+          }
+        }
+      }
     }
     cost.push(leg.cost); back.push(leg.back);
   }
