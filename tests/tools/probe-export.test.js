@@ -121,3 +121,36 @@ describe('the export probe on routed links (2.6)', () => {
     expect(errors.filter((e) => / m from its stop/.test(e))).toEqual([]);
   });
 });
+
+// Knutepunkt (2.6.1): the probe works out the approved links' interchanges itself and finds each in the export
+describe('the export probe on Knutepunkt links', () => {
+  const OUR_TRIP = '5f0c2e1a-1111-4aaa-8bbb-00000000000a', FEED_TRIP = '5f0c2e1a-1111-4aaa-8bbb-00000000000f';
+  const cal = [{ id: 'h1', name: 'Vår', ranges: /** @type {[string, string][]} */ ([['20260105', '20260111']]) }];
+  const ours = ['#LEV;Test;TST', '#RUT;-1;1;Hub - C;;6;', '#TRA;Fram', '#PER;;;;;;', '#KAL;h1', '#TAB;0;;;;',
+    '#TUR;0;D;0;0;0;0', `#UID;${OUR_TRIP}`,
+    '#TRL;0;NSR:Quay:2;Hub;0;-1;-1;-1;0;-1', '#TRC;0;1000;0;0;0;0;0',
+    '#TRL;1;NSR:Quay:3;C;0;-1;-1;-1;0;-1', '#TRC;0;1030;0;0;0;0;0',
+    '#KNP;0;NSR:Quay:2;NSR:StopPlace:2;;2;15;5;0;;;;;;', `#KNL;0;0;F;${FEED_TRIP};NSR:Quay:2;592;2026-10-31T20:00:00.000Z`].join('\r\n') + '\r\n';
+  const feeder = ['#LEV;Test;TST', '#RUT;-1;2;A - Hub;;6;', '#TRA;Fram', '#PER;;;;;;', '#KAL;h1', '#TAB;0;;;;',
+    '#TUR;0;D;0;0;0;0', `#UID;${FEED_TRIP}`,
+    '#TRL;0;NSR:Quay:1;A;0;-1;-1;-1;0;-1', '#TRC;0;0900;0;0;0;0;0',
+    '#TRL;1;NSR:Quay:2;Hub;0;-1;-1;-1;0;-1', '#TRC;0;0952;0;0;0;0;0',
+    '#TRL;2;NSR:Quay:4;D;0;-1;-1;-1;0;-1', '#TRC;0;1010;0;0;0;0;0'].join('\r\n') + '\r\n';
+  const hubProject = { codespace: 'TST', routes: [{ code: 'OUR', text: ours }, { code: 'F', text: feeder }], calendars: cal };
+  const files = () => new Map(buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'OUR', rs: parseERN(ours) }, { code: 'F', rs: parseERN(feeder) }], orgs: [], calendars: cal })
+    .map((f) => [f.name, f.xml]));
+
+  it('an export with its Knutepunkt interchange is clean', () => {
+    const { errors, stats } = probeExport({ files: files(), project: hubProject });
+    expect(errors).toEqual([]);
+    expect(stats.interchanges).toBe(1);
+  });
+
+  it('catches a Knutepunkt interchange missing from the export', () => {
+    const f = files();
+    const name = /** @type {string} */ ([...f.keys()].find((n) => n.includes('-Line-OUR')));
+    f.set(name, /** @type {string} */ (f.get(name)).replace(/<ServiceJourneyInterchange [\s\S]*?<\/ServiceJourneyInterchange>/, ''));
+    const { errors } = probeExport({ files: f, project: hubProject });
+    expect(errors.some((e) => e.includes('Knutepunkt') && e.includes(OUR_TRIP))).toBe(true);
+  });
+});

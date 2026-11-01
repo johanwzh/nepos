@@ -11,6 +11,8 @@ import { unionDays, tripDays, isoDate } from '../../src/core/calendars.js';
 import { tripVariants } from '../../src/core/netex/journeys.js';
 import { uuid5 } from '../../src/core/uuid5.js';
 import { haversineM } from '../../src/routing/geometry.js';
+import { hubState } from '../../src/core/interchanges/hub.js';
+import { addDays } from '../../src/core/calendars.js';
 
 /** @param {string} s */
 const unesc = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
@@ -113,8 +115,15 @@ export function expectedTrips({ codespace: cs, routes, calendars }) {
   /** @type {Map<string, { route: string, label: string, calls: { stopId: string, arr: number | null, dep: number | null, notes: string[] }[], note: string, days: string[] }>} */
   const trips = new Map();
   let interchanges = 0;
+  /** Each line's written variants by trip uid, for the Knutepunkt links. @type {Map<string, Map<string, { id: string, label: string, calls: { ri: number, stopId: string }[], days: Set<string> }[]>>} */
+  const byUid = new Map();
+  /** @type {{ code: string, rs: any }[]} */
+  const parsed = [];
   for (const { code, text } of routes) {
     const rs = expandRoute(parseERN(text));
+    parsed.push({ code, rs });
+    const uids = new Map();
+    byUid.set(code, uids);
     (rs.tableSets ?? []).forEach((/** @type {any} */ set, /** @type {number} */ di) => {
       for (const per of (rs.periods ?? []).filter((/** @type {any} */ p) => p.setId === set.id)) {
         const grid = rs.grids[`${per.id}:${set.id}`] ?? { stops: [], cols: [] };
@@ -135,6 +144,7 @@ export function expectedTrips({ codespace: cs, routes, calendars }) {
             });
             const label = `${rs.publicCode || code} ${set.name ?? ''} ${col.dayCode} ${fmt(calls[0].dep)}${col.parentCi != null ? ' (interval)' : ''}`;
             trips.set(id, { route: code, label, calls, note: col.note?.trim() ?? '', days: v.days.map(isoDate) });
+            if (col.uid) uids.set(col.uid, [...(uids.get(col.uid) ?? []), { id, label, calls: v.calls.map((/** @type {any} */ c) => ({ ri: c.ri, stopId: c.stopId })), days: new Set(v.days) }]);
             // Interchanges, on the same conditions as the export (line.js)
             for (let ri = 0; ri < grid.stops.length; ri++) {
               const cell = col.cells[ri];
@@ -150,7 +160,36 @@ export function expectedTrips({ codespace: cs, routes, calendars }) {
       }
     });
   }
-  return { trips, interchanges };
+  return { trips, interchanges, hubs: hubInterchanges(parsed, byUid) };
+}
+
+/**
+ * The Knutepunkt interchanges the export should write (2.6.1), worked out as the spec says, not with the export's code:
+ * for each approved link on a hub row whose stop is unchanged, every variant of our trip that calls at the row with
+ * every variant of the feeder's trip that calls at the link's stop, when they run on a common or neighbouring day.
+ * @param {{ code: string, rs: any }[]} parsed @param {Map<string, Map<string, { id: string, label: string, calls: { ri: number, stopId: string }[], days: Set<string> }[]>>} byUid
+ * @returns {{ from: string, to: string, label: string }[]}
+ */
+function hubInterchanges(parsed, byUid) {
+  const near = (/** @type {Set<string>} */ a, /** @type {Set<string>} */ b) => [...a].some((d) => b.has(d) || b.has(addDays(d, -1)) || b.has(addDays(d, 1)));
+  /** @type {{ from: string, to: string, label: string }[]} */
+  const out = [];
+  for (const { code, rs } of parsed) {
+    for (const grid of Object.values(rs.grids ?? {})) {
+      /** @type {any} */ const g = grid;
+      g.stops.forEach((/** @type {any} */ stop, /** @type {number} */ ri) => {
+        if (hubState(g, ri) !== 'ok') return;
+        for (const col of g.cols) {
+          const link = col.cells[ri]?.hubLink;
+          if (!link?.line || !col.uid) continue;
+          const tos = (byUid.get(code)?.get(col.uid) ?? []).filter((v) => v.calls.some((c) => c.ri === ri));
+          const froms = (byUid.get(link.line)?.get(link.trip ?? '') ?? []).filter((v) => v.calls.some((c) => c.stopId === link.stopId));
+          for (const to of tos) for (const from of froms) if (near(to.days, from.days)) out.push({ from: from.id, to: to.id, label: `${to.label} waits for ${from.label} at ${stop.stopId}` });
+        }
+      });
+    }
+  }
+  return out;
 }
 
 /**
@@ -230,7 +269,11 @@ export function probeExport({ files, project }) {
       }
     }
     for (const id of x.sjs.keys()) if (!exp.trips.has(id)) errors.push(`in the export but not in the timetable: ${id}`);
-    if (exp.interchanges !== x.interchanges.length) errors.push(`${x.interchanges.length} interchanges in the export, ${exp.interchanges} in the timetables`);
+    // Knutepunkt (2.6.1): each approved link's interchange, From the feeder To our trip
+    const written = new Set(x.interchanges.map((ix) => `${ix.from}|${ix.to}`));
+    for (const h of exp.hubs) if (!written.has(`${h.from}|${h.to}`)) errors.push(`Knutepunkt: ${h.label} — no interchange in the export (${h.to} ← ${h.from})`);
+    const want = exp.interchanges + exp.hubs.length;
+    if (want !== x.interchanges.length) errors.push(`${x.interchanges.length} interchanges in the export, ${exp.interchanges} in the timetables${exp.hubs.length ? ` and ${exp.hubs.length} from Knutepunkt` : ''}`);
   }
 
   // ── Routed links (2.6) ──
