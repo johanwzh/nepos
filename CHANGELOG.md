@@ -2,7 +2,7 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
-## 2.6.0 — not released yet
+## 2.6.0 — 2026-11-01
 
 **New features**
 
