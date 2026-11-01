@@ -15,3 +15,6 @@ NBU/
 
 # The pre-release test project (user 2026-10-30): its private/ holds secrets; never pushed
 pre-release-data/
+
+# Dev tools that are never released (user 2026-11-01)
+tools/kanban/
