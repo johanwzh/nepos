@@ -54,7 +54,7 @@ again. At release only the date goes into the changelog heading — check the ve
       one routed bus line). It warns when a route file was saved after the export (re-export first). Must end
       with "No errors". A feature that changes the export adds its check to `tools/probe-export/checks.js` (with a test
       in `tests/tools/probe-export.test.js`). The test project is **PRT**
-      (`C:\Users\jwiklund\OneDrive - Entur AS\nepos-online\PRT`, every feature; JPB beside it has times past midnight).
+      (kept in the dev workspace's `data-dev/PRT`, every feature).
       PRT grows into the standard test set (backlog): add a case to it with each new feature.
 
 ## 5. Tests
