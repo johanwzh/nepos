@@ -10,7 +10,9 @@ export const VMAX_MS = 25;
 
 import { rulesFor } from './rules.js';
 
-const DEFAULT_KMH = [80, 60, 40, 15, 15];          // by class: motorway/trunk, primary/secondary, minor, service, ferry
+// by class: motorway/trunk, primary/secondary, minor, service, ferry, tertiary (nepos-tiles class 5, 2026-11-03: its own
+// class so U-turns can keep off it; the same speed as minor, as Nepos 2.6.0 reads it)
+export const DEFAULT_KMH = [80, 60, 40, 15, 15, 40];
 const FERRY_KMH = 15;
 
 /** Road (bus) as before; every other profile: the edge's maxspeed or the profile's default, never over its top speed.

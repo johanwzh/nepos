@@ -71,3 +71,43 @@ describe('routing graph', () => {
     expect(G.restrict.get(1 * 2 + 0)).toEqual({ no: new Set(), only: 0 });
   });
 });
+
+describe('the graph keeps the limits and where a U-turn is allowed (backlog 93, 107)', () => {
+  // one edge per attribute: the edges run east from node 0
+  const attrs = [
+    { cls: 2, maxheight: 3.7, maxwidth: 2.55, maxlength: 12.5, maxweight: 8 },   // 0 residential, no speed
+    { cls: 2, speed: 60 },                                                       // 1 minor road at 60
+    { cls: 5 },                                                                  // 2 tertiary (nepos-tiles class 5)
+    { cls: 3 },                                                                  // 3 service
+    { cls: 1, speed: 50 },                                                       // 4 primary
+    { cls: 2, speed: 50 },                                                       // 5 minor road at 50
+  ];
+  const tile = () => decodeTile(encodeTile({
+    nodes: [[10.74, LAT], ...attrs.map((_, i) => /** @type {[number, number]} */ ([10.741 + i * 0.001, LAT]))], attrs,
+    edges: attrs.map((_, i) => ({ from: 0, to: i + 1, len: 60, attr: i, way: 100 + i })),
+  }));
+
+  it('per edge: height, width, length and weight (0 = none)', () => {
+    const G = buildGraph([{ key: 't', tile: tile() }]);
+    expect(G.maxheight[0]).toBeCloseTo(3.7, 5);
+    expect(G.maxwidth[0]).toBeCloseTo(2.55, 5);
+    expect(G.maxlength[0]).toBeCloseTo(12.5, 5);
+    expect(G.maxweight[0]).toBeCloseTo(8, 5);
+    expect(G.maxheight[1]).toBe(0);
+  });
+
+  it('a U-turn only on a small road at 50 km/h or less: residential, service; never tertiary or primary', () => {
+    const G = buildGraph([{ key: 't', tile: tile() }]);
+    expect(Array.from(G.uturnOk)).toEqual([1, 0, 0, 1, 0, 1]);
+    expect(Array.from(G.cls)).toEqual([2, 2, 5, 3, 1, 2]);
+  });
+
+  it('no U-turns on track networks', () => {
+    const G = buildGraph([{ key: 't', tile: tile() }], 'tram');
+    expect(Array.from(G.uturnOk)).toEqual([0, 0, 0, 0, 0, 0]);
+  });
+
+  it('a tertiary road (class 5) costs as a minor road', () => {
+    expect(secondsPerMetre({ cls: 5, speed: 0, ferry: false })).toBe(secondsPerMetre({ cls: 2, speed: 0, ferry: false }));
+  });
+});

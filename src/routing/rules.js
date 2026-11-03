@@ -24,3 +24,8 @@ export const rulesFor = (profile) => RULES[profile] ?? RULES.bus;
 export const MAX_TURN_DEG = 90;
 /** At a level crossing of two tracks (node byte bit 1, nepos-tiles) track only goes straight through. */
 export const CROSSING_MAX_DEG = 30;
+
+/** A U-turn (backlog 107) only on a small road: minor (unclassified, residential, living street…) or service, never
+ *  tertiary (class 5) or larger, and only at this speed or less. */
+export const UTURN_CLASSES = [2, 3];
+export const UTURN_MAX_KMH = 50;

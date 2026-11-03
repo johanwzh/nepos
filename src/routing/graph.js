@@ -1,14 +1,18 @@
 // One routing graph from several NPT2 tiles: border nodes with the same coordinate become one node, so a road crosses
 // from tile to tile. Directed edge de = e * 2 + d: d = 0 drives from -> to, d = 1 to -> from.
 import { edgePoints } from './tile-format.js';
-import { secondsPerMetre } from './cost.js';
+import { secondsPerMetre, DEFAULT_KMH } from './cost.js';
+import { UTURN_CLASSES, UTURN_MAX_KMH } from './rules.js';
 
 /** @typedef {import('./tile-format.js').Tile} Tile */
 /** @typedef {{ key: string, tile: Tile }} TileEntry */
 /**
- * profile: the network's rules (rules.js), fixed when the graph is built.
+ * profile: the network's rules (rules.js), fixed when the graph is built. maxheight, maxwidth, maxlength (metres) and
+ * maxweight (tonnes) per edge, 0 when none is known (backlog 93); cls the road class; uturnOk: a small slow road a
+ * vehicle may turn on (backlog 107, road network only).
  * @typedef {{ profile: import('./profiles.js').Profile, nodes: number, edges: number, lon: Int32Array, lat: Int32Array, from: Uint32Array, to: Uint32Array,
  *   len: Float32Array, spm: Float32Array, ferry: Uint8Array, dir: Uint8Array, way: Uint32Array, road: (e: number) => string,
+ *   maxheight: Float32Array, maxwidth: Float32Array, maxlength: Float32Array, maxweight: Float32Array, cls: Uint8Array, uturnOk: Uint8Array,
  *   geo: Int32Array, geoStart: Uint32Array, out: { start: Uint32Array, de: Uint32Array },
  *   open: Uint8Array, cross: Uint8Array, restrict: Map<number, { no: Set<number>, only: number }>, cells: Map<number, number[]>, keys: Set<string>,
  *   entries: TileEntry[] }} Graph
@@ -29,6 +33,8 @@ export function buildGraph(entries, profile = 'bus') {
   const from = new Uint32Array(edges), to = new Uint32Array(edges), len = new Float32Array(edges), spm = new Float32Array(edges);
   const ferry = new Uint8Array(edges), dir = new Uint8Array(edges), way = new Uint32Array(edges);
   const tileOf = new Uint16Array(edges), nameOf = new Uint32Array(edges);
+  const maxheight = new Float32Array(edges), maxwidth = new Float32Array(edges), maxlength = new Float32Array(edges), maxweight = new Float32Array(edges);
+  const cls = new Uint8Array(edges), uturnOk = new Uint8Array(edges);
   const geo = new Int32Array(points * 2), geoStart = new Uint32Array(edges + 1);
   const restrict = new Map(), cells = new Map(), border = new Map();
   let n = 0, e = 0, g = 0;
@@ -52,6 +58,8 @@ export function buildGraph(entries, profile = 'bus') {
       from[e] = local[tile.from[i]]; to[e] = local[tile.to[i]]; len[e] = tile.len[i];
       spm[e] = secondsPerMetre(a, profile); ferry[e] = a.ferry ? 1 : 0; dir[e] = a.dir; way[e] = tile.way[i];
       tileOf[e] = ti; nameOf[e] = tile.name[i];
+      maxheight[e] = a.maxheight; maxwidth[e] = a.maxwidth; maxlength[e] = a.maxlength; maxweight[e] = a.maxweight; cls[e] = a.cls;
+      if (profile === 'bus' && !a.ferry && UTURN_CLASSES.includes(a.cls) && (a.speed || DEFAULT_KMH[a.cls]) <= UTURN_MAX_KMH) uturnOk[e] = 1;
       const pts = edgePoints(tile, i);
       geoStart[e] = g; geo.set(pts, g * 2); g += pts.length / 2;
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -91,6 +99,7 @@ export function buildGraph(entries, profile = 'bus') {
 
   return {
     profile, nodes: n, edges: e, lon: lon.subarray(0, n), lat: lat.subarray(0, n), open: open.subarray(0, n), cross: cross.subarray(0, n), from, to, len, spm, ferry, dir, way,
+    maxheight, maxwidth, maxlength, maxweight, cls, uturnOk,
     road: (i) => entries[tileOf[i]].tile.names[nameOf[i]] ?? '',
     geo, geoStart, out: { start, de }, restrict, cells, keys: new Set(entries.map((t) => t.key)), entries,
   };
