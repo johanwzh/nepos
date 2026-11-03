@@ -16,11 +16,11 @@ import { KINDS, isOver } from '../core/vehicle-limits.js';
 /** @typedef {import('../core/vehicle-limits.js').LimitAt} LimitAt */
 /**
  * A leg that went round (a vehicle with sizes): around, the limits that closed the route without limits; free, that
- * route. no-route-vehicle: there is a route only without the limits.
- * @typedef {import('./search.js').Leg & { around?: LimitAt[], free?: [number, number][] }} RoutedLeg
+ * route, with its metres and seconds. no-route-vehicle: there is a route only without the limits.
+ * @typedef {import('./search.js').Leg & { around?: LimitAt[], free?: [number, number][], freeM?: number, freeS?: number }} RoutedLeg
  * @typedef {({ ok: true, legs: RoutedLeg[], snaps: import('./search.js').Snap[], ms: number, settled: number, flags?: ('detour' | 'far-snap')[][] })
  *   | { ok: false, error: 'no-road' | 'no-route', point?: number, leg?: number, blockedSnap?: { point: number, edge: number } }
- *   | { ok: false, error: 'no-route-vehicle', leg: number, around: LimitAt[], free: [number, number][], point?: number, blockedSnap?: { point: number, edge: number } }} RouteResult
+ *   | { ok: false, error: 'no-route-vehicle', leg: number, around: LimitAt[], free: [number, number][], freeM: number, freeS: number, point?: number, blockedSnap?: { point: number, edge: number } }} RouteResult
  */
 /** @typedef {{ vehicle?: Sizes, uturnLength?: number }} RouteOpts */
 
@@ -72,7 +72,7 @@ export function createRouter(profile = 'bus') {
         if (!free.ok) return r;
         const leg = r.leg ?? 0, l = free.legs[Math.min(leg, free.legs.length - 1)];
         const around = r.blockedSnap ? overOn(G, r.blockedSnap.edge, v) : blockers(G, l.edges, v);
-        return { ...r, error: 'no-route-vehicle', leg, around, free: l.coords };
+        return { ...r, error: 'no-route-vehicle', leg, around, free: l.coords, freeM: l.metres, freeS: l.seconds };
       }
       if (v) {
         // The same chain without limits, on the chain's own saved snaps: a new stop may snap elsewhere without limits (a
@@ -82,7 +82,7 @@ export function createRouter(profile = 'bus') {
           const f = free.legs[k];
           if (!f || sameCoords(leg.coords, f.coords)) return;
           const around = blockers(G, f.edges, v);
-          if (around.length) { leg.around = around; leg.free = f.coords; }      // differing without a blocker: a tie
+          if (around.length) Object.assign(leg, { around, free: f.coords, freeM: f.metres, freeS: f.seconds });      // differing without a blocker: a tie
         });
       }
       const stops = chain.map((p, i) => i).filter((i) => i === 0 || i === chain.length - 1 || !chain[i].via);

@@ -3,7 +3,9 @@
 // table set's other patterns faint. Bottom: one thumbnail per pattern, framed red / orange / green. Right: the info,
 // layered by what is selected (table set → pattern → pattern + leg), and the actions. The user is in control: opening
 // routes nothing; Route makes a proposal, Accept or Keep writes data/links/<line>.json, Discard drops it. While the
-// view is open the rest of the app is locked (power tools); ✕ and Esc are the ways out.
+// view is open the rest of the app is locked (power tools); ✕ and Esc are the ways out. Vehicle groups (backlog 92, 93,
+// 107; design 2026-11-03 §10): each thumbnail has its vehicles beside it; a leg says why it goes round or has no route
+// for the vehicle, with the way in OpenStreetMap; the route without limits is drawn red; U-turns are marked.
 import { app } from './state.js';
 import { t } from '../i18n/strings.js';
 import { onRefresh, refreshAll, runAction } from './shell.js';
@@ -22,6 +24,7 @@ import { DEFAULT_SETTINGS } from '../project/settings.js';
 import { styleUrlFor } from '../core/map-style.js';
 import { patternThumb } from '../core/pattern-thumb.js';
 import { pruneLineLinks } from '../core/route-patterns.js';
+import { fit, KINDS } from '../core/vehicle-limits.js';
 
 /** @typedef {[number, number]} LonLat */
 /** @typedef {ReturnType<typeof createRoutingSession>} Session */
@@ -33,7 +36,7 @@ import { pruneLineLinks } from '../core/route-patterns.js';
 function defaultSession({ code, rs, setId, onProgress }) {
   // the line's network (routing for all modes): its worker and its tile set
   const profile = profileFor(rs?.mode ?? '', rs?.submode ?? '') ?? 'bus';
-  return createRoutingSession({ code, rs, setId, onProgress, calendars: app.calendars, lineLinks: app.lineLinks.get(code) ?? emptyLineLinks(code), quayInfo,
+  return createRoutingSession({ code, rs, setId, onProgress, calendars: app.calendars, lineLinks: app.lineLinks.get(code) ?? emptyLineLinks(code), quayInfo, vehicles: app.vehicles ?? [],
     router: createRoutingClient(undefined, profile),
     tiles: createTileSource({ fs: /** @type {any} */ (app.fs), baseUrl: app.settings.routingTilesUrl || DEFAULT_SETTINGS.routingTilesUrl, set: rulesFor(profile).set }) });
 }
@@ -73,7 +76,34 @@ const mins = (/** @type {number} */ s) => Math.round(s / 60);
 /** The roads of a leg, each once; OSM's "ref;name" reads "162 Ring 1". @param {string[]} roads */
 const roadList = (roads) => [...new Set(roads.map((r) => r.replace(/;/g, ' ')).filter(Boolean))].join(', ');
 const isLink = (/** @type {any} */ l) => l?.status === 'OK';
-const REASON = /** @type {Record<string, string>} */ ({ none: 'rvNone', unroutable: 'rvUnroutable', moved: 'rvMoved', map: 'rvMap', changed: 'rvChanged' });
+const REASON = /** @type {Record<string, string>} */ ({ none: 'rvNone', unroutable: 'rvUnroutable', moved: 'rvMoved', changed: 'rvChanged',
+  reconfirm: 'rvReconfirm', unchecked: 'rvUnchecked' });
+
+/** A size or limit as the UI writes it: one decimal, two where needed, the language's decimal mark. @param {number} n */
+const num = (n) => {
+  const s = Number.isInteger(Math.round(n * 100) / 10) ? n.toFixed(1) : n.toFixed(2);
+  return app.settings.lang === 'en' ? s : s.replace('.', ',');
+};
+/** @param {import('../core/vehicle-limits.js').LimitAt} l */
+const withUnit = (l) => `${num(l.value)} ${l.kind === 'weight' ? 't' : 'm'}`;
+/** The key of the link a pattern's leg uses now: a variant or the pair (design §7). @param {any} st @param {string} pair */
+const savedKey = (st, pair) => st.legs[st.pattern.keys.indexOf(pair)]?.key ?? pair;
+/** "TB (4.0 m) is taller than the 3.7 m clearance on Matrandvegen". @param {any} st @param {import('../core/vehicle-limits.js').LimitAt} l */
+function overText(st, l) {
+  const size = /** @type {number} */ (st.pattern.group?.[l.kind] ?? 0);
+  return t(`rvOver_${l.kind}`, (st.pattern.vehicles ?? []).join(', ') || '—', `${num(size)} ${l.kind === 'weight' ? 't' : 'm'}`, withUnit(l), l.road || t('rvNoName'));
+}
+/** "0.4 m to spare under the 3.7 m clearance on Matrandvegen". @param {any} st @param {import('../core/vehicle-limits.js').LimitAt} l */
+function closeText(st, l) {
+  const size = /** @type {number} */ (st.pattern.group?.[l.kind] ?? 0);
+  return l.kind === 'weight' ? t('rvClose_weight', withUnit(l), l.road || t('rvNoName')) : t(`rvClose_${l.kind}`, num(l.value - size), withUnit(l), l.road || t('rvNoName'));
+}
+/** "the 3.7 m clearance on Matrandvegen". @param {import('../core/vehicle-limits.js').LimitAt} l */
+const limitText = (l) => t('rvLimit', t(`rvKind_${l.kind}`), withUnit(l), l.road || t('rvNoName'));
+/** A line about what blocks a road, with the way in OpenStreetMap; a click fits the map to it. @param {import('../core/vehicle-limits.js').LimitAt} l @param {string} text */
+const blockerLine = (l, text) => `<div class="rv-around" data-at="${l.at[0]},${l.at[1]}">${esc(text)} <a href="https://www.openstreetmap.org/way/${l.way}" target="_blank" rel="noopener">${esc(t('rvOsm'))}</a></div>`;
+/** @param {{ road: string, where: string }} u */
+const uturnText = (u) => t(`rvUturn_${u.where}`, u.road || t('rvNoName'));
 
 /** @param {any} e */
 function message(e) {
@@ -89,7 +119,7 @@ const current = () => states().find((s) => s.pattern.id === selPattern) ?? null;
 
 /** The route a leg has now: the proposal's, else the saved link. @param {any} st @param {string} key @returns {SavedLink | { state: string, error?: string } | undefined} */
 function legNow(st, key) {
-  return st.proposal?.legs.get(key) ?? session?.file().links[key];
+  return st.proposal?.legs.get(key) ?? session?.file().links[savedKey(st, key)];
 }
 
 /** A leg's line on the map: routed, or straight between its stops. @param {Pattern} p @param {number} i @param {any} l */
@@ -100,16 +130,26 @@ function coordsOf(p, i, l) {
 }
 
 /** The waypoints of a leg: set in the proposal, else saved. @param {any} st @param {string} key @returns {LonLat[]} */
-const viaOf = (st, key) => st.proposal?.via.get(key) ?? /** @type {any} */ (session?.file().links[key])?.via ?? [];
+const viaOf = (st, key) => st.proposal?.via.get(key) ?? /** @type {any} */ (session?.file().links[savedKey(st, key)])?.via ?? [];
 
 /** Why a leg needs a look ('' when it does not). @param {any} st @param {number} i */
 function reason(st, i) {
-  const leg = st.legs[i];
-  const p = leg.key ? st.proposal?.legs.get(leg.key) : null;
-  if (p && !isLink(p)) return p.error ? message({ message: p.error }) : t(p.state === 'no-road' ? 'rtNoRoad' : 'rtNoRoute');
+  const leg = st.legs[i], pair = st.pattern.keys[i];
+  const p = pair ? st.proposal?.legs.get(pair) : null;
+  if (p && !isLink(p)) {
+    if (p.state === 'no-route-vehicle') return t('rvNoRouteVehicle', (p.around ?? []).map((/** @type {any} */ l) => overText(st, l)).join('; '));
+    return p.error ? message({ message: p.error }) : t(p.state === 'no-road' ? 'rtNoRoad' : 'rtNoRoute');
+  }
+  if (!p && leg.state === 'over') return (leg.over ?? []).map((/** @type {any} */ l) => overText(st, l)).join('; ');
   if (!p && REASON[leg.state]) return t(REASON[leg.state]);
-  const l = leg.key ? legNow(st, leg.key) : null;
-  return (/** @type {any} */ (l)?.flags ?? []).map((/** @type {string} */ f) => (f === 'detour' ? t('rtDetour') : t('rtFarSnap'))).join(', ');
+  const l = /** @type {any} */ (pair ? legNow(st, pair) : null);
+  return [...(l?.flags ?? []).map((/** @type {string} */ f) => (f === 'detour' ? t('rtDetour') : t('rtFarSnap'))), ...closeOf(st, i).map((c) => closeText(st, c))].join(', ');
+}
+
+/** The limits a leg's vehicle is close to: on its proposal, else as its state says. @param {any} st @param {number} i @returns {import('../core/vehicle-limits.js').LimitAt[]} */
+function closeOf(st, i) {
+  const p = st.pattern.keys[i] ? st.proposal?.legs.get(st.pattern.keys[i]) : null;
+  return p && isLink(p) ? fit(p.limits, st.pattern.group ?? {}).close : st.legs[i].close ?? [];
 }
 
 /** Where along a line a point lies (segment index + fraction), to keep the waypoints in driving order. @param {LonLat[]} line @param {LonLat} p */
@@ -234,26 +274,31 @@ function drawMap() {
       const l = k ? legNow(st, k) : undefined;
       const prop = k ? st.proposal?.legs.get(k) : undefined;
       // The comparison: the saved (or replaced) route dashed under the proposal
-      const oldKey = k ? st.proposal?.old.get(k) ?? (prop ? k : null) : null;
+      const oldKey = k ? st.proposal?.old.get(k) ?? (prop ? savedKey(st, k) : null) : null;
       const old = oldKey ? session?.file().links[oldKey] : undefined;
       if (old && prop && isLink(old) && old !== prop) links.push({ key: `old:${key}`, coords: /** @type {LonLat[]} */ (decodePolyline(old.polyline, old.precision ?? 6)), state: 'old' });
       const legState = st.legs[i].state;
-      const ok = isLink(l) && (prop || legState === 'routed' || legState === 'moved');
+      // the route it would have taken without limits, red, under the proposal (92)
+      const free = /** @type {any} */ (prop)?.free;
+      if (free) links.push({ key: `free:${key}`, coords: free, state: 'free' });
+      const ok = isLink(l) && (prop || ['routed', 'moved', 'reconfirm', 'unchecked', 'over'].includes(legState));
       /** @type {import('./map-view.js').MapLink['state']} */
-      const state = key === selLeg ? 'selected' : !ok ? 'failed' : !prop && legState !== 'routed' ? 'stale'
-        : /** @type {any} */ (l).flags?.length ? 'flagged' : /** @type {any} */ (l).via?.length ? 'via' : 'routed';
+      const state = key === selLeg ? 'selected' : !ok ? 'failed' : !prop && legState === 'over' ? 'free' : !prop && legState !== 'routed' ? 'stale'
+        : /** @type {any} */ (l).flags?.length || closeOf(st, i).length ? 'flagged' : /** @type {any} */ (l).via?.length ? 'via' : 'routed';
       links.push({ key, coords: coordsOf(st.pattern, i, ok ? l : undefined), state });
     });
   }
   v.setLinks(links);
   v.setStopLabels((st?.pattern.stops ?? []).flatMap((s, i) => (s.quay ? [{ lon: s.quay.lon, lat: s.quay.lat, name: s.name, n: i + 1 }] : [])));
   const via = st && selLeg ? viaOf(st, selLeg) : [];
-  v.setMarkers(via.map(([lon, lat], i) => ({
+  /** @type {{ at: LonLat, road: string, where: string }[]} the U-turns of the pattern's legs (107) */
+  const turns = st ? st.pattern.keys.flatMap((k) => { const l = /** @type {any} */ (k ? legNow(st, k) : null); return isLink(l) ? l.uturns ?? [] : []; }) : [];
+  v.setMarkers([...via.map(([lon, lat], i) => ({
     lon, lat, html: '', cls: `rt-wp${i === selWp ? ' on' : ''}`, size: 14, z: 900, draggable: true,
     onClick: () => { selWp = i; drawMap(); },
     onContext: () => { const next = [...via]; next.splice(i, 1); selWp = null; if (selLeg) setVia(selLeg, next); },
     onDragEnd: (/** @type {LonLat} */ p) => { const next = [...via]; next[i] = p; selWp = i; if (selLeg) setVia(selLeg, next); },
-  })));
+  })), ...turns.map((u) => ({ lon: u.at[0], lat: u.at[1], html: '↶', cls: 'rv-uturn', size: 18, z: 800, tooltip: esc(uturnText(u)) }))]);
   const fitKey = `${setId}|${selPattern ?? ''}`;
   if (fitFor !== fitKey) {
     const pts = (st ? links.filter((l) => l.state !== 'faint') : links).flatMap((l) => l.coords);
@@ -261,12 +306,20 @@ function drawMap() {
   }
 }
 
-/** The pattern's thumbnail. @param {any} st */
+/** A vehicle as the timetable shows it: its short code on its colour. @param {string} name */
+function vehicleChip(name) {
+  const v = app.vehicles?.find((x) => x.name === name);
+  return `<span class="g-lb-chip" style="background:${esc(v?.colour ?? '#888888')}" title="${esc(name)}">${esc(v?.shortCode || name)}</span>`;
+}
+
+/** The pattern's thumbnail, its trips' vehicles beside it (user 2026-11-03: several may share one). @param {any} st */
 function thumb(st) {
   const legs = st.pattern.keys.map((/** @type {string | null} */ k, /** @type {number} */ i) => coordsOf(st.pattern, i, k ? legNow(st, k) : undefined));
   const first = st.pattern.stops[0]?.name ?? '', last = st.pattern.stops.at(-1)?.name ?? '';
-  return `<button type="button" class="rv-thumb rv-${st.state}${st.pattern.id === selPattern ? ' on' : ''}${st.proposal ? ' rv-pending' : ''}" data-id="${esc(st.pattern.id)}" title="${esc(`${first} – ${last}`)}">`
-    + `<svg viewBox="0 0 90 56" aria-hidden="true"><path d="${patternThumb(legs, 90, 56)}"/></svg><span>${esc(t('rvStops', st.pattern.stops.length))} · ${esc(t('rvRuns', st.pattern.runs ?? 0))}</span></button>`;
+  const vehs = /** @type {string[]} */ (st.pattern.vehicles ?? []);
+  const chips = vehs.length ? `<div class="rv-vehs">${vehs.slice(0, 4).map(vehicleChip).join('')}${vehs.length > 4 ? `<span class="rv-more" title="${esc(vehs.join(', '))}">+${vehs.length - 4}</span>` : ''}</div>` : '';
+  return `<div class="rv-tw"><button type="button" class="rv-thumb rv-${st.state}${st.pattern.id === selPattern ? ' on' : ''}${st.proposal ? ' rv-pending' : ''}" data-id="${esc(st.pattern.id)}" title="${esc(`${first} – ${last}`)}">`
+    + `<svg viewBox="0 0 90 56" aria-hidden="true"><path d="${patternThumb(legs, 90, 56)}"/></svg><span>${esc(t('rvStops', st.pattern.stops.length))} · ${esc(t('rvRuns', st.pattern.runs ?? 0))}</span></button>${chips}</div>`;
 }
 
 /** Km and seconds of the pattern's legs, by a choice of link per leg. @param {any} st @param {(k: string) => any} pick */
@@ -292,7 +345,7 @@ function info() {
   const st = current();
   if (!st) {
     const n = (/** @type {string} */ s) => all.filter((x) => x.state === s).length;
-    const keys = new Set(all.flatMap((x) => x.pattern.keys.filter(Boolean)));
+    const keys = new Set(all.flatMap((x) => x.legs.map((/** @type {any} */ l) => l.key).filter(Boolean)));
     const m = [...keys].reduce((sum, k) => { const l = session?.file().links[/** @type {string} */ (k)]; return sum + (isLink(l) ? /** @type {any} */ (l).distanceM : 0); }, 0);
     return `<div class="rv-head">${esc(t('rtTitle'))}</div><div>${esc(t('rvSetSummary', all.length, n('green'), n('orange'), n('red')))}</div>`
       + `<div>${esc(t('rvLegsKm', keys.size, km(m)))}</div>${session?.newerMap() ? `<div class="rv-note">${esc(t('rtNewer'))}</div>` : ''}`
@@ -302,10 +355,14 @@ function info() {
   const now = totals(st, (k) => legNow(st, k));
   let html = `<div class="rv-head">${esc(p.stops[0]?.name)} – ${esc(p.stops.at(-1)?.name)}</div><div>${esc(t('rvStops', p.stops.length))}</div>`
     + `<div>${esc(t('rvPatternKm', km(now.m), mins(now.s)))}</div>`;
+  if (p.vehicles?.length) {
+    const sizes = KINDS.filter((k) => p.group?.[k] != null).map((k) => t(`rvSz_${k}`, num(/** @type {number} */ (p.group[k]))));
+    html += `<div>${esc(sizes.length ? t('rvVehicles', p.vehicles.join(', '), sizes.join(', ')) : p.vehicles.join(', '))}</div>`;
+  }
   const check = st.legs.map((_, i) => i).filter((i) => reason(st, i));
   if (check.length) {
     html += `<div class="rv-sub">${esc(t('rvToCheck'))}</div><ul class="rv-check">${check.map((i) =>
-      `<li data-key="${esc(st.legs[i].key ?? '')}" class="rv-${st.state === 'red' && !isLink(legNow(st, st.legs[i].key ?? '')) ? 'failed' : 'flagged'}">${esc(p.stops[i].name)} – ${esc(p.stops[i + 1].name)}: ${esc(reason(st, i))}</li>`).join('')}</ul>`;
+      `<li data-key="${esc(p.keys[i] ?? '')}" class="rv-${st.state === 'red' && (!isLink(legNow(st, p.keys[i] ?? '')) || st.legs[i].state === 'over') ? 'failed' : 'flagged'}">${esc(p.stops[i].name)} – ${esc(p.stops[i + 1].name)}: ${esc(reason(st, i))}</li>`).join('')}</ul>`;
   }
   if (st.proposal) {
     // The comparison: before → after, per leg and for the pattern
@@ -333,9 +390,41 @@ function info() {
     }
     if (via.length) html += `<div>${esc(t('rvWaypoints', via.length))}</div>`;
     if (viaPending) html += `<div class="rv-note">${esc(t('rvViaHint'))}</div>`;
-    if (reason(st, i)) html += `<div class="rv-why">${esc(reason(st, i))}</div>`;
+    html += legVehicleInfo(st, i, l);
+    // what blocks the road (92): over, no route for this vehicle, goes round (proposal), went round (saved)
+    const prop = /** @type {any} */ (st.proposal?.legs.get(selLeg));
+    /** @type {string[]} */
+    let blockers = [];
+    if (prop?.state === 'no-route-vehicle') blockers = (prop.around ?? []).map((/** @type {any} */ b) => blockerLine(b, t('rvNoRouteVehicle', overText(st, b))));
+    else if (isLink(prop) && prop.around?.length) blockers = prop.around.map((/** @type {any} */ b) => blockerLine(b, t('rvGoesRound', overText(st, b), km(prop.distanceM - (prop.freeM ?? 0)), mins((prop.seconds ?? 0) - (prop.freeS ?? 0)))));
+    else if (!prop && st.legs[i].state === 'over') blockers = (st.legs[i].over ?? []).map((/** @type {any} */ b) => blockerLine(b, overText(st, b)));
+    else if (!prop && isLink(l) && l.around?.length) blockers = l.around.map((/** @type {any} */ b) => blockerLine(b, t('rvWentRound', limitText(b))));
+    html += blockers.join('');
+    const why = st.legs[i].state === 'over' && !prop ? '' : reason(st, i);
+    if (why && !(prop?.state === 'no-route-vehicle')) html += `<div class="rv-why">${esc(why)}</div>`;
     html += '</div>';
   }
+  return html;
+}
+
+/**
+ * A leg's lowest limits, its U-turns, who else uses its route and the map data it was routed on (design §10).
+ * @param {any} st @param {number} i @param {any} l the leg's route now
+ */
+function legVehicleInfo(st, i, l) {
+  if (!isLink(l)) return '';
+  let html = '';
+  const lows = KINDS.filter((k) => l.limits?.[k]).map((k) => t('rvLowItem', t(`rvKind_${k}`), withUnit(l.limits[k]), l.limits[k].road || t('rvNoName')));
+  if (lows.length) html += `<div>${esc(t('rvLowest', lows.join(', ')))}</div>`;
+  for (const u of l.uturns ?? []) html += `<div>${esc(uturnText(u))}</div>`;
+  const pair = st.pattern.keys[i], key = savedKey(st, pair);
+  if (!st.proposal?.legs.has(pair)) {
+    const others = states().filter((o) => o.pattern.id !== st.pattern.id && o.legs.some((/** @type {any} */ lg, /** @type {number} */ j) => o.pattern.keys[j] === pair && lg.key === key
+      && !['over', 'none', 'unroutable', 'changed'].includes(lg.state)));
+    const who = others.flatMap((o) => (o.pattern.vehicles?.length ? o.pattern.vehicles : [t('rvNoVehicleTrips')]));
+    if (who.length) html += `<div>${esc(t('rvShared', [...new Set(who)].join(', ')))}</div>`;
+  }
+  if (l.tiles?.dataDate) html += `<div class="rv-note">${esc(t('rvMapDate', l.tiles.dataDate))}</div>`;
   return html;
 }
 
@@ -345,7 +434,8 @@ function actions() {
   let html = '';
   if (st && st.pattern.keys.some(Boolean)) html += b('rv-route', 'rvRoute', !st.proposal && st.state !== 'green');
   if (st?.proposal?.legs.size) html += b('rv-accept', 'rvAccept', true);
-  if (st && !st.proposal && st.legs.some((l) => l.state === 'moved')) html += b('rv-keep', 'rvKeep');
+  // Keep: a stop that moved, or a route to reconfirm for this vehicle; never one it is over or not yet checked against
+  if (st && !st.proposal && st.legs.some((l) => l.state === 'moved' || l.state === 'reconfirm')) html += b('rv-keep', 'rvKeep');
   if (app.settings.autoRoute) html += b('rv-all', 'rvUpdateAll');
   return html;
 }
@@ -419,7 +509,7 @@ function build() {
   const root = /** @type {HTMLElement} */ (document.getElementById('route-view'));
   // The legend (user 2026-10-31): the map's colours and dashes, built once so it stays open or closed as the user left it
   const lg = /** @type {[string, string][]} */ ([['routed', 'rvLgRouted'], ['via', 'rvLgVia'], ['flagged', 'rvLgCheck'], ['failed', 'rvLgNone'],
-    ['old', 'rvLgOld'], ['selected', 'rvLgSelected'], ['faint', 'rvLgOther']]);
+    ['free', 'rvLgFree'], ['uturn', 'rvLgUturn'], ['old', 'rvLgOld'], ['selected', 'rvLgSelected'], ['faint', 'rvLgOther']]);
   const legend = `<details class="rv-legend"><summary>${esc(t('rvLegend'))}</summary><ul>${lg.map(([c, k]) => `<li><i class="rv-lg rv-lg-${c}"></i>${esc(t(k))}</li>`).join('')}</ul></details>`;
   root.innerHTML = `<div class="rv-top"><span class="rv-title">${esc(t('rtTitle'))}</span><div class="rv-sets"></div></div>`
     + '<div class="rv-body"><div class="rv-stops"></div><div class="rv-mapwrap"><div id="rv-map"></div>'
@@ -428,7 +518,11 @@ function build() {
   root.addEventListener('click', (e) => {
     const el = /** @type {HTMLElement} */ (e.target);
     const id = selPattern;
-    if (el.closest('.rv-close')) setTool('');
+    if (el.closest('.rv-around') && !el.closest('a')) {
+      // fit the map to what blocks the road (my call, design §10)
+      const [lon, lat] = String(/** @type {HTMLElement} */ (el.closest('.rv-around')).dataset.at).split(',').map(Number);
+      view?.fit([[lon, lat], [lon, lat]], { padding: 80, maxZoom: 16 });
+    } else if (el.closest('.rv-close')) setTool('');
     // While it routes or saves, the selection stays (final review 3: no switch from under a write, no hidden proposal)
     else if (busy && el.closest('.rv-set, .rv-thumb, .rv-gap, .rv-check li, .rv-foot, .rv-unused')) return;
     else if (el.closest('.rv-discard')) { for (const p of session?.pending() ?? []) session?.discard(p); render(); }
@@ -464,7 +558,8 @@ async function start(id) {
   session = makeSession({ code, rs, setId, onProgress: (done, total) => { progress = done < total ? t('rvFetching', done, total) : t('rvRoutingNow'); render(); } });
   const s = session;
   render();
-  enqueue(() => s.open());
+  // the automatic check (design §8): limits along saved routes, written at once when it found any
+  enqueue(async () => { await s.open(); const f = await s.checkLimits?.(); if (f) await write(s, f); });
 }
 
 let isOpen = false;

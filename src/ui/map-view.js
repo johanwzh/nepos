@@ -10,7 +10,7 @@ import { t } from '../i18n/strings.js';
  *             anchor?: 'center' | 'bottom', onClick?: (ev: MouseEvent) => void, onContext?: (ev: MouseEvent) => void,
  *             draggable?: boolean, onDragEnd?: (lngLat: LonLat) => void }} MapMarker
  *   anchor 'bottom': the marker's bottom edge is the point (a pin's tip, 2.5); draggable: a routing waypoint (2.6)
- * @typedef {{ key: string, coords: LonLat[], state: 'routed' | 'flagged' | 'failed' | 'selected' | 'via' | 'old' | 'faint' | 'stale' }} MapLink
+ * @typedef {{ key: string, coords: LonLat[], state: 'routed' | 'flagged' | 'failed' | 'selected' | 'via' | 'old' | 'faint' | 'stale' | 'free' }} MapLink
  *   via: a leg through waypoints; old: the saved route under a proposal; faint: the table set's other patterns; stale: a
  *   saved route out of date (the timetable's map) — routing editor, 2026-10-31
  * @typedef {{ lon: number, lat: number, r: number, tooltip: string, c?: string }} MapDot   c: the dot's colour (default blue)
@@ -71,6 +71,8 @@ export function createMapView(el, { style, dark = false }) {
       filter: ['==', ['get', 'state'], state], layout: { 'line-join': 'round', 'line-cap': 'round' }, paint });
     link('faint', { 'line-color': '#9a9a9a', 'line-width': 2, 'line-opacity': 0.45 });
     link('old', { 'line-color': '#777', 'line-width': 4, 'line-opacity': 0.7, 'line-dasharray': [1.5, 1.5] });
+    // the route without limits, where a vehicle's limits closed it (backlog 92): under the proposal
+    link('free', { 'line-color': '#c62828', 'line-width': 3, 'line-opacity': 0.75 });
     link('routed', { 'line-color': '#1b8a4a', 'line-width': 4, 'line-opacity': 0.85 });
     link('via', { 'line-color': '#6a3fc4', 'line-width': 4, 'line-opacity': 0.9 });
     link('stale', { 'line-color': '#e08a00', 'line-width': 4, 'line-opacity': 0.85 });

@@ -29,8 +29,8 @@ import { variantKey, sameRouteFor } from '../core/vehicle-links.js';
  * leg's key → the key of the leg it replaced (the comparison draws the old route).
  * A routed leg may carry free (the route without limits, drawn red; never saved); a leg with no route for this vehicle
  * carries it with around (what blocks it).
- * @typedef {{ legs: Map<string, (SavedLink & { free?: LonLat[] }) | { state: 'no-route' | 'no-road' | 'no-route-vehicle', error?: string,
- *   around?: import('../core/vehicle-limits.js').LimitAt[], free?: LonLat[] }>, via: Map<string, LonLat[]>, old: Map<string, string> }} Proposal
+ * @typedef {{ legs: Map<string, (SavedLink & { free?: LonLat[], freeM?: number, freeS?: number }) | { state: 'no-route' | 'no-road' | 'no-route-vehicle', error?: string,
+ *   around?: import('../core/vehicle-limits.js').LimitAt[], free?: LonLat[], freeM?: number, freeS?: number }>, via: Map<string, LonLat[]>, old: Map<string, string> }} Proposal
  */
 
 const PRECISION = 6;
@@ -138,7 +138,7 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
     if (!r.ok) {
       const f = /** @type {any} */ (r);
       // no route for this vehicle (§10): the route without limits and what blocks it go with the failed leg
-      if (keys.length === 1) pr.legs.set(keys[0], f.error === 'no-route-vehicle' ? { state: 'no-route-vehicle', around: f.around, free: f.free }
+      if (keys.length === 1) pr.legs.set(keys[0], f.error === 'no-route-vehicle' ? { state: 'no-route-vehicle', around: f.around, free: f.free, freeM: f.freeM, freeS: f.freeS }
         : { state: f.error === 'no-road' ? 'no-road' : 'no-route' });
       return false;
     }
@@ -151,12 +151,12 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
     keys.forEach((key, k) => {
       const leg = /** @type {import('./router-core.js').RoutedLeg} */ (r.legs[k]), flags = r.flags?.[k] ?? [];
       const limits = { ...leg.limits, built: manifest?.built ?? '' };
-      /** @type {SavedLink & { free?: [number, number][] }} */
+      /** @type {SavedLink & { free?: [number, number][], freeM?: number, freeS?: number }} */
       const link = { polyline: encodePolyline(leg.coords, PRECISION), precision: PRECISION, distanceM: Math.round(leg.metres * 10) / 10,
         status: 'OK', from: pos(stops[k]), to: pos(stops[k + 1]), ferryM: Math.round(leg.ferryMetres * 10) / 10, seconds: Math.round(leg.seconds),
         via: viaOf(pr, key, used[k]), roads: leg.roads, flags, routedAt: now().toISOString(), tiles: tilesOf, limits,
         ...(opts.uturnLength != null ? { uturn: opts.uturnLength } : {}), ...(leg.uturns?.length ? { uturns: leg.uturns } : {}),
-        ...(leg.around?.length ? { around: leg.around, free: leg.free } : {}) };
+        ...(leg.around?.length ? { around: leg.around, free: leg.free, freeM: leg.freeM, freeS: leg.freeS } : {}) };
       const saved = file.links[used[k]];
       if (!saved || !sameLink(link, saved)) { pr.legs.set(key, link); return; }
       // The same route: kept as it is (not a metre changes); a route saved before 2.6.1 gets its limits, one on an older
@@ -265,7 +265,7 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
       p.keys.forEach((pair, i) => {
         const l = pair ? pr?.legs.get(pair) : undefined;
         if (!pair || !isLink(l)) return;
-        const { free, ...link } = /** @type {SavedLink & { free?: any }} */ (l);
+        const { free, freeM, freeS, ...link } = /** @type {SavedLink & { free?: any, freeM?: number, freeS?: number }} */ (l);
         const plain = links[pair];
         if (!gk) { links[pair] = link; usedNow[i] = pair; return; }
         if (plain && sameLink(link, plain)) {
@@ -360,7 +360,7 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
         for (const [key, link] of want) {
           const coords = /** @type {[number, number][]} */ (decodePolyline(link.polyline, link.precision ?? 6));
           const points = coords.filter((_, i) => i % 20 === 0 || i === coords.length - 1).map(([lon, lat]) => ({ lon, lat }));
-          const opened = await tiles.open(points, { latest: true });
+          const opened = await tiles.open(points, { latest: true, onProgress });
           manifest = opened.manifest; newer = opened.newer;
           const missing = tilesForChain(manifest, points, 1).filter((k) => !router.has(k));
           if (missing.length) await router.addTiles(await Promise.all(missing.map(async (k) => ({ key: k, buf: await loadTile(k) }))));
