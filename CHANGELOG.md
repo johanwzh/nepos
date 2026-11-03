@@ -20,8 +20,34 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Stops and modes:** a snowAndIce line may use road stops (bus, coach); a bus or coach line still may not use
   snowAndIce stops.
 
+- **Routing knows the vehicle's size:** a vehicle's height, width, length and weight (new on **Resources**: **Weight (t)**,
+  the permitted total weight) now steer **Routing**: a road whose OpenStreetMap limit the vehicle is over is never
+  used. Height, width and length are hard limits; up to 5 % over a weight limit is a warning. The same stops run by
+  vehicles of different sizes are routed separately, one thumbnail each, with the vehicles beside it. Trips without a
+  vehicle, or with a vehicle without sizes, route as before.
+- **Why a route goes round:** where the limits send a route round, **Routing** draws the route it would have taken in
+  red and says why, e.g. "TB (4.0 m) is taller than the 3.7 m clearance on Matrandvegen – +1.4 km, +2 min", with a
+  link to the road in OpenStreetMap, so a wrong tag can be checked and fixed there. A stop the vehicle cannot reach
+  says "No route for this vehicle".
+- **Export check:** a trip whose vehicle is over a limit on its route is an error; less than 0.5 m to spare, or a
+  weight close to the limit, is a warning. Routes to reconfirm after a vehicle change, or not yet checked against the
+  vehicle sizes, are one warning per line. Where Nepos can tell that a changed vehicle still gets the same route, it
+  does not ask.
+- **U-turns:** a vehicle may now turn at a stop, a waypoint or a junction on a small road (residential, unclassified,
+  service, at most 50 km/h), at a cost that grows with its length: a minibus turns at its stop where a 12 m bus drives
+  on to turn. On larger and faster roads U-turns stay out. **Routing** marks each U-turn on the map.
+- **Newer map data:** a monthly map build no longer turns every route orange. When **Routing** opens, Nepos checks the
+  saved routes against the new limits by itself and only marks a route when a limit matters for its vehicle.
+- **Two journey patterns** in the export where two vehicle groups with the same stops take different roads (Antu notes
+  this as information only).
+
 **Your project files**
 
+- **Routes (`data/links/`):** saved routes get their lowest limits along the road, the U-turn length they were routed
+  with and, for a vehicle group's own route, a key of its own. Routes saved before keep working; their limits are
+  filled in the first time **Routing** opens on the line. Nothing to do.
+- **Vehicles:** a vehicle gets an optional weight. Nothing to do. (Nepos 2.6.0 drops the weight if it saves the
+  vehicle list.)
 - **Vehicles:** a vehicle saved with the old mode "ferry" becomes "water" the next time the vehicle list is saved.
   Nothing to do.
 
