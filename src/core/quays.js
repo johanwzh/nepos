@@ -42,10 +42,11 @@ export const lineModeOf = (rs) => rs?.mode || /** @type {any} */ (ERN_MODES)[rs?
 /**
  * The stops each line mode may use (user 2026-10-31): every road vehicle uses the road stops (there are no coach-only
  * stops); a car ferry may call at any ferry or boat quay (it just cannot unload cars there), and a boat at a car ferry
- * quay. Other modes use their own stops.
+ * quay. Other modes use their own stops. One way (backlog 70, user 2026-11-03): a snowAndIce line (a snowcoach) may use
+ * the road stops, but a bus, coach or taxi line may not use snowAndIce stops.
  * @type {Record<string, string[]>}
  */
-const STOP_MODES = { bus: ['bus', 'coach'], coach: ['bus', 'coach'], taxi: ['bus', 'coach'], ferry: ['ferry', 'water'], water: ['water', 'ferry'] };
+const STOP_MODES = { bus: ['bus', 'coach'], coach: ['bus', 'coach'], taxi: ['bus', 'coach'], snowAndIce: ['bus', 'coach'], ferry: ['ferry', 'water'], water: ['water', 'ferry'] };
 
 /**
  * Whether a stop place's NSR transport mode suits the line's mode (STOP_MODES; otherwise the same mode).

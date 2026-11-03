@@ -57,6 +57,18 @@ describe('Quay status', () => {
     }
   });
 
+  it('snowAndIce, one way (backlog 70, user 2026-11-03): a snowcoach line may use road stops, a bus or coach line may not use snowAndIce stops', () => {
+    expect(modeMatches('snowAndIce', 'snowAndIce')).toBe(true);
+    expect(modeMatches('snowAndIce', 'bus')).toBe(true);
+    expect(modeMatches('snowAndIce', 'coach')).toBe(true);
+    expect(modeMatches('bus', 'snowAndIce')).toBe(false);
+    expect(modeMatches('coach', 'snowAndIce')).toBe(false);
+    expect(modeMatches('taxi', 'snowAndIce')).toBe(false);
+    expect(modeMatches('snowAndIce', 'water')).toBe(false);
+    expect(modeMatches('snowAndIce', 'rail')).toBe(false);
+    expect(modeMatches('snowAndIce', '')).toBe(true); // NSR gave no mode
+  });
+
   it('tells each case apart', () => {
     expect(quayStatus(null, undefined, 1)).toBe('missing');
     expect(quayStatus('101', undefined, 1)).toBe('not-nsr');

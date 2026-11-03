@@ -130,6 +130,26 @@ describe('the vehicle row: short codes and modes (user 2026-10-20)', () => {
     press('Enter');
     expect([...document.querySelectorAll('.lb-pick .lb-item')].map((x) => x.textContent)).toEqual(['Buss 7', 'Reserve', 'Ingen']);
   });
+
+  /** The names the picker offers on a line of this mode (backlog 70) */
+  const offeredOn = (/** @type {string} */ mode, /** @type {Record<string, string>} */ vehicles) => {
+    app.routeState = { ...newRouteState('no'), mode };
+    app.vehicles = Object.entries(vehicles).map(([name, transportMode], n) => ({ id: `v${n}`, name, colour: '#2f6fb5', transportMode }));
+    loadGrid({ stops: [stop('A')], cols: [{ dayCode: 'D', cells: [cell('0700')] }], vehicleRow: true });
+    down(vh(0));
+    press('Enter');
+    return [...document.querySelectorAll('.lb-pick .lb-item')].map((x) => x.textContent);
+  };
+
+  it('offers the road group on a road line, and the water group (also the old ferry) on a water line (backlog 70)', () => {
+    expect(offeredOn('bus', { Buss: 'bus', Ekspress: 'coach', Taxi: 'taxi', Ferje: 'water', Tog: 'rail' })).toEqual(['Buss', 'Ekspress', 'Taxi', 'Ingen']);
+    expect(offeredOn('water', { Buss: 'bus', Ferje: 'water', Gammel: 'ferry', Reserve: '' })).toEqual(['Ferje', 'Gammel', 'Reserve', 'Ingen']);
+  });
+
+  it('offers a snowcoach on a bus line, but no bus on a snowAndIce line (backlog 70)', () => {
+    expect(offeredOn('bus', { Buss: 'bus', Snøbuss: 'snowAndIce' })).toEqual(['Buss', 'Snøbuss', 'Ingen']);
+    expect(offeredOn('snowAndIce', { Buss: 'bus', Snøbuss: 'snowAndIce' })).toEqual(['Snøbuss', 'Ingen']);
+  });
 });
 
 describe('one marker at a time (user 2026-10-20)', () => {

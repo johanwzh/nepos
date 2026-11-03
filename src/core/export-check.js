@@ -2,6 +2,7 @@
 // wrong or surprising. Errors block the export; warnings are shown and never block. Quay status
 // from NSR is advisory, so it only ever gives warnings. Pure.
 import { quayStatus, stopLocalId, lineModeOf } from './quays.js';
+import { vehicleFitsLine } from './vehicles.js';
 import { findRole, aliasIssues, orgRole } from './orgs.js';
 import { ROUTE_CODE_PATTERN } from './route-names.js';
 import { journeyStops, tripVariants } from './netex/journeys.js';
@@ -241,8 +242,8 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
 }
 
 /**
- * A trip's vehicle must run the line's mode (user 2026-10-20): one error per vehicle and line. A vehicle without a
- * mode, or a name no longer in the list, is not checked.
+ * A trip's vehicle must run a mode that goes with the line's (user 2026-10-20; vehicleFitsLine, backlog 70): one error
+ * per vehicle and line. A vehicle without a mode, or a name no longer in the list, is not checked.
  * @param {string} code @param {any} rs @param {{ name: string, transportMode?: string }[]} vehicles
  * @param {(level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void} add
  */
@@ -253,7 +254,7 @@ function checkVehicles(code, rs, vehicles, add) {
   for (const grid of Object.values(rs.grids ?? {})) {
     for (const col of /** @type {any} */ (grid).cols ?? []) {
       const v = col.vehicle ? vehicles.find((x) => x.name === col.vehicle) : null;
-      if (!v?.transportMode || v.transportMode === mode || said.has(v.name)) continue;
+      if (!v?.transportMode || vehicleFitsLine(v.transportMode, mode) || said.has(v.name)) continue;
       said.add(v.name);
       add('error', 'vehicle-mode', { route: code, detail: v.name });
     }

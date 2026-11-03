@@ -32,7 +32,7 @@ import { unionDays, tripDays } from '../core/calendars.js';
 import { app } from './state.js';
 import { normalizeDests, servedRows, setDestAt, moveChange, viaDrag, applySuggestion, copyDests, pasteDests, snapshotDests, restoreDests, destLabel } from '../core/destinations.js';
 import { destColumnsOpen, onDestToggle, destCellInfo, renderDestCell, openDestEditor, toggleDestColumns } from './dest-columns.js';
-import { vehicleShown } from '../core/vehicles.js';
+import { vehicleShown, vehicleFitsLine } from '../core/vehicles.js';
 import { openXWindow } from './x-window.js';
 import { openBookingForm } from './booking-form.js';
 import { openPasteSpecial } from './paste-special.js';
@@ -1194,9 +1194,9 @@ function renderFootRow(tbl) {
 /** What differs between the two rows: the column field, the project list (all, and those offered), what a chip shows, the texts, the row's class. */
 const TAGS = /** @type {const} */ ({
   label: { field: 'label', list: () => app.labels ?? [], offered: () => app.labels ?? [], shown: (/** @type {string} */ n) => n, title: 'labelsRow', none: 'labelNone', noneYet: 'labelsNoneYet', cls: 'g-row-lb' },
-  // A vehicle shows its short code; the picker offers those of the line's mode, and those without a mode
+  // A vehicle shows its short code; the picker offers those whose mode goes with the line's (vehicleFitsLine), and those without a mode
   vehicle: { field: 'vehicle', list: () => app.vehicles ?? [],
-    offered: () => (app.vehicles ?? []).filter((v) => !v.transportMode || !app.routeState?.mode || v.transportMode === app.routeState.mode),
+    offered: () => (app.vehicles ?? []).filter((v) => vehicleFitsLine(v.transportMode, app.routeState?.mode ?? '')),
     shown: (/** @type {string} */ n) => { const v = app.vehicles?.find((x) => x.name === n); return v ? vehicleShown(v) : n; }, title: 'vehiclesRow', none: 'vehicleNone', noneYet: 'vehiclesNoneYet', cls: 'g-row-lb g-row-vh' },
 });
 /** A tag row is selected: which one (lbKind) and its column (lbCol) */

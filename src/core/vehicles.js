@@ -1,5 +1,5 @@
 // A vehicle's own data (user 2026-10-20), named as in NeTEx's VehicleType so it can be exported later: the mode it
-// runs (must match the line), fuel, low floor, seats, its size in metres, the vehicle type ID Nepos makes, and a
+// runs (must go with the line's: vehicleFitsLine), fuel, low floor, seats, its size in metres, the vehicle type ID Nepos makes, and a
 // VehicleTypeRef into the national vehicle register under the fixed NMR:VehicleType: prefix.
 
 /** NeTEx FuelTypeEnumeration (netex_nm_equipmentEnergy_support.xsd), in the schema's order. */
@@ -18,8 +18,26 @@ export const SHORT_CODE_MAX = 8;
  *   vehicleTypeId: string, vehicleTypeRef: string }} Vehicle
  */
 
+/**
+ * Vehicle and line modes that go together (backlog 70, user 2026-11-03): road vehicles run any road line, a boat and
+ * the old "ferry" any water line.
+ * @type {string[][]}
+ */
+const VEHICLE_MODE_GROUPS = [['bus', 'coach', 'taxi'], ['water', 'ferry']];
+
+/**
+ * Whether a vehicle of this mode may run a line of that mode: the same group, or the same mode, and one way a snowAndIce
+ * vehicle (a snowcoach) on a bus line (not the other way). A vehicle or a line without a mode fits anything.
+ * @param {string} vehicleMode @param {string} lineMode
+ */
+export function vehicleFitsLine(vehicleMode, lineMode) {
+  if (!vehicleMode || !lineMode || vehicleMode === lineMode) return true;
+  if (vehicleMode === 'snowAndIce' && lineMode === 'bus') return true;
+  return VEHICLE_MODE_GROUPS.some((g) => g.includes(vehicleMode) && g.includes(lineMode));
+}
+
 /** @param {any} v */
-const positive = (v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null);
+const positive =(v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null);
 /** @param {any} v */
 const str = (v) => (typeof v === 'string' ? v : '');
 
@@ -28,7 +46,7 @@ export function normalizeVehicle(v) {
   return {
     id: v.id, name: v.name, colour: v.colour,
     shortCode: str(v.shortCode),
-    transportMode: str(v.transportMode),
+    transportMode: v.transportMode === 'ferry' ? 'water' : str(v.transportMode), // the old mode (backlog 70)
     fuelType: FUEL_TYPES.includes(v.fuelType) ? v.fuelType : '',
     lowFloor: v.lowFloor === true,
     seats: Number.isInteger(v.seats) && v.seats >= 0 ? v.seats : null,

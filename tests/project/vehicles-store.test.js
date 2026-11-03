@@ -44,4 +44,13 @@ describe('vehicles: their own data (user 2026-10-20)', () => {
     await fs.writeBytes('data/vehicles.json', new TextEncoder().encode('[{"id":"v1","name":"Buss 7","colour":"#2f6fb5"}]'));
     expect((await readVehicles(fs)).vehicles[0]).toMatchObject({ shortCode: '', transportMode: '', lowFloor: false, seats: null });
   });
+
+  it('a vehicle saved as "ferry" reads as "water" and is written as "water" on the next save (backlog 70)', async () => {
+    const fs = createMemoryFs();
+    await fs.writeBytes('data/vehicles.json', new TextEncoder().encode('[{"id":"v1","name":"Ferje 1","colour":"#2f6fb5","transportMode":"ferry"}]'));
+    const { vehicles } = await readVehicles(fs);
+    expect(vehicles[0].transportMode).toBe('water');
+    await writeVehicles(fs, vehicles);
+    expect(JSON.parse(/** @type {string} */ (await readText(fs, 'data/vehicles.json')))[0].transportMode).toBe('water');
+  });
 });

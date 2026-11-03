@@ -418,6 +418,28 @@ describe('vehicles on trips (user 2026-10-20)', () => {
     expect(check(rs).filter((i) => i.code === 'vehicle-mode')).toEqual([]); // no vehicle list given
   });
 
+  it('modes that go together are fine: road vehicles on a road line, a boat or the old ferry on a water line (backlog 70)', () => {
+    const rs = route();
+    grid0(rs).cols[0].vehicle = 'Taxi 1';
+    expect(check(rs, { vehicles: [V({ name: 'Taxi 1', transportMode: 'taxi' })] }).filter((i) => i.code === 'vehicle-mode')).toEqual([]);
+    expect(check(rs, { vehicles: [V({ name: 'Taxi 1', transportMode: 'coach' })] }).filter((i) => i.code === 'vehicle-mode')).toEqual([]);
+    const boat = route();
+    boat.mode = 'water';
+    grid0(boat).cols[0].vehicle = 'Ferje 1';
+    expect(check(boat, { vehicles: [V({ name: 'Ferje 1', transportMode: 'ferry' })] }).filter((i) => i.code === 'vehicle-mode')).toEqual([]);
+    expect(check(boat, { vehicles: [V({ name: 'Ferje 1', transportMode: 'water' })] }).filter((i) => i.code === 'vehicle-mode')).toEqual([]);
+  });
+
+  it('a snowcoach on a bus line is fine, a bus on a snowAndIce line is an error (backlog 70)', () => {
+    const rs = route();
+    grid0(rs).cols[0].vehicle = 'Snøbuss';
+    expect(check(rs, { vehicles: [V({ name: 'Snøbuss', transportMode: 'snowAndIce' })] }).filter((i) => i.code === 'vehicle-mode')).toEqual([]);
+    const snow = route();
+    snow.mode = 'snowAndIce';
+    grid0(snow).cols[0].vehicle = 'Buss 7';
+    expect(check(snow, { vehicles: [V({})] }).filter((i) => i.code === 'vehicle-mode')).toEqual([expect.objectContaining({ level: 'error', detail: 'Buss 7' })]);
+  });
+
   it('has texts in both languages', () => {
     expect(CHECK_CODES).toContain('vehicle-mode');
     for (const lang of Object.keys(STRINGS)) expect(STRINGS[lang]['chk:vehicle-mode']).toBeTruthy();
