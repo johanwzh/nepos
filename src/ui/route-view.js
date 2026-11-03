@@ -238,7 +238,7 @@ function drawMap() {
       const old = oldKey ? session?.file().links[oldKey] : undefined;
       if (old && prop && isLink(old) && old !== prop) links.push({ key: `old:${key}`, coords: /** @type {LonLat[]} */ (decodePolyline(old.polyline, old.precision ?? 6)), state: 'old' });
       const legState = st.legs[i].state;
-      const ok = isLink(l) && (prop || legState === 'routed' || legState === 'moved' || legState === 'map');
+      const ok = isLink(l) && (prop || legState === 'routed' || legState === 'moved');
       /** @type {import('./map-view.js').MapLink['state']} */
       const state = key === selLeg ? 'selected' : !ok ? 'failed' : !prop && legState !== 'routed' ? 'stale'
         : /** @type {any} */ (l).flags?.length ? 'flagged' : /** @type {any} */ (l).via?.length ? 'via' : 'routed';
@@ -345,7 +345,7 @@ function actions() {
   let html = '';
   if (st && st.pattern.keys.some(Boolean)) html += b('rv-route', 'rvRoute', !st.proposal && st.state !== 'green');
   if (st?.proposal?.legs.size) html += b('rv-accept', 'rvAccept', true);
-  if (st && !st.proposal && st.legs.some((l) => l.state === 'moved' || l.state === 'map')) html += b('rv-keep', 'rvKeep');
+  if (st && !st.proposal && st.legs.some((l) => l.state === 'moved')) html += b('rv-keep', 'rvKeep');
   if (app.settings.autoRoute) html += b('rv-all', 'rvUpdateAll');
   return html;
 }

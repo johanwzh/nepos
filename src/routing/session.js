@@ -67,7 +67,7 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
   const loaded = new Set();
   const loadTile = (/** @type {string} */ key) => { loaded.add(key); return tiles.loadTile(key); };
 
-  const states = () => patternStates(patterns, file, { quayInfo, publishedBuilt });
+  const states = () => patternStates(patterns, file, { quayInfo });
   const stateOf = (/** @type {string} */ id) => /** @type {PatternState} */ (states().find((s) => s.pattern.id === id));
   /** @param {string} id */
   const proposalOf = (id) => {
@@ -246,7 +246,7 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
       if (!st) return file;
       const links = { ...file.links };
       for (const l of st.legs) {
-        if (!l.key || (l.state !== 'moved' && l.state !== 'map')) continue;
+        if (!l.key || l.state !== 'moved') continue;
         const [a, b] = l.key.split('|').map((q) => quayInfo.get(q));
         const link = links[l.key];
         links[l.key] = { ...link, reviewed: { built: publishedBuilt || undefined,

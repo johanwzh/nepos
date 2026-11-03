@@ -108,10 +108,10 @@ export function lineRouting(code) {
   const live = code === app.activeRoute || app.drafts.has(code);
   const ids = [...new Set(Object.values(rs.grids ?? {}).flatMap((g) => /** @type {any} */ (g).stops.map((/** @type {any} */ s) => String(s.stopId ?? ''))))];
   const where = ids.map((id) => { const q = quayInfo.get(id); return q ? `${q.lat},${q.lon}` : ''; }).join(';');
-  const key = [entry?.text, app.calendars, app.lineLinks.get(code), where];
+  const key = [entry?.text, app.calendars, app.lineLinks.get(code), app.vehicles, where];
   const hit = routingCache.get(code);
   if (!live && hit && hit.key.every((v, i) => v === key[i])) return hit.value;
-  const states = patternStates(tablePatterns(rs, { calendars: app.calendars, quayInfo }), app.lineLinks.get(code), { quayInfo });
+  const states = patternStates(tablePatterns(rs, { calendars: app.calendars, quayInfo, vehicles: app.vehicles ?? [] }), app.lineLinks.get(code), { quayInfo });
   const n = (/** @type {string} */ s) => states.filter((x) => x.state === s).length;
   const value = { patterns: states.length, green: n('green'), orange: n('orange'), red: n('red') };
   if (!live) routingCache.set(code, { key, value });

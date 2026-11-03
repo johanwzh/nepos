@@ -20,8 +20,9 @@ const link = (key, extra = {}) => {
 const accepted = (patterns) => ({ version: 1, line: 'L', snaps: {},
   links: Object.fromEntries(patterns.flatMap((p) => p.keys.filter(Boolean).map((/** @type {string} */ key) => [key, link(key)]))),
   patterns: Object.fromEntries(patterns.map((p) => [p.id, { stops: p.stops.map((/** @type {any} */ s) => s.stopId), keys: p.keys, trips: p.trips, acceptedAt: '2026-10-31T10:00:00Z' }])) });
-const states = (/** @type {any[]} */ patterns, /** @type {any} */ file, quayInfo = QUAYS, publishedBuilt = '2026-10-01') =>
-  patternStates(patterns, file, { quayInfo, publishedBuilt });
+/** The fourth argument, a published road build, no longer changes anything (design 2026-11-03). */
+const states = (/** @type {any[]} */ patterns, /** @type {any} */ file, quayInfo = QUAYS, /** @type {string} */ _built = '') =>
+  patternStates(patterns, file, { quayInfo });
 
 describe('the journey patterns of a table set (routing editor, 2026-10-31)', () => {
   it('one pattern per distinct stop sequence, with its trips', () => {
@@ -98,11 +99,9 @@ describe('the state of each pattern (spec "The user is in control")', () => {
     expect(states(p, file, moved)[0].state).toBe('green');
   });
 
-  it('newer published road data: orange, map; reviewed against that build: green; unknown build: never map', () => {
+  it('newer published road data alone changes nothing: green (design 2026-11-03: monthly builds mark no routes)', () => {
     const file = accepted(p);
-    expect(states(p, file, QUAYS, '2026-11-01')[0].legs.map((l) => l.state)).toEqual(['map', 'map']);
-    expect(states(p, file, QUAYS, '')[0].state).toBe('green');
-    for (const key of p[0].keys) file.links[/** @type {string} */ (key)].reviewed = { built: '2026-11-01' };
+    expect(states(p, file, QUAYS, '2026-11-01')[0].legs.map((l) => l.state)).toEqual(['routed', 'routed']);
     expect(states(p, file, QUAYS, '2026-11-01')[0].state).toBe('green');
   });
 
@@ -112,8 +111,8 @@ describe('the state of each pattern (spec "The user is in control")', () => {
     const s = states(now, file);
     expect(s[0].state).toBe('orange');
     expect(s[0].legs).toEqual([
-      { key: k('1', '4'), state: 'changed', oldKey: k('1', '2') },
-      { key: k('4', '3'), state: 'changed', oldKey: k('2', '3') },
+      { key: k('1', '4'), pair: k('1', '4'), state: 'changed', oldKey: k('1', '2') },
+      { key: k('4', '3'), pair: k('4', '3'), state: 'changed', oldKey: k('2', '3') },
     ]);
   });
 
@@ -126,7 +125,7 @@ describe('the state of each pattern (spec "The user is in control")', () => {
     const now = pats(line([t('u1', ['0700', '0710', off(), '0730'])], S4b));
     const s = states(now, accepted(before));
     expect(s.map((x) => x.state)).toEqual(['orange', 'orange']);
-    expect(s[1].legs).toEqual([{ key: k('1', '4'), state: 'changed', oldKey: k('1', '2') }, { key: k('4', '5'), state: 'changed', oldKey: k('2', '5') }]);
+    expect(s[1].legs).toEqual([{ key: k('1', '4'), pair: k('1', '4'), state: 'changed', oldKey: k('1', '2') }, { key: k('4', '5'), pair: k('4', '5'), state: 'changed', oldKey: k('2', '5') }]);
   });
 
   it('an extra call is a new pattern: red', () => {
@@ -193,5 +192,91 @@ describe('unused links are dropped when a line is saved (spec Goal 6)', () => {
 
   it('a line not routed (air) keeps its file', () => {
     expect(pruneLineLinks(line([t('u9', ['0700', '0710'])], STOPS, 'air'), file())).toBeNull();
+  });
+});
+
+describe('routing patterns per vehicle group (backlog 93/107, design 2026-11-03 §5, §8)', () => {
+  const V = /** @type {any[]} */ ([
+    { name: 'TB', height: 4, width: null, length: null, weight: null },
+    { name: 'LB', height: 3, width: null, length: null, weight: null },
+    { name: 'TB2', height: 4, width: null, length: null, weight: null, fuelType: 'diesel' },
+    { name: 'Mini', height: 2.8, width: null, length: 8, weight: null },
+    { name: 'Plain', height: null, width: null, length: null, weight: null },
+  ]);
+  const veh = (/** @type {string} */ uid, /** @type {string} */ vehicle, /** @type {any[]} */ times) => ({ ...t(uid, times), vehicle });
+  const vp = (/** @type {any} */ rs) => tablePatterns(rs, { calendars: CAL, quayInfo: QUAYS, setId: 0, vehicles: V });
+  const lim = (/** @type {number} */ h) => ({ height: { kind: 'height', value: h, way: 77, road: 'Matrandvegen', at: [10.7, 59.9] } });
+  const L12 = k('1', '2'), L23 = k('2', '3');
+
+  it('the same stops with vehicles of other sizes are two patterns; the same sizes are one', () => {
+    const p2 = vp(line([veh('u1', 'TB', ['0700', '0710', '0720']), veh('u2', 'LB', ['0800', '0810', '0820']), veh('u3', 'TB2', ['0900', '0910', '0920'])]));
+    expect(p2.map((x) => x.id)).toEqual(['NSR:Quay:1 NSR:Quay:2 NSR:Quay:3 #h4', 'NSR:Quay:1 NSR:Quay:2 NSR:Quay:3 #h3']);
+    expect(p2[0].vehicles).toEqual(['TB', 'TB2']);
+    expect(p2[0].group).toEqual({ height: 4 });
+    expect(p2[0].groupKey).toBe('h4');
+    expect(p2[0].keys).toEqual([L12, L23]);
+  });
+
+  it('trips without a vehicle, or with one without sizes, are the plain pattern as in 2.6.0', () => {
+    const p2 = vp(line([t('u1', ['0700', '0710', '0720']), veh('u2', 'Plain', ['0800', '0810', '0820'])]));
+    expect(p2.map((x) => x.id)).toEqual(['NSR:Quay:1 NSR:Quay:2 NSR:Quay:3']);
+    expect(p2[0].vehicles).toEqual(['Plain']);
+  });
+
+  it('a block\'s generated trips take their parent\'s vehicle (Review Focus 3)', () => {
+    const col = veh('u1', 'TB', ['0700', '0710', '0720']);
+    /** @type {any} */ (col).block = { every: 30, span: 60 };
+    expect(vp(line([col])).map((x) => [x.id, x.runs])).toEqual([['NSR:Quay:1 NSR:Quay:2 NSR:Quay:3 #h4', 3]]);
+  });
+
+  it('over a limit on its route: red; close: green, with the limit; fits: green', () => {
+    const tb = vp(line([veh('u1', 'TB', ['0700', '0710', '0720'])]));
+    const file = { ...accepted(tb), links: { [L12]: link(L12, { limits: lim(3.7) }), [L23]: link(L23, { limits: lim(4.3) }) } };
+    const st = states(tb, file)[0];
+    expect(st.state).toBe('red');
+    expect(st.legs.map((l) => l.state)).toEqual(['over', 'routed']);
+    expect(st.legs[0].over?.[0].value).toBe(3.7);
+    expect(st.legs[1].close?.[0].value).toBe(4.3);
+  });
+
+  it('a variant of its own: the leg uses it, by its key', () => {
+    const tb = vp(line([veh('u1', 'TB', ['0700', '0710', '0720'])]));
+    const file = { ...accepted(tb), links: { [L12]: link(L12, { limits: lim(3.7) }), [`${L12}|h4`]: link(L12, { limits: {}, uturn: 12 }), [L23]: link(L23, { limits: {} }) } };
+    const st = states(tb, file)[0];
+    expect(st.state).toBe('green');
+    expect(st.legs.map((l) => [l.key, l.pair])).toEqual([[`${L12}|h4`, L12], [L23, L23]]);
+  });
+
+  it('a smaller vehicle on a route that went round for a bigger one: orange, reconfirm', () => {
+    const lb = vp(line([veh('u1', 'LB', ['0700', '0710', '0720'])]));
+    const file = { ...accepted(lb), links: { [`${L12}|h4`]: link(L12, { limits: {}, uturn: 12 }), [`${L23}|h4`]: link(L23, { limits: {}, uturn: 12 }) } };
+    const st = states(lb, file)[0];
+    expect(st.state).toBe('orange');
+    expect(st.legs.map((l) => l.state)).toEqual(['reconfirm', 'reconfirm']);
+  });
+
+  it('a route saved before 2.6.1 (no limits) and a sized vehicle: orange, unchecked; without sizes: green', () => {
+    const tb = vp(line([veh('u1', 'TB', ['0700', '0710', '0720'])]));
+    expect(states(tb, accepted(tb))[0].legs.map((l) => l.state)).toEqual(['unchecked', 'unchecked']);
+    const plain = vp(line([t('u1', ['0700', '0710', '0720'])]));
+    expect(states(plain, accepted(plain))[0].state).toBe('green');
+  });
+
+  it('a minibus on a route made with the 12 m default: reconfirm (it may turn now); the same route kept for it: green', () => {
+    const mini = vp(line([veh('u1', 'Mini', ['0700', '0710', '0720'])]));
+    const file = { ...accepted(mini), links: { [L12]: link(L12, { limits: {} }), [L23]: link(L23, { limits: {} }) } };
+    expect(states(mini, file)[0].legs.map((l) => l.state)).toEqual(['reconfirm', 'reconfirm']);
+    for (const key of [L12, L23]) /** @type {any} */ (file.links[key]).kept = ['h2.8l8'];
+    expect(states(mini, file)[0].state).toBe('green');
+  });
+
+  it('Remove unused keeps a variant while its group runs the line, drops it when no trip has that group', () => {
+    const rs = line([veh('u1', 'TB', ['0700', '0710', '0720'])]);
+    const file = { version: 1, line: 'L', snaps: {}, links: { [L12]: link(L12), [`${L12}|h4`]: link(L12), [`${L12}|h9`]: link(L12), [L23]: link(L23) } };
+    const next = /** @type {any} */ (pruneLineLinks(rs, /** @type {any} */ (file), V));
+    expect(Object.keys(next.links).sort()).toEqual([L12, `${L12}|h4`, L23].sort());
+    // a 2.6.0 file with another network's key keeps it (Review Focus 4)
+    const tram = 'NSR:Quay:1|NSR:Quay:2|tram';
+    expect(pruneLineLinks(rs, /** @type {any} */ ({ ...file, links: { [L12]: link(L12), [L23]: link(L23), [tram]: link(L12) } }), V)).toBeNull();
   });
 });

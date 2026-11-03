@@ -81,7 +81,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     if (!routeTrips) add('warning', 'route-no-trips', { route: code });
     checkVehicles(code, rs, vehicles, add);
     checkBookings(code, rs, add);
-    if (links) checkLinks(code, rs, links.get(code), { calendars, quayInfo, add });
+    if (links) checkLinks(code, rs, links.get(code), { calendars, quayInfo, vehicles, add });
     checkHubs(code, rs, () => hubLines?.() ?? routes.filter((x) => x.rs && x.status !== 'damaged'), { calendars, quayInfo, add });
     trips += routeTrips;
   }
@@ -370,9 +370,9 @@ function checkHubs(code, rs, lines, { calendars, quayInfo, add }) {
  * Legs of a line not routed or out of date: one warning with the counts (2.6). Such a pattern is exported without
  * ServiceLinks, so this never blocks the export. Air lines are not routed and have no legs.
  * @param {string} code @param {any} rs @param {import('../project/links-store.js').LineLinks | undefined} lineLinks
- * @param {{ calendars: import('./calendars.js').Calendar[], quayInfo: Map<string, any>, add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void }} ctx
+ * @param {{ calendars: import('./calendars.js').Calendar[], quayInfo: Map<string, any>, vehicles: any[], add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void }} ctx
  */
-function checkLinks(code, rs, lineLinks, { calendars, quayInfo, add }) {
-  const sum = lineLinkSummary(rs, lineLinks, { calendars, quayInfo });
+function checkLinks(code, rs, lineLinks, { calendars, quayInfo, vehicles, add }) {
+  const sum = lineLinkSummary(rs, lineLinks, { calendars, quayInfo, vehicles });
   if (sum.notRouted || sum.outOfDate) add('warning', 'link-missing', { route: code, detail: `${sum.notRouted}|${sum.outOfDate}` });
 }

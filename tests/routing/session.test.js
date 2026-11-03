@@ -187,11 +187,11 @@ describe('routing session: orange patterns', () => {
     expect(file.snaps['NSR:Quay:4455']).toEqual(saved.snaps['NSR:Quay:4455']);
   });
 
-  it('newer road data: orange; Route on it again gives the saved link object when nothing changed', async () => {
+  it('newer road data alone: green (design 2026-11-03); Route on it again gives the saved link object when nothing changed', async () => {
     const saved = await acceptedFile();
     const s = session([SARPSBORG], saved, { tiles: fixtureTiles({ ...manifest, built: '2099-01-01T00:00:00Z' }) });
     await s.open();
-    expect(stateOf(s, pid(SARPSBORG)).legs.map((/** @type {any} */ l) => l.state)).toEqual(['map', 'map']);
+    expect(stateOf(s, pid(SARPSBORG)).legs.map((/** @type {any} */ l) => l.state)).toEqual(['routed', 'routed']);
     await s.route(pid(SARPSBORG));
     expect(leg(s, pid(SARPSBORG), key('4455', '5181'))).toBe(saved.links[key('4455', '5181')]);
   });
@@ -255,7 +255,7 @@ describe('routing session: failures stay contained', () => {
     expect(/** @type {any} */ (s.proposal(pid(SARPSBORG))).via.get(key('4455', '5181')) ?? []).toEqual([]);
   });
 
-  it('final review 1: newer road data, Route then Accept on an unchanged route turns it green without changing a metre', async () => {
+  it('final review 1: newer road data, Route then Accept on an unchanged route stays green without changing a metre', async () => {
     const first = session([SARPSBORG]);
     await first.open();
     await first.route(pid(SARPSBORG));
@@ -263,7 +263,7 @@ describe('routing session: failures stay contained', () => {
     for (const k of Object.keys(saved.links)) saved.links[k] = { ...saved.links[k], tiles: { ...saved.links[k].tiles, built: '2000-01-01T00:00:00Z' } };
     const s = session([SARPSBORG], saved);
     await s.open();
-    expect(stateOf(s, pid(SARPSBORG)).state).toBe('orange');
+    expect(stateOf(s, pid(SARPSBORG)).state).toBe('green');
     await s.route(pid(SARPSBORG));
     expect(/** @type {any} */ (s.tiles.open.mock.calls[0])[1]).toEqual({ latest: true });
     const file = await s.accept(pid(SARPSBORG));
