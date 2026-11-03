@@ -3,6 +3,7 @@ import { app } from './state.js';
 import { $, onRefresh, refreshAll, showMessage, runAction, beforeLeave, applyTheme, setPage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { createHandleFs } from '../project/fs.js';
+import { hasFolderAccess } from '../project/folder-access.js';
 import { openProject, updateOutdatedRoutes } from '../project/open.js';
 import { createProject } from '../project/create.js';
 import { findFileNameProblems, repairFileNames } from '../project/repair.js';
@@ -30,7 +31,7 @@ import { readAllLinks } from '../project/links-store.js';
 /** Notes to show in the next project check (settings reset, format upgraded). @type {string[]} */
 let pendingNotes = [];
 
-const supported = () => typeof (/** @type {any} */ (window)).showDirectoryPicker === 'function';
+const supported = () => hasFolderAccess();
 
 /**
  * Load a project folder into the app.
@@ -181,6 +182,7 @@ export async function openRecent(handle) {
 
 
 export async function pickAndOpen() {
+  if (!supported()) { showMessage(t('unsupportedBrowser')); return; }
   if (!(await beforeLeave())) return;
   try {
     const handle = await /** @type {any} */ (window).showDirectoryPicker({ mode: 'readwrite', id: 'nepos-project' });
@@ -193,6 +195,7 @@ export async function pickAndOpen() {
 /** Close the open project (after the unsaved-changes check). */
 export async function closeProject() {
   if (!app.meta || !(await beforeLeave())) return;
+  setPage('edit'); // without a project the tabs are locked: back to the start screen
   Object.assign(app, { fs: null, handle: null, meta: null, routes: [], orgs: [], orgsError: null, brandings: [], brandingsError: null, labels: [], labelsError: null, vehicles: [], vehiclesError: null, exports: {}, lineLinks: new Map(),
     calendars: [], calendarsError: null, activeRoute: null, routeState: null, dirty: false, drafts: new Map(), calendarDrafts: new Map(), calendarSelected: null, resourceDrafts: new Map(), resourceSelected: null, fileNameProblems: [], sampleMode: false });
   clearGrid();
@@ -288,9 +291,11 @@ export function renderPlaceholder() {
   actions.innerHTML = '';
   info.innerHTML = '';
   $('grid-ph').style.display = app.routeState ? 'none' : '';
+  const browserNotice = !supported() && !app.sampleMode;
+  $('grid-ph').classList.toggle('n2-ph-notice', browserNotice);
 
-  if (!supported() && !app.sampleMode) {
-    $('grid-ph-h').textContent = 'Nepos';
+  if (browserNotice) {
+    $('grid-ph-h').textContent = t('unsupportedBrowserTitle');
     $('grid-ph-s').textContent = t('unsupportedBrowser');
     return;
   }

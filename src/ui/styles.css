@@ -240,6 +240,8 @@ button, select, input, textarea {
     bottom: -1px;
 }
 .tab.active .fk { color: var(--accent); }
+/* No project open: the tabs wait, there is nothing to switch to */
+.tab.locked { opacity: .4; cursor: default; pointer-events: none; }
 
 /* ═══════════════════════════════════════════════════════════════════
    PAGES
@@ -561,6 +563,11 @@ button, select, input, textarea {
     font-size: 13px;
 }
 .grid-placeholder strong { font-size: 15px; color: var(--text-m); font-weight: 500; }
+/* a few sentences (the browser notice) read as short paragraphs, not one long line */
+#grid-ph-s { max-width: 520px; padding: 0 16px; text-align: center; line-height: 1.5; white-space: pre-line; }
+/* the browser notice is something to read, not a hint: stronger colours than the usual placeholder */
+.grid-placeholder.n2-ph-notice strong { color: var(--text); }
+.grid-placeholder.n2-ph-notice #grid-ph-s { color: var(--text-m); }
 .grid-placeholder .open-btn {
     margin-top: 8px;
     padding: 7px 18px;

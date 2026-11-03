@@ -3,6 +3,7 @@ import { app } from './state.js';
 import { $, refreshAll, runAction, persistSettings, applyTheme, onRefresh, openProjectSettings, currentPage, setPage } from './shell.js';
 import { t } from '../i18n/strings.js';
 import { createMenuBar } from './menubar.js';
+import { hasFolderAccess } from '../project/folder-access.js';
 import { pickAndOpen, openNewDialog, openRecent, closeProject, copyProject, setOnRecentChanged, openCodespaceDialog } from './project-ui.js';
 import { newRoute, saveRoute, saveAllRoutes, discardAllChanges } from './route-editor.js';
 import { grid, render as renderGrid } from './grid.js';
@@ -38,8 +39,8 @@ function setLightDark(theme) {
 /** @type {import('./menubar.js').Menu[]} */
 const MENUS = [
   { label: () => t('menuProject'), items: () => [
-    { label: t('newProjectItem'), action: () => { void openNewDialog(); } },
-    { label: t('openProjectItem'), action: () => { void pickAndOpen(); } },
+    { label: t('newProjectItem'), disabled: !hasFolderAccess(), action: () => { void openNewDialog(); } },
+    { label: t('openProjectItem'), disabled: !hasFolderAccess(), action: () => { void pickAndOpen(); } },
     { label: t('openRecent'), submenu: () => (recent.length
       ? [...recent.map((f) => /** @type {import('./menubar.js').MenuItem} */ ({ label: f.name, action: () => { void openRecent(f.handle); } })),
         'separator', { label: t('recentClear'), action: () => { void clearRecentFolders().then(reloadRecent); } }]

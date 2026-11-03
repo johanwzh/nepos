@@ -5,6 +5,7 @@ import { app } from './state.js';
 import { $, onRefresh, onLinesChanged } from './shell.js';
 import { selectRoute, newRoute } from './route-editor.js';
 import { t } from '../i18n/strings.js';
+import { hasFolderAccess } from '../project/folder-access.js';
 import { modeIconSvg } from './mode-icons.js';
 import { lineRows, sortLines, loadLineSort } from './line-rows.js';
 import { lineOrder } from './line-table.js';
@@ -28,7 +29,8 @@ export function renderRouteList() {
   const el = $('route-list');
   el.innerHTML = '';
   if (!app.meta) {
-    el.innerHTML = `<div class="route-list-hint">${esc(t('noProjectOpen'))}</div>`;
+    // a browser that cannot open folders gets its explanation on the start screen, not a hint to open one
+    if (hasFolderAccess()) el.innerHTML = `<div class="route-list-hint">${esc(t('noProjectOpen'))}</div>`;
     return;
   }
   if (app.routes.length === 0) el.innerHTML = `<div class="route-list-hint">${esc(t('noRoutes'))}</div>`;

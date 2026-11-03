@@ -1,7 +1,7 @@
 # Nepos — brukerveiledning
 
 Nepos er et verktøy for å lage rutetabeller for kollektivtrafikk og levere dem til Entur som NeTEx.
-Det kjører i nettleseren (Chrome eller Edge på PC/Mac) og jobber på en prosjektmappe på din egen
+Det kjører i nettleseren (Chrome eller Edge på en datamaskin med Windows, Mac eller Linux) og jobber på en prosjektmappe på din egen
 maskin. Ingenting sendes noe sted før du selv eksporterer og leverer filene.
 
 > Denne veiledningen beskriver Nepos 2. Navn på knapper og menyer står i **fet skrift** slik de
@@ -30,6 +30,10 @@ Alt Nepos lagrer, ligger i én mappe du velger selv:
 - **Prosjekt → Åpne prosjekt…**: velg prosjektmappen. Nylig brukte prosjekter står også i
   Prosjekt-menyen.
 - Første gang en mappe åpnes, spør nettleseren om tilgang. Svar ja.
+- Nepos må kunne åpne og lagre mapper på maskinen din, og det kan bare Chrome og Edge (og noen andre
+  Chromium-nettlesere) på en datamaskin. I Firefox, Safari og i nettlesere på mobil og nettbrett sier Nepos fra på
+  startskjermen at du må bruke en annen nettleser; **Nytt prosjekt…** og **Åpne prosjekt…** er da utilgjengelige.
+- Uten et åpent prosjekt er alle fanene unntatt **Rediger rutetabell** (startskjermen) låst. De åpnes når et prosjekt åpnes.
 
 Når et prosjekt åpnes, kjører Nepos en **prosjektkontroll**: den sier fra om filer som kan oppdateres,
 som må rettes, eller som har feil filnavn — og tilbyr å rette det som kan rettes automatisk.

@@ -2,10 +2,17 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
-## 2.7.0 — unreleased
+## 2.6.1 — unreleased
 
 **New features**
 
+- **Browsers that cannot open folders:** in Firefox, Safari or a phone browser, Nepos used to show one grey line and
+  an error from **Project → Open project…**. Now the start screen (the **Edit timetable** tab) says calmly that Nepos
+  needs Chrome or Edge on a desktop computer (Windows, Mac or Linux), that other Chromium browsers may work, and that
+  phones and tablets are not supported. **New project…** and **Open project…** are greyed out there. Nepos asks the
+  browser what it can do, not what it is called, so a browser that gets folder access later just works.
+- **Tabs wait for a project:** with no project open, every tab except **Edit timetable** (with its start screen) is
+  locked, and so are Alt+1…7. They unlock when a project opens, and **Project → Close project** returns to the start screen.
 - **Vehicles and modes:** a vehicle may run any line of its mode group: bus, coach and taxi go together, and so do
   water and the old ferry. One way, a snowAndIce vehicle (a snowcoach) may run any road line (bus, coach, taxi), but
   a road vehicle may not run a snowAndIce line. Every other mode must match exactly. This goes for the vehicle picker in the timetable and for the

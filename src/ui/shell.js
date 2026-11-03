@@ -35,6 +35,7 @@ export function refreshAll() {
   applyLang();
   updateStatusBar();
   updateProjectButton();
+  updateTabs();
   $('sample-banner').hidden = !app.sampleMode;
   for (const fn of refreshers) fn();
 }
@@ -287,6 +288,21 @@ export function currentPage() {
   return curPage;
 }
 
+/** Without an open project there is nothing to switch between: the Editor page holds the start screen,
+ * and the other tabs stay locked until a project is open (user 2026-11-03). */
+function tabsLocked() {
+  return !app.meta;
+}
+
+function updateTabs() {
+  const locked = tabsLocked();
+  document.querySelectorAll('.tab[data-page]').forEach((tab) => {
+    const lock = locked && /** @type {HTMLElement} */ (tab).dataset.page !== 'edit';
+    tab.classList.toggle('locked', lock);
+    if (lock) tab.setAttribute('aria-disabled', 'true'); else tab.removeAttribute('aria-disabled');
+  });
+}
+
 /** Wire up the shell once at start-up. */
 let keysWired = false;
 
@@ -337,7 +353,7 @@ export function initShell() {
   panels.left.open = true; // the mini view is always shown (navigation spec §3.1)
   applyPanel('left');
   $('map-strip').addEventListener('click', () => toggleMap());
-  $('close-left').addEventListener('click', () => setPage('lines'));
+  $('close-left').addEventListener('click', () => { if (!tabsLocked()) setPage('lines'); });
   $('close-right').addEventListener('click', () => { pinMap(false); if (panels.right.open) togglePanel('right'); });
   $('pin-right')?.addEventListener('click', () => pinMap(!mapPin));
 
@@ -368,7 +384,10 @@ export function initShell() {
   });
 
   document.querySelectorAll('.tab[data-page]').forEach((tab) => {
-    tab.addEventListener('click', () => setPage(/** @type {string} */ (/** @type {HTMLElement} */ (tab).dataset.page)));
+    tab.addEventListener('click', () => {
+      const page = /** @type {string} */ (/** @type {HTMLElement} */ (tab).dataset.page);
+      if (!tabsLocked() || page === 'edit') setPage(page);
+    });
   });
 
   // View and panel shortcuts (navigation spec §8). Capture phase, so they work from text fields and
@@ -387,7 +406,7 @@ export function initShell() {
     // The visual timetable (Marey chart, 2.5): in place of the timetable
     if (e.key.toLowerCase() === 'v') { if (curPage === 'edit' && app.routeState) { e.preventDefault(); e.stopPropagation(); toggleMarey(); } return; }
     const view = byDigit[e.key];
-    if (view) { e.preventDefault(); e.stopPropagation(); setPage(view); }
+    if (view) { e.preventDefault(); e.stopPropagation(); if (!tabsLocked() || view === 'edit') setPage(view); }
   }, true);
   keysWired = true; // the document outlives a re-initialised shell (tests): one listener only
 
