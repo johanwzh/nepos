@@ -28,8 +28,11 @@ export function createRoutingClient(makeWorker = () => new Worker(new URL('./wor
     },
     /** @param {string} key */
     has: (key) => loaded.has(key),
-    /** @param {ChainPoint[]} chain @returns {Promise<import('./router-core.js').RouteResult>} */
-    route: (chain) => /** @type {Promise<any>} */ (call({ op: 'route', chain })),
+    /** @param {ChainPoint[]} chain @param {import('./router-core.js').RouteOpts} [opts] @returns {Promise<import('./router-core.js').RouteResult>} */
+    route: (chain, opts) => /** @type {Promise<any>} */ (call({ op: 'route', chain, opts })),
+    /** The lowest limits along a saved route (design 2026-11-03 §8). @param {[number, number][]} coords
+     *  @returns {Promise<{ limits: import('../core/vehicle-limits.js').Limits, matched: boolean }>} */
+    place: (coords) => /** @type {Promise<any>} */ (call({ op: 'place', coords })),
     close() {
       closed = true;
       worker.terminate();

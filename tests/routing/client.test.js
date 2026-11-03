@@ -60,3 +60,16 @@ describe('routing client', () => {
     await expect(client.addTiles([])).rejects.toThrow('routing closed');
   });
 });
+
+describe('routing client: vehicle options and placing (backlog 92/93)', () => {
+  it('passes the route options and the place call to the worker', async () => {
+    /** @type {any[]} */
+    const sent = [];
+    const w = { onmessage: /** @type {any} */ (null), postMessage(/** @type {any} */ m) { sent.push(m); queueMicrotask(() => w.onmessage({ data: { id: m.id, result: { op: m.op } } })); }, terminate() {} };
+    const client = createRoutingClient(() => /** @type {any} */ (w));
+    await client.route([{ lon: 1, lat: 2 }], { vehicle: { height: 4 }, uturnLength: 8 });
+    expect(await client.place([[1, 2], [3, 4]])).toEqual({ op: 'place' });
+    expect(sent[0]).toMatchObject({ op: 'route', opts: { vehicle: { height: 4 }, uturnLength: 8 } });
+    expect(sent[1]).toMatchObject({ op: 'place', coords: [[1, 2], [3, 4]] });
+  });
+});
