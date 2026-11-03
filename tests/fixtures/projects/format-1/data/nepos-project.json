@@ -1,0 +1,9 @@
+{
+  "formatVersion": 1,
+  "name": "Fixture format 1",
+  "codespace": "TST",
+  "orgExportMode": "codespace",
+  "speedLimits": {
+    "bus": 70
+  }
+}

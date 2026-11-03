@@ -1,0 +1,49 @@
+#LEV;Fixture format 1;TST
+#RUT;-1;10;Sørvik - Nordvik;;6;
+#TRM;water;localPassengerFerry
+#MRK;TST:Branding:bbbbbbbb-0000-4000-8000-000000000001
+#EKS;1
+#OFF;1
+#SEK;NOG:Operator:cccccccccc3;Testbåt AS;0;1;0;0
+#SEK;NOG:Authority:aaaaaaaaaa1;Testfylket;1;0;0;0
+#TRA;Sørvik - Nordvik
+#UID;aaaaaaaa-0000-4000-8000-0000000000a1
+#PER;;;;;;
+#KAL;cccccccc-0000-4000-8000-000000000001
+#TAB;0;;;;
+#TUR;0;D;0;0;0;0
+#UID;dddddddd-0000-4000-8000-000000001010
+#TUR;1;DX67;0;0;0;0
+#UID;dddddddd-0000-4000-8000-000000001011
+#TUR;2;135;0;0;0;0
+#UID;dddddddd-0000-4000-8000-000000001012
+#TRL;0;101;Sørvik;2;-1;-1;-1;0;-1
+#TRC;0;0800;0;0;0;0;0
+#TRC;1;1400;0;0;0;0;0
+#TRC;2;2200;0;0;0;0;0
+#TRL;1;102;Midtvik;0;-1;-1;12.500000;0;-1
+#TRC;0;1030;0;0;0;0;256
+#TRC;1;|;0;0;0;0;0
+#TRC;2;0030;1;0;0;0;0
+#TRL;2;103;Nordvik;8;-1;-1;-1;0;-1
+#TRC;0;1200;0;0;0;0;1
+#TRC;1;1630;0;0;0;0;0
+#TRL;3;103;Nordvik;0;-1;-1;-1;0;-1
+#TRC;0;1215;0;0;1;0;1026
+#TRC;1;1645;0;0;0;0;0
+#UNT;1;-1;20260615;8192;20260615;8192;0;0;
+#FOT;2;-1;Kjører ikke i fellesferien.;nob
+#UNT;2;-1;20260706;16384;20260802;16384;0;0;
+#TRA;Nordvik - Sørvik
+#UID;aaaaaaaa-0000-4000-8000-0000000000a2
+#PER;;;;;;
+#KAL;cccccccc-0000-4000-8000-000000000001
+#TAB;0;;;;
+#TUR;0;D;0;0;0;0
+#UID;dddddddd-0000-4000-8000-000000001013
+#TRL;0;103;Nordvik;0;-1;-1;-1;0;-1
+#TRC;0;0600;0;0;0;0;0
+#TRL;1;102;Midtvik;0;-1;-1;-1;0;-1
+#TRC;0;0700;0;0;0;0;0
+#TRL;2;101;Sørvik;0;-1;-1;-1;0;-1
+#TRC;0;0930;0;0;0;0;0

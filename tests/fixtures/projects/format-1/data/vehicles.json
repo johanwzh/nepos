@@ -1,0 +1,37 @@
+[
+  {
+    "shortCode": "B7",
+    "transportMode": "bus",
+    "fuelType": "electricity",
+    "lowFloor": true,
+    "seats": 45,
+    "length": 12.2,
+    "width": 2.55,
+    "height": 3.3,
+    "vehicleTypeId": "TST:VehicleType:ffffffff-0000-4000-8000-0000000000a1",
+    "vehicleTypeRef": "NMR:VehicleType:TEST-1",
+    "id": "ffffffff-0000-4000-8000-000000000001",
+    "name": "Buss 7",
+    "colour": "#2f6fb5"
+  },
+  {
+    "shortCode": "",
+    "transportMode": "ferry",
+    "fuelType": "",
+    "lowFloor": false,
+    "seats": 120,
+    "length": null,
+    "width": null,
+    "height": null,
+    "vehicleTypeId": "",
+    "vehicleTypeRef": "",
+    "id": "ffffffff-0000-4000-8000-000000000002",
+    "name": "Testbåten",
+    "colour": "#16a085"
+  },
+  {
+    "id": "ffffffff-0000-4000-8000-000000000003",
+    "name": "Gammel buss",
+    "colour": "#7f8c8d"
+  }
+]

@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "line": "20",
+  "links": {
+    "TST:Quay:104|TST:Quay:105|bus": {
+      "polyline": "_ethtB_}gvH_t`B_ibE",
+      "precision": 6,
+      "distanceM": 6400.5,
+      "status": "OK",
+      "from": [
+        5.1,
+        61.5
+      ],
+      "to": [
+        5.2,
+        61.55
+      ],
+      "seconds": 540,
+      "roads": [
+        "Fv. 1"
+      ],
+      "routedAt": "2026-10-31T09:00:00.000Z"
+    }
+  },
+  "snaps": {
+    "TST:Quay:104": {
+      "way": 1001,
+      "lon": 5.1,
+      "lat": 61.5,
+      "along": true,
+      "off": 3.2,
+      "road": "Fv. 1"
+    },
+    "TST:Quay:105": {
+      "way": 1002,
+      "lon": 5.2,
+      "lat": 61.55,
+      "along": true,
+      "off": 2.1,
+      "road": "Fv. 1"
+    }
+  },
+  "patterns": {
+    "TST:Quay:104 TST:Quay:105": {
+      "stops": [
+        "TST:Quay:104",
+        "TST:Quay:105"
+      ],
+      "keys": [
+        "TST:Quay:104|TST:Quay:105|bus"
+      ],
+      "trips": [
+        "dddddddd-0000-4000-8000-000000002020",
+        "dddddddd-0000-4000-8000-000000002021"
+      ],
+      "acceptedAt": "2026-10-31T09:05:00.000Z"
+    }
+  }
+}

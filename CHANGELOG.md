@@ -9,10 +9,14 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Vehicles and modes:** a vehicle may run any line of its mode group: bus, coach and taxi go together, and so do
   water and the old ferry. One way, a snowAndIce vehicle (a snowcoach) may run a bus line, but a bus may not run a
   snowAndIce line. Every other mode must match exactly. This goes for the vehicle picker in the timetable and for the
-  export check's "another transport mode than the line" error. A vehicle saved with the old mode "ferry" becomes
-  "water" the next time the vehicle list is saved.
+  export check's "another transport mode than the line" error.
 - **Stops and modes:** a snowAndIce line may use road stops (bus, coach); a bus or coach line still may not use
   snowAndIce stops.
+
+**Your project files**
+
+- **Vehicles:** a vehicle saved with the old mode "ferry" becomes "water" the next time the vehicle list is saved.
+  Nothing to do.
 
 ## 2.6.0 — 2026-11-01
 

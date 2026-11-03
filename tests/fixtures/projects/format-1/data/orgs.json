@@ -1,0 +1,58 @@
+{
+  "companies": [
+    {
+      "organisationId": "901",
+      "companyNumber": "999000001",
+      "name": "Testfylket",
+      "legalName": "TESTFYLKET",
+      "tradingName": "",
+      "authority": {
+        "id": "NOG:Authority:aaaaaaaaaa1",
+        "version": "1",
+        "contact": {
+          "email": "",
+          "phone": "",
+          "url": "https://example.invalid/fylket"
+        },
+        "alias": ""
+      },
+      "operator": null
+    },
+    {
+      "organisationId": "902",
+      "companyNumber": "999000003",
+      "name": "Testbuss AS",
+      "legalName": "TESTBUSS AS",
+      "tradingName": "",
+      "authority": null,
+      "operator": {
+        "id": "NOG:Operator:bbbbbbbbbb2",
+        "version": "1",
+        "contact": {
+          "email": "",
+          "phone": "99900002",
+          "url": ""
+        },
+        "alias": ""
+      }
+    },
+    {
+      "organisationId": "903",
+      "companyNumber": "999000004",
+      "name": "Testbåt AS",
+      "legalName": "TESTBÅT AS",
+      "tradingName": "",
+      "authority": null,
+      "operator": {
+        "id": "NOG:Operator:cccccccccc3",
+        "version": "2",
+        "contact": {
+          "email": "",
+          "phone": "",
+          "url": ""
+        },
+        "alias": ""
+      }
+    }
+  ]
+}

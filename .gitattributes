@@ -1,2 +1,4 @@
 * text=auto eol=lf
 tests/parity/baseline/** -text
+# Frozen test projects: byte for byte as a Nepos version wrote them (Windows-1252 line files, CRLF). Never normalised.
+tests/fixtures/projects/** -text

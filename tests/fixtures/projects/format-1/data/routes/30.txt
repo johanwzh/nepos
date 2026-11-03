@@ -1,0 +1,41 @@
+#LEV;Fixture format 1;TST;Test Creator;creator@example.invalid
+#RUT;-1;30;Gamleby - Nyeby;;1;
+#MOD;bus;localBus
+#BRA;TST:Branding:bbbbbbbb-0000-4000-8000-000000000001
+#SEK;1;Testbuss AS;0;1;0;0
+#SEK;2;Testfylket;1;0;0;0
+#CUR;spd;9
+#DST;1;Nyeby;
+#DST;2;Midtby;
+#TRA;Gamleby - Nyeby
+#UID;dddddddd-0000-4000-8000-000000003030
+#PER;;;;;;
+#KAL;cccccccc-0000-4000-8000-000000000001
+#KOM;Korrespondanse med buss i Nyeby.
+#KON;Korrespondanse med buss i Nyeby (nynorsk).
+#KOE;Connects with the bus in Nyeby.
+#KOT;Anschluss an den Bus in Nyeby.
+#TAB;0;;;;
+#TUR;0;D;0;0;0;0;
+#UID;dddddddd-0000-4000-8000-000000003031
+#TUR;1;DX67;0;0;0;0;
+#UID;dddddddd-0000-4000-8000-000000003032
+#TRL;0;101;Gamleby;34;1;-1;-1;34;-1
+#TRC;0;0800;0;0;0;0;0
+#TRC;1;1400;0;0;0;0;0
+#TRL;1;102;Midtby;34;0;12.500000;-1;34;-1
+#TRC;0;0830;0;0;0;0;8
+#TRC;1;|;0;0;0;0;0
+#TRL;2;103;Nyeby;34;2;-1;-1;34;-1
+#TRC;0;0900;0;0;0;0;1
+#TRC;1;1500;0;0;0;0;0
+#TRL;3;103;Nyeby;34;0;-1;-1;34;-1
+#TRC;0;0910;0;0;1;0;1026
+#TRC;1;1510;0;0;0;0;0
+#TRL;4;104;Nordby;34;0;-1;-1;34;-1
+#TRC;0;0940;0;0;0;0;0
+#TRC;1;1540;0;0;0;0;0
+#FOT;1;-1;Kjører ikke i fellesferien.;0
+#DSK;0;0;;2
+#DSK;0;2;;1
+#UNT;1;-1;20260615;8192;20260615;8192;0;0;

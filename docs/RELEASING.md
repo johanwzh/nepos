@@ -28,6 +28,7 @@ again. At release only the date goes into the changelog heading — check the ve
       sections up to the running version.
       Split the section in two (user 2026-10-30): a `**New features**` paragraph, then `**Bug fixes**` (oversights
       and things that did not work as meant), each a list. Help shows both; `#` headings are skipped there.
+      A release that changes a project file adds a third paragraph, `**Your project files**` (§4).
 
 ## 3. What users read
 
@@ -40,6 +41,19 @@ again. At release only the date goes into the changelog heading — check the ve
 
 - [ ] ERN format changed? `docs/ern/ern-standard.md` updated, the parser and writer agree with it, and the project
       check (`src/core/integrity/`) knows the new records or fields (round trip clean, older files "can be updated").
+      A new "outdated" rule needs a line in the old convention in a new frozen project (next item).
+- [ ] **A JSON project file changed shape (backlog 29)?** (`data/nepos-project.json` and the stores in `src/project/`:
+      calendars, orgs, brandings, labels, vehicles, exports, links.) A user may skip versions and must arrive safely,
+      with nothing lost. Either the store's reader still accepts every shape a released version wrote, and keeps a
+      field it does not know (preferred, for an added optional field), or add a `MIGRATIONS` step and raise
+      `CURRENT_FORMAT_VERSION` in `src/project/format.js` (it runs when the project opens, after a full backup of
+      `data/`). Either way: add a frozen project of the old shape beside the others in `tests/fixtures/projects/`
+      (never edit a folder there; its README says how) and keep `tests/project/upgrade.test.js`, which opens every
+      folder with the new code, green.
+- [ ] **Any project file changed (a JSON file as above, or the ERN line files)?** The release's `CHANGELOG.md` section
+      gets a `**Your project files**` paragraph after the bug fixes: what changed, and whether the user must do
+      anything ("nothing, Nepos updates it when you save", or "open the project and press **Update outdated
+      files**"). The Project check dialog already shows the detail per file. Nothing changed: no paragraph.
 - [ ] NeTEx export changed? The files validate against Entur's NeTEx schema, every reference resolves, and a test
       export of a real project still looks right.
 
