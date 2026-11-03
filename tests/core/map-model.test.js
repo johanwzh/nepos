@@ -67,3 +67,18 @@ describe('the selected trip along its saved routes (routing editor, 2026-10-31)'
     expect(tripRouteLegs(grid, grid.cols[0], undefined, info).straight.map((s) => s.coords)).toEqual([[[10, 60], [10.1, 60]], [[10.1, 60], [10.2, 60]]]);
   });
 });
+
+describe('the selected trip along its own vehicle group\'s route (backlog 93)', () => {
+  const grid = { stops: [stop('A', 'NSR:Quay:1'), stop('B', 'NSR:Quay:2')], cols: [{ vehicle: 'TB', cells: [cell('0700'), cell('0710')] }, { vehicle: 'LB', cells: [cell('0800'), cell('0810')] }] };
+  const info = new Map([['NSR:Quay:1', at(60, 10)], ['NSR:Quay:2', at(60, 10.1)]]);
+  const K = 'NSR:Quay:1|NSR:Quay:2|bus';
+  const short = /** @type {[number, number][]} */ ([[10, 60], [10.1, 60]]), long = /** @type {[number, number][]} */ ([[10, 60], [10.05, 60.05], [10.1, 60]]);
+  const mk = (/** @type {[number, number][]} */ c, extra = {}) => ({ polyline: encodePolyline(c, 6), precision: 6, distanceM: 6000, status: 'OK', from: c[0], to: c[c.length - 1], ...extra });
+  const links = { [K]: mk(short, { limits: { height: { kind: 'height', value: 3.7, way: 1, road: '', at: [10, 60] } } }), [`${K}|h4`]: mk(long, { limits: {}, uturn: 12 }) };
+  const ctx = { vehicles: [{ name: 'TB', height: 4 }, { name: 'LB', height: 3 }], lineMode: 'bus' };
+
+  it('TB follows its own route, LB the plain one', () => {
+    expect(tripRouteLegs(grid, grid.cols[0], /** @type {any} */ (links), info, 'bus', ctx).links[0].coords).toEqual(long);
+    expect(tripRouteLegs(grid, grid.cols[1], /** @type {any} */ (links), info, 'bus', ctx).links[0].coords).toEqual(short);
+  });
+});

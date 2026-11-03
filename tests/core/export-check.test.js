@@ -527,3 +527,57 @@ describe('Knutepunkt links', () => {
     }
   });
 });
+
+describe('vehicle limits on the route (backlog 93, design 2026-11-03 §11)', () => {
+  const KEY = 'NSR:Quay:7203|NSR:Quay:11972|bus';
+  /** @param {Record<string, any>} links */
+  const lineLinks = (links) => new Map([['50', { version: 1, line: '50', links, snaps: {} }]]);
+  const H = (/** @type {number} */ v) => ({ height: { kind: 'height', value: v, way: 77, road: 'Matrandvegen', at: [0, 0] } });
+  const ok = (extra = {}) => ({ polyline: '', precision: 6, distanceM: 900, status: 'OK', from: [0, 0], to: [0, 0], ...extra });
+  const V = [{ name: 'TB', height: 4 }, { name: 'LB', height: 3.3 }, { name: 'LB3', height: 3 }, { name: 'Plain' }];
+  /** The clean route, its trip run by these vehicles (one trip each, an hour apart). @param {string[]} names */
+  const run = (names) => {
+    const rs = route();
+    const g = grid0(rs), first = g.cols[0];
+    g.cols = names.map((name, i) => ({ ...structuredClone(first), vehicle: name, uid: `cccccccc-0000-4000-8000-00000000010${i}`,
+      cells: first.cells.map((/** @type {any} */ c) => (c ? { ...c, time: `${String(7 + i).padStart(2, '0')}${c.time.slice(2)}` } : c)) }));
+    return rs;
+  };
+  const mine = (/** @type {any[]} */ issues) => issues.filter((i) => i.code.startsWith('vehicle-'));
+
+  it('a vehicle over a limit on its route: one error per vehicle and limit, with the trips counted and the first as its place', () => {
+    const issues = mine(check(run(['TB', 'TB']), { vehicles: V, links: lineLinks({ [KEY]: ok({ limits: H(3.7) }) }) }));
+    expect(issues).toEqual([{ level: 'error', code: 'vehicle-limit', route: '50', detail: 'TB|height|4|3.7|Matrandvegen|Jernbanetorget|Oslo bussterminal|2',
+      where: expect.objectContaining({ column: 1 }) }]);
+    expect(STRINGS.en['chk:vehicle-limit'](issues[0].detail)).toBe('TB (4.0 m) is taller than the 3.7 m clearance on Matrandvegen, Jernbanetorget – Oslo bussterminal (2 trips): change the vehicle or route it again.');
+    expect(STRINGS.no['chk:vehicle-limit'](issues[0].detail)).toBe('TB (4,0 m) er høyere enn fri høyde 3,7 m på Matrandvegen, Jernbanetorget – Oslo bussterminal (2 turer): bytt kjøretøy eller ruter på nytt.');
+  });
+
+  it('close to a limit: a warning', () => {
+    const issues = mine(check(run(['LB']), { vehicles: V, links: lineLinks({ [KEY]: ok({ limits: H(3.7) }) }) }));
+    expect(issues.map((i) => [i.level, i.code, i.detail])).toEqual([['warning', 'vehicle-limit-close', 'LB|height|3.3|3.7|Matrandvegen|Jernbanetorget|Oslo bussterminal|1']]);
+    expect(STRINGS.en['chk:vehicle-limit-close'](issues[0].detail)).toBe('LB (3.3 m) has less than 0.5 m to spare under the 3.7 m clearance on Matrandvegen, Jernbanetorget – Oslo bussterminal (1 trip).');
+  });
+
+  it('routes not checked against the vehicle, or to reconfirm: one warning per line with the count', () => {
+    const issues = mine(check(run(['TB', 'LB3']), { vehicles: V, links: lineLinks({ [KEY]: ok(), [`${KEY}|h4`]: ok({ limits: {}, uturn: 12 }) }) }));
+    expect(issues).toEqual([{ level: 'warning', code: 'vehicle-route-check', route: '50', detail: '1' }]);
+    expect(STRINGS.en['chk:vehicle-route-check']('1')).toBe('1 leg to reconfirm or not yet checked against the vehicle sizes — open Routing on the line.');
+    expect(mine(check(run(['TB']), { vehicles: V, links: lineLinks({ [KEY]: ok() }) }))).toEqual([{ level: 'warning', code: 'vehicle-route-check', route: '50', detail: '1' }]);
+  });
+
+  it('nothing for trips without a vehicle or sizes, without links, or off roads', () => {
+    expect(mine(check(run(['', 'Plain']), { vehicles: V, links: lineLinks({ [KEY]: ok({ limits: H(2) }) }) }))).toEqual([]);
+    expect(mine(check(run(['TB']), { vehicles: V }))).toEqual([]);
+    const rail = run(['TB']);
+    rail.mode = 'rail'; rail.submode = 'regionalRail';
+    expect(mine(check(rail, { vehicles: V, links: lineLinks({ 'NSR:Quay:7203|NSR:Quay:11972|rail': ok({ limits: H(2) }) }) }))).toEqual([]);
+  });
+
+  it('has texts in both languages', () => {
+    for (const code of ['vehicle-limit', 'vehicle-limit-close', 'vehicle-route-check']) {
+      expect(CHECK_CODES).toContain(code);
+      for (const lang of Object.keys(STRINGS)) expect(STRINGS[lang][`chk:${code}`]).toBeTruthy();
+    }
+  });
+});

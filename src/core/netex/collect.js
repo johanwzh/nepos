@@ -9,6 +9,7 @@ import { destSegments, destKey } from '../destinations.js';
 import { uuid5 } from '../uuid5.js';
 import { profileFor } from '../../routing/profiles.js';
 import { isExportable } from '../link-state.js';
+import { linkForTrip, groupOfKey } from '../vehicle-links.js';
 
 /**
  * Collect everything the NeTEx files need from the parsed routes. Stops are identified by their
@@ -18,9 +19,10 @@ import { isExportable } from '../link-state.js';
  *           orgs?: import('../orgs.js').Company[], orgMode?: 'codespace' | 'nog',
  *           brandings?: import('../../project/brandings-store.js').Branding[],
  *           calendars?: import('../calendars.js').Calendar[],
- *           links?: Map<string, import('../../project/links-store.js').LineLinks>, quayInfo?: Map<string, any> }} input
+ *           links?: Map<string, import('../../project/links-store.js').LineLinks>, quayInfo?: Map<string, any>, vehicles?: any[] }} input
+ *   vehicles: a trip's vehicle group picks its links (backlog 93)
  */
-export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList = [], orgMode = 'codespace', brandings: brandingList = [], calendars: calendarList = [], links = undefined, quayInfo = new Map() }) {
+export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList = [], orgMode = 'codespace', brandings: brandingList = [], calendars: calendarList = [], links = undefined, quayInfo = new Map(), vehicles = [] }) {
     const cs = codespace || '1869';
 
     // Routes without a trip (two or more calls) have nothing to export: no line file at all
@@ -101,24 +103,37 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
     /**
      * The ServiceLink IDs of a pattern's consecutive pairs, or null when any pair has no exportable link (then the
      * pattern is written with its points only, never half its links). Registers the links for the shared file. Links
-     * belong to the line: two lines with the same pair have a ServiceLink each, keyed `code|pair`.
-     * @param {any} rs @param {{ stopId: string }[]} stopList @param {string} code the line's code
+     * belong to the line: two lines with the same pair have a ServiceLink each, keyed `code|key`. A trip's vehicle group
+     * picks the link of each pair (a variant, design 2026-11-03 §7).
+     * @param {any} rs @param {{ stopId: string }[]} stopList @param {string} code the line's code @param {string} [vehicle] the trip's vehicle
      */
-    function linkRefsFor(rs, stopList, code) {
+    function linkRefsFor(rs, stopList, code, vehicle = '') {
         const profile = profileFor(rs?.mode ?? '', rs?.submode ?? '');
         const own = links?.get(code)?.links;
         if (!own || !profile || stopList.length < 2) return null;
         const found = [];
         for (let i = 1; i < stopList.length; i++) {
-            const key = `${stopList[i - 1].stopId}|${stopList[i].stopId}|${profile}`;
-            const saved = own[key];
+            const pair = `${stopList[i - 1].stopId}|${stopList[i].stopId}|${profile}`;
+            const { key: chosen, link } = linkForTrip(pair, vehicle, own, { vehicles, lineMode: String(rs?.mode ?? '') });
+            const key = chosen ?? pair, saved = link ?? undefined;
             if (!saved || !isExportable(key, saved, quayInfo)) return null;
             found.push({ id: `${cs}:ServiceLink:${uuid5(`${code}|${key}`)}`, key: `${code}|${key}`, saved, fromId: stopList[i - 1].stopId, toId: stopList[i].stopId });
         }
         for (const l of found) if (!usedLinks.has(l.key)) usedLinks.set(l.key, l);
         return found.map((l) => l.id);
     }
+    /**
+     * The variants a trip's legs use, one group key per leg ('' for the plain link), or '' when every leg is plain: trips
+     * whose links differ need patterns of their own. @param {any} rs @param {{ stopId: string }[]} stopList @param {string} code @param {string} vehicle
+     */
+    function linkVariantsFor(rs, stopList, code, vehicle) {
+        const profile = profileFor(rs?.mode ?? '', rs?.submode ?? '');
+        const own = links?.get(code)?.links;
+        if (!own || profile !== 'bus' || !vehicle) return '';
+        const groups = stopList.slice(1).map((s, i) => groupOfKey(linkForTrip(`${stopList[i].stopId}|${s.stopId}|bus`, vehicle, own, { vehicles, lineMode: String(rs?.mode ?? '') }).key ?? ''));
+        return groups.some(Boolean) ? groups.join(',') : '';
+    }
     // Every ServiceJourney the line files will write, so Knutepunkt links can refer to another line's trips
     const journeys = journeyIndex(cs, routes, colDays);
-    return { cs, routes, orgs, orgFor, orgMode, brandings, usedStops, destDisps, destDispId, operDays, colDays, overallFrom, overallTo, usedLinks, linkRefsFor, journeys };
+    return { cs, routes, orgs, orgFor, orgMode, brandings, usedStops, destDisps, destDispId, operDays, colDays, overallFrom, overallTo, usedLinks, linkRefsFor, linkVariantsFor, journeys };
 }

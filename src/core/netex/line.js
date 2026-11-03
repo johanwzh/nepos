@@ -122,16 +122,19 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     // JP key = the stop sequence and the boarding rules at each stop (a/p/x): trips that differ
                     // in either need their own pattern. The ID stays as before for a pattern without rules.
                     const rules = jpStopList.map(s => (s.forBoarding ? '' : 'a') + (s.forAlighting ? '' : 'p') + (s.requestStop ? 'x' : '')).join(',');
+                    const vehicleVariants = data.linkVariantsFor?.(rs, jpStopList, routeCode, String(col.vehicle ?? '')) ?? '';
                     // and the bookings on its stops (booking spec 2026-10-22)
                     const booked = jpStopList.map((s) => bookingKey(s.booking));
                     const ruled = (/[apx]/.test(rules) ? `|rules:${rules}` : '')
                         + (booked.some(Boolean) ? `|booking:${booked.join(',')}` : '')
                         // trips with other destinations need their own pattern
-                        + (callDests.some(Boolean) ? `|dd:${callDests.map((d) => (d ? destKey(d) : '')).join(',')}` : '');
+                        + (callDests.some(Boolean) ? `|dd:${callDests.map((d) => (d ? destKey(d) : '')).join(',')}` : '')
+                        // and trips whose vehicle group has a route of its own (backlog 93): the pattern carries its links
+                        + (vehicleVariants ? `|veh:${vehicleVariants}` : '');
                     const jpKey = `${set.direction ?? ''}:${jpStopList.map(s=>s.stopId??s.name).join(':')}${ruled}`;
                     if (!jpMap.has(jpKey) && !sharedJps.has(jpKey)) {
                         const jpId = `${cs}:JourneyPattern:${uuid5(`${setKey}|${jpStopList.map(s=>s.stopId).join('|')}${ruled}`)}`;
-                        jpMap.set(jpKey, { jpId, stopList:jpStopList, routeId, name: `${set.name}-${++jpN}` });
+                        jpMap.set(jpKey, { jpId, stopList:jpStopList, routeId, name: `${set.name}-${++jpN}`, vehicle: String(col.vehicle ?? '') });
                         sharedJps.set(jpKey, { jpId });
                     }
                     // The pattern gives the IDs; the times are this trip's own
@@ -239,7 +242,7 @@ ${porXml}
       </Route>`);
 
         // Emit JourneyPatterns
-        for (const [, { jpId, stopList, name }] of jpMap) {
+        for (const [, { jpId, stopList, name, vehicle }] of jpMap) {
             // A DestinationDisplay where the trip's destination starts and where it changes
             const spijpList = stopList.map((/** @type {any} */ s, /** @type {number} */ i)=>{
                 const spijpId = `${cs}:StopPointInJourneyPattern:${jpId.split(':').pop()}-${i+1}`;
@@ -256,7 +259,7 @@ ${porXml}
             }).join('\n');
 
             // ServiceLinks: only when every pair of the pattern has this line's routed link
-            const linkIds = data.linkRefsFor?.(rs, stopList, routeCode) ?? null;
+            const linkIds = data.linkRefsFor?.(rs, stopList, routeCode, vehicle) ?? null;
             const linksXml = linkIds ? `\n        <linksInSequence>\n${linkIds.map((/** @type {string} */ id, /** @type {number} */ i) => `          <ServiceLinkInJourneyPattern id="${cs}:ServiceLinkInJourneyPattern:${jpId.split(':').pop()}-${i + 1}" version="1" order="${i + 1}">\n            <ServiceLinkRef ref="${id}"/>\n          </ServiceLinkInJourneyPattern>`).join('\n')}\n        </linksInSequence>` : '';
             jpsXml.push(`      <JourneyPattern id="${jpId}" version="1">
         <Name>${xe(name)}</Name>

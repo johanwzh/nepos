@@ -14,6 +14,7 @@ import { quayInfo, onQuaysLoaded } from './quays.js';
 import { speedProfile } from '../core/speed-profile.js';
 import { ERN_MODES } from '../core/ern/modes.js';
 import { isExportable } from '../core/link-state.js';
+import { linkForTrip } from '../core/vehicle-links.js';
 import { profileFor } from '../routing/profiles.js';
 
 const H = 64;          // the strip's height
@@ -31,14 +32,15 @@ function lineMode() {
   return rs?.mode || /** @type {any} */ (ERN_MODES)[rs?.transportMode ?? 0]?.mode || '';
 }
 
-/** The open bus line's routed km between two stops, or null. @type {() => ((a: string, b: string) => number | null) | undefined} */
-function roadKm() {
+/** The open line's routed km between two stops for this trip's vehicle (backlog 93), or null. @param {any} col
+ *  @returns {((a: string, b: string) => number | null) | undefined} */
+function roadKm(col) {
   const profile = profileFor(app.routeState?.mode ?? '', app.routeState?.submode ?? '');
   const links = app.activeRoute && profile ? app.lineLinks.get(app.activeRoute)?.links : undefined;
   if (!links) return undefined;
   return (a, b) => {
-    const key = `${a}|${b}|${profile}`, l = links[key];
-    return l && isExportable(key, l, /** @type {any} */ (quayInfo)) ? l.distanceM / 1000 : null;
+    const { key, link: l } = linkForTrip(`${a}|${b}|${profile}`, String(col?.vehicle ?? ''), links, { vehicles: app.vehicles ?? [], lineMode: app.routeState?.mode ?? '' });
+    return key && l && isExportable(key, l, /** @type {any} */ (quayInfo)) ? l.distanceM / 1000 : null;
   };
 }
 
@@ -48,7 +50,7 @@ function render() {
   box.hidden = currentPage() !== 'edit' || !grid.active;
   if (box.hidden) return;
   const col = grid.cols[selectedColumn()];
-  const p = col ? speedProfile(grid, col, quayInfo, lineMode(), app.meta?.speedLimits, roadKm()) : null;
+  const p = col ? speedProfile(grid, col, quayInfo, lineMode(), app.meta?.speedLimits, roadKm(col)) : null;
   if (!p || p.points.length < 2) { box.innerHTML = `<div class="sp-none">${esc(t(p ? 'spdNoPositions' : 'spdNone'))}</div>`; return; }
 
   const W = Math.max(200, box.clientWidth || 1000);

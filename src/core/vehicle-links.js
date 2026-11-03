@@ -4,7 +4,7 @@
 // saved link, the group uses it without asking (user 2026-11-03): the vehicle fits it and either costs U-turns alike or
 // costs them more on a route that makes none, and, for a variant, the vehicle is at least as big as its group (the router
 // could only forbid more roads). Otherwise the closest link is a candidate for the user to reconfirm. Pure.
-import { fit, groupKey, parseGroupKey, biggerOrEqual, uturnLength } from './vehicle-limits.js';
+import { fit, groupKey, groupOf, parseGroupKey, biggerOrEqual, uturnLength } from './vehicle-limits.js';
 
 /** @typedef {import('./link-state.js').SavedLink} SavedLink */
 /** @typedef {import('./vehicle-limits.js').Sizes} Sizes */
@@ -51,4 +51,15 @@ export function linkFor(pair, g, links, { lineMode }) {
   const fits = variants.find((k) => links[k].limits && !fit(links[k].limits, g).over.length);
   const k = fits ?? (plain ? pair : variants[0]);
   return k ? { key: k, link: links[k], how: 'candidate' } : { key: null, link: null, how: null };
+}
+
+/**
+ * The link a trip's leg uses: its vehicle's group (on roads; elsewhere the plain link), through linkFor. Every reader of a
+ * trip's route goes through this: the export, the export check, the timetable's map, the speed strip, Analysis.
+ * @param {string} pair @param {string} vehicle the trip's vehicle name @param {Record<string, SavedLink>} links
+ * @param {{ vehicles?: any[], lineMode: string }} ctx @returns {LinkChoice}
+ */
+export function linkForTrip(pair, vehicle, links, { vehicles = [], lineMode }) {
+  const g = pair.endsWith('|bus') ? groupOf(vehicle, vehicles) : {};
+  return linkFor(pair, g, links, { lineMode });
 }

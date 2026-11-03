@@ -1,6 +1,11 @@
 // Every text the user sees, in Norwegian and English. Keys with a ':' translate codes coming
 // from the core and project layers (issue:, open:, create:, name:, org:).
 
+/** A size or limit in a check text: one decimal, two where needed; comma: the Norwegian decimal mark. @param {string} x @param {boolean} [comma] */
+const sizeText = (x, comma = false) => { const n = Number(x), s = Number.isInteger(Math.round(n * 100) / 10) ? n.toFixed(1) : n.toFixed(2); return comma ? s.replace('.', ',') : s; };
+/** The parts of a vehicle-limit detail: vehicle, kind, size, limit, road, from, to, trips. @param {string} d */
+const limitParts = (d) => { const [v, kind, size, limit, road, from, to, n] = d.split('|'); return { v, kind, size, limit, road, from, to, n: Number(n) }; };
+
 export const STRINGS = {
   en: {
     mapLayerVector: 'Map', mapLayerOsm: 'OpenStreetMap', mapLayerAerial: 'Aerial',
@@ -313,6 +318,19 @@ export const STRINGS = {
     vehFuel: 'Fuel', vehLowFloor: 'Low floor', vehSeats: 'Seats', vehLength: 'Length (m)', vehWidth: 'Width (m)', vehHeight: 'Height (m)', vehWeight: 'Weight (t)', vehWeightHint: 'Permitted total weight',
     vehTypeId: 'Vehicle type ID', vehTypeIdOnSave: 'made when saved', vehTypeRef: 'VehicleTypeRef', vehColour: 'Colour in the timetable',
     vehColourNote: "The colour of the vehicle's label in the timetable, not the vehicle's colour.",
+    'chk:vehicle-limit': (d) => {
+      const p = limitParts(d), u = p.kind === 'weight' ? 't' : 'm';
+      const what = { height: 'taller than the', width: 'wider than the', length: 'longer than the', weight: 'heavier than the' }[p.kind];
+      const kind = { height: 'clearance', width: 'width limit', length: 'length limit', weight: 'weight limit' }[p.kind];
+      return `${p.v} (${sizeText(p.size)} ${u}) is ${what} ${sizeText(p.limit)} ${u} ${kind} on ${p.road || 'a road without a name'}, ${p.from} – ${p.to} (${p.n} ${p.n === 1 ? 'trip' : 'trips'}): change the vehicle or route it again.`;
+    },
+    'chk:vehicle-limit-close': (d) => {
+      const p = limitParts(d), u = p.kind === 'weight' ? 't' : 'm';
+      const kind = { height: 'clearance', width: 'width limit', length: 'length limit', weight: 'weight limit' }[p.kind];
+      const near = p.kind === 'weight' ? 'is close to the' : 'has less than 0.5 m to spare under the';
+      return `${p.v} (${sizeText(p.size)} ${u}) ${near} ${sizeText(p.limit)} ${u} ${kind} on ${p.road || 'a road without a name'}, ${p.from} – ${p.to} (${p.n} ${p.n === 1 ? 'trip' : 'trips'}).`;
+    },
+    'chk:vehicle-route-check': (d) => `${d} ${d === '1' ? 'leg' : 'legs'} to reconfirm or not yet checked against the vehicle sizes — open Routing on the line.`,
     'chk:vehicle-mode': (d) => `The vehicle "${d}" runs another transport mode than the line.`,
     'chk:booking-no-contact': 'A booking has no phone number, e-mail or web address to book with.',
     'chk:block-empty': 'An interval block has no times on its first trip.',
@@ -779,6 +797,17 @@ export const STRINGS = {
     vehFuel: 'Drivstoff', vehLowFloor: 'Lavgulv', vehSeats: 'Sitteplasser', vehLength: 'Lengde (m)', vehWidth: 'Bredde (m)', vehHeight: 'Høyde (m)', vehWeight: 'Vekt (t)', vehWeightHint: 'Tillatt totalvekt',
     vehTypeId: 'Kjøretøytype-ID', vehTypeIdOnSave: 'lages ved lagring', vehTypeRef: 'VehicleTypeRef', vehColour: 'Farge i rutetabellen',
     vehColourNote: 'Fargen på kjøretøyets merkelapp i rutetabellen, ikke kjøretøyets farge.',
+    'chk:vehicle-limit': (d) => {
+      const p = limitParts(d), u = p.kind === 'weight' ? 't' : 'm';
+      const what = { height: 'høyere enn fri høyde', width: 'bredere enn breddegrensen', length: 'lengre enn lengdegrensen', weight: 'tyngre enn vektgrensen' }[p.kind];
+      return `${p.v} (${sizeText(p.size, true)} ${u}) er ${what} ${sizeText(p.limit, true)} ${u} på ${p.road || 'en vei uten navn'}, ${p.from} – ${p.to} (${p.n} ${p.n === 1 ? 'tur' : 'turer'}): bytt kjøretøy eller ruter på nytt.`;
+    },
+    'chk:vehicle-limit-close': (d) => {
+      const p = limitParts(d), u = p.kind === 'weight' ? 't' : 'm';
+      const near = { height: 'har under 0,5 m å gå på under fri høyde', width: 'har under 0,5 m å gå på ved breddegrensen', length: 'har under 0,5 m å gå på ved lengdegrensen', weight: 'er nær vektgrensen' }[p.kind];
+      return `${p.v} (${sizeText(p.size, true)} ${u}) ${near} ${sizeText(p.limit, true)} ${u} på ${p.road || 'en vei uten navn'}, ${p.from} – ${p.to} (${p.n} ${p.n === 1 ? 'tur' : 'turer'}).`;
+    },
+    'chk:vehicle-route-check': (d) => `${d} ${d === '1' ? 'strekning' : 'strekninger'} må bekreftes eller er ikke sjekket mot kjøretøyets mål — åpne Ruting på linjen.`,
     'chk:vehicle-mode': (d) => `Kjøretøyet «${d}» har en annen transportform enn linjen.`,
     'chk:booking-no-contact': 'En bestilling mangler telefonnummer, e-post eller nettadresse å bestille på.',
     'chk:block-empty': 'En intervallblokk har ingen tider på første tur.',

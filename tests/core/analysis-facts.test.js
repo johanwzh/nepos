@@ -89,3 +89,14 @@ describe('trip facts', () => {
     expect(facts(line([trip(['0700', '0710', '0720'], { dayCode: '' })]))).toEqual([]);
   });
 });
+
+describe('km per trip by its vehicle group (backlog 93)', () => {
+  it('a trip whose vehicle has its own route counts that route\'s km', () => {
+    const rs = line([trip(['0700', '0710', '0720'], { vehicle: 'TB' }), trip(['0800', '0810', '0820'], { uid: '5f0c2e1a-1111-4aaa-8bbb-00000000000b' })]);
+    const own = /** @type {[string, any]} */ (link(1, 2, 3000, { limits: {}, uturn: 12 }));
+    const links = Object.fromEntries([link(1, 2, 1000, { limits: { height: { kind: 'height', value: 3.7, way: 1, road: '', at: [0, 0] } } }), [`${own[0]}|h4`, own[1]], link(2, 3, 2500, { limits: {} })]);
+    const [tb, plain] = facts(rs, { links, vehicles: /** @type {any} */ ([{ name: 'TB', height: 4 }]) });
+    expect(tb.km).toBe(5.5);
+    expect(plain.km).toBe(3.5);
+  });
+});

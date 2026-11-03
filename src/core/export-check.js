@@ -15,6 +15,9 @@ import { ERN_MODES } from './ern/modes.js';
 import { expandRoute } from './blocks.js';
 import { normalizeBooking, bookingProblems } from './booking.js';
 import { lineLinkSummary } from './link-status.js';
+import { groupOf, groupKey, fit } from './vehicle-limits.js';
+import { linkFor } from './vehicle-links.js';
+import { profileFor } from '../routing/profiles.js';
 import { hubState } from './interchanges/hub.js';
 import { proposals } from './interchanges/proposals.js';
 
@@ -25,7 +28,7 @@ export const CHECK_CODES = [
   'calendar-missing', 'calendar-empty', 'day-code', 'no-operating-days', 'calendars-unreadable', 'stop-not-seen', 'stop-mode',
   'stop-unchecked', 'col-decreasing', 'cell-dates-also', 'cell-dates-short', 'route-no-trips',
   'route-changed-on-disk', 'org-alias-missing', 'no-submode', 'speed-over', 'speed-limit-high', 'dest-missing', 'dest-last-dropped', 'dest-via-text', 'dest-unserved', 'dest-not-on-route', 'vehicle-mode',
-  'link-missing', 'hub-lost', 'hub-stale', 'hub-missing-feeder',
+  'link-missing', 'hub-lost', 'hub-stale', 'hub-missing-feeder', 'vehicle-limit', 'vehicle-limit-close', 'vehicle-route-check',
 ];
 
 /**
@@ -82,6 +85,7 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     checkVehicles(code, rs, vehicles, add);
     checkBookings(code, rs, add);
     if (links) checkLinks(code, rs, links.get(code), { calendars, quayInfo, vehicles, add });
+    if (links) checkVehicleLimits(code, rs, vehicles, links.get(code), { quayInfo, add });
     checkHubs(code, rs, () => hubLines?.() ?? routes.filter((x) => x.rs && x.status !== 'damaged'), { calendars, quayInfo, add });
     trips += routeTrips;
   }
@@ -375,4 +379,55 @@ function checkHubs(code, rs, lines, { calendars, quayInfo, add }) {
 function checkLinks(code, rs, lineLinks, { calendars, quayInfo, vehicles, add }) {
   const sum = lineLinkSummary(rs, lineLinks, { calendars, quayInfo, vehicles });
   if (sum.notRouted || sum.outOfDate) add('warning', 'link-missing', { route: code, detail: `${sum.notRouted}|${sum.outOfDate}` });
+}
+
+/**
+ * A trip's vehicle on the limits of its route (backlog 93, design 2026-11-03 §11): over a limit is an error, close to
+ * one a warning, each once per vehicle and limit on the line with the trips counted and the first as its place; routes
+ * to reconfirm or not yet checked against the vehicle are one warning per line. Only on roads, only vehicles with sizes.
+ * @param {string} code @param {any} rs @param {any[]} vehicles @param {import('../project/links-store.js').LineLinks | undefined} lineLinks
+ * @param {{ quayInfo: Map<string, any>, add: (level: 'error' | 'warning', code: string, extra?: Partial<CheckIssue>) => void }} ctx
+ */
+function checkVehicleLimits(code, rs, vehicles, lineLinks, { quayInfo, add }) {
+  if (profileFor(rs?.mode ?? '', rs?.submode ?? '') !== 'bus' || !vehicles.length || !lineLinks) return;
+  const ex = expandRoute(rs);
+  /** @type {Map<string, { level: 'error' | 'warning', code: string, detail: string, trips: Set<string>, where: any }>} */
+  const found = new Map();
+  /** @type {Set<string>} */
+  const toCheck = new Set();
+  for (const set of ex.tableSets ?? []) for (const per of (ex.periods ?? []).filter((/** @type {any} */ p) => p.setId === set.id)) {
+    const grid = ex.grids?.[`${per.id}:${set.id}`];
+    if (!grid) continue;
+    grid.cols.forEach((/** @type {any} */ col, /** @type {number} */ ci) => {
+      if (col.virt) return;
+      const g = groupOf(String(col.vehicle ?? ''), vehicles);
+      if (!Object.keys(g).length) return;
+      const trip = `${per.id}:${set.id}:${ci}`, column = (col.parentCi ?? ci) + 1;
+      const calls = journeyStops(grid, col);
+      for (let i = 1; i < calls.length; i++) {
+        const a = calls[i - 1], b = calls[i];
+        if (a.stopId === b.stopId || !quayInfo.has(a.stopId) || !quayInfo.has(b.stopId)) continue;
+        const pair = `${a.stopId}|${b.stopId}|bus`;
+        const { link, how } = linkFor(pair, g, lineLinks.links, { lineMode: String(rs?.mode ?? '') });
+        if (!link) continue;
+        if (!link.limits) { toCheck.add(`${pair}#${groupKey(g)}`); continue; }
+        const f = fit(link.limits, g);
+        if (!f.over.length && how === 'candidate') toCheck.add(`${pair}#${groupKey(g)}`);
+        for (const [level, issue, list] of /** @type {const} */ ([['error', 'vehicle-limit', f.over], ['warning', 'vehicle-limit-close', f.close]])) {
+          for (const l of list) {
+            const id = `${issue}|${col.vehicle}|${l.kind}|${l.way}`;
+            let x = found.get(id);
+            if (!x) {
+              x = { level, code: issue, detail: [col.vehicle, l.kind, g[l.kind], l.value, l.road, a.name ?? '', b.name ?? ''].join('|'), trips: new Set(),
+                where: { tableSet: set.name, period: '', setId: set.id, periodId: per.id, column } };
+              found.set(id, x);
+            }
+            x.trips.add(trip);
+          }
+        }
+      }
+    });
+  }
+  for (const x of found.values()) add(x.level, x.code, { route: code, detail: `${x.detail}|${x.trips.size}`, where: x.where });
+  if (toCheck.size) add('warning', 'vehicle-route-check', { route: code, detail: String(toCheck.size) });
 }

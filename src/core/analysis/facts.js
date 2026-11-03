@@ -3,6 +3,7 @@
 // km is known only when every leg has a link the export would write (isExportable): no straight-line estimates.
 import { eachTrip } from '../link-pairs.js';
 import { isExportable } from '../link-state.js';
+import { linkForTrip } from '../vehicle-links.js';
 import { profileFor } from '../../routing/profiles.js';
 
 /** @typedef {{ stopId: string, arr: number, dep: number }} FactCall minutes from the start date's midnight (may pass 1440) */
@@ -44,8 +45,9 @@ export function lineFacts(code, rs, { calendars, quayInfo, links, vehicles }) {
     const legs = [];
     for (let i = 1; i < calls.length; i++) {
       const key = `${calls[i - 1].stopId}|${calls[i].stopId}|${profile ?? 'none'}`;
-      const saved = profile ? links?.[key] : undefined;
-      legs.push({ key, km: saved && isExportable(key, saved, quayInfo) ? saved.distanceM / 1000 : null });
+      // the trip's vehicle group picks the route (backlog 93)
+      const { key: used, link: saved } = profile ? linkForTrip(key, String(col.vehicle ?? ''), links ?? {}, { vehicles, lineMode: mode }) : { key: null, link: null };
+      legs.push({ key, km: used && saved && isExportable(used, saved, quayInfo) ? saved.distanceM / 1000 : null });
     }
     const known = legs.every((l) => l.km != null);
     const v = col.vehicle ? vehicles.find((x) => x.name === col.vehicle) : undefined;

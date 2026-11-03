@@ -101,7 +101,7 @@ async function runExport() {
     return;
   }
   const files = buildNeTExFiles({ codespace: meta.codespace, deliveryName: meta.name, routes: checked.routes, orgs: app.orgs, orgMode: orgExportMode(app.meta), brandings: app.brandings, calendars: app.calendars,
-    links: routedLinks(app.lineLinks), quayInfo });
+    links: routedLinks(app.lineLinks), quayInfo, vehicles: app.vehicles ?? [] });
   const asZip = app.settings.exportAsZip !== false;
   let written = '';
   const ok = await runAction(async () => { written = await writeExport(fs, files, { codespace: meta.codespace, asZip }); });

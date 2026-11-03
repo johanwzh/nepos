@@ -3,6 +3,7 @@
 import { journeyStops } from './netex/journeys.js';
 import { tripLinks } from './link-pairs.js';
 import { linkMoved } from './link-state.js';
+import { linkForTrip } from './vehicle-links.js';
 import { decodePolyline } from '../routing/geometry.js';
 
 /** @param {any} cell */
@@ -42,17 +43,18 @@ export function tripOnMap(grid, col, quayInfo) {
  * @param {Record<string, import('./link-state.js').SavedLink> | undefined} links the line's links
  * @param {Map<string, { lat: number | null, lon: number | null } | null>} quayInfo
  * @param {import('../routing/profiles.js').Profile} [profile] the line's network: its links only (routing for all modes)
+ * @param {{ vehicles?: any[], lineMode?: string }} [ctx] the trip's vehicle picks its group's route (backlog 93)
  * @returns {{ links: { key: string, coords: [number, number][], state: 'routed' | 'stale' }[], straight: { key: string, coords: [number, number][] }[] }}
  */
-export function tripRouteLegs(grid, col, links, quayInfo, profile = 'bus') {
+export function tripRouteLegs(grid, col, links, quayInfo, profile = 'bus', { vehicles = [], lineMode = '' } = {}) {
   /** @type {{ key: string, coords: [number, number][], state: 'routed' | 'stale' }[]} */
   const out = [];
   /** @type {{ key: string, coords: [number, number][] }[]} */
   const straight = [];
   for (const { key } of tripLinks(grid, col, profile)) {
-    const l = links?.[key];
-    if (l?.status === 'OK') {
-      out.push({ key, coords: /** @type {[number, number][]} */ (decodePolyline(l.polyline, l.precision ?? 6)), state: linkMoved(key, l, /** @type {any} */ (quayInfo)) ? 'stale' : 'routed' });
+    const { key: used, link: l } = linkForTrip(key, String(/** @type {any} */ (col).vehicle ?? ''), links ?? {}, { vehicles, lineMode });
+    if (used && l) {
+      out.push({ key, coords: /** @type {[number, number][]} */ (decodePolyline(l.polyline, l.precision ?? 6)), state: linkMoved(used, l, /** @type {any} */ (quayInfo)) ? 'stale' : 'routed' });
       continue;
     }
     const [a, b] = key.split('|').map((id) => quayInfo.get(id));

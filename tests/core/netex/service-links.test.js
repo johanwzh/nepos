@@ -85,3 +85,36 @@ describe('ServiceLinks in the export', () => {
     }
   });
 });
+
+describe('ServiceLinks per vehicle group (backlog 93, design 2026-11-03 §11)', () => {
+  const VEHICLES = [{ name: 'TB', height: 4 }, { name: 'LB', height: 3 }];
+  const H = (/** @type {number} */ v) => ({ height: { kind: 'height', value: v, way: 77, road: 'Matrandvegen', at: [0, 0] } });
+  /** Line r1 from Quay 1 to 2 with one trip per vehicle name. @param {string[]} names */
+  const run = (names) => {
+    const rs = route('r1', [1, 2]);
+    const g = rs.grids[`${rs.periods[0].id}:${rs.periods[0].setId}`], first = g.cols[0];
+    g.cols = names.map((name, i) => ({ ...structuredClone(first), vehicle: name, uid: `cccccccc-0000-4000-8000-00000000020${i}`,
+      cells: first.cells.map((/** @type {any} */ c) => (c ? { ...c, time: `${String(7 + i).padStart(2, '0')}${c.time.slice(2)}` } : c)) }));
+    return rs;
+  };
+  /** @param {any} rs @param {Map<string, any>} links @param {any[]} [vehicles] */
+  const buildV = (rs, links, vehicles = VEHICLES) => buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs }], orgs: [], brandings: [],
+    calendars: [{ id: 'h1', name: 'V', ranges: [['20260101', '20260630']] }], timestamp: 'x', links, quayInfo, vehicles });
+
+  it('a group with its own route gets its own JourneyPattern and ServiceLink; the others keep the plain one', () => {
+    const [key, plain] = shape(1, 2);
+    const detour = { ...plain, distanceM: 2000, limits: {}, uturn: 12, around: [H(3.7).height] };
+    const [shared, line] = buildV(run(['TB', 'LB']), lines({ r1: [[key, { ...plain, limits: H(3.7) }], [`${key}|h4`, detour]] }));
+    expect([...line.xml.matchAll(/<JourneyPattern id=/g)]).toHaveLength(2);
+    expect([...shared.xml.matchAll(/<ServiceLink id=/g)]).toHaveLength(2);
+    expect(shared.xml).toContain('<Distance>812</Distance>');
+    expect(shared.xml).toContain('<Distance>2000</Distance>');
+  });
+
+  it('without a variant every ID is as in 2.6.0, whatever the vehicles', () => {
+    const links = lines({ r1: [shape(1, 2)] });
+    const before = buildV(run(['TB', 'LB']), links, []);
+    const after = buildV(run(['TB', 'LB']), links);
+    expect(after.map((f) => f.xml)).toEqual(before.map((f) => f.xml));
+  });
+});

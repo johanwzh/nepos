@@ -146,7 +146,8 @@ function update() {
   // A bus line's legs as in Ruting (user 2026-10-31): along their saved route, orange when a stop has moved, red dashed
   // without a route; other modes keep the trip line
   const routed = col && app.activeRoute && isRoutedLine(app.routeState)
-    ? tripRouteLegs(grid, col, app.lineLinks.get(app.activeRoute)?.links, quayInfo, profileFor(app.routeState?.mode ?? '', app.routeState?.submode ?? '') ?? 'bus') : null;
+    ? tripRouteLegs(grid, col, app.lineLinks.get(app.activeRoute)?.links, quayInfo, profileFor(app.routeState?.mode ?? '', app.routeState?.submode ?? '') ?? 'bus',
+      { vehicles: app.vehicles ?? [], lineMode: app.routeState?.mode ?? '' }) : null;
   if (routed) v.setLinks([...routed.links, ...routed.straight.map((s) => ({ ...s, state: /** @type {const} */ ('failed') }))]);
   const unrouted = new Set((routed?.straight ?? []).flatMap((s) => s.key.split('|').slice(0, 2)));
   v.setTrip({
