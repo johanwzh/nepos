@@ -21,18 +21,18 @@ export const SHORT_CODE_MAX = 8;
 /**
  * Vehicle and line modes that go together (backlog 70, user 2026-11-03): road vehicles run any road line, a boat and
  * the old "ferry" any water line.
- * @type {string[][]}
  */
-const VEHICLE_MODE_GROUPS = [['bus', 'coach', 'taxi'], ['water', 'ferry']];
+const ROAD = ['bus', 'coach', 'taxi'];
+const VEHICLE_MODE_GROUPS = [ROAD, ['water', 'ferry']];
 
 /**
  * Whether a vehicle of this mode may run a line of that mode: the same group, or the same mode, and one way a snowAndIce
- * vehicle (a snowcoach) on a bus line (not the other way). A vehicle or a line without a mode fits anything.
+ * vehicle (a snowcoach) on any road line (not the other way; user 2026-11-03). A vehicle or a line without a mode fits anything.
  * @param {string} vehicleMode @param {string} lineMode
  */
 export function vehicleFitsLine(vehicleMode, lineMode) {
   if (!vehicleMode || !lineMode || vehicleMode === lineMode) return true;
-  if (vehicleMode === 'snowAndIce' && lineMode === 'bus') return true;
+  if (vehicleMode === 'snowAndIce') return ROAD.includes(lineMode);
   return VEHICLE_MODE_GROUPS.some((g) => g.includes(vehicleMode) && g.includes(lineMode));
 }
 

@@ -53,16 +53,15 @@ describe('vehicle and line modes that go together (backlog 70, user 2026-11-03)'
     expect(vehicleFitsLine('ferry', 'ferry')).toBe(true);
   });
 
-  it('a snowcoach may run a bus line, but a bus may not run a snowAndIce line', () => {
-    expect(vehicleFitsLine('snowAndIce', 'bus')).toBe(true);
-    expect(vehicleFitsLine('bus', 'snowAndIce')).toBe(false);
-    expect(vehicleFitsLine('coach', 'snowAndIce')).toBe(false);
+  it('a snowcoach may run any road line (user 2026-11-03), but a road vehicle may not run a snowAndIce line', () => {
+    for (const line of ['bus', 'coach', 'taxi']) expect(vehicleFitsLine('snowAndIce', line), `snowAndIce on ${line}`).toBe(true);
+    for (const v of ['bus', 'coach', 'taxi']) expect(vehicleFitsLine(v, 'snowAndIce'), `${v} on snowAndIce`).toBe(false);
     expect(vehicleFitsLine('snowAndIce', 'snowAndIce')).toBe(true);
   });
 
   it('every other mode must match exactly', () => {
     expect(vehicleFitsLine('tram', 'tram')).toBe(true);
-    for (const [v, line] of [['tram', 'bus'], ['bus', 'tram'], ['water', 'bus'], ['bus', 'water'], ['rail', 'metro'], ['snowAndIce', 'water'], ['snowAndIce', 'coach'], ['ferry', 'bus']]) {
+    for (const [v, line] of [['tram', 'bus'], ['bus', 'tram'], ['water', 'bus'], ['bus', 'water'], ['rail', 'metro'], ['snowAndIce', 'water'], ['snowAndIce', 'rail'], ['ferry', 'bus']]) {
       expect(vehicleFitsLine(v, line), `${v} on ${line}`).toBe(false);
     }
   });

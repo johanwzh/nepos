@@ -146,8 +146,10 @@ describe('the vehicle row: short codes and modes (user 2026-10-20)', () => {
     expect(offeredOn('water', { Buss: 'bus', Ferje: 'water', Gammel: 'ferry', Reserve: '' })).toEqual(['Ferje', 'Gammel', 'Reserve', 'Ingen']);
   });
 
-  it('offers a snowcoach on a bus line, but no bus on a snowAndIce line (backlog 70)', () => {
+  it('offers a snowcoach on a road line, but no bus on a snowAndIce line (backlog 70)', () => {
     expect(offeredOn('bus', { Buss: 'bus', Snøbuss: 'snowAndIce' })).toEqual(['Buss', 'Snøbuss', 'Ingen']);
+    expect(offeredOn('coach', { Buss: 'bus', Snøbuss: 'snowAndIce', Tog: 'rail' })).toEqual(['Buss', 'Snøbuss', 'Ingen']);
+    expect(offeredOn('taxi', { Taxi: 'taxi', Snøbuss: 'snowAndIce' })).toEqual(['Snøbuss', 'Taxi', 'Ingen']);
     expect(offeredOn('snowAndIce', { Buss: 'bus', Snøbuss: 'snowAndIce' })).toEqual(['Snøbuss', 'Ingen']);
   });
 });

@@ -430,10 +430,13 @@ describe('vehicles on trips (user 2026-10-20)', () => {
     expect(check(boat, { vehicles: [V({ name: 'Ferje 1', transportMode: 'water' })] }).filter((i) => i.code === 'vehicle-mode')).toEqual([]);
   });
 
-  it('a snowcoach on a bus line is fine, a bus on a snowAndIce line is an error (backlog 70)', () => {
+  it('a snowcoach on a road line (bus, coach, taxi) is fine, a bus on a snowAndIce line is an error (backlog 70)', () => {
     const rs = route();
     grid0(rs).cols[0].vehicle = 'Snøbuss';
-    expect(check(rs, { vehicles: [V({ name: 'Snøbuss', transportMode: 'snowAndIce' })] }).filter((i) => i.code === 'vehicle-mode')).toEqual([]);
+    for (const mode of ['bus', 'coach', 'taxi']) {
+      rs.mode = mode;
+      expect(check(rs, { vehicles: [V({ name: 'Snøbuss', transportMode: 'snowAndIce' })] }).filter((i) => i.code === 'vehicle-mode'), mode).toEqual([]);
+    }
     const snow = route();
     snow.mode = 'snowAndIce';
     grid0(snow).cols[0].vehicle = 'Buss 7';
