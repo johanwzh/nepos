@@ -339,12 +339,16 @@ describe('Ressurser: a vehicle\'s own data (user 2026-10-20)', () => {
     type('re-length', '12,2');
     type('re-width', '2.55');
     type('re-height', '3.3');
+    type('re-weight', '-1');
+    expect(field('re-weight').classList.contains('invalid')).toBe(true);
+    type('re-weight', '19,5');
+    expect(field('re-weight').classList.contains('invalid')).toBe(false);
     type('re-vehicleTypeRef', 'ABC-12');
     expect(page().textContent).toContain('NMR:VehicleType:');
     click(q('.re-save'));
     await flush(); await flush();
     expect(app.vehicles[0]).toMatchObject({ name: 'Buss 7', shortCode: 'B7', transportMode: 'bus', fuelType: 'electricity', lowFloor: true, seats: 45,
-      length: 12.2, width: 2.55, height: 3.3, vehicleTypeRef: 'NMR:VehicleType:ABC-12', vehicleTypeId: expect.stringMatching(/^TST:VehicleType:/) });
+      length: 12.2, width: 2.55, height: 3.3, weight: 19.5, vehicleTypeRef: 'NMR:VehicleType:ABC-12', vehicleTypeId: expect.stringMatching(/^TST:VehicleType:/) });
   });
 
   it('says the colour is the timetable label\'s, not the vehicle\'s', () => {

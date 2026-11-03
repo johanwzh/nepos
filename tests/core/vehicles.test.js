@@ -13,7 +13,7 @@ describe('vehicle data', () => {
 
   it('fills in what an older vehicle lacks, and drops what is not valid', () => {
     expect(normalizeVehicle(base)).toEqual({ ...base, shortCode: '', transportMode: '', fuelType: '', lowFloor: false, seats: null,
-      length: null, width: null, height: null, vehicleTypeId: '', vehicleTypeRef: '' });
+      length: null, width: null, height: null, weight: null, vehicleTypeId: '', vehicleTypeRef: '' });
     expect(normalizeVehicle({ ...base, fuelType: 'coal', lowFloor: 'yes', seats: 'many', length: -2 })).toMatchObject({ fuelType: '', lowFloor: false, seats: null, length: null });
   });
 
@@ -21,6 +21,13 @@ describe('vehicle data', () => {
     const v = normalizeVehicle({ ...base, seats: 'many', depot: 'Nord', axles: 3 });
     expect(v).toMatchObject({ depot: 'Nord', axles: 3, seats: null });
     expect(Object.keys(v)).toEqual(expect.arrayContaining(['id', 'name', 'colour', 'depot', 'axles']));
+  });
+
+  it('keeps a permitted total weight in tonnes, and empties one that is not a positive number (backlog 93)', () => {
+    expect(normalizeVehicle({ ...base, weight: 19.5 }).weight).toBe(19.5);
+    for (const weight of [0, -1, 'x', undefined]) expect(normalizeVehicle({ ...base, weight }).weight).toBeNull();
+    expect(vehicleProblems({ ...normalizeVehicle(base), weight: -2 }).weight).toBe(true);
+    expect(vehicleProblems({ ...normalizeVehicle(base), weight: 18 })).toEqual({});
   });
 
   it('accepts a full vehicle', () => {

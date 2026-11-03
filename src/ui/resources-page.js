@@ -463,14 +463,14 @@ function vehicleDetail(v) {
 const typedNumber = (text) => { const x = text.trim().replace(',', '.'); return x === '' ? null : Number(x); };
 
 /**
- * A vehicle's own fields (user 2026-10-20): short code, mode, fuel, low floor, seats and size.
+ * A vehicle's own fields (user 2026-10-20): short code, mode, fuel, low floor, seats, size and weight (backlog 93).
  * @param {HTMLElement} main @param {string} id @param {() => any} cur @param {() => boolean} valid
  */
 function vehicleFields(main, id, cur, valid) {
   /** @param {string} key @param {any} value */
   const set = (key, value) => { drafts().set(id, { ...cur(), [key]: value }); };
   /** Mark every field the check refuses. */
-  const mark = () => { const p = vehicleProblems(cur()); for (const k of ['shortCode', 'seats', 'length', 'width', 'height']) main.querySelector(`#re-${k}`)?.classList.toggle('invalid', !!p[k]); };
+  const mark = () => { const p = vehicleProblems(cur()); for (const k of ['shortCode', 'seats', 'length', 'width', 'height', 'weight']) main.querySelector(`#re-${k}`)?.classList.toggle('invalid', !!p[k]); };
   /** @param {string} key @param {string} label @param {(text: string) => any} parse @param {string} [note] */
   const text = (key, label, parse, note = '') => {
     const input = /** @type {HTMLInputElement} */ (el('input', 're-in'));
@@ -506,6 +506,7 @@ function vehicleFields(main, id, cur, valid) {
   text('length', t('vehLength'), typedNumber);
   text('width', t('vehWidth'), typedNumber);
   text('height', t('vehHeight'), typedNumber);
+  text('weight', t('vehWeight'), typedNumber, t('vehWeightHint'));
   mark();
 }
 

@@ -1,5 +1,6 @@
 // A vehicle's own data (user 2026-10-20), named as in NeTEx's VehicleType so it can be exported later: the mode it
-// runs (must go with the line's: vehicleFitsLine), fuel, low floor, seats, its size in metres, the vehicle type ID Nepos makes, and a
+// runs (must go with the line's: vehicleFitsLine), fuel, low floor, seats, its size in metres, its permitted total weight
+// in tonnes (backlog 93: checked against the roads' limits), the vehicle type ID Nepos makes, and a
 // VehicleTypeRef into the national vehicle register under the fixed NMR:VehicleType: prefix.
 
 /** NeTEx FuelTypeEnumeration (netex_nm_equipmentEnergy_support.xsd), in the schema's order. */
@@ -14,7 +15,7 @@ export const SHORT_CODE_MAX = 8;
 
 /**
  * @typedef {{ id: string, name: string, colour: string, shortCode: string, transportMode: string, fuelType: string,
- *   lowFloor: boolean, seats: number | null, length: number | null, width: number | null, height: number | null,
+ *   lowFloor: boolean, seats: number | null, length: number | null, width: number | null, height: number | null, weight: number | null,
  *   vehicleTypeId: string, vehicleTypeRef: string }} Vehicle
  */
 
@@ -52,7 +53,7 @@ export function normalizeVehicle(v) {
     fuelType: FUEL_TYPES.includes(v.fuelType) ? v.fuelType : '',
     lowFloor: v.lowFloor === true,
     seats: Number.isInteger(v.seats) && v.seats >= 0 ? v.seats : null,
-    length: positive(v.length), width: positive(v.width), height: positive(v.height),
+    length: positive(v.length), width: positive(v.width), height: positive(v.height), weight: positive(v.weight),
     vehicleTypeId: str(v.vehicleTypeId),
     vehicleTypeRef: str(v.vehicleTypeRef),
   };
@@ -60,7 +61,7 @@ export function normalizeVehicle(v) {
 
 /**
  * What is wrong with a vehicle's own fields (the name is checked with the other vehicles), by field.
- * Numbers are checked as typed: seats a whole number, sizes positive. @param {Vehicle | any} v
+ * Numbers are checked as typed: seats a whole number, sizes and weight positive. @param {Vehicle | any} v
  * @returns {Record<string, true>}
  */
 export function vehicleProblems(v) {
@@ -68,7 +69,7 @@ export function vehicleProblems(v) {
   const p = {};
   if (v.shortCode && (v.shortCode.length > SHORT_CODE_MAX || v.shortCode.includes(';'))) p.shortCode = true;
   if (v.seats != null && !(Number.isInteger(v.seats) && v.seats >= 0)) p.seats = true;
-  for (const k of ['length', 'width', 'height']) if (v[k] != null && !(typeof v[k] === 'number' && Number.isFinite(v[k]) && v[k] > 0)) p[k] = true;
+  for (const k of ['length', 'width', 'height', 'weight']) if (v[k] != null && !(typeof v[k] === 'number' && Number.isFinite(v[k]) && v[k] > 0)) p[k] = true;
   const ref = str(v.vehicleTypeRef);
   if (ref && !(ref.startsWith(VEHICLE_TYPE_REF_PREFIX) && /^[A-Za-z0-9_-]+$/.test(ref.slice(VEHICLE_TYPE_REF_PREFIX.length)))) p.vehicleTypeRef = true;
   return p;
