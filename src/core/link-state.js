@@ -7,11 +7,16 @@ import { haversineM } from '../routing/geometry.js';
  * distanceM: along the network (ferry included); from, to: the Quays' positions [lon, lat] when it was routed.
  * 2.6 adds: ferryM, seconds (driving time by the router's cost), via (the user's waypoints [lon, lat]), roads (names
  * along it), flags ('detour', 'far-snap'), routedAt (ISO) and the tile build it was routed on. reviewed (routing editor,
- * 2026-10-31): Keep — the user checked the saved route against this road build and these Quay positions.
+ * 2026-10-31): Keep — the user checked the saved route against this road build and these Quay positions. 2.6.1 (design
+ * 2026-11-03 §7): limits, the lowest along it (absent: routed before 2.6.1); uturn, the U-turn length it was routed with
+ * (absent: the line's default); uturns, its U-turns; around (a variant), what made it go round; kept, the vehicle groups
+ * the user accepted or kept it for.
  * @typedef {{ polyline: string, precision?: number, distanceM: number, status: string, from: [number, number], to: [number, number],
  *   ferryM?: number, seconds?: number, via?: [number, number][], roads?: string[], flags?: string[], routedAt?: string,
  *   tiles?: { set: string, built: string, dataDate: string, hashes: Record<string, string> },
- *   reviewed?: { built?: string, from?: [number, number], to?: [number, number] } }} SavedLink
+ *   reviewed?: { built?: string, from?: [number, number], to?: [number, number] },
+ *   limits?: import('./vehicle-limits.js').Limits, uturn?: number, uturns?: import('../routing/search.js').UTurn[],
+ *   around?: import('./vehicle-limits.js').LimitAt[], kept?: string[] }} SavedLink
  */
 
 /** A Quay moved further than this (NSR) makes the link out of date. */
