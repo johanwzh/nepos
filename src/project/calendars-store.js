@@ -1,6 +1,6 @@
 // Calendars (timetable structure spec §3): the project's named sets of operating days.
-import { readText, writeJson } from './fs.js';
-import { CALENDARS_FILE } from './layout.js';
+import { readText } from './fs.js';
+import { CALENDARS_FILE, writeJsonBackedUp } from './layout.js';
 import { normalizeRanges } from '../core/calendars.js';
 
 /** @param {any} c */
@@ -19,9 +19,9 @@ export async function readCalendars(fs) {
   }
 }
 
-/** @param {import('./fs.js').ProjectFs} fs @param {import('../core/calendars.js').Calendar[]} calendars */
-export async function writeCalendars(fs, calendars) {
-  await writeJson(fs, CALENDARS_FILE, calendars.map((c) => ({ ...c, ranges: normalizeRanges(c.ranges) })));
+/** @param {import('./fs.js').ProjectFs} fs @param {import('../core/calendars.js').Calendar[]} calendars @param {{ now?: Date }} [opts] */
+export async function writeCalendars(fs, calendars, opts) {
+  await writeJsonBackedUp(fs, CALENDARS_FILE, 'calendars', calendars.map((c) => ({ ...c, ranges: normalizeRanges(c.ranges) })), opts);
 }
 
 /** @param {string} name @returns {import('../core/calendars.js').Calendar} */

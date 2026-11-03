@@ -1,5 +1,5 @@
-import { readText, writeJson } from './fs.js';
-import { ORGS_FILE } from './layout.js';
+import { readText } from './fs.js';
+import { ORGS_FILE, writeJsonBackedUp } from './layout.js';
 
 /** @param {any} e */
 const isEntry = (e) => e === null || (e && typeof e === 'object' && typeof e.id === 'string' && e.contact && typeof e.contact === 'object');
@@ -30,7 +30,8 @@ export async function readOrgs(fs) {
 /**
  * @param {import('./fs.js').ProjectFs} fs
  * @param {import('../core/orgs.js').Company[]} companies
+ * @param {{ now?: Date }} [opts]
  */
-export async function writeOrgs(fs, companies) {
-  await writeJson(fs, ORGS_FILE, { companies });
+export async function writeOrgs(fs, companies, opts) {
+  await writeJsonBackedUp(fs, ORGS_FILE, 'orgs', { companies }, opts);
 }

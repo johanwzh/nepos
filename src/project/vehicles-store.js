@@ -2,8 +2,7 @@
 // labels (a name and a colour for the timetable) plus the vehicle's own data (core/vehicles.js). A column refers to a
 // vehicle by its name (ERN text row, flags 512); not exported yet. This list is Nepos's go-between: a vehicle here will
 // later refer to Entur's vehicle register.
-import { writeJson } from './fs.js';
-import { VEHICLES_FILE } from './layout.js';
+import { VEHICLES_FILE, writeJsonBackedUp } from './layout.js';
 import { readTagList, newTag } from './labels-store.js';
 import { normalizeVehicle } from '../core/vehicles.js';
 
@@ -15,9 +14,9 @@ export async function readVehicles(fs) {
   return { vehicles: list.map(normalizeVehicle), error };
 }
 
-/** @param {import('./fs.js').ProjectFs} fs @param {Vehicle[]} vehicles */
-export async function writeVehicles(fs, vehicles) {
-  await writeJson(fs, VEHICLES_FILE, vehicles);
+/** @param {import('./fs.js').ProjectFs} fs @param {Vehicle[]} vehicles @param {{ now?: Date }} [opts] */
+export async function writeVehicles(fs, vehicles, opts) {
+  await writeJsonBackedUp(fs, VEHICLES_FILE, 'vehicles', vehicles, opts);
 }
 
 /** A new, unnamed vehicle with the next colour in turn and a vehicle type ID in the project's codespace.

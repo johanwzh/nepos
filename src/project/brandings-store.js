@@ -1,6 +1,6 @@
 // Brandings (line header spec §6): the project's own list, data/brandings.json.
-import { readText, writeJson } from './fs.js';
-import { BRANDINGS_FILE } from './layout.js';
+import { readText } from './fs.js';
+import { BRANDINGS_FILE, writeJsonBackedUp } from './layout.js';
 
 /** @typedef {{ id: string, name: string, shortName: string, description: string, url: string, imageUrl: string }} Branding */
 
@@ -20,9 +20,9 @@ export async function readBrandings(fs) {
   }
 }
 
-/** @param {import('./fs.js').ProjectFs} fs @param {Branding[]} brandings */
-export async function writeBrandings(fs, brandings) {
-  await writeJson(fs, BRANDINGS_FILE, brandings);
+/** @param {import('./fs.js').ProjectFs} fs @param {Branding[]} brandings @param {{ now?: Date }} [opts] */
+export async function writeBrandings(fs, brandings, opts) {
+  await writeJsonBackedUp(fs, BRANDINGS_FILE, 'brandings', brandings, opts);
 }
 
 /** @param {string} codespace @returns {Branding} */

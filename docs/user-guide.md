@@ -17,7 +17,11 @@ Alt Nepos lagrer, ligger i én mappe du velger selv:
 
 - `data/` — linjene (ERN-filer), kalendere, merkevarer og organisasjoner. Det er denne delen du
   deler med andre eller tar sikkerhetskopi av. Hver gang en linje lagres, legges den forrige versjonen i
-  `data/backups/`; de 10 nyeste per linje beholdes. En slettet linje og kopiene fra formatoppgraderinger
+  `data/backups/`; de 10 nyeste per linje beholdes. Det samme gjelder kalendere, organisasjoner,
+  merkevarer, etiketter og kjøretøy: forrige versjon av filen ligger i `data/backups/` som
+  `calendars.<tidspunkt>.json`, `orgs.…`, `brandings.…`, `labels.…` og `vehicles.…`, de 10 nyeste av hver. For å
+  hente noe tilbake kopierer du filen tilbake til `data/` under det opprinnelige navnet (`calendars.json` osv.) mens Nepos er
+  lukket. En slettet linje og kopiene fra formatoppgraderinger
   blir aldri ryddet bort. De rutede strekningene til hver linje ligger i `data/links/<linje>.json`.
 - `private/` — dine egne innstillinger (språk, fargetema). Deles ikke.
 - `exports/` — NeTEx-filene, én undermappe for hver eksport.

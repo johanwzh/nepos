@@ -20,6 +20,12 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 - **Stops and modes:** a snowAndIce line may use road stops (bus, coach); a bus or coach line still may not use
   snowAndIce stops.
 
+- **Backups of more than the lines:** saving calendars, organisations, brandings, labels or vehicles now keeps the
+  previous version of that file in `data/backups/` (`calendars.<time>.json`, `orgs.…`, `brandings.…`, `labels.…`,
+  `vehicles.…`), the 10 newest of each, as for the lines. Before, a calendar you had broken could only be restored from
+  your own copy of the folder. Nothing is backed up when a file is saved unchanged. To get a version back, close Nepos
+  and copy the file back into `data/` under its original name.
+
 - **Routing knows the vehicle's size:** a vehicle's height, width, length and weight (new on **Resources**: **Weight (t)**,
   the permitted total weight) now steer **Routing**: a road whose OpenStreetMap limit the vehicle is over is never
   used. Height, width and length are hard limits; up to 5 % over a weight limit is a warning. The same stops run by

@@ -1,8 +1,8 @@
 // Column labels (user 2026-10-19): the project's own list of labels a planner puts on trips ("Normal", "Rush"),
 // each with a colour, in data/labels.json. A column refers to a label by its name (ERN text row); not exported.
 // Vehicles (vehicles-store.js) are kept the same way; both are "tags" here.
-import { readText, writeJson } from './fs.js';
-import { LABELS_FILE } from './layout.js';
+import { readText } from './fs.js';
+import { LABELS_FILE, writeJsonBackedUp } from './layout.js';
 
 /** @typedef {{ id: string, name: string, colour: string }} Label */
 
@@ -36,9 +36,9 @@ export async function readLabels(fs) {
   return { labels: list, error };
 }
 
-/** @param {import('./fs.js').ProjectFs} fs @param {Label[]} labels */
-export async function writeLabels(fs, labels) {
-  await writeJson(fs, LABELS_FILE, labels);
+/** @param {import('./fs.js').ProjectFs} fs @param {Label[]} labels @param {{ now?: Date }} [opts] */
+export async function writeLabels(fs, labels, opts) {
+  await writeJsonBackedUp(fs, LABELS_FILE, 'labels', labels, opts);
 }
 
 /** A new, unnamed label with the next colour in turn. @param {number} [n] how many labels there are already @returns {Label} */
