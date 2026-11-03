@@ -4,7 +4,7 @@ import { haversineM } from './geometry.js';
 const DETOUR_RATIO = 2, DETOUR_MIN_M = 300;
 
 /**
- * @param {import('./search.js').Leg} leg @param {{ lon: number, lat: number }} a @param {{ lon: number, lat: number }} b
+ * @param {{ metres: number }} leg @param {{ lon: number, lat: number }} a @param {{ lon: number, lat: number }} b
  * @param {{ off: number }} snapB the snap of the stop the leg ends at
  * @param {number} [farSnapM] the profile's far-snap distance (rules.js)
  * @returns {('detour' | 'far-snap')[]}

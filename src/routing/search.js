@@ -3,10 +3,13 @@
 // e in direction d, now at its head"); at a point, a virtual state is (candidate, direction). Rules from the spike
 // review: leave a point in the direction you arrived; never take back the edge just driven unless it is a dead end;
 // bus turn restrictions apply; off-road metres between a point and its snap cost OFFROAD_S_PER_M and are never driven.
+// A vehicle (backlog 92/93, design 2026-11-03): an edge it is over is never driven nor snapped to; each leg reports the
+// lowest limits along it and the edges it drove.
 import { createHeap } from './heap.js';
 import { OFFROAD_S_PER_M } from './cost.js';
 import { candidatesWidening, fromRef } from './snap.js';
-import { scaleAt, sliceEdge, turnDeg } from './edge-geometry.js';
+import { scaleAt, sliceEdge, turnDeg, pointAt } from './edge-geometry.js';
+import { isOver } from '../core/vehicle-limits.js';
 import { rulesFor, MAX_TURN_DEG, CROSSING_MAX_DEG } from './rules.js';
 
 /**
@@ -14,10 +17,12 @@ import { rulesFor, MAX_TURN_DEG, CROSSING_MAX_DEG } from './rules.js';
  * @typedef {import('./snap.js').Candidate} Candidate
  * @typedef {import('./snap.js').SnapRef} SnapRef
  * @typedef {{ lon: number, lat: number, via?: boolean, fixed?: SnapRef }} ChainPoint
- * @typedef {{ metres: number, ferryMetres: number, seconds: number, coords: [number, number][], roads: string[] }} Leg
+ * @typedef {import('../core/vehicle-limits.js').Limits} Limits
+ * @typedef {{ metres: number, ferryMetres: number, seconds: number, coords: [number, number][], roads: string[], limits: Limits, edges: number[] }} Leg
  * @typedef {SnapRef & { refLost?: boolean, radius: number }} Snap
  * @typedef {{ ok: true, legs: Leg[], snaps: Snap[], ms: number, settled: number }
- *   | { ok: false, error: 'no-road' | 'no-route', point?: number, leg?: number }} ChainResult
+ *   | { ok: false, error: 'no-road' | 'no-route', point?: number, leg?: number, blockedSnap?: { point: number, edge: number } }} ChainResult
+ *   blockedSnap: the stop or waypoint whose only roads (or saved snap) the vehicle cannot use
  * @typedef {{ edge: number, d: number, a: number, b: number }} Piece  driven on edge from a to b metres (from its from node)
  */
 
@@ -29,8 +34,10 @@ const SLACK_S = 600;
 const scratch = new WeakMap();
 
 /**
- * The graph's profile sets the snap radius, the top speed and whether track turns are checked (rules.js).
- * @param {Graph} G @param {ChainPoint[]} points @param {{ offroad?: number, radius?: number, vmax?: number, track?: boolean, turnAtStops?: boolean }} [opts] @returns {ChainResult}
+ * The graph's profile sets the snap radius, the top speed and whether track turns are checked (rules.js). vehicle: its
+ * sizes (none: no limits).
+ * @param {Graph} G @param {ChainPoint[]} points
+ * @param {{ offroad?: number, radius?: number, vmax?: number, track?: boolean, turnAtStops?: boolean, vehicle?: import('../core/vehicle-limits.js').Sizes }} [opts] @returns {ChainResult}
  */
 export function routeChain(G, points, opts = {}) {
   const rules = rulesFor(G.profile);
@@ -40,15 +47,28 @@ export function routeChain(G, points, opts = {}) {
   const cands = [];
   const refLost = [], radius = [];
   const canDrive = (e, d) => G.dir[e] === 0 || G.dir[e] === (d ? 2 : 1);
+  const v = opts.vehicle;
+  /** An edge this vehicle is over (never driven, never snapped to). @param {number} e */
+  const cannot = v ? (e) => isOver('height', G.maxheight[e], v.height) || isOver('width', G.maxwidth[e], v.width)
+    || isOver('length', G.maxlength[e], v.length) || isOver('weight', G.maxweight[e], v.weight) : () => false;
+  /** The leg a point lies on: a stop's the one arriving at it (the first stop's the first leg), a waypoint's its own. @param {number} i */
+  const legAt = (i) => { let before = 0; for (let j = 0; j < i; j++) if (j === 0 || !points[j].via) before++; return Math.max(0, before - 1); };
+  const blocked = (/** @type {number} */ i, /** @type {number} */ edge) => /** @type {ChainResult} */ ({ ok: false, error: 'no-route', point: i, leg: legAt(i), blockedSnap: { point: i, edge } });
   for (let i = 0; i < points.length; i++) {
     const p = points[i];
     const fixed = p.fixed ? fromRef(G, p.fixed) : null;
     // a boat may arrive and leave either way at a quay: its saved snap keeps the place, not the direction
     const ref = fixed && turnAtStops ? { ...fixed, d: undefined } : fixed;
-    if (ref && canDrive(ref.edge, ref.d)) { cands.push([ref]); radius.push(0); refLost.push(false); continue; }
+    if (ref && canDrive(ref.edge, ref.d)) {
+      if (cannot(ref.edge)) return blocked(i, ref.edge);
+      cands.push([ref]); radius.push(0); refLost.push(false); continue;
+    }
     const w = candidatesWidening(G, [p.lon, p.lat], radius0);
     if (!w.list.length) return { ok: false, error: 'no-road', point: i };
-    cands.push(w.list); radius.push(w.radius); refLost.push(!!p.fixed);
+    // A stop is a kerb: one whose roads near it are all closed to the vehicle is not moved to another road further off
+    const list = w.list.filter((c) => !cannot(c.edge));
+    if (!list.length) return blocked(i, w.list[0].edge);
+    cands.push(list); radius.push(w.radius); refLost.push(!!p.fixed);
   }
 
   // Virtual states of point i: index c * 2 + d. cost[i][s] = best time to stand there; back[i][s] = how.
@@ -62,7 +82,7 @@ export function routeChain(G, points, opts = {}) {
 
   let settled = 0;
   for (let i = 0; i + 1 < points.length; i++) {
-    const leg = searchLeg(G, cands[i], cost[i], cands[i + 1], points[i + 1], offroad, canDrive, vmax, track);
+    const leg = searchLeg(G, cands[i], cost[i], cands[i + 1], points[i + 1], offroad, canDrive, vmax, track, cannot);
     settled += leg.settled;
     if (!leg.cost.some(Number.isFinite)) {
       let stops = 0;
@@ -114,7 +134,10 @@ export function routeChain(G, points, opts = {}) {
 }
 
 /** @returns {Leg} */
-const newLeg = () => ({ metres: 0, ferryMetres: 0, seconds: 0, coords: [], roads: [] });
+const newLeg = () => ({ metres: 0, ferryMetres: 0, seconds: 0, coords: [], roads: [], limits: {}, edges: [] });
+
+/** The limit arrays of the graph by kind, and the resolution the tiles store them at. */
+const LIMIT_ARRAYS = /** @type {const} */ ([['height', 'maxheight', 100], ['width', 'maxwidth', 100], ['length', 'maxlength', 10], ['weight', 'maxweight', 10]]);
 
 /** @param {Graph} G @param {Leg} leg @param {Piece} pc */
 function addPiece(G, leg, pc) {
@@ -130,14 +153,22 @@ function addPiece(G, leg, pc) {
   }
   const road = G.road(pc.edge);
   if (road && leg.roads[leg.roads.length - 1] !== road) leg.roads.push(road);
+  if (leg.edges[leg.edges.length - 1] !== pc.edge) leg.edges.push(pc.edge);
+  for (const [kind, arr, res] of LIMIT_ARRAYS) {
+    const value = Math.round(G[arr][pc.edge] * res) / res;
+    if (!(value > 0) || (leg.limits[kind] && /** @type {any} */ (leg.limits[kind]).value <= value)) continue;
+    const [lon, lat] = pointAt(G, pc.edge, (lo + hi) / 2);
+    leg.limits[kind] = { kind, value, way: G.way[pc.edge], road, at: [lon, lat] };
+  }
 }
 
 /**
  * One search from the virtual states of a point (costs in `start`) to every virtual state of the next point.
  * @param {Graph} G @param {Candidate[]} from @param {Float64Array} start @param {Candidate[]} to @param {ChainPoint} target
- * @param {number} offroad @param {(e: number, d: number) => boolean} canDrive
+ * @param {number} offroad @param {(e: number, d: number) => boolean} canDrive @param {number} vmax @param {boolean} track
+ * @param {(e: number) => boolean} cannot an edge the vehicle may not use
  */
-function searchLeg(G, from, start, to, target, offroad, canDrive, vmax, track) {
+function searchLeg(G, from, start, to, target, offroad, canDrive, vmax, track, cannot) {
   let sc = scratch.get(G);
   if (!sc) {
     const n = G.edges * 2;
@@ -216,6 +247,7 @@ function searchLeg(G, from, start, to, target, offroad, canDrive, vmax, track) {
     for (let k = o0; k < o1; k++) {
       const de2 = G.out.de[k], e2 = de2 >> 1, d2 = de2 & 1;
       if (de2 === back && !deadEnd) continue;
+      if (cannot(e2)) continue;
       if (r && (r.no.has(e2) || (r.only >= 0 && r.only !== e2))) continue;
       // a train does not reverse through a switch, nor turn onto the track it crosses
       if (track && de2 !== back && turnDeg(G, de, de2) > (G.cross[v] ? CROSSING_MAX_DEG : MAX_TURN_DEG)) continue;
