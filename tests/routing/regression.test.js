@@ -1,6 +1,6 @@
 // The spike cases the user reviewed (2026-10-30), on real OSM tiles cut to small boxes (tests/fixtures/routing/README.md).
 // A failure here is a router bug: never loosen a check to make it pass.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { createRouter, routeWithTiles } from '../../src/routing/router-core.js';
@@ -16,16 +16,19 @@ function area(name) {
   return router;
 }
 const routers = new Map();
+/** opts: the U-turn length (backlog 107: every case must hold with U-turns allowed too). */
+let opts = {};
 function run(name, chain = cases.cases[name].chain) {
   const a = cases.cases[name].area;
   if (!routers.has(a)) routers.set(a, area(a));
-  const r = routers.get(a).route(chain);
+  const r = routers.get(a).route(chain, opts);
   if (!r.ok) throw new Error(`${name}: ${JSON.stringify(r)}`);
   return r;
 }
 const noImmediateReversal = (coords) => coords.every((c, i) => i < 2 || c[0] !== coords[i - 2][0] || c[1] !== coords[i - 2][1]);
 
-describe('regression: the reviewed spike cases', () => {
+describe.each([['2.6.0 rules', {}], ['U-turns costed for a 12 m bus (backlog 107)', { uturnLength: 12 }]])('regression: the reviewed spike cases, %s', (_, o) => {
+  beforeEach(() => { opts = o; });
   it('Manglerud T (B): on Ring 3 eastbound, no car-park loop', () => {
     const r = run('manglerud-b');
     expect(r.snaps[1].off).toBeLessThanOrEqual(15);

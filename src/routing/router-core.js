@@ -21,9 +21,9 @@ export function createRouter(profile = 'bus') {
     },
     /** @param {string} key */
     has: (key) => G.keys.has(key),
-    /** @param {ChainPoint[]} chain @returns {RouteResult} */
-    route(chain) {
-      const r = routeChain(G, chain);
+    /** @param {ChainPoint[]} chain @param {{ vehicle?: import('../core/vehicle-limits.js').Sizes, uturnLength?: number }} [opts] @returns {RouteResult} */
+    route(chain, opts = {}) {
+      const r = routeChain(G, chain, opts);
       if (!r.ok) return r;
       const stops = chain.map((p, i) => i).filter((i) => i === 0 || i === chain.length - 1 || !chain[i].via);
       const flags = r.legs.map((leg, k) => {

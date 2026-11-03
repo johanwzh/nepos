@@ -4,12 +4,14 @@
 // review: leave a point in the direction you arrived; never take back the edge just driven unless it is a dead end;
 // bus turn restrictions apply; off-road metres between a point and its snap cost OFFROAD_S_PER_M and are never driven.
 // A vehicle (backlog 92/93, design 2026-11-03): an edge it is over is never driven nor snapped to; each leg reports the
-// lowest limits along it and the edges it drove.
+// lowest limits along it and the edges it drove. U-turns (backlog 107): with a U-turn length, a vehicle may turn at a
+// stop, a waypoint or a node on a small slow road (graph uturnOk) for uturnSeconds(length); a dead end stays free and
+// unreported; without one, the ban above holds.
 import { createHeap } from './heap.js';
 import { OFFROAD_S_PER_M } from './cost.js';
 import { candidatesWidening, fromRef } from './snap.js';
 import { scaleAt, sliceEdge, turnDeg, pointAt } from './edge-geometry.js';
-import { isOver } from '../core/vehicle-limits.js';
+import { isOver, uturnSeconds } from '../core/vehicle-limits.js';
 import { rulesFor, MAX_TURN_DEG, CROSSING_MAX_DEG } from './rules.js';
 
 /**
@@ -18,7 +20,8 @@ import { rulesFor, MAX_TURN_DEG, CROSSING_MAX_DEG } from './rules.js';
  * @typedef {import('./snap.js').SnapRef} SnapRef
  * @typedef {{ lon: number, lat: number, via?: boolean, fixed?: SnapRef }} ChainPoint
  * @typedef {import('../core/vehicle-limits.js').Limits} Limits
- * @typedef {{ metres: number, ferryMetres: number, seconds: number, coords: [number, number][], roads: string[], limits: Limits, edges: number[] }} Leg
+ * @typedef {{ at: [number, number], road: string, where: 'stop' | 'waypoint' | 'node' }} UTurn
+ * @typedef {{ metres: number, ferryMetres: number, seconds: number, coords: [number, number][], roads: string[], limits: Limits, edges: number[], uturns: UTurn[] }} Leg
  * @typedef {SnapRef & { refLost?: boolean, radius: number }} Snap
  * @typedef {{ ok: true, legs: Leg[], snaps: Snap[], ms: number, settled: number }
  *   | { ok: false, error: 'no-road' | 'no-route', point?: number, leg?: number, blockedSnap?: { point: number, edge: number } }} ChainResult
@@ -35,9 +38,9 @@ const scratch = new WeakMap();
 
 /**
  * The graph's profile sets the snap radius, the top speed and whether track turns are checked (rules.js). vehicle: its
- * sizes (none: no limits).
+ * sizes (none: no limits); uturnLength: the length a U-turn is costed by (none: no U-turns but at dead ends).
  * @param {Graph} G @param {ChainPoint[]} points
- * @param {{ offroad?: number, radius?: number, vmax?: number, track?: boolean, turnAtStops?: boolean, vehicle?: import('../core/vehicle-limits.js').Sizes }} [opts] @returns {ChainResult}
+ * @param {{ offroad?: number, radius?: number, vmax?: number, track?: boolean, turnAtStops?: boolean, vehicle?: import('../core/vehicle-limits.js').Sizes, uturnLength?: number }} [opts] @returns {ChainResult}
  */
 export function routeChain(G, points, opts = {}) {
   const rules = rulesFor(G.profile);
@@ -53,6 +56,10 @@ export function routeChain(G, points, opts = {}) {
     || isOver('length', G.maxlength[e], v.length) || isOver('weight', G.maxweight[e], v.weight) : () => false;
   /** The leg a point lies on: a stop's the one arriving at it (the first stop's the first leg), a waypoint's its own. @param {number} i */
   const legAt = (i) => { let before = 0; for (let j = 0; j < i; j++) if (j === 0 || !points[j].via) before++; return Math.max(0, before - 1); };
+  const uturnCost = opts.uturnLength != null ? uturnSeconds(opts.uturnLength) : null;
+  /** What leaving point p the other way from its arrival costs on candidate c (null: not allowed). A boat turns at a quay
+   *  for free (user 2026-11-01), a road vehicle on a small slow road for its U-turn cost. @param {ChainPoint} p @param {Candidate} c */
+  const turnCost = (p, c) => (turnAtStops ? (p.via ? null : 0) : uturnCost != null && G.uturnOk[c.edge] ? uturnCost : null);
   const blocked = (/** @type {number} */ i, /** @type {number} */ edge) => /** @type {ChainResult} */ ({ ok: false, error: 'no-route', point: i, leg: legAt(i), blockedSnap: { point: i, edge } });
   for (let i = 0; i < points.length; i++) {
     const p = points[i];
@@ -79,30 +86,39 @@ export function routeChain(G, points, opts = {}) {
   cost.push(new Float64Array(cands[0].length * 2).fill(Infinity));
   back.push(new Array(cands[0].length * 2).fill(null));
   cands[0].forEach((c, ci) => { for (const d of [0, 1]) if (canDrive(c.edge, d) && (c.d === undefined || c.d === d)) cost[0][ci * 2 + d] = offroad * c.off; });
+  /** turned[i][s]: state s of point i is left the other way from the arrival, by a U-turn with a cost. @type {Uint8Array[]} */
+  const turned = [new Uint8Array(cands[0].length * 2)];
+  // The first stop's kerb faces one way: a vehicle may turn there and leave the other way
+  cands[0].forEach((c, ci) => {
+    const t = c.d === undefined ? null : turnCost(points[0], c), o = 1 - /** @type {number} */ (c.d);
+    if (t && canDrive(c.edge, o)) { cost[0][ci * 2 + o] = offroad * c.off + t; turned[0][ci * 2 + o] = 1; }
+  });
 
   let settled = 0;
   for (let i = 0; i + 1 < points.length; i++) {
-    const leg = searchLeg(G, cands[i], cost[i], cands[i + 1], points[i + 1], offroad, canDrive, vmax, track, cannot);
+    const leg = searchLeg(G, cands[i], cost[i], cands[i + 1], points[i + 1], offroad, canDrive, vmax, track, cannot, uturnCost);
     settled += leg.settled;
     if (!leg.cost.some(Number.isFinite)) {
       let stops = 0;
       for (let j = 0; j <= i; j++) if (j === 0 || !points[j].via) stops++;
       return { ok: false, error: 'no-route', leg: stops - 1 };
     }
-    // A boat may leave a stop (never a waypoint) the way it came: it turns at the quay (user 2026-11-01)
-    if (turnAtStops && i + 1 < points.length - 1 && !points[i + 1].via) {
-      const cs = cands[i + 1];
+    // Leaving a point the way it came: a boat at a quay, a road vehicle on a small slow road (turnCost)
+    const cs = cands[i + 1], here = new Uint8Array(cs.length * 2);
+    if (i + 1 < points.length - 1) {
+      const arrived = leg.cost.slice(), how = leg.back.slice();
       for (let c = 0; c < cs.length; c++) {
-        const best = leg.cost[c * 2] <= leg.cost[c * 2 + 1] ? c * 2 : c * 2 + 1;
+        const t = turnCost(points[i + 1], cs[c]);
+        if (t === null) continue;
         for (const d of [0, 1]) {
-          const s = c * 2 + d;
-          if (s !== best && Number.isFinite(leg.cost[best]) && leg.cost[best] < leg.cost[s] && canDrive(cs[c].edge, d)) {
-            leg.cost[s] = leg.cost[best]; leg.back[s] = leg.back[best];
+          const s = c * 2 + d, o = c * 2 + 1 - d;
+          if (Number.isFinite(arrived[o]) && arrived[o] + t < leg.cost[s] && canDrive(cs[c].edge, d)) {
+            leg.cost[s] = arrived[o] + t; leg.back[s] = how[o]; here[s] = t > 0 ? 1 : 0;
           }
         }
       }
     }
-    cost.push(leg.cost); back.push(leg.back);
+    cost.push(leg.cost); back.push(leg.back); turned.push(here);
   }
 
   // The cheapest state at the last point, walked back to the first.
@@ -120,13 +136,30 @@ export function routeChain(G, points, opts = {}) {
   const legs = [];
   let cur = newLeg();
   for (let i = 0; i < searchLegs.length; i++) {
-    for (const pc of searchLegs[i]) addPiece(G, cur, pc);
+    if (turned[i][chosen[i]]) {
+      const c = cands[i][chosen[i] >> 1];
+      cur.uturns.push({ at: [c.lon, c.lat], road: G.road(c.edge), where: i === 0 || !points[i].via ? 'stop' : 'waypoint' });
+    }
+    /** @type {Piece | null} */
+    let prev = null;
+    for (const pc of searchLegs[i]) {
+      if (prev && uturnCost !== null && pc.edge === prev.edge && pc.d !== prev.d) {
+        const v = prev.d ? G.from[prev.edge] : G.to[prev.edge], back = (prev.edge * 2 + prev.d) ^ 1;
+        let deadEnd = !G.open[v];
+        for (let k = G.out.start[v]; k < G.out.start[v + 1]; k++) if (G.out.de[k] !== back) deadEnd = false;
+        if (!deadEnd) cur.uturns.push({ at: [G.lon[v] / Q, G.lat[v] / Q], road: G.road(prev.edge), where: 'node' });
+      }
+      addPiece(G, cur, pc);
+      prev = pc;
+    }
     if (i + 1 === last || !points[i + 1].via) { legs.push(cur); cur = newLeg(); }
   }
   const snaps = chosen.map((st, i) => {
     const c = cands[i][st >> 1], e = c.edge;
+    // the kerb is the way the vehicle arrived: a turned state leaves the other way
+    const arrived = turned[i][st] ? 1 - (st & 1) : st & 1;
     /** @type {Snap} */
-    const snap = { way: G.way[e], lon: c.lon, lat: c.lat, along: (st & 1) === 0, off: c.off, road: G.road(e), radius: radius[i] };
+    const snap = { way: G.way[e], lon: c.lon, lat: c.lat, along: arrived === 0, off: c.off, road: G.road(e), radius: radius[i] };
     if (refLost[i]) snap.refLost = true;
     return snap;
   });
@@ -134,7 +167,7 @@ export function routeChain(G, points, opts = {}) {
 }
 
 /** @returns {Leg} */
-const newLeg = () => ({ metres: 0, ferryMetres: 0, seconds: 0, coords: [], roads: [], limits: {}, edges: [] });
+const newLeg = () => ({ metres: 0, ferryMetres: 0, seconds: 0, coords: [], roads: [], limits: {}, edges: [], uturns: [] });
 
 /** The limit arrays of the graph by kind, and the resolution the tiles store them at. */
 const LIMIT_ARRAYS = /** @type {const} */ ([['height', 'maxheight', 100], ['width', 'maxwidth', 100], ['length', 'maxlength', 10], ['weight', 'maxweight', 10]]);
@@ -166,9 +199,9 @@ function addPiece(G, leg, pc) {
  * One search from the virtual states of a point (costs in `start`) to every virtual state of the next point.
  * @param {Graph} G @param {Candidate[]} from @param {Float64Array} start @param {Candidate[]} to @param {ChainPoint} target
  * @param {number} offroad @param {(e: number, d: number) => boolean} canDrive @param {number} vmax @param {boolean} track
- * @param {(e: number) => boolean} cannot an edge the vehicle may not use
+ * @param {(e: number) => boolean} cannot an edge the vehicle may not use @param {number | null} uturnCost a U-turn on a small slow road (null: none)
  */
-function searchLeg(G, from, start, to, target, offroad, canDrive, vmax, track, cannot) {
+function searchLeg(G, from, start, to, target, offroad, canDrive, vmax, track, cannot, uturnCost) {
   let sc = scratch.get(G);
   if (!sc) {
     const n = G.edges * 2;
@@ -246,13 +279,17 @@ function searchLeg(G, from, start, to, target, offroad, canDrive, vmax, track, c
     for (let k = o0; k < o1; k++) if (G.out.de[k] !== back) { deadEnd = false; break; }
     for (let k = o0; k < o1; k++) {
       const de2 = G.out.de[k], e2 = de2 >> 1, d2 = de2 & 1;
-      if (de2 === back && !deadEnd) continue;
+      let extra = 0;
+      if (de2 === back && !deadEnd) {
+        if (uturnCost === null || !G.uturnOk[e2]) continue;
+        extra = uturnCost;
+      }
       if (cannot(e2)) continue;
       if (r && (r.no.has(e2) || (r.only >= 0 && r.only !== e2))) continue;
       // a train does not reverse through a switch, nor turn onto the track it crosses
       if (track && de2 !== back && turnDeg(G, de, de2) > (G.cross[v] ? CROSSING_MAX_DEG : MAX_TURN_DEG)) continue;
-      relax(de2, g + G.len[e2] * G.spm[e2], de);
-      targetsOn(e2, d2, d2 ? G.len[e2] : 0, g, de, de2, -1);
+      relax(de2, g + extra + G.len[e2] * G.spm[e2], de);
+      targetsOn(e2, d2, d2 ? G.len[e2] : 0, g + extra, de, de2, -1);
     }
   }
 
