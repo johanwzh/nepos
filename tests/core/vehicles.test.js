@@ -17,6 +17,12 @@ describe('vehicle data', () => {
     expect(normalizeVehicle({ ...base, fuelType: 'coal', lowFloor: 'yes', seats: 'many', length: -2 })).toMatchObject({ fuelType: '', lowFloor: false, seats: null, length: null });
   });
 
+  it('keeps a field it does not know (a newer Nepos wrote it; backlog 29), and still cleans the ones it knows', () => {
+    const v = normalizeVehicle({ ...base, seats: 'many', depot: 'Nord', axles: 3 });
+    expect(v).toMatchObject({ depot: 'Nord', axles: 3, seats: null });
+    expect(Object.keys(v)).toEqual(expect.arrayContaining(['id', 'name', 'colour', 'depot', 'axles']));
+  });
+
   it('accepts a full vehicle', () => {
     const v = normalizeVehicle({ ...base, shortCode: 'B7', transportMode: 'bus', fuelType: 'electricity', lowFloor: true, seats: 45,
       length: 12.2, width: 2.55, height: 3.3, vehicleTypeId: 'TST:VehicleType:x', vehicleTypeRef: `${VEHICLE_TYPE_REF_PREFIX}ABC-12` });

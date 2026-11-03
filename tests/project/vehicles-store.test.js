@@ -20,6 +20,16 @@ describe('vehicles (user 2026-10-20)', () => {
     expect((await readVehicles(fs)).error).toBe('unreadable');
   });
 
+  it('saving what was read keeps a field this Nepos does not know (an older tab must not strip a newer one\'s data)', async () => {
+    const fs = createMemoryFs();
+    const stored = [{ id: 'v1', name: 'Buss 7', colour: '#2f6fb5', depot: 'Nord', axles: 3 }];
+    await fs.writeBytes('data/vehicles.json', new TextEncoder().encode(JSON.stringify(stored)));
+    const { vehicles } = await readVehicles(fs);
+    await writeVehicles(fs, vehicles);
+    const saved = JSON.parse(/** @type {string} */ (await readText(fs, 'data/vehicles.json')));
+    expect(saved).toEqual([expect.objectContaining({ id: 'v1', name: 'Buss 7', depot: 'Nord', axles: 3 })]);
+  });
+
   it('a new vehicle has an ID and a colour', () => {
     expect(newVehicle()).toMatchObject({ id: expect.stringMatching(/^[0-9a-f-]{36}$/), name: '', colour: expect.stringMatching(/^#[0-9a-f]{6}$/) });
   });

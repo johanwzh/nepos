@@ -41,9 +41,11 @@ const positive =(v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v
 /** @param {any} v */
 const str = (v) => (typeof v === 'string' ? v : '');
 
-/** A vehicle as read from the file: missing fields filled in, invalid ones emptied. @param {any} v @returns {Vehicle} */
+/** A vehicle as read from the file: missing fields filled in, invalid ones emptied. A field this Nepos does not know is
+ *  kept as it is, so a newer Nepos's data survives a save from an older one (backlog 29). @param {any} v @returns {Vehicle} */
 export function normalizeVehicle(v) {
   return {
+    ...v,
     id: v.id, name: v.name, colour: v.colour,
     shortCode: str(v.shortCode),
     transportMode: v.transportMode === 'ferry' ? 'water' : str(v.transportMode), // the old mode (backlog 70)
