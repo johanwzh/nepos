@@ -66,7 +66,7 @@ function fakeSession() {
     LB2: pat('h3', { height: 3 }, ['LB2']), OLD: pat('h2', { height: 2 }, ['OLD']),
   };
   /** @type {any} */
-  let file = { version: 1, line: '50', links: { [K]: link(SHORT), [`${K}|h3x`]: link(LONG, { around: [LIMIT] }) }, snaps: {} };
+  let file = { version: 1, line: '50', links: { [K]: link(SHORT), [`${K}|h3x`]: link(LONG, { around: [LIMIT], distanceM: 900 }) }, snaps: {} };
   /** @type {Map<string, any>} */
   const proposals = new Map();
   const legsOf = /** @type {Record<string, any>} */ ({
@@ -88,7 +88,7 @@ function fakeSession() {
     proposal: (/** @type {string} */ id) => proposals.get(id) ?? null,
     route: vi.fn(async (/** @type {string} */ id) => {
       proposals.set(id, { legs: new Map([[K, link(LONG, { distanceM: 2000, seconds: 180, uturn: 12, limits: {}, around: [LIMIT], free: SHORT, freeM: 600, freeS: 60,
-        uturns: [{ at: [10.008, 59.01], road: 'Blindvegen', where: 'stop' }] })]]), via: new Map(), old: new Map([[K, K]]) });
+        uturns: [{ at: [10.008, 59.01], road: 'Blindvegen', where: 'stop' }] })]]), via: new Map(), old: id === 'h3' ? new Map() : new Map([[K, K]]) });
     }),
     setWaypoints: vi.fn(async () => {}),
     accept: vi.fn(async () => file),
@@ -215,5 +215,32 @@ describe('Routing with vehicle groups', () => {
   it('the legend has the route without limits and the U-turn', () => {
     expect(q('.rv-legend')?.textContent).toContain('Rute uten grenser (stengt)');
     expect(q('.rv-legend')?.textContent).toContain('U-sving');
+  });
+});
+
+describe('final review', () => {
+  it('M3: the comparison\'s "before" is the route the pattern uses (its variant), not the plain one', async () => {
+    thumb('h3').click();
+    await settle();
+    /** @type {HTMLElement} */ (q('.rv-route')).click();
+    await settle();
+    expect(info()).toContain('0,9 → 2,0 km');
+  });
+
+  it('M2: the unused count is what Remove unused removes: a variant of a vehicle group on the line is used', async () => {
+    const { grid } = await import('../../src/ui/grid.js');
+    setTool('');
+    await settle();
+    for (const col of grid.cols) /** @type {any} */ (col).vehicle = 'TB';
+    session.file().links[`${K}|h4`] = link(LONG, { uturn: 12 });
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', altKey: true, bubbles: true, cancelable: true }));
+    await settle();
+    expect(info()).toContain('1 ubrukt strekning beholdt');
+  });
+
+  it('M4: a line with one group (no vehicle sizes) says nothing about sharing', async () => {
+    for (const st of session.states()) { /** @type {any} */ (st.pattern).groupKey = ''; /** @type {any} */ (st.pattern).group = {}; }
+    await pick('');
+    expect(info()).not.toContain('Deles med');
   });
 });

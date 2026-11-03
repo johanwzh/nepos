@@ -90,3 +90,10 @@ describe('linkFor: rules 1–6', () => {
     expect(linkFor(P, { length: 4 }, { [P]: link({ limits: {} }) }, { lineMode: 'taxi' })).toMatchObject({ how: 'proven' });
   });
 });
+
+describe('final review M6', () => {
+  it('a group\'s own route over a new limit, with a plain route it fits: the plain one, not a red leg', () => {
+    const links = { [P]: link({ limits: {} }), [`${P}|h4`]: link({ uturn: 12, limits: limits(3.5) }) };
+    expect(linkFor(P, { height: 4 }, links, ctx)).toMatchObject({ key: P, how: 'proven' });
+  });
+});

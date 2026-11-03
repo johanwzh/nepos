@@ -39,7 +39,10 @@ export function linkFor(pair, g, links, { lineMode }) {
   const gk = groupKey(g);
   if (!gk) return plain ? { key: pair, link: plain, how: 'plain' } : { key: null, link: null, how: null };
   const own = routed(variantKey(pair, gk));
-  if (own) return { key: variantKey(pair, gk), link: own, how: 'own' };
+  // the group's own route, unless a newer map found a limit on it the group is over (final review M6: then a route it
+  // fits is used, and only without one the leg is red)
+  const ownOver = own?.limits && fit(own.limits, g).over.length > 0;
+  if (own && !ownOver) return { key: variantKey(pair, gk), link: own, how: 'own' };
   const uLen = uturnLength(g, lineMode);
   if (plain && sameRouteFor(plain, g, uLen, uturnLength({}, lineMode))) return { key: pair, link: plain, how: 'proven' };
   const variants = Object.keys(links).filter((k) => k.startsWith(`${pair}|`) && routed(k)).sort();
@@ -49,7 +52,7 @@ export function linkFor(pair, g, links, { lineMode }) {
     if (biggerOrEqual(g, g0) && sameRouteFor(links[k], g, uLen, uturnLength(g0, lineMode))) return { key: k, link: links[k], how: 'proven' };
   }
   const fits = variants.find((k) => links[k].limits && !fit(links[k].limits, g).over.length);
-  const k = fits ?? (plain ? pair : variants[0]);
+  const k = fits ?? (own ? variantKey(pair, gk) : plain ? pair : variants[0]);
   return k ? { key: k, link: links[k], how: 'candidate' } : { key: null, link: null, how: null };
 }
 

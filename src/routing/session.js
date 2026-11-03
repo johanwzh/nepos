@@ -13,8 +13,8 @@ import { MOVED_M } from '../core/link-state.js';
 import { tablePatterns, patternStates, pruneLineLinks } from '../core/route-patterns.js';
 import { profileFor } from './profiles.js';
 import { rulesFor } from './rules.js';
-import { uturnLength } from '../core/vehicle-limits.js';
-import { variantKey, sameRouteFor } from '../core/vehicle-links.js';
+import { uturnLength, parseGroupKey, biggerOrEqual } from '../core/vehicle-limits.js';
+import { variantKey, sameRouteFor, groupOfKey } from '../core/vehicle-links.js';
 
 /** @typedef {import('../core/link-pairs.js').QuayRef} QuayRef */
 /** @typedef {import('../core/link-state.js').SavedLink} SavedLink */
@@ -77,8 +77,8 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
   const loadTile = (/** @type {string} */ key) => { loaded.add(key); return tiles.loadTile(key); };
   /** What Route passes for a pattern: its group's sizes, and on roads its U-turn length (backlog 107). @param {Pattern} p */
   const optsFor = (p) => ({ ...(Object.keys(p.group ?? {}).length ? { vehicle: p.group } : {}), ...(set === 'road' ? { uturnLength: uturnLength(p.group ?? {}, lineMode) } : {}) });
-  /** The key of the link leg i of pattern p uses now (a variant or the pair). @param {Pattern} p @param {number} i */
-  const usedKey = (p, i) => stateOf(p.id)?.legs[i]?.key ?? p.keys[i];
+  /** The keys of the links pattern p's legs use now (a variant or the pair), each leg's: one state per call (final review M8). @param {Pattern} p */
+  const usedKeys = (p) => { const st = stateOf(p.id); return p.keys.map((k, i) => st?.legs[i]?.key ?? k); };
 
   const states = () => patternStates(patterns, file, { quayInfo });
   const stateOf = (/** @type {string} */ id) => /** @type {PatternState} */ (states().find((s) => s.pattern.id === id));
@@ -100,10 +100,11 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
   async function openTiles(p) {
     /** @type {{ lon: number, lat: number }[]} */
     const points = [];
+    const used = usedKeys(p);
     p.stops.forEach((s, i) => {
       if (s.quay) points.push({ lon: s.quay.lon, lat: s.quay.lat });
       const k = p.keys[i];
-      if (k) for (const [lon, lat] of viaOf(proposals.get(p.id), k, usedKey(p, i))) points.push({ lon, lat });
+      if (k) for (const [lon, lat] of viaOf(proposals.get(p.id), k, used[i])) points.push({ lon, lat });
     });
     // The newest published build: Route on an orange "newer map data" pattern compares with that (final review 1)
     const opened = await tiles.open(points, { latest: true, onProgress });
@@ -162,8 +163,10 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
       // The same route: kept as it is (not a metre changes); a route saved before 2.6.1 gets its limits, one on an older
       // build is marked checked against this one
       const built = [saved.tiles?.built ?? '', saved.reviewed?.built ?? ''].sort().pop() ?? '';
-      let keep = saved;
+      let keep = /** @type {SavedLink & { free?: LonLat[], freeM?: number, freeS?: number }} */ (saved);
       if (!saved.limits) keep = { ...keep, limits };
+      // the route without limits and what blocked it, for the comparison (final review I2; Accept strips the free route)
+      if (link.around?.length) keep = { ...keep, around: link.around, free: link.free, freeM: link.freeM, freeS: link.freeS };
       if (manifest?.built && built < manifest.built) keep = { ...keep, reviewed: { ...saved.reviewed, built: manifest.built } };
       pr.legs.set(key, keep);
     });
@@ -175,13 +178,14 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
    * @param {Pattern} p @param {Proposal} pr @param {Set<number>} which leg indexes
    */
   async function routeLegs(p, pr, which) {
+    const usedAll = usedKeys(p);
     for (let i = 0; i < p.keys.length; i++) {
       if (!which.has(i)) continue;
       let j = i;
       while (j + 1 < p.keys.length && which.has(j + 1)) j++;
       const stops = /** @type {QuayRef[]} */ (p.stops.slice(i, j + 2).map((s) => s.quay));
       const keys = /** @type {string[]} */ (p.keys.slice(i, j + 1));
-      const used = keys.map((_, k) => /** @type {string} */ (usedKey(p, i + k)));
+      const used = keys.map((_, k) => /** @type {string} */ (usedAll[i + k]));
       if (!(await route(p, pr, stops, keys, used)) && keys.length > 1) {
         for (let k = 0; k < keys.length; k++) await route(p, pr, [stops[k], stops[k + 1]], [keys[k]], [used[k]]);
       }
@@ -213,9 +217,10 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
       const pr = proposalOf(id);
       /** @type {Set<number>} */
       const which = new Set();
+      const used = usedKeys(p);
       p.keys.forEach((k, i) => {
         if (!k || (key && k !== key)) return;
-        const viaChanged = pr.via.has(k) && JSON.stringify(pr.via.get(k)) !== JSON.stringify(file.links[usedKey(p, i)]?.via ?? []);
+        const viaChanged = pr.via.has(k) && JSON.stringify(pr.via.get(k)) !== JSON.stringify(file.links[used[i] ?? k]?.via ?? []);
         if (key || st.legs[i].state !== 'routed' || viaChanged) which.add(i);
       });
       if (!which.size) p.keys.forEach((k, i) => { if (k) which.add(i); });
@@ -242,7 +247,7 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
       if (!pr.legs.has(key)) return;
       try {
         await openTiles(p);
-        await route(p, pr, [/** @type {QuayRef} */ (p.stops[i].quay), /** @type {QuayRef} */ (p.stops[i + 1].quay)], [key], [/** @type {string} */ (usedKey(p, i))], true);
+        await route(p, pr, [/** @type {QuayRef} */ (p.stops[i].quay), /** @type {QuayRef} */ (p.stops[i + 1].quay)], [key], [/** @type {string} */ (usedKeys(p)[i])], true);
       } catch (e) {
         if (had) pr.via.set(key, had); else pr.via.delete(key);
         throw e;
@@ -266,17 +271,28 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
         const l = pair ? pr?.legs.get(pair) : undefined;
         if (!pair || !isLink(l)) return;
         const { free, freeM, freeS, ...link } = /** @type {SavedLink & { free?: any, freeM?: number, freeS?: number }} */ (l);
-        const plain = links[pair];
+        const plain = links[pair], own = variantKey(pair, gk), used = /** @type {string} */ (usedNow[i]);
         if (!gk) { links[pair] = link; usedNow[i] = pair; return; }
+        /** The route is a saved one: no copy; confirmed for the group when Nepos cannot prove it. @param {string} k */
+        const confirm = (k) => {
+          const at = links[k], g0 = k === pair ? {} : parseGroupKey(groupOfKey(k));
+          const next = { ...at, ...(at.limits ? {} : { limits: link.limits }) };
+          // provable as linkFor proves it: the plain link, or another group's route for a group at least as big (rules 3, 5)
+          const proven = (k === pair || biggerOrEqual(p.group ?? {}, g0)) && sameRouteFor(next, p.group, uLen, uturnLength(g0, lineMode));
+          if (k !== own && !proven && !next.kept?.includes(gk)) next.kept = [...(next.kept ?? []), gk];
+          links[k] = next; usedNow[i] = k;
+        };
+        // the link the leg uses now, when it is another group's route (rule 4 to 6, final review M5)
+        if (used !== pair && used !== own && links[used] && sameLink(link, links[used])) { confirm(used); return; }
         if (plain && sameLink(link, plain)) {
-          // the group's route is the plain one: no variant; confirmed for the group when Nepos cannot prove it
-          const next = { ...plain, ...(plain.limits ? {} : { limits: link.limits }) };
-          if (!sameRouteFor(next, p.group, uLen, defLen) && !next.kept?.includes(gk)) next.kept = [...(next.kept ?? []), gk];
-          links[pair] = next; usedNow[i] = pair; return;
+          // the group's route is the plain one: its own route goes, unless another pattern still uses it (final review I1)
+          if (links[own] && !states().some((o) => o.pattern.id !== id && o.legs.some((x) => x.key === own))) delete links[own];
+          confirm(pair); return;
         }
-        // a route that did not go round, costing U-turns as the default group does, is the default group's route too
-        if (!link.around?.length && (link.uturn ?? defLen) === defLen) { links[pair] = link; usedNow[i] = pair; return; }
-        links[variantKey(pair, gk)] = link; usedNow[i] = variantKey(pair, gk);
+        // a route changed in the thumbnail of a group with its own route is that route (a variant never touches the plain
+        // link, design §7); else one that did not go round, costing U-turns as the default group does, is the plain one
+        if (used !== own && !link.around?.length && (link.uturn ?? defLen) === defLen) { links[pair] = link; usedNow[i] = pair; return; }
+        links[own] = link; usedNow[i] = own;
       });
       const nextSnaps = { ...file.snaps };
       for (const s of p.stops) if (s.quay && snaps[s.quay.quayId]) nextSnaps[s.quay.quayId] = snaps[s.quay.quayId];
@@ -345,6 +361,7 @@ export function createRoutingSession({ code, rs, setId, calendars, lineLinks, qu
       /** @type {Map<string, SavedLink>} */
       const want = new Map();
       try {
+        if (!states().some((st) => st.pattern.groupKey)) return null;
         const pub = await tiles.published().catch(() => null);
         if (!pub) return null;
         for (const st of states()) {

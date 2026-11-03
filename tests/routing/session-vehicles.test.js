@@ -169,3 +169,56 @@ describe('the automatic check when Routing opens (§8)', () => {
     expect(s.r.place).not.toHaveBeenCalled();
   });
 });
+
+describe('final review: Accept and Route on a group\'s own route', () => {
+  const MID = /** @type {[number, number][]} */ ([[11.0, 59.0], [11.005, 59.002], [11.01, 59.0]]);
+  const variant = () => saved(LONG, { limits: {}, uturn: 12, around: [H37.height], via: [[11.005, 59.004]] });
+
+  it('I1: a new route in the thumbnail of a group with its own route rewrites that route, never the plain one', async () => {
+    const plain = saved(SHORT, { limits: H37 });
+    const s = session(['TB'], { [PAIR]: plain, [`${PAIR}|h4`]: variant() }, { r: router(MID) });
+    const id = only(s).pattern.id;
+    await s.route(id);
+    const file = /** @type {any} */ (await s.accept(id));
+    expect(file.links[PAIR]).toBe(plain);
+    expect(file.links[`${PAIR}|h4`].polyline).toBe(encodePolyline(MID, 6));
+    expect(file.patterns[id].keys).toEqual([`${PAIR}|h4`]);
+  });
+
+  it('I1: a group\'s route that is now the plain one drops its own, and uses the plain link', async () => {
+    const plain = saved(SHORT, { limits: {} });
+    const { via, ...noVia } = variant();
+    const s = session(['TB'], { [PAIR]: plain, [`${PAIR}|h4`]: noVia });
+    const id = only(s).pattern.id;
+    await s.route(id);
+    const file = /** @type {any} */ (await s.accept(id));
+    expect(Object.keys(file.links)).toEqual([PAIR]);
+    expect(file.patterns[id].keys).toEqual([PAIR]);
+  });
+
+  it('M5: a route equal to the other group\'s route it reconfirms: kept for this group, not copied', async () => {
+    const s = session(['LB'], { [`${PAIR}|h4`]: variant() }, { r: router(LONG, { around: [H37.height], free: SHORT, freeM: 600, freeS: 60 }) });
+    const id = only(s).pattern.id;
+    expect(only(s).legs[0].state).toBe('reconfirm');
+    await s.route(id);
+    const file = /** @type {any} */ (await s.accept(id));
+    expect(Object.keys(file.links)).toEqual([`${PAIR}|h4`]);
+    expect(file.links[`${PAIR}|h4`].kept).toEqual(['h3']);
+  });
+
+  it('I2: routing an unchanged route that went round again keeps the route without limits on the proposal', async () => {
+    const s = session(['TB'], { [`${PAIR}|h4`]: variant() }, { r: router(LONG, { around: [H37.height], free: SHORT, freeM: 600, freeS: 60 }) });
+    const id = only(s).pattern.id;
+    await s.route(id);
+    expect(/** @type {any} */ (s.proposal(id)?.legs.get(PAIR))).toMatchObject({ freeM: 600, freeS: 60, free: SHORT });
+    const file = /** @type {any} */ (await s.accept(id));
+    expect(file.links[`${PAIR}|h4`].free).toBeUndefined();
+    expect(file.links[`${PAIR}|h4`].freeM).toBeUndefined();
+  });
+
+  it('M8: no trip with a sized vehicle: the check asks nothing of the network', async () => {
+    const s = session([''], { [PAIR]: saved(SHORT) });
+    expect(await s.checkLimits()).toBeNull();
+    expect(s.t.published).not.toHaveBeenCalled();
+  });
+});

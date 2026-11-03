@@ -336,7 +336,7 @@ function totals(st, pick) {
 function unused() {
   const file = session?.file();
   if (!file || !rs) return 0;
-  const next = pruneLineLinks(rs, file);
+  const next = pruneLineLinks(rs, file, app.vehicles ?? []);
   return next ? Object.keys(file.links).length - Object.keys(next.links).length : 0;
 }
 
@@ -366,7 +366,7 @@ function info() {
   }
   if (st.proposal) {
     // The comparison: before → after, per leg and for the pattern
-    const before = (/** @type {string} */ k) => session?.file().links[st.proposal?.old.get(k) ?? k];
+    const before = (/** @type {string} */ k) => session?.file().links[st.proposal?.old.get(k) ?? savedKey(st, k)];
     const was = totals(st, before);
     const rows = [...st.proposal.legs.entries()].filter(([, l]) => isLink(l)).map(([k, l]) => {
       const i = p.keys.indexOf(k), b = /** @type {any} */ (before(k));
@@ -418,7 +418,8 @@ function legVehicleInfo(st, i, l) {
   if (lows.length) html += `<div>${esc(t('rvLowest', lows.join(', ')))}</div>`;
   for (const u of l.uturns ?? []) html += `<div>${esc(uturnText(u))}</div>`;
   const pair = st.pattern.keys[i], key = savedKey(st, pair);
-  if (!st.proposal?.legs.has(pair)) {
+  // who else uses the route: only where the line has vehicle groups (a line without sizes shows as in 2.6.0)
+  if (!st.proposal?.legs.has(pair) && states().some((o) => o.pattern.groupKey)) {
     const others = states().filter((o) => o.pattern.id !== st.pattern.id && o.legs.some((/** @type {any} */ lg, /** @type {number} */ j) => o.pattern.keys[j] === pair && lg.key === key
       && !['over', 'none', 'unroutable', 'changed'].includes(lg.state)));
     const who = others.flatMap((o) => (o.pattern.vehicles?.length ? o.pattern.vehicles : [t('rvNoVehicleTrips')]));
