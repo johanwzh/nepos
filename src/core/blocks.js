@@ -39,17 +39,32 @@ export const validBlock = (block) => !!block && INTERVALS.includes(block.every) 
  * A copy of the column with every time moved by `offset` minutes (day offsets follow); no block, no trip number.
  * @param {any} col @param {number} offset
  */
-function shifted(col, offset) {
-  const copy = JSON.parse(JSON.stringify(col));
-  delete copy.block;
-  delete copy.tripNo;
-  copy.cells = (copy.cells ?? []).map((/** @type {any} */ c) => {
-    if (!timed(c)) return c;
-    const v = abs(c) + offset;
+function shifted(col, offset, base = baseMinutes(col)) {
+  const { block: _block, tripNo: _tripNo, cells, ...rest } = col;
+  const copy = plainCopy(rest);
+  copy.cells = (cells ?? []).map((/** @type {any} */ c, /** @type {number} */ i) => {
+    if (base[i] === null) return plainCopy(c);
+    const v = /** @type {number} */ (base[i]) + offset;
     const d = Math.floor(v / 1440);
-    return { ...c, time: hhmm(v - d * 1440), dayOffset: d, interchange: null, hubLink: null };
+    return { ...plainCopy(c), time: hhmm(v - d * 1440), dayOffset: d, interchange: null, hubLink: null };
   });
   return copy;
+}
+
+/** Each cell's time in minutes (with day offset), null where it has none: worked out once per block. @param {any} col */
+const baseMinutes = (col) => (col.cells ?? []).map((/** @type {any} */ c) => (timed(c) ? abs(c) : null));
+
+/**
+ * A deep copy of plain data, as JSON would make it (undefined fields left out, null kept) but without the text round
+ * trip: a block of 1 321 trips was copied through JSON on every check (backlog 96). @param {any} v @returns {any}
+ */
+function plainCopy(v) {
+  if (v === null || typeof v !== 'object') return v;
+  if (Array.isArray(v)) return v.map((x) => (x === undefined ? null : plainCopy(x)));
+  /** @type {Record<string, any>} */
+  const out = {};
+  for (const k in v) if (v[k] !== undefined && typeof v[k] !== 'function') out[k] = plainCopy(v[k]);
+  return out;
 }
 
 /** A generated trip's uid: stable per parent and offset, a real UUID (NeTEx ids). @param {any} col @param {number} offset */
@@ -71,7 +86,12 @@ export function freeUid(uid, used) {
 export function blockTrips(col) {
   if (!validBlock(col.block)) return [];
   const out = [];
-  for (let off = col.block.every; off <= col.block.span; off += col.block.every) out.push({ ...shifted(col, off), uid: tripUid(col, off) });
+  const base = baseMinutes(col);
+  for (let off = col.block.every; off <= col.block.span; off += col.block.every) {
+    const trip = shifted(col, off, base);
+    trip.uid = tripUid(col, off);
+    out.push(trip);
+  }
   return out;
 }
 
@@ -170,9 +190,12 @@ export function tripCols(grid) {
   return gen.length ? [...real, ...gen] : real;
 }
 
+/** Routes expandRoute made: expanding one again gives it back (one check passes its expansion on, backlog 96). */
+const expanded = new WeakSet();
+
 /** The route with every table's blocks expanded (tripCols); the route itself is not changed. @param {any} rs */
 export function expandRoute(rs) {
-  if (!rs?.grids) return rs;
+  if (!rs?.grids || expanded.has(rs)) return rs;
   let any = false;
   /** @type {Record<string, any>} */
   const grids = {};
@@ -181,5 +204,8 @@ export function expandRoute(rs) {
     if (cols.length !== /** @type {any} */ (g).cols.length) any = true;
     grids[k] = { .../** @type {any} */ (g), cols };
   }
-  return any ? { ...rs, grids } : rs;
+  if (!any) return rs; // nothing to expand: not marked, a block may be added to it later
+  const out = { ...rs, grids };
+  expanded.add(out);
+  return out;
 }

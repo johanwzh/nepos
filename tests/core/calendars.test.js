@@ -74,6 +74,9 @@ describe('UUID v5', () => {
     // RFC 4122 example namespace (DNS) and name "www.example.com"
     expect(uuid5('www.example.com', '6ba7b810-9dad-11d1-80b4-00c04fd430c8')).toBe('2ed6657d-e927-568b-95e1-2665a8aea6a2');
     expect(uuid5('x')).toBe(uuid5('x', NEPOS_NAMESPACE));
+    // pinned before the faster SHA-1 (backlog 96): a name over two blocks, and letters outside ASCII
+    expect(uuid5('a61c84b7-21dc-42ff-a94f-3446013293f9|+1320|a long name that needs a second SHA-1 block')).toBe('a9423a84-8b47-59f1-8c1d-7fe15916d763');
+    expect(uuid5('Økern–Majorstuen æøå')).toBe('a0bba939-b904-5ceb-a3a7-f9ec8905a831');
     expect(uuid5('x')).not.toBe(uuid5('y'));
   });
 });

@@ -20,8 +20,12 @@ function sha1(bytes) {
     for (let i = 16; i < 80; i++) { const x = w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]; w[i] = (x << 1) | (x >>> 31); }
     let a = h0, b = h1, c = h2, d = h3, e = h4;
     for (let i = 0; i < 80; i++) {
-      const [f, k] = i < 20 ? [(b & c) | (~b & d), 0x5a827999] : i < 40 ? [b ^ c ^ d, 0x6ed9eba1]
-        : i < 60 ? [(b & c) | (b & d) | (c & d), 0x8f1bbcdc] : [b ^ c ^ d, 0xca62c1d6];
+      // no array per round: a block's 1 321 trips each hash their ID (backlog 96)
+      let f, k;
+      if (i < 20) { f = (b & c) | (~b & d); k = 0x5a827999; }
+      else if (i < 40) { f = b ^ c ^ d; k = 0x6ed9eba1; }
+      else if (i < 60) { f = (b & c) | (b & d) | (c & d); k = 0x8f1bbcdc; }
+      else { f = b ^ c ^ d; k = 0xca62c1d6; }
       const t = (((a << 5) | (a >>> 27)) + f + e + k + w[i]) >>> 0;
       e = d; d = c; c = (b << 30) | (b >>> 2); b = a; a = t;
     }
@@ -33,10 +37,15 @@ function sha1(bytes) {
   return out;
 }
 
+const encoder = new TextEncoder();
+/** @type {Map<string, number[]>} */
+const nsBytes = new Map();
+
 /** @param {string} name @param {string} [namespace] */
 export function uuid5(name, namespace = NEPOS_NAMESPACE) {
-  const ns = namespace.replace(/-/g, '').match(/../g)?.map((h) => parseInt(h, 16)) ?? [];
-  const nameBytes = new TextEncoder().encode(name);
+  let ns = nsBytes.get(namespace);
+  if (!ns) nsBytes.set(namespace, (ns = namespace.replace(/-/g, '').match(/../g)?.map((h) => parseInt(h, 16)) ?? []));
+  const nameBytes = encoder.encode(name);
   const bytes = new Uint8Array(ns.length + nameBytes.length);
   bytes.set(ns);
   bytes.set(nameBytes, ns.length);

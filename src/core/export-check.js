@@ -89,12 +89,13 @@ export function checkForExport({ routes, orgs, register, orgMode, codespace, org
     // The route code becomes part of NeTEx IDs and the line file name.
     if (!ROUTE_CODE_PATTERN.test(code)) add('error', 'route-code', { route: code });
     // A block's trips are checked as the export writes them, their problems shown on the parent column
-    const routeTrips = checkRoute(code, expandRoute(rs), { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, brandings, calendars, quayInfo, add, localIds, usedOrgIds, speedLimits, modesUsed });
+    const ex = expandRoute(rs); // once per line: the links and vehicle limits read the same expansion (backlog 96)
+    const routeTrips = checkRoute(code, ex, { orgs: register ?? orgs, copy: orgMode === 'codespace' ? orgs : null, brandings, calendars, quayInfo, add, localIds, usedOrgIds, speedLimits, modesUsed });
     if (!routeTrips) add('warning', 'route-no-trips', { route: code });
     checkVehicles(code, rs, vehicles, add);
     checkBookings(code, rs, add);
-    if (links) checkLinks(code, rs, links.get(code), { calendars, quayInfo, vehicles, add });
-    if (links) checkVehicleLimits(code, rs, vehicles, links.get(code), { quayInfo, add });
+    if (links) checkLinks(code, ex, links.get(code), { calendars, quayInfo, vehicles, add });
+    if (links) checkVehicleLimits(code, ex, vehicles, links.get(code), { quayInfo, add });
     checkHubs(code, rs, () => hubLines?.() ?? routes.filter((x) => x.rs && x.status !== 'damaged'), { calendars, quayInfo, add });
     trips += routeTrips;
   }

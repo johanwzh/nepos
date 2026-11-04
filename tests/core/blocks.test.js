@@ -101,3 +101,45 @@ describe('blocks', () => {
     expect(dragResult(9)).toEqual({ kind: 'ask' });
   });
 });
+
+describe('expanding a line (backlog 96: each check expanded the same line 2–3 times, each trip through JSON)', () => {
+  const line = (/** @type {any} */ block) => ({
+    tableSets: [{ id: 0 }], periods: [{ id: 0, setId: 0, calendarIds: [] }],
+    grids: { '0:0': { stops: [{ stopId: 'NSR:Quay:1' }, { stopId: 'NSR:Quay:2' }], cols: [{ ...parent(block), dates: [{ from: '20260101', to: '20260101', on: false }],
+      cells: [{ ...c('0605'), dates: [{ from: '20260102', to: '20260102', on: false }], interchange: { targetC: 0 }, hubLink: { line: 'x' } }, c('0625')] }] } },
+  });
+
+  it('gives the expanded line back as it is when it is expanded again', async () => {
+    const { expandRoute } = await import('../../src/core/blocks.js');
+    const ex = expandRoute(line({ every: 30, span: 120 }));
+    expect(ex.grids['0:0'].cols).toHaveLength(5);
+    expect(expandRoute(ex)).toBe(ex);
+  });
+
+  it('expands a line again once a block is added to it, also when it had none before', async () => {
+    const { expandRoute } = await import('../../src/core/blocks.js');
+    const rs = line(undefined);
+    expect(expandRoute(rs)).toBe(rs);
+    rs.grids['0:0'].cols[0].block = { every: 30, span: 120 };
+    expect(expandRoute(rs).grids['0:0'].cols).toHaveLength(5);
+  });
+
+  it('copies each generated trip whole: changing one leaves its parent and the others as they were', async () => {
+    const { expandRoute } = await import('../../src/core/blocks.js');
+    const rs = line({ every: 30, span: 120 });
+    const [first, gen, other] = expandRoute(rs).grids['0:0'].cols;
+    expect(gen).toMatchObject({ parentCi: 0, dayCode: 'D' });
+    expect(gen.block).toBeUndefined();
+    expect(gen.tripNo).toBeUndefined();
+    expect(gen.cells[0]).toMatchObject({ time: '0635', dayOffset: 0, interchange: null, hubLink: null, dates: [{ from: '20260102', to: '20260102', on: false }] });
+    gen.dates[0].on = true;
+    gen.cells[0].dates[0].on = true;
+    gen.cells[1].suffix = 'a';
+    expect(first.dates[0].on).toBe(false);
+    expect(first.cells[0].dates[0].on).toBe(false);
+    expect(first.cells[1].suffix).toBe('');
+    expect(other.dates[0].on).toBe(false);
+    expect(other.cells[0].dates[0].on).toBe(false);
+    expect(first.cells[0].interchange).toEqual({ targetC: 0 });
+  });
+});
