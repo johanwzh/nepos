@@ -71,9 +71,10 @@ const cache = new Map();
 /**
  * Line sizes in passing times (lineSize; backlog 96). From `later` on, the open line is checked when the user pauses
  * (DEFER_MS after the last change) instead of on every keystroke; from `heavy` on, the editor says the line is heavy.
- * An object so tests can lower them.
+ * An object so tests can lower them. Measured in Chrome (2026-11-04): a check takes ~120 ms at 38 000 passing times
+ * (checked when the user pauses from 20 000 on) and ~1 s at 150 000; 380 000 took 2.5 s.
  */
-export const checkSizes = { later: 20000, heavy: 200000 };
+export const checkSizes = { later: 20000, heavy: 150000 };
 const DEFER_MS = 400;
 let deferred = /** @type {any} */ (null);
 

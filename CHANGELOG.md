@@ -19,6 +19,16 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
   marked. The list follows your edits and scrolls inside the box when it is long. The grid and the box show the same
   letters, ready for a printout later. Typing is unchanged: only **a** and **p** are typed with a time.
 
+**Faster with many departures**
+
+- **Big lines no longer slow Nepos down (backlog 96):** a line with a block every minute (1 322 trips, a million
+  departures over two years) took seconds for every redraw, edit and page change; now a redraw takes about 50 ms and the
+  Lines page 0.1 s instead of 5 s. A trip's days are worked out once per day code instead of once per trip, the open line
+  is checked once per change instead of two or three times per redraw, and a block's trips are made about twice as fast.
+  From 20 000 passing times (trips × stops) the open line is checked when you pause typing; from 150 000 the footer says
+  **Heavy line** with its size, and its tooltip says what makes a line heavy. The user guide has a new section, "Big
+  lines" ("Store linjer").
+
 ## 2.6.1 — 2026-11-04
 
 **New features**

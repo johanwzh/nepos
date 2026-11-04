@@ -423,6 +423,36 @@ En rød strekning stopper eksporten. Grensene per transportmiddel kan endres i *
 Prosjektinnstillinger → Fartsgrenser** (tomt felt = standard). Settes en grense mer enn 1,5 ganger over
 standard, får eksporten en advarsel om at Entur kanskje ikke godtar så raske turer.
 
+### Store linjer
+
+Nepos kontrollerer linjen mens du arbeider: hver tur ved hvert stopp. Det en linje veier, er derfor **turer × stopp**,
+antall passeringer. Dagene teller ikke: en linje som går hver dag i to år, er ikke tyngre enn en som går én uke. En
+blokk (**Virtuelle intervall**) lager alle turene sine selv om tabellen viser den som noen få kolonner: hvert minutt fra
+06:00 til 04:00 er 1 321 turer.
+
+Målt i Chrome (november 2026):
+
+| Linje | Turer | Passeringer | Kontrollen tar |
+|---|---|---|---|
+| Bylinje hvert 10. minutt, 8 stopp, to retninger | 300 | 2 400 | 0,02 s |
+| Tog hvert minutt fra 06:00 til 04:00, 28 stopp | 1 322 | 38 000 | 0,1 s |
+| Stamlinje hvert 5. minutt, 44 stopp, to retninger | 922 | 40 600 | 0,2 s |
+| Hvert minutt hele døgnet, alle dager, 44 stopp, to retninger | 8 640 | 380 000 | 2,5 s |
+
+- Fra **20 000 passeringer** kontrolleres linjen når du stopper å skrive, ikke for hvert tastetrykk: merket for
+  problemer nederst viser det forrige resultatet et øyeblikk. Klikker du merket, kontrolleres linjen med en gang.
+- Fra **150 000 passeringer** står det **Stor linje** nederst, med antall turer og passeringer. Da tar kontrollen
+  rundt et sekund eller mer etter hver endring. Nepos virker, men tregere.
+
+Råd:
+
+- La en blokk være så tett og så lang som tilbudet faktisk er.
+- Del en linje i flere linjer bare der det virkelig er forskjellige tilbud.
+- Å dele turene på flere tabeller (for eksempel helgeturene i en egen tabell) gjør ikke linjen lettere: Nepos
+  kontrollerer hele linjen, og en blokk viser seg som noen få kolonner uansett hvor mange turer den lager.
+- En tabell med mange kolonner tegnes om for hvert tastetrykk. Der teller tabellens størrelse på skjermen, ikke antall
+  turer: en blokk hvert 10. minutt viser én kolonne per avgang i timen, en blokk hvert 5. minutt bare én.
+
 ---
 
 ## 4. Stopp og kart
