@@ -190,6 +190,24 @@ export function tripCols(grid) {
   return gen.length ? [...real, ...gen] : real;
 }
 
+/**
+ * A line's size as the export writes it, counted without expanding (backlog 96): its trips and their passing times
+ * (timed cells), a block counting all its trips. What a line weighs in Nepos: the check works per trip and stop.
+ * @param {any} rs @returns {{ trips: number, times: number }}
+ */
+export function lineSize(rs) {
+  let trips = 0, times = 0;
+  for (const g of Object.values(rs?.grids ?? {})) for (const col of /** @type {any} */ (g).cols ?? []) {
+    if (col.virt) continue;
+    const n = (col.cells ?? []).filter(timed).length;
+    if (!n) continue;
+    const k = validBlock(col.block) ? 1 + col.block.span / col.block.every : 1;
+    trips += k;
+    times += k * n;
+  }
+  return { trips, times };
+}
+
 /** Routes expandRoute made: expanding one again gives it back (one check passes its expansion on, backlog 96). */
 const expanded = new WeakSet();
 

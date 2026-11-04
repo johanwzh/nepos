@@ -143,3 +143,29 @@ describe('expanding a line (backlog 96: each check expanded the same line 2–3 
     expect(first.cells[0].interchange).toEqual({ targetC: 0 });
   });
 });
+
+describe('a line\'s size, counted without expanding it (backlog 96)', () => {
+  it('counts trips and passing times as the expanded line has them: blocks, passes and empty columns', async () => {
+    const { expandRoute, lineSize } = await import('../../src/core/blocks.js');
+    const col = (/** @type {any[]} */ cells, /** @type {any} */ block = undefined) => ({ uid: UID, dayCode: 'D', cells, block });
+    const rs = {
+      tableSets: [{ id: 0 }, { id: 1 }], periods: [{ id: 0, setId: 0, calendarIds: [] }, { id: 0, setId: 1, calendarIds: [] }],
+      grids: {
+        '0:0': { stops: [{}, {}, {}], cols: [
+          col([c('0600'), { time: '|' }, c('0620')], { every: 5, span: 120 }), // 25 trips × 2 times
+          col([c('0700'), c('0710'), null]),                                  // 1 × 2
+          col([null, { time: '|' }, null]),                                   // no times: no trip
+        ] },
+        '0:1': { stops: [{}, {}], cols: [col([c('2330'), c('2350')], { every: 60, span: 120 })] }, // 3 × 2
+      },
+    };
+    let trips = 0, times = 0;
+    for (const g of Object.values(expandRoute(rs).grids)) for (const k of /** @type {any} */ (g).cols) {
+      const n = k.cells.filter((/** @type {any} */ x) => x?.time && x.time !== '|').length;
+      if (n) { trips++; times += n; }
+    }
+    expect(lineSize(rs)).toEqual({ trips, times });
+    expect(lineSize(rs)).toEqual({ trips: 29, times: 58 });
+    expect(lineSize(null)).toEqual({ trips: 0, times: 0 });
+  });
+});

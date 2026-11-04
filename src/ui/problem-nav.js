@@ -18,9 +18,9 @@ let index = -1;
 let forRoute = /** @type {string | null} */ (null);
 let timer = /** @type {any} */ (null);
 
-/** The open line's problems, errors first. */
-function issues() {
-  return app.activeRoute ? lineIssues(app.activeRoute) : [];
+/** The open line's problems, errors first; `fresh`: checked now, also a heavy line being edited (backlog 96). */
+function issues(fresh = false) {
+  return app.activeRoute ? lineIssues(app.activeRoute, { fresh }) : [];
 }
 
 /** Fill the marker (the footer has a button #ef-problems). @param {boolean} [keepStep] */
@@ -41,7 +41,7 @@ export function updateProblemMarker(keepStep = false) {
 
 /** The next problem, round the list. */
 function next() {
-  const list = issues();
+  const list = issues(true);
   if (!list.length) return;
   index = (index + 1) % list.length;
   goToProblem(list[index]);

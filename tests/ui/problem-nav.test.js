@@ -64,6 +64,22 @@ describe('the problems marker', () => {
     expect(first.level).toBe('error');
   });
 
+  it('on a heavy line being edited, a click goes by the problems as they are now (backlog 96)', async () => {
+    const { checkSizes } = await import('../../src/ui/line-info.js');
+    lineIssues('50');
+    const later = checkSizes.later;
+    try {
+      checkSizes.later = 1;                     // the line counts as heavy: its check waits for a pause
+      app.routeState.routeName = 'Named now';   // the no-name error is gone
+      expect(lineIssues('50').some((i) => i.code === 'no-name')).toBe(true); // the last result, while editing
+      marker().click();
+      expect(lineIssues('50').some((i) => i.code === 'no-name')).toBe(false);
+      expect(document.activeElement?.id).not.toBe('rh-name');
+    } finally {
+      checkSizes.later = later;
+    }
+  });
+
   it('a missing line name: the name field, focused and marked', () => {
     goToProblem({ level: 'error', code: 'no-name', route: '50' });
     const name = document.getElementById('rh-name');

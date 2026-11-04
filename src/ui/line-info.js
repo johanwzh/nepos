@@ -1,7 +1,10 @@
 // One place to read a line as it is now (navigation spec §5): the open line, a parked unsaved
 // line, or the saved file. The export check runs per line, continuously; saved lines are cached
-// by their text, the open line and drafts are checked on each call (one line is cheap).
+// by their text, the open line and drafts by their content (backlog 96: one line is not always
+// cheap — a block of 1 321 trips was checked 2–3 times per keystroke).
 import { app } from './state.js';
+import { notifyLinesChanged } from './shell.js';
+import { lineSize } from '../core/blocks.js';
 import { parseERN } from '../core/ern/parse.js';
 import { checkForExport } from '../core/export-check.js';
 import { routedLinks } from '../core/features.js';
@@ -66,21 +69,49 @@ const hasHubs = (rs) => Object.values(rs?.grids ?? {}).some((/** @type {any} */ 
 const cache = new Map();
 
 /**
- * The export-check issues that belong to one line.
+ * Line sizes in passing times (lineSize; backlog 96). From `later` on, the open line is checked when the user pauses
+ * (DEFER_MS after the last change) instead of on every keystroke; from `heavy` on, the editor says the line is heavy.
+ * An object so tests can lower them.
+ */
+export const checkSizes = { later: 20000, heavy: 200000 };
+const DEFER_MS = 400;
+let deferred = /** @type {any} */ (null);
+
+/** Check the open line once the user pauses, then tell the lines pane and the problem marker. @param {string} code */
+function checkLater(code) {
+  clearTimeout(deferred);
+  deferred = setTimeout(() => {
+    deferred = null;
+    if (code !== app.activeRoute) return; // another line was opened meanwhile: it is checked on its own
+    lineIssues(code, { fresh: true });
+    notifyLinesChanged();
+  }, DEFER_MS);
+}
+
+/**
+ * The export-check issues that belong to one line. A heavy open line being edited gives its last issues and is checked
+ * when the user pauses; `fresh` checks it now (stepping to the next problem).
  * @param {string} code
+ * @param {{ fresh?: boolean }} [opts]
  * @returns {import('../core/export-check.js').CheckIssue[]}
  */
-export function lineIssues(code) {
+export function lineIssues(code, { fresh = false } = {}) {
   const entry = app.routes.find((r) => r.code === code);
   if (!entry) return [];
   const rs = lineState(code);
-  const live = code === app.activeRoute || app.drafts.has(code) || hasHubs(rs);
-  // Saved lines: cached by their text and by the project data the check reads.
-  const key = [entry.text, app.orgs, app.orgRegister, app.brandings, app.calendars, app.vehicles, app.meta, quayInfo.size, app.lineLinks.get(code)];
+  // A line with a Knutepunkt reads the other lines too: checked on every call, as before.
+  const hubs = hasHubs(rs);
+  const live = code === app.activeRoute || app.drafts.has(code);
+  // Cached by the line's content (its text when saved) and by the project data the check reads.
+  const key = [live ? JSON.stringify(rs) : entry.text, app.orgs, app.orgRegister, app.brandings, app.calendars, app.vehicles, app.meta, quayInfo.size, app.lineLinks.get(code)];
   const hit = cache.get(code);
-  if (!live && hit && hit.key.every((/** @type {any} */ v, /** @type {number} */ i) => v === key[i])) return hit.issues;
+  if (!hubs && hit && hit.key.every((/** @type {any} */ v, /** @type {number} */ i) => v === key[i])) return hit.issues;
+  if (!fresh && !hubs && hit && code === app.activeRoute && lineSize(rs).times >= checkSizes.later) {
+    checkLater(code);
+    return hit.issues;
+  }
   const issues = check([{ code, rs, status: entry.status }]).filter((i) => i.route === code);
-  if (!live) cache.set(code, { key, issues });
+  if (!hubs) cache.set(code, { key, issues });
   return issues;
 }
 

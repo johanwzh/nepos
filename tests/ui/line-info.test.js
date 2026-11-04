@@ -8,7 +8,14 @@ import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
-import { lineIssues, lineState, projectIssues, lineLabel, lineRouting } from '../../src/ui/line-info.js';
+import { lineIssues, lineState, projectIssues, lineLabel, lineRouting, checkSizes } from '../../src/ui/line-info.js';
+
+// How often the export check runs (backlog 96): the open line was checked 2–3 times per keystroke
+const checks = vi.hoisted(() => ({ n: 0 }));
+vi.mock('../../src/core/export-check.js', async (orig) => {
+  const real = /** @type {any} */ (await orig());
+  return { ...real, checkForExport: (/** @type {any} */ input) => { checks.n++; return real.checkForExport(input); } };
+});
 import { quayInfo } from '../../src/ui/quays.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
@@ -70,6 +77,67 @@ describe('review fixes', () => {
     expect(codes(lineIssues('20'))).toContain('col-decreasing');
     expect(problems('20')).toBe(before + 1);
     expect(title()).not.toBe(titleBefore);
+  });
+});
+
+describe('the open line is checked once per change (backlog 96)', () => {
+  it('checks an unchanged open line once however often it is asked, and again after any change', async () => {
+    await selectRoute('20');
+    checks.n = 0;
+    lineIssues('20'); lineIssues('20'); lineIssues('20');
+    expect(checks.n).toBeLessThanOrEqual(1);
+    const n = checks.n;
+    app.routeState.periods[0].calendarIds = ['cal-1'];      // changed in place: still seen
+    expect(codes(lineIssues('20'))).not.toContain('no-calendar');
+    expect(checks.n).toBe(n + 1);
+    lineIssues('20');
+    expect(checks.n).toBe(n + 1);
+    app.calendars = [...app.calendars];                      // the project's calendars changed
+    lineIssues('20');
+    expect(checks.n).toBe(n + 2);
+  });
+
+  it('a heavy open line keeps its last problems while it is edited, and is checked when the user pauses', async () => {
+    await selectRoute('20');
+    lineIssues('20');
+    const titleOf = () => /** @type {HTMLElement} */ ([...document.querySelectorAll('.route-item')].find((i) => i.classList.contains('active'))).title;
+    const before = titleOf();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const later = checkSizes.later;
+    try {
+      checkSizes.later = 1;                                   // this small line counts as heavy here
+      checks.n = 0;
+      app.routeState.periods[0].calendarIds = ['cal-1'];
+      expect(codes(lineIssues('20'))).toContain('no-calendar'); // the last result, while editing
+      expect(checks.n).toBe(0);
+      vi.advanceTimersByTime(399);
+      expect(checks.n).toBe(0);
+      lineIssues('20');                                         // another change restarts the pause
+      vi.advanceTimersByTime(399);
+      expect(checks.n).toBe(0);
+      vi.advanceTimersByTime(1);
+      expect(checks.n).toBe(1);
+      expect(codes(lineIssues('20'))).not.toContain('no-calendar');
+      expect(checks.n).toBe(1);
+      expect(titleOf()).not.toBe(before);                       // the lines pane was told
+    } finally {
+      checkSizes.later = later;
+      vi.useRealTimers();
+    }
+  });
+
+  it('checks a heavy line at once when asked for a fresh answer (next problem, the Export page)', async () => {
+    await selectRoute('20');
+    lineIssues('20');
+    const later = checkSizes.later;
+    try {
+      checkSizes.later = 1;
+      app.routeState.periods[0].calendarIds = ['cal-1'];
+      expect(codes(lineIssues('20', { fresh: true }))).not.toContain('no-calendar');
+      expect(projectIssues().some((i) => i.route === '20' && i.code === 'no-calendar')).toBe(false);
+    } finally {
+      checkSizes.later = later;
+    }
   });
 });
 
