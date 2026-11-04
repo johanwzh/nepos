@@ -3,7 +3,7 @@
 // by their text, the open line and drafts by their content (backlog 96: one line is not always
 // cheap — a block of 1 321 trips was checked 2–3 times per keystroke).
 import { app } from './state.js';
-import { notifyLinesChanged } from './shell.js';
+import { notifyLinesChanged, currentPage } from './shell.js';
 import { lineSize } from '../core/blocks.js';
 import { parseERN } from '../core/ern/parse.js';
 import { checkForExport } from '../core/export-check.js';
@@ -89,6 +89,26 @@ function checkLater(code) {
   }, DEFER_MS);
 }
 
+/** @type {WeakMap<object, number>} */
+const quaySerials = new WeakMap();
+let nextSerial = 1;
+/**
+ * What the check knows of a line's stops: each stop's NSR information, by identity (an entry is replaced, never
+ * changed, when it is looked up again or a stop is picked; final review 3). @param {any} rs
+ */
+function quaysKey(rs) {
+  /** @type {Set<string>} */
+  const ids = new Set();
+  for (const g of Object.values(rs?.grids ?? {})) for (const s of /** @type {any} */ (g).stops ?? []) if (s.stopId) ids.add(String(s.stopId));
+  return [...ids].map((id) => {
+    const info = quayInfo.get(id);
+    if (!info) return info === null ? 'n' : '';
+    let n = quaySerials.get(info);
+    if (!n) quaySerials.set(info, (n = nextSerial++));
+    return n;
+  }).join(',');
+}
+
 /**
  * The export-check issues that belong to one line. A heavy open line being edited gives its last issues and is checked
  * when the user pauses; `fresh` checks it now (stepping to the next problem).
@@ -100,16 +120,21 @@ export function lineIssues(code, { fresh = false } = {}) {
   const entry = app.routes.find((r) => r.code === code);
   if (!entry) return [];
   const rs = lineState(code);
-  // A line with a Knutepunkt reads the other lines too: checked on every call, as before.
+  // A line with a Knutepunkt reads the other lines too: checked on every call, as before, and what was kept from before
+  // it had one is dropped, so it is never shown again when the Knutepunkt goes (final review 2).
   const hubs = hasHubs(rs);
+  if (hubs) cache.delete(code);
   const live = code === app.activeRoute || app.drafts.has(code);
   // Cached by the line's content (its text when saved) and by the project data the check reads.
-  const key = [live ? JSON.stringify(rs) : entry.text, app.orgs, app.orgRegister, app.brandings, app.calendars, app.vehicles, app.meta, quayInfo.size, app.lineLinks.get(code)];
+  const key = [live ? JSON.stringify(rs) : entry.text, app.orgs, app.orgRegister, app.brandings, app.calendars, app.vehicles, app.meta, quayInfo.size, quaysKey(rs), app.lineLinks.get(code)];
   const hit = cache.get(code);
   if (!hubs && hit && hit.key.every((/** @type {any} */ v, /** @type {number} */ i) => v === key[i])) return hit.issues;
-  if (!fresh && !hubs && hit && code === app.activeRoute && lineSize(rs).times >= checkSizes.later) {
+  // Waiting is only for typing in the editor, and only on a result made with the project data as it is now
+  // (final review 1 and 2: Tasks kept a stale card; another project's line with the same code)
+  const sameData = !!hit && hit.key.every((/** @type {any} */ v, /** @type {number} */ i) => i === 0 || v === key[i]);
+  if (!fresh && !hubs && sameData && code === app.activeRoute && currentPage() === 'edit' && lineSize(rs).times >= checkSizes.later) {
     checkLater(code);
-    return hit.issues;
+    return /** @type {any} */ (hit).issues;
   }
   const issues = check([{ code, rs, status: entry.status }]).filter((i) => i.route === code);
   if (!hubs) cache.set(code, { key, issues });

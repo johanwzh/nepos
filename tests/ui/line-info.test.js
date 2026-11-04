@@ -2,10 +2,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell, refreshAll } from '../../src/ui/shell.js';
+import { initShell, refreshAll, setPage } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
-import { initGrid } from '../../src/ui/grid.js';
+import { initGrid, grid } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { initRouteEditor, selectRoute } from '../../src/ui/route-editor.js';
 import { lineIssues, lineState, projectIssues, lineLabel, lineRouting, checkSizes } from '../../src/ui/line-info.js';
@@ -17,6 +17,7 @@ vi.mock('../../src/core/export-check.js', async (orig) => {
   return { ...real, checkForExport: (/** @type {any} */ input) => { checks.n++; return real.checkForExport(input); } };
 });
 import { quayInfo } from '../../src/ui/quays.js';
+import { parseERN } from '../../src/core/ern/parse.js';
 import { createMemoryFs } from '../../src/project/fs.js';
 import { createProject } from '../../src/project/create.js';
 import { writeRoute } from '../../src/project/routes.js';
@@ -123,6 +124,59 @@ describe('the open line is checked once per change (backlog 96)', () => {
     } finally {
       checkSizes.later = later;
       vi.useRealTimers();
+    }
+  });
+
+  it('waits only in the editor: on Tasks or Lines a heavy line is checked at once (final review 1)', async () => {
+    await selectRoute('20');
+    lineIssues('20');
+    const later = checkSizes.later;
+    try {
+      checkSizes.later = 1;
+      app.routeState.periods[0].calendarIds = ['cal-1'];
+      setPage('tasks');
+      expect(codes(lineIssues('20'))).not.toContain('no-calendar');
+    } finally {
+      checkSizes.later = later;
+      setPage('edit');
+    }
+  });
+
+  it('never waits on a result made with other project data, or from before a Knutepunkt (final review 2)', async () => {
+    await selectRoute('20');
+    lineIssues('20');                                         // made with this project's data
+    const later = checkSizes.later;
+    try {
+      checkSizes.later = 1;
+      app.orgs = [...app.orgs];                               // as when another project is open
+      app.routeState.periods[0].calendarIds = ['cal-1'];
+      expect(codes(lineIssues('20'))).not.toContain('no-calendar');
+      // A Knutepunkt is added (its line is then checked on every call), the calendar goes, the Knutepunkt goes
+      const hub = Object.values(parseERN(route('20').replace('#TUR;0;D;0;0;0;0', '#TUR;0;D;0;0;0;0\r\n#KNP;0;NSR:Quay:1;;200;0;10')).grids).map((g) => /** @type {any} */ (g))[0].stops[0].hub;
+      expect(hub).toBeTruthy();
+      grid.stops[0].hub = hub;
+      lineIssues('20');
+      app.routeState.periods[0].calendarIds = [];
+      grid.stops[0].hub = undefined;
+      expect(codes(lineIssues('20'))).toContain('no-calendar');
+    } finally {
+      checkSizes.later = later;
+    }
+  });
+
+  it('sees a stop\'s NSR information change even when no stop is added (final review 3)', async () => {
+    await selectRoute('20');
+    try {
+      quayInfo.set('NSR:Quay:1', /** @type {any} */ ({ lon: 10, lat: 59, modes: ['bus'] }));
+      lineIssues('20');
+      const n = checks.n;
+      lineIssues('20');
+      expect(checks.n).toBe(n);
+      quayInfo.set('NSR:Quay:1', /** @type {any} */ ({ lon: 10, lat: 59, modes: ['water'] }));
+      lineIssues('20');
+      expect(checks.n).toBe(n + 1);
+    } finally {
+      quayInfo.clear();
     }
   });
 
