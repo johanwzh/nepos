@@ -6,6 +6,14 @@ Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major 
 
 **New features**
 
+- **Paste like Excel (backlog 102):** copy one time and paste it onto many selected cells, and all of them get it. Copy
+  a block and select a bigger area that is a whole multiple of it (two rows copied, four selected) and the block is
+  repeated over the area; otherwise it is pasted once from the top-left cell. A block pasted once that hangs over the
+  edge adds the columns and rows it needs, also for a copy made inside Nepos (it was cut off before); a selected area
+  never grows the table, and more than 50 new columns or rows still asks first. After pasting, the pasted area is
+  selected. The **day-code row** works the same way, and now also takes day codes from Excel (a row or a column of codes,
+  tidied as typed ones are); anything that is not a day code pastes nothing. A block's generated columns are never
+  written to. Times and day codes are not pasted together (later).
 - **All note letters under the timetable:** the note box under the grid now also lists every note letter of the table
   (b, c, d …, in letter order), each with its note text and a summary of its dates. The letter of the selected time is
   marked. The list follows your edits and scrolls inside the box when it is long. The grid and the box show the same

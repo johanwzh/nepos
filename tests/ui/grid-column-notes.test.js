@@ -61,6 +61,9 @@ describe('several day codes at once', () => {
     down(dc(1));
     down(dc(3), { shiftKey: true });
     press('v', { ctrlKey: true });
+    const ev = new Event('paste', { bubbles: true, cancelable: true }); // what the browser sends after Ctrl+V
+    /** @type {any} */ (ev).clipboardData = { getData: () => 'DX67' };
+    document.dispatchEvent(ev);
     expect(grid.cols.map((c) => c.dayCode)).toEqual(['DX67', 'DX67', 'DX67', 'DX67']);
   });
 });

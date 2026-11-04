@@ -9,6 +9,7 @@ import { t } from '../i18n/strings.js';
 import { isValidDayCode } from '../core/ern/validate.js';
 import { canonicalDayCode } from '../core/day-codes.js';
 import { parseCellInput, normalizeCell } from '../core/grid-input.js';
+import { pastePlan, textBlock, dayCodeList } from '../core/paste-plan.js';
 import { noteMarks } from '../core/note-letters.js';
 import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
@@ -1652,20 +1653,9 @@ function onKeyDown(e) {
     return;
   }
   if ((e.ctrlKey || e.metaKey) && inDC && !dcEdit && grid.cols[dcCol]) {
-    const k = e.key.toLowerCase();
-    // Several columns: their day codes, in order (user 2026-10-30)
-    if (k === 'c') { e.preventDefault(); const [a, b] = dcRange(); dcClip = grid.cols.slice(a, b + 1).map((c) => c.dayCode); void navigator.clipboard?.writeText(dcClip.join('\t')).catch(() => {}); return; }
-    if (k === 'v' && !grid.readOnly && dcClip.length && dcClip.every((d) => isValidDayCode(d))) {
-      e.preventDefault();
-      const [a, b] = dcRange();
-      if (dcClip.length === 1) { for (let ci = a; ci <= b; ci++) if (!locked(ci)) grid.cols[ci].dayCode = dcClip[0]; }
-      else {
-        // From the selected column on, one code per column; columns are added at the end when there are too few
-        if (!growGrid(0, Math.max(0, a + dcClip.length - grid.cols.length))) return;
-        dcClip.forEach((d, i) => { if (!locked(a + i)) grid.cols[a + i].dayCode = d; });
-      }
-      render(); return;
-    }
+    // Several columns: their day codes, in order (user 2026-10-30). Pasting is left to the paste event (onPaste), which
+    // reads the clipboard's text: codes copied here and in Excel alike (backlog 102)
+    if (e.key.toLowerCase() === 'c') { e.preventDefault(); const [a, b] = dcRange(); void navigator.clipboard?.writeText(grid.cols.slice(a, b + 1).map((c) => c.dayCode).join('\t')).catch(() => {}); return; }
   }
   if ((e.ctrlKey || e.metaKey) && !editing && !dcEdit && !inStopCol && !inDC && !inTN && !tnEdit && !inLB) {
     if (e.key === 'c') { e.preventDefault(); copySelection(); return; }
@@ -1861,40 +1851,75 @@ let cellClip = /** @type {{ text: string, cells: any[][] } | null} */ (null);
 const sameText = (s) => !!cellClip && s.replace(/\r\n/g, '\n').replace(/\n+$/, '') === cellClip.text.replace(/\n+$/, '');
 
 /**
- * Put the copied cells at the selection's corner, only the given parts: times (time and day offset), boarding (a/p),
- * booking (x: request stop or booking), notes (note and dates). Parts other than times go only onto times.
+ * One paste for every block of times (backlog 102, spec 2026-11-04): where it goes follows Excel's rule — repeated over a
+ * selection that is a whole multiple of the block (one cell: filling the selection), else once from the selection's
+ * top-left cell, adding the rows and columns it needs (asking above 50). `put` writes the block's cell (sr, sc) at (r, c);
+ * a block's generated columns are never written to, but still take their place. Then the area written is selected and
+ * the table drawn once.
+ * @param {{ rows: number, cols: number, usedRows?: number, usedCols?: number }} src the block's size; `used*` how much of it grows the table
+ * @param {(r: number, c: number, sr: number, sc: number) => void} put
+ * @returns {boolean} false when nothing was pasted (nothing to paste, or the user said no to the new rows and columns)
+ */
+function pasteBlock(src, put) {
+  const { r1, r2, c1, c2 } = rect();
+  const plan = pastePlan(src, { r0: r1, r1: r2, c0: c1, c1: c2 }, { rows: grid.stops.length, cols: grid.cols.length });
+  if (!plan || !growGrid(plan.addRows, plan.addCols)) return false;
+  for (let r = plan.r0; r <= plan.r1; r++) {
+    for (let c = plan.c0; c <= plan.c1; c++) if (!locked(c)) put(r, c, (r - plan.r0) % src.rows, (c - plan.c0) % src.cols);
+  }
+  ancR = plan.r0; endR = plan.r1; ancC = plan.c0; endC = plan.c1;
+  render();
+  return true;
+}
+
+/**
+ * Put the copied cells where the selection says (pasteBlock), only the given parts: times (time and day offset),
+ * boarding (a/p), booking (x: request stop or booking), notes (note and dates). Parts other than times go only onto times.
  * @param {Set<string>} parts
  */
 function pasteCells(parts) {
   const clip = cellClip;
-  if (!clip || grid.readOnly) return;
-  clip.cells.forEach((row, dr) => row.forEach((src, dc) => {
-    const r = ancR + dr, c = ancC + dc;
-    if (r >= grid.stops.length || c >= grid.cols.length || locked(c)) return;
-    const col = grid.cols[c];
-    if (parts.has('times')) {
-      if (!src?.time) { col.cells[r] = null; return; }
-      const prev = col.cells[r];
-      col.cells[r] = { ...(prev && prev.time !== '|' && src.time !== '|' ? prev : {}), time: src.time, dayOffset: src.dayOffset || 0, suffix: prev?.suffix ?? '', interchange: null };
-      if (src.time === '|') { col.cells[r] = { time: '|', dayOffset: 0, suffix: '', interchange: null }; return; }
-    }
-    const cell = col.cells[r];
-    if (!cell?.time || cell.time === '|') return;
-    if (parts.has('boarding')) cell.suffix = src?.suffix ?? '';
-    if (parts.has('booking')) {
-      if (src?.req) cell.req = true; else delete cell.req;
-      if (src?.booking) cell.booking = copyOf(src.booking); else delete cell.booking;
-    }
-    if (parts.has('notes')) {
-      if (src?.note) cell.note = src.note; else delete cell.note;
-      if (src?.dates?.length) cell.dates = copyOf(src.dates); else delete cell.dates;
-    }
-  }));
-  render();
+  if (!clip || grid.readOnly || !clip.cells.length || !clip.cells[0].length) return;
+  pasteBlock({ rows: clip.cells.length, cols: clip.cells[0].length }, (r, c, sr, sc) => putCell(grid.cols[c], r, clip.cells[sr][sc], parts));
 }
 
-/** The day codes copied last with Ctrl+C in the day-code row (one per selected column). @type {string[]} */
-let dcClip = [];
+/** One copied cell onto a cell (see pasteCells). @param {any} col @param {number} r @param {any} src @param {Set<string>} parts */
+function putCell(col, r, src, parts) {
+  if (parts.has('times')) {
+    if (!src?.time) { col.cells[r] = null; return; }
+    const prev = col.cells[r];
+    col.cells[r] = { ...(prev && prev.time !== '|' && src.time !== '|' ? prev : {}), time: src.time, dayOffset: src.dayOffset || 0, suffix: prev?.suffix ?? '', interchange: null };
+    if (src.time === '|') { col.cells[r] = { time: '|', dayOffset: 0, suffix: '', interchange: null }; return; }
+  }
+  const cell = col.cells[r];
+  if (!cell?.time || cell.time === '|') return;
+  if (parts.has('boarding')) cell.suffix = src?.suffix ?? '';
+  if (parts.has('booking')) {
+    if (src?.req) cell.req = true; else delete cell.req;
+    if (src?.booking) cell.booking = copyOf(src.booking); else delete cell.booking;
+  }
+  if (parts.has('notes')) {
+    if (src?.note) cell.note = src.note; else delete cell.note;
+    if (src?.dates?.length) cell.dates = copyOf(src.dates); else delete cell.dates;
+  }
+}
+
+/**
+ * Day codes onto the selected columns of the day-code row, by the same rule (backlog 102): one code fills the selection,
+ * several are repeated or pasted once from the first selected column, adding columns at the right. Nothing happens
+ * unless every entry is a day code.
+ * @param {string} text what is on the clipboard: tab- or line-separated codes, from Nepos or Excel
+ */
+function pasteDayCodes(text) {
+  const list = dayCodeList(text);
+  if (!list) return;
+  const [a, b] = dcRange();
+  const plan = pastePlan({ rows: 1, cols: list.length }, { r0: 0, r1: 0, c0: a, c1: b }, { rows: 1, cols: grid.cols.length });
+  if (!plan || !growGrid(0, plan.addCols)) return;
+  for (let c = plan.c0; c <= plan.c1; c++) if (!locked(c)) grid.cols[c].dayCode = list[(c - plan.c0) % list.length];
+  dcCol = plan.c0; dcSpanAt = plan.c0; dcEnd = plan.c1;
+  render();
+}
 
 /** The stop copied last with Ctrl+C (its name comes along when the same Quay ID is pasted). */
 let stopClip = /** @type {{ quayId: string, name: string } | null} */ (null);
@@ -1911,13 +1936,15 @@ function pasteStop(id) {
 /** Paste uses the paste event, so the browser never asks for clipboard permission. @param {ClipboardEvent} e */
 function onPaste(e) {
   if (!grid.active || grid.readOnly || currentPage() !== 'edit' || inStopEdit || toolLocksCells()) return;
-  // Only into the times: never while the day-code or trip-number row has the keyboard
-  if (inDC || dcEdit || inTN || tnEdit || inLB || inDest || document.querySelector('.float-box')) return;
+  // Only into the times and the day codes: never while the note row, the trip-number row or a box has the keyboard
+  if ((inDC && inFN) || dcEdit || inTN || tnEdit || inLB || inDest || document.querySelector('.float-box')) return;
   const tag = /** @type {HTMLElement} */ (e.target)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
   const text = e.clipboardData?.getData('text');
   if (!text) return;
   e.preventDefault();
+  // The day-code row: the codes in the text (copied here or in Excel), by the same rule as times (backlog 102)
+  if (inDC) { pasteDayCodes(text); return; }
   // What Nepos copied itself: the whole cells
   if (!inStopCol && sameText(text)) { pasteCells(new Set(['times', 'boarding', 'booking', 'notes'])); return; }
   if (inStopCol) {
@@ -1926,35 +1953,27 @@ function onPaste(e) {
     if (ids.length > 1) pasteStopList(ids); else pasteStop(text.trim());
     return;
   }
-  // A block wider or taller than the table adds the columns and rows it needs (user 2026-10-19), as in Excel
-  // ... as far as the block holds times (or |): pasted junk adds nothing
-  let lastR = -1, lastC = -1;
-  text.replace(/\r?\n$/, '').split(/\r?\n/).forEach((line, dr) => line.split('\t').forEach((v, dc) => { if (v.trim() && parseCellInput(v.trim())) { lastR = Math.max(lastR, dr); lastC = Math.max(lastC, dc); } }));
-  const addCols = Math.max(0, ancC + lastC + 1 - grid.cols.length), addRows = Math.max(0, ancR + lastR + 1 - grid.stops.length);
-  if (!growGrid(addRows, addCols)) return;
-  /** @type {[number, number][]} */
-  const pasted = [];
-  text.split(/\r?\n/).forEach((line, dr) => {
-    if (!line) return;
-    line.split('\t').forEach((val, dc) => {
-      const r = ancR + dr, c = ancC + dc;
-      if (r >= grid.stops.length || c >= grid.cols.length || locked(c)) return;
-      const v = val.trim();
-      if (!v) { grid.cols[c].cells[r] = null; return; }
-      const p = /** @type {any} */ (parseCellInput(v));
-      if (!p) return;
-      const prev = grid.cols[c].cells[r];
-      if (prev && p.time !== '|') p.dayOffset = prev.dayOffset || 0;
-      p.interchange = null;
-      // A pasted time keeps the cell's note and dates, as a typed one does
-      if (prev && p.time !== '|') keepMarks(prev, p);
-      grid.cols[c].cells[r] = p;
-      if (p.suffix) pasted.push([r, c]);
-    });
+  // Text from Excel (backlog 102): one time onto many cells, a block repeated over a bigger selection, a block that hangs over
+  // the edge adds the columns and rows it needs (user 2026-10-19), as in Excel — as far as it holds times (or |): pasted
+  // junk adds nothing. '' = an empty cell (clears its target), false = not a time (leaves its target), undefined = a short row.
+  /** @type {any[][]} */
+  const block = textBlock(text).map((row) => row.map((v) => { const s = v.trim(); return s ? (parseCellInput(s) ?? false) : ''; }));
+  let cols = 0, usedRows = 0, usedCols = 0;
+  block.forEach((row, dr) => { cols = Math.max(cols, row.length); row.forEach((p, dc) => { if (p) { usedRows = dr + 1; usedCols = Math.max(usedCols, dc + 1); } }); });
+  if (!usedRows && !block.some((row) => row.includes(''))) return; // nothing that reads as a time
+  pasteBlock({ rows: block.length, cols, usedRows, usedCols }, (r, c, sr, sc) => {
+    const p = block[sr][sc];
+    if (p === undefined || p === false) return;
+    const col = grid.cols[c];
+    if (p === '') { col.cells[r] = null; return; }
+    const cell = { ...p }; // one copy per cell: a repeated block never shares one object
+    const prev = col.cells[r];
+    if (prev && cell.time !== '|') cell.dayOffset = prev.dayOffset || 0;
+    cell.interchange = null;
+    // A pasted time keeps the cell's note and dates, as a typed one does; a and p only on the stops in between (clearEndMarks)
+    if (prev && cell.time !== '|') keepMarks(prev, cell);
+    col.cells[r] = cell;
   });
-  // a and p only on the stops in between: not on a trip's first or last stop
-  for (const [r, c] of pasted) if (isTripEnd(r, c)) grid.cols[c].cells[r].suffix = '';
-  render();
 }
 
 /**

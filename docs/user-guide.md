@@ -185,9 +185,11 @@ turen kjører.
 - Høyreklikk en dagkode → **Vis kjøretøy** viser en rad for hvilket **kjøretøy** som kjører turen. Den virker
   som etikett-raden: Enter eller dobbeltklikk velger, Delete fjerner, Ctrl+C / Ctrl+V kopierer. Kjøretøyene lager
   du under **Ressurser**. En tur som kopieres med intervall, får ikke med seg kjøretøyet.
-- Dagkoder ryddes selv: DX76 blir DX67, 1234567 blir D. Ctrl+C / Ctrl+V kopierer en dagkode til en annen kolonne. Velg
-  flere kolonner, så kopieres alle dagkodene; de limes inn i rekkefølge fra kolonnen du står i, og nye kolonner legges
-  til ved behov.
+- Dagkoder ryddes selv: DX76 blir DX67, 1234567 blir D. Ctrl+C / Ctrl+V kopierer dagkoder, også til og fra regneark
+  (en rad eller kolonne med koder). Én kode limes inn i alle valgte kolonner. Flere koder limes inn i rekkefølge fra
+  første valgte kolonne; er utvalget et helt antall ganger så bredt som det kopierte (to koder kopiert, fire kolonner
+  valgt), gjentas kodene, ellers limes de inn én gang og nye kolonner legges til ved behov (over 50 spør Nepos først).
+  Er noe i teksten ikke en dagkode, limes ingenting inn.
 - **Flere kolonner:** Shift+klikk eller Shift+piltast i dagkode-raden velger flere kolonner. F7 (eller høyreklikk →
   merknad) gir alle samme merknad, og Ctrl+V limer en dagkode inn i alle. **×** på en av dem, **Delete** eller høyreklikk →
   **Slett de valgte kolonnene** sletter alle (Nepos spør én gang). Det samme med flere stopp: Shift+klikk eller Shift+piltast i stoppkolonnen, så **×**.
@@ -213,8 +215,18 @@ cellen. Feltet er bredere for hver dag (+1, +2 …). Linjen under tabellen sier 
 er. Fyll ut tider og + / − gir +1 av seg selv; ellers settes det med høyreklikk → Sett dagforskyvning….
 
 Velg et område med **Shift + piltaster** eller ved å **dra med musen**. **Ctrl+C / Ctrl+V** kopierer
-og limer inn tider, også fra og til regneark. Limer du inn flere kolonner eller rader enn tabellen har,
-legges de til (over 50 spør Nepos først).
+og limer inn tider, også fra og til regneark, og virker som i Excel:
+
+- **Én celle til mange:** kopier én celle, velg flere celler og lim inn — alle de valgte cellene får den.
+- **En blokk over et større utvalg:** er det valgte området et helt antall ganger så stort som blokken du kopierte
+  (to rader kopiert, fire rader valgt), gjentas blokken over hele området. Passer ikke størrelsen, limes blokken inn
+  én gang fra den øverste venstre cellen i utvalget.
+- **Tabellen vokser:** limes en blokk inn én gang og rekker utenfor tabellen, legges kolonnene til til høyre og
+  stoppradene nederst (blanke rader som du fyller ut). Over 50 spør Nepos først. Et valgt område gjør aldri tabellen
+  større.
+- Etter innliming er området som ble limt inn valgt. Kolonnene i et virtuelt intervall (de genererte turene) skrives
+  aldri til, men teller med som plasser.
+- Det samme gjelder **dagkodene**: kopier og lim inn i dagkode-raden, se over. Tider og dagkoder limes ikke inn samtidig.
 
 **Lim inn en liste med stopp:** velg en stoppcelle og lim inn tekst med NSR Quay-ID-er — én per linje,
 skilt med komma eller semikolon, eller rett fra et JSON-svar. Nepos tar ut alle `NSR:Quay:…` i rekkefølge

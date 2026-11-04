@@ -555,6 +555,13 @@ describe('code review 2026-10-17', () => {
   });
 });
 
+/** The paste event the browser sends after Ctrl+V, with the text on the clipboard (backlog 102: day codes paste from it). */
+const pasteEvent = (/** @type {string} */ text) => {
+  const ev = new Event('paste', { bubbles: true, cancelable: true });
+  /** @type {any} */ (ev).clipboardData = { getData: () => text };
+  document.dispatchEvent(ev);
+};
+
 describe('day codes: copy and paste between columns (39)', () => {
   it('copies a column\'s day code and pastes it on another', () => {
     loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'DX67', cells: [cell('0700'), cell('0710')] }, { dayCode: '6', cells: [cell('0800'), cell('0810')] }] });
@@ -563,6 +570,7 @@ describe('day codes: copy and paste between columns (39)', () => {
     press('c', { ctrlKey: true });
     dc(1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
     press('v', { ctrlKey: true });
+    pasteEvent('DX67');
     expect(grid.cols[1].dayCode).toBe('DX67');
   });
 });
@@ -581,6 +589,7 @@ describe('several day codes at once (user 2026-10-30)', () => {
     expect(wrote).toEqual(['DX67\t6']);
     dc(2).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
     press('v', { ctrlKey: true });
+    pasteEvent(wrote[0]);
     expect(grid.cols.map((c) => c.dayCode)).toEqual(['DX67', '6', 'DX67', '6']);
     expect(grid.cols[3].cells).toEqual([null, null]);
   });
@@ -592,6 +601,7 @@ describe('several day codes at once (user 2026-10-30)', () => {
     dc(1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }));
     dc(2).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, shiftKey: true }));
     press('v', { ctrlKey: true });
+    pasteEvent('DX67');
     expect(grid.cols.map((c) => c.dayCode)).toEqual(['DX67', 'DX67', 'DX67']);
   });
 });
