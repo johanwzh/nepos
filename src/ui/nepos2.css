@@ -905,6 +905,8 @@ select option { background: var(--bg-panel); color: var(--text); }
   font-size: 12px; cursor: pointer; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ef-problems.has-errors { border-color: var(--g-dec-c); color: var(--g-dec-c); }
 .ef-problems:hover { background: var(--accent-bg); }
+/* A heavy line (backlog 96): its size beside the problems marker, quiet; the advice is in its tooltip */
+.ef-heavy { color: var(--text-m); font-size: 12px; margin-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }
 .go-here { outline: 3px solid var(--g-dec-c) !important; outline-offset: 1px; animation: go-here-pulse .8s ease-in-out 3; position: relative; }
 .go-here::after { content: attr(data-go-here); position: absolute; left: 0; top: calc(100% + 4px); z-index: 50; white-space: nowrap;
   background: var(--g-dec-c); color: #fff; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; pointer-events: none; }

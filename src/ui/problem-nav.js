@@ -4,7 +4,8 @@
 import { app } from './state.js';
 import { t } from '../i18n/strings.js';
 import { $, onLinesChanged } from './shell.js';
-import { lineIssues } from './line-info.js';
+import { lineIssues, lineState, checkSizes } from './line-info.js';
+import { lineSize } from '../core/blocks.js';
 import { grid, onGridRender, selectDayCode, selectStopCell, selectDestCell, selectCell, viewColumn } from './grid.js';
 import { switchTableSet, switchPeriod } from './route-editor.js';
 import { openEditDialog } from './table-set-tabs.js';
@@ -37,6 +38,17 @@ export function updateProblemMarker(keepStep = false) {
   const step = keepStep && index >= 0 && list[index] ? ` — ${index + 1}/${list.length}: ${t(`chk:${list[index].code}`, list[index].detail ?? '')}` : '';
   el.textContent = `⚠ ${counts}${step}`;
   el.title = t('probHint');
+  updateHeavyNotice();
+}
+
+/** Beside the marker: the open line's size once it is heavy, with advice (backlog 96). */
+function updateHeavyNotice() {
+  const el = $('ef-heavy');
+  if (!el) return;
+  const { trips, times } = lineSize(app.activeRoute ? lineState(app.activeRoute) : null);
+  el.hidden = times < checkSizes.heavy;
+  el.textContent = el.hidden ? '' : t('heavyLine', trips, times);
+  el.title = el.hidden ? '' : t('heavyLineHint');
 }
 
 /** The next problem, round the list. */

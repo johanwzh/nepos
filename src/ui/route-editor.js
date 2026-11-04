@@ -471,6 +471,7 @@ function renderFooter() {
 
   el.innerHTML = `
     <button class="ef-problems" id="ef-problems" hidden></button>
+    <span class="ef-heavy" id="ef-heavy" hidden></span>
     <div class="ef-spacer"></div>
     ${ro ? `<span class="n2-readonly-note">${esc(t('statusDamaged'))}</span>` : `
     <span class="ef-state" id="ef-state">${app.dirty ? `● ${esc(t('unsavedChanges'))}` : ''}</span>

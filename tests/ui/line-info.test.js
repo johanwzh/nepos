@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
-import { initShell } from '../../src/ui/shell.js';
+import { initShell, refreshAll } from '../../src/ui/shell.js';
 import { initRouteList } from '../../src/ui/route-list.js';
 import { initProjectUi, openFs } from '../../src/ui/project-ui.js';
 import { initGrid } from '../../src/ui/grid.js';
@@ -137,6 +137,28 @@ describe('the open line is checked once per change (backlog 96)', () => {
       expect(projectIssues().some((i) => i.route === '20' && i.code === 'no-calendar')).toBe(false);
     } finally {
       checkSizes.later = later;
+    }
+  });
+});
+
+describe('the footer says when a line is heavy (backlog 96)', () => {
+  const notice = () => /** @type {HTMLElement} */ (document.getElementById('ef-heavy'));
+
+  it('shows the line\'s trips and passing times from the heavy size on, with advice; not below', async () => {
+    await selectRoute('20');
+    expect(notice().hidden).toBe(true);
+    const heavy = checkSizes.heavy;
+    try {
+      checkSizes.heavy = 2;                       // line 20: one trip, two passing times
+      refreshAll();
+      expect(notice().hidden).toBe(false);
+      expect(notice().textContent).toMatch(/1 tur.*2 passeringer/);
+      expect(notice().title).toMatch(/blokk/i);
+      checkSizes.heavy = 3;
+      refreshAll();
+      expect(notice().hidden).toBe(true);
+    } finally {
+      checkSizes.heavy = heavy;
     }
   });
 });
