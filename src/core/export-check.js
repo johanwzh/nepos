@@ -38,6 +38,15 @@ export const CHECK_CODES = [
 
 /** @param {any} cell */
 const timed = (cell) => !!cell?.time && cell.time !== '|';
+
+/** @type {WeakMap<string[], Set<string>>} */
+const daySets = new WeakMap();
+/** One Set per shared day list (tripDays shares its lists), not one per trip (backlog 96). @param {string[]} days */
+function daySet(days) {
+  let s = daySets.get(days);
+  if (!s) daySets.set(days, (s = new Set(days)));
+  return s;
+}
 /** @param {string[]} names */
 const list = (names) => names.slice(0, 3).join(', ') + (names.length > 3 ? ` (+${names.length - 3})` : '');
 /** @param {any} cell */
@@ -187,7 +196,7 @@ function checkRoute(code, rs, { orgs, copy, brandings, calendars, quayInfo, add,
         const calls = journeyStops(grid, col);
         if (calls.length < 2) return;
         const key = calls.map((c) => `${c.stopId}@${c.depCell.dayOffset || 0}:${c.depCell.time}`).join('|');
-        const days = new Set(tripDays(periodDays, col));
+        const days = daySet(tripDays(periodDays, col));
         const list = seen.get(key) ?? [];
         if (list.some((o) => [...days].some((d) => o.days.has(d)))) add('warning', 'trip-duplicate', { ...r, where: { ...where, column: (col.parentCi ?? ci) + 1 } });
         list.push({ ci, days });

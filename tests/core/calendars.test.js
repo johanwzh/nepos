@@ -133,6 +133,30 @@ describe('tripDays with "no date" values (code review 2026-10-17)', () => {
   });
 });
 
+describe('tripDays once per day code (backlog 96: a block of 1 321 trips worked out the same days 1 321 times)', () => {
+  it('shares one read-only answer between trips with the same day code and dates', async () => {
+    const { tripDays } = await import('../../src/core/calendars.js');
+    const period = ['20260302', '20260303', '20260304', '20260305', '20260306', '20260307', '20260308'];
+    const a = tripDays(period, { dayCode: 'DX67' });
+    expect(tripDays(period, { dayCode: 'DX67', dates: [] })).toBe(a);
+    expect(a).toEqual(['20260302', '20260303', '20260304', '20260305', '20260306']);
+    expect(Object.isFrozen(a)).toBe(true);
+    const off = [{ from: '20260303', to: '20260303', on: false }];
+    expect(tripDays(period, { dayCode: 'DX67', dates: off })).toEqual(['20260302', '20260304', '20260305', '20260306']);
+    expect(tripDays(period, { dayCode: 'DX67', dates: off.map((d) => ({ ...d })) })).toBe(tripDays(period, { dayCode: 'DX67', dates: off }));
+    expect(tripDays(period, { dayCode: '67' })).toEqual(['20260307', '20260308']);
+  });
+
+  it('works the days out again for another period list, even one with the same days', async () => {
+    const { tripDays } = await import('../../src/core/calendars.js');
+    const p1 = ['20260302', '20260303'];
+    const p2 = ['20260302', '20260303', '20260304'];
+    expect(tripDays(p1, { dayCode: 'D' })).toEqual(p1);
+    expect(tripDays(p2, { dayCode: 'D' })).toEqual(p2);
+    expect(tripDays([...p1], { dayCode: 'D' })).not.toBe(tripDays(p1, { dayCode: 'D' }));
+  });
+});
+
 describe('byDate (43)', () => {
   it('sorts calendars by their first day, then by name; calendars without days last', () => {
     const cals = [

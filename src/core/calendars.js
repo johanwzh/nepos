@@ -131,6 +131,21 @@ export function rangeDays(r) {
  * @param {{ dayCode: string, dates?: { from: string, to: string, on: boolean }[] }} col
  */
 export function tripDays(periodDays, col) {
+  // Once per period list, day code and own dates (backlog 96): a block's trips, and every column with the same day
+  // code, share one read-only answer instead of working out the same days per trip.
+  const key = col.dates?.length ? `${col.dayCode}|${JSON.stringify(col.dates)}` : String(col.dayCode);
+  let known = tripDaysMemo.get(periodDays);
+  if (!known) tripDaysMemo.set(periodDays, (known = new Map()));
+  let days = known.get(key);
+  if (!days) known.set(key, (days = Object.freeze(computeTripDays(periodDays, col))));
+  return /** @type {string[]} */ (days);
+}
+
+/** @type {WeakMap<string[], Map<string, readonly string[]>>} */
+const tripDaysMemo = new WeakMap();
+
+/** @param {string[]} periodDays @param {{ dayCode: string, dates?: { from: string, to: string, on: boolean }[] }} col */
+function computeTripDays(periodDays, col) {
   const days = new Set(columnDays(periodDays, col.dayCode));
   const dates = col.dates ?? [];
   /** @param {{ from: string, to: string }} r */
