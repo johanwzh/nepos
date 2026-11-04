@@ -39,11 +39,12 @@ export function textBlock(text) {
 
 /**
  * Day codes in pasted text (tabs and line breaks both separate them, so a row or a column from a spreadsheet works),
- * tidied the way a typed one is (DX76 → DX67). Null when any entry is not a day code: then nothing is pasted.
+ * tidied the way a typed one is (DX76 → DX67). An empty entry is an empty day code (a column not filled in yet), as an
+ * empty cell is in the times. Null when any entry is not a day code, or all are empty: then nothing is pasted.
  * @param {string} text @returns {string[] | null}
  */
 export function dayCodeList(text) {
   if (!text) return null;
   const codes = text.replace(/\r?\n$/, '').split(/\t|\r?\n/).map((s) => canonicalDayCode(s.trim().toUpperCase()));
-  return codes.every((c) => c && isAllowedDayCode(c)) ? codes : null;
+  return codes.some((c) => c) && codes.every((c) => c === '' || isAllowedDayCode(c)) ? codes : null;
 }

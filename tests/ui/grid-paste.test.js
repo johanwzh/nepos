@@ -333,6 +333,33 @@ describe('day codes', () => {
     expect(codes()).toEqual(['DX67', 'D', '7', 'D', 'D']);
   });
 
+  it('a time copied in Nepos is never pasted as a day code, although 1234 is both', () => {
+    grid.cols[0].cells[1].time = '1234';
+    const text = copyRect(1, 0);
+    down(dc(2));
+    paste(text);
+    expect(codes()).toEqual(['D', 'D', 'D', 'D', 'D']);
+  });
+
+  it('day codes copied after a time still paste (the newer copy owns the clipboard)', () => {
+    grid.cols[0].cells[1].time = '1234';
+    copyRect(1, 0);
+    grid.cols[0].dayCode = '1234';
+    const text = copyDayCodes(0);
+    down(dc(2));
+    paste(text);
+    expect(grid.cols[2].dayCode).toBe('1234');
+  });
+
+  it('an empty day code copied along with others pastes as empty', () => {
+    grid.cols[1].dayCode = '';
+    const text = copyDayCodes(0, 1);
+    expect(text).toBe('D\t');
+    down(dc(3));
+    paste(text);
+    expect(codes()).toEqual(['D', '', 'D', 'D', '']);
+  });
+
   it('times pasted while the day codes are selected change nothing, and day codes pasted on times change nothing', () => {
     down(dc(1));
     paste('0900');

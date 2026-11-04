@@ -1655,7 +1655,7 @@ function onKeyDown(e) {
   if ((e.ctrlKey || e.metaKey) && inDC && !dcEdit && grid.cols[dcCol]) {
     // Several columns: their day codes, in order (user 2026-10-30). Pasting is left to the paste event (onPaste), which
     // reads the clipboard's text: codes copied here and in Excel alike (backlog 102)
-    if (e.key.toLowerCase() === 'c') { e.preventDefault(); const [a, b] = dcRange(); void navigator.clipboard?.writeText(grid.cols.slice(a, b + 1).map((c) => c.dayCode).join('\t')).catch(() => {}); return; }
+    if (e.key.toLowerCase() === 'c') { e.preventDefault(); cellClip = null; const [a, b] = dcRange(); void navigator.clipboard?.writeText(grid.cols.slice(a, b + 1).map((c) => c.dayCode).join('\t')).catch(() => {}); return; }
   }
   if ((e.ctrlKey || e.metaKey) && !editing && !dcEdit && !inStopCol && !inDC && !inTN && !tnEdit && !inLB) {
     if (e.key === 'c') { e.preventDefault(); copySelection(); return; }
@@ -1943,8 +1943,9 @@ function onPaste(e) {
   const text = e.clipboardData?.getData('text');
   if (!text) return;
   e.preventDefault();
-  // The day-code row: the codes in the text (copied here or in Excel), by the same rule as times (backlog 102)
-  if (inDC) { pasteDayCodes(text); return; }
+  // The day-code row: the codes in the text (copied here or in Excel), by the same rule as times (backlog 102). Times copied
+  // in Nepos are never day codes, though 1234 is both (a day-code copy clears that copy, so the newer one wins)
+  if (inDC) { if (!sameText(text)) pasteDayCodes(text); return; }
   // What Nepos copied itself: the whole cells
   if (!inStopCol && sameText(text)) { pasteCells(new Set(['times', 'boarding', 'booking', 'notes'])); return; }
   if (inStopCol) {

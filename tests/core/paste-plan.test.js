@@ -100,7 +100,11 @@ describe('dayCodeList', () => {
   it('is null when any entry is not a day code (nothing is pasted)', () => {
     expect(dayCodeList('D\thei')).toBeNull();
     expect(dayCodeList('0800\t0900')).toBeNull();
-    expect(dayCodeList('D\t\t6')).toBeNull();
     expect(dayCodeList('')).toBeNull();
+    expect(dayCodeList('\t')).toBeNull();
+  });
+  it('an empty entry is an empty day code (a column not filled in yet), as an empty cell is in the times', () => {
+    expect(dayCodeList('D\t\t6')).toEqual(['D', '', '6']);
+    expect(dayCodeList('DX67\t')).toEqual(['DX67', '']);
   });
 });
