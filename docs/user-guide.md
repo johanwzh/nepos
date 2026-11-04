@@ -204,7 +204,9 @@ stoppe. Etter tiden kan du skrive `a` (bare avstigning) eller `p` (bare påstign
 høyreklikkmenyen for alle valgte celler. **Stopper ved behov** og **bestilling** (x) skrives aldri: se under.
 
 Ved en tid står opptil tre merker: a/p, x og én **bokstav** for tidens merknad og datoer (b, c, d … — a, p og x
-hoppes over; samme merknad gir samme bokstav). Linjen under tabellen viser alt om tiden du står i.
+hoppes over; samme merknad gir samme bokstav). Linjen under tabellen viser alt om tiden du står i, og under den
+står bokstavene i tabellen, i rekkefølge (b, c, d …), hver med merknaden og datoene den står for. Bokstaven til tiden du
+står i er merket. Bokstavene skrives aldri: de følger merknadene og datoene, og bare **a** og **p** skrives sammen med tiden.
 
 **Etter midnatt:** en tid på en senere dag enn dagkoden har et lysegrønt felt i høyre kant av cellen — ingen `+1` i
 cellen. Feltet er bredere for hver dag (+1, +2 …). Linjen under tabellen sier hvor mange dager etter dagkoden tiden

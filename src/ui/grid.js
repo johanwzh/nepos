@@ -9,7 +9,7 @@ import { t } from '../i18n/strings.js';
 import { isValidDayCode } from '../core/ern/validate.js';
 import { canonicalDayCode } from '../core/day-codes.js';
 import { parseCellInput, normalizeCell } from '../core/grid-input.js';
-import { noteLetters } from '../core/note-letters.js';
+import { noteMarks } from '../core/note-letters.js';
 import { currentPage, showMessage, addOnce } from './shell.js';
 import { stopMark, loadQuays, quayInfo, onQuaysLoaded } from './quays.js';
 import { NSR_QUAY_PATTERN } from '../core/quays.js';
@@ -836,7 +836,8 @@ export function render() {
   clearEndMarks();
   syncBlocks();
   notifySelection(`${inDC}|${ancR},${ancC}|${endR},${endC}`);
-  letters = noteLetters(grid);
+  const marks = noteMarks(grid);
+  letters = marks.letters;
   if (!inDC) { inFN = false; dcSpanAt = -1; }
   /** @type {Set<string>} */
   const linked = new Set();
@@ -864,7 +865,7 @@ export function render() {
   } else tbl.classList.remove('dest-shown');
   layoutFrozen(tbl);
   drawChains(tbl);
-  updateFnPreview(inDC ? { type: 'col', ri: 0, ci: dcCol } : inStopCol ? null : { type: 'cell', ri: ancR, ci: ancC });
+  updateFnPreview(inDC ? { type: 'col', ri: 0, ci: dcCol } : inStopCol ? null : { type: 'cell', ri: ancR, ci: ancC }, marks);
   if (differs || snapshot() !== baseline) { differs = true; onChange(); }
   for (const fn of renderListeners) fn();
 }

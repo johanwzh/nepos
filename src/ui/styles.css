@@ -419,12 +419,18 @@ button, select, input, textarea {
     background: var(--bg-raised);
     border-top: 1px solid var(--border-lt);
     font-size: 11px; color: var(--text-m);
-    cursor: pointer; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis;
     min-height: 22px; line-height: 1.5;
 }
 #fn-preview.visible { display: block; }
-#fn-preview:hover { color: var(--accent); background: var(--accent-bg); }
+/* The selected time in full; a click opens its note */
+#fn-preview .fn-sel { cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#fn-preview .fn-sel:hover { color: var(--accent); background: var(--accent-bg); }
+/* The note letters of the table, in letter order (backlog 116); a long list scrolls here */
+#fn-preview .fn-legend { display: flex; flex-wrap: wrap; gap: 0 18px; max-height: 54px; overflow-y: auto; }
+#fn-preview .fn-sel + .fn-legend { margin-top: 2px; padding-top: 2px; border-top: 1px dotted var(--border-lt); }
+#fn-preview .fn-leg { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#fn-preview .fn-leg-l { color: #d06000; font-style: italic; font-weight: 600; }
+#fn-preview .fn-leg.is-sel { color: var(--text); background: var(--accent-bg); border-radius: 3px; padding: 0 4px; margin: 0 -4px; }
 
 /* ── Edit footer ── */
 #edit-footer {

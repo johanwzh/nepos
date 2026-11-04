@@ -7,6 +7,7 @@ import { markDirty } from './shell.js';
 import { grid, render } from './grid.js';
 import { openFloatBox, closeFloatBox } from './float-box.js';
 import { normalizeBooking } from '../core/booking.js';
+import { noteMarks } from '../core/note-letters.js';
 
 const $ = (/** @type {string} */ id) => /** @type {any} */ (document.getElementById(id));
 
@@ -36,9 +37,12 @@ const datesText = (dates) => `${t('fnDatesLabel')}: ${t('datesSummary', dates.fi
 /**
  * Under the grid: everything about the selected time — its note (else its trip's), dates, boarding rule, request stop and
  * booking (else the trip's, else the line's) — in full; the grid itself has no hover texts (booking spec 2026-10-22).
+ * Below that, the table's note letters, each once, in letter order, with its note and dates (backlog 116); the letter of
+ * the selected time is marked.
  * @param {{ type: 'col' | 'cell', ri: number, ci: number } | null} where
+ * @param {ReturnType<typeof noteMarks>} [marks] the table's letters, when the caller has them already
  */
-export function updateFnPreview(where = null) {
+export function updateFnPreview(where = null, marks = noteMarks(grid)) {
   const el = $('fn-preview');
   if (!el) return;
   let text = '';
@@ -64,11 +68,33 @@ export function updateFnPreview(where = null) {
       : app.routeState?.booking ? bookingSummary(app.routeState.booking, t('bkLine')) : '';
     if (booking) more.push(booking);
   }
-  if (!text && !more.length) { el.classList.remove('visible'); el.onclick = null; return; }
-  el.textContent = [text, ...more].filter(Boolean).join(' · ');
+  const legend = grid.active ? marks.legend : [];
+  el.replaceChildren();
+  if (!text && !more.length && !legend.length) { el.classList.remove('visible'); return; }
+  if (text || more.length) {
+    const sel = document.createElement('div');
+    sel.className = 'fn-sel';
+    sel.textContent = [text, ...more].filter(Boolean).join(' · ');
+    const at = target;
+    if (at) sel.onclick = () => openFnEditor(at.type, at.ri, at.ci);
+    el.append(sel);
+  }
+  if (legend.length) {
+    const own = where?.type === 'cell' ? marks.letters.get(`${where.ci}:${where.ri}`) : undefined;
+    const list = document.createElement('div');
+    list.className = 'fn-legend';
+    for (const e of legend) {
+      const item = document.createElement('span');
+      item.className = e.letter === own ? 'fn-leg is-sel' : 'fn-leg';
+      const l = document.createElement('b');
+      l.className = 'fn-leg-l';
+      l.textContent = e.letter;
+      item.append(l, ' ' + [e.note, e.dates.length ? datesText(e.dates) : ''].filter(Boolean).join(' · '));
+      list.append(item);
+    }
+    el.append(list);
+  }
   el.classList.add('visible');
-  const at = target;
-  el.onclick = at ? () => openFnEditor(at.type, at.ri, at.ci) : null;
 }
 
 /**

@@ -2,6 +2,15 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
+## 2.6.2 — unreleased
+
+**New features**
+
+- **All note letters under the timetable:** the note box under the grid now also lists every note letter of the table
+  (b, c, d …, in letter order), each with its note text and a summary of its dates. The letter of the selected time is
+  marked. The list follows your edits and scrolls inside the box when it is long. The grid and the box show the same
+  letters, ready for a printout later. Typing is unchanged: only **a** and **p** are typed with a time.
+
 ## 2.6.1 — 2026-11-04
 
 **New features**

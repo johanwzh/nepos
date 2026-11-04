@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { loadAppMarkup } from './dom-setup.js';
 import { app } from '../../src/ui/state.js';
 import { initShell } from '../../src/ui/shell.js';
-import { grid, initGrid, loadGrid, selectCell, gridData } from '../../src/ui/grid.js';
+import { grid, initGrid, loadGrid, selectCell, gridData, render } from '../../src/ui/grid.js';
 import { initFootnoteEditor } from '../../src/ui/footnote-editor.js';
 import { newRouteState } from '../../src/ui/route-state.js';
 
@@ -224,5 +224,67 @@ describe('first look at 2.5 (user 2026-10-30)', () => {
   it('the trip-number row\'s caption lines up with Label and Vehicle (user 2026-10-30)', () => {
     const n2 = readFileSync('src/ui/nepos2.css', 'utf8');
     expect(n2).toMatch(/\.g-row-tn \.g-tn-label \{[^}]*text-align: left; padding-left: 8px;/);
+  });
+});
+
+// The note box under the grid lists every note letter of the table (backlog 116, user 2026-11-04)
+describe('the note box lists the letters', () => {
+  const dates1 = [{ from: '20260101', to: '20260101', on: false }];
+  const box = () => /** @type {HTMLElement} */ (document.getElementById('fn-preview'));
+  const legend = () => [...document.querySelectorAll('#fn-preview .fn-leg')].map((e) => e.textContent);
+  const marked = () => [...document.querySelectorAll('#fn-preview .fn-leg.is-sel')].map((e) => e.querySelector('.fn-leg-l')?.textContent);
+  const load = () => loadGrid({ stops: [stop('S'), stop('A'), stop('B'), stop('E')], cols: [
+    { dayCode: 'D', cells: [cell('0600'), cell('0605', { note: 'Bytt her' }), cell('0610', { dates: dates1 }), cell('0620', { note: 'Bytt her' })], note: '', dates: [] },
+    { dayCode: 'D', cells: [cell('0700'), cell('0705', { note: 'Kun skoledager', dates: dates1 }), cell('0710'), cell('0720')], note: '', dates: [] },
+  ] });
+
+  it('shows every letter in use once, in letter order, with its note and dates', () => {
+    load();
+    selectCell(0, 0);
+    expect(box().classList.contains('visible')).toBe(true);
+    expect(legend()).toEqual(['b Bytt her', 'c Datoer: 1 fjernet', 'd Kun skoledager · Datoer: 1 fjernet']); // the test app is in Norwegian
+  });
+
+  it('marks the letter of the selected time, and none on a time without a letter', () => {
+    load();
+    selectCell(2, 0);
+    expect(marked()).toEqual(['c']);
+    selectCell(1, 1);
+    expect(marked()).toEqual(['d']);
+    selectCell(0, 0);
+    expect(marked()).toEqual([]);
+    expect(legend()).toHaveLength(3); // the list stays whole
+  });
+
+  it('follows the notes: a new note gets the next letter, a removed one is gone', () => {
+    load();
+    selectCell(0, 0);
+    grid.cols[1].cells[3].note = 'Ny';
+    render();
+    expect(legend().at(-1)).toBe('e Ny');
+    grid.cols[0].cells[1].note = ''; grid.cols[0].cells[3].note = '';
+    render();
+    expect(legend()).toEqual(['b Datoer: 1 fjernet', 'c Kun skoledager · Datoer: 1 fjernet', 'd Ny']);
+  });
+
+  it('is hidden when no time has a note or dates and the selected time says nothing', () => {
+    loadGrid({ stops: [stop('A'), stop('B')], cols: [{ dayCode: 'D', cells: [cell('0700'), cell('0710')], note: '', dates: [] }] });
+    selectCell(0, 0);
+    expect(box().classList.contains('visible')).toBe(false);
+    expect(legend()).toEqual([]);
+  });
+
+  it('still shows the selected time in full, and its line opens the note editor', () => {
+    load();
+    selectCell(1, 0);
+    const sel = /** @type {HTMLElement} */ (box().querySelector('.fn-sel'));
+    expect(sel.textContent).toContain('Bytt her');
+    sel.click();
+    expect(document.querySelector('.note-box .note-text')).not.toBeNull();
+  });
+
+  it('a long list scrolls inside the box instead of growing it', () => {
+    const css = readFileSync('src/ui/styles.css', 'utf8');
+    expect(css).toMatch(/#fn-preview \.fn-legend \{[^}]*max-height: [^;]+; overflow-y: auto;/);
   });
 });
