@@ -287,8 +287,9 @@ Nederst i linjenavigatoren står **kraftverktøyene**. Å se dem endrer ingentin
   trikk og taubane svinger aldri skarpt i et sporveksel. Et ferjekaistopp kan ligge et stykke fra ruten (opptil
   500 m; over 170 m merkes strekningen for sjekk). Finnes det ikke noe nett i nærheten, blir strekningen stående som
   rett linje. Øverst velger du tabellsett; nederst er ett lite bilde per mønster (hver unike rekke stopp),
-  med ramme etter tilstand: **rød** — ikke rutet (et nytt mønster, eller et stopp uten NSR-posisjon), **oransje** — må
-  sjekkes (et stopp er flyttet i NSR, nyere kartdata, eller et annet stopp på en rad), **grønn** — rutet — og hvor
+  med ramme etter tilstand: **rød** — ikke rutet (et nytt mønster, eller et stopp uten NSR-posisjon), eller kjøretøyet er
+  over en grense og ingen rute passer, **oransje** — må sjekkes (et stopp er flyttet i NSR, et annet stopp på en rad,
+  eller strekninger som må bekreftes etter et bytte av kjøretøy, se under), **grønn** — rutet — og hvor
   mange turer som kjører mønsteret. Velg et mønster: alle radene i tabellen står til venstre, og stopp mønsteret
   passerer, har en **|** foran seg; kartet viser strekningene med stoppenes nummer og navn (de andre mønstrene svakt),
   og infofeltet til høyre viser mønsteret. **Forklaring** under infofeltet viser hva fargene og strekene betyr. Klikk en strekning på kartet eller mellom to stopp i listen for å se lengde,
@@ -305,6 +306,27 @@ Nederst i linjenavigatoren står **kraftverktøyene**. Å se dem endrer ingentin
   **Automatisk ruting** på (Visning-menyen) får visningen **Oppdater alle**, som ruter og godtar alle røde og oransje
   mønstre i tabellsettet. Mens Ruting er åpen, er resten av Nepos låst; **Lukk** eller **Esc** går ut (Nepos spør først
   om et forslag ikke er godtatt).
+
+  **Kjøretøy og grenser.** Høyde, bredde, lengde og vekt på kjøretøyene (se **Ressurser**) styrer ruten: en vei der
+  OpenStreetMap har en grense kjøretøyet er over, brukes aldri. Høyde, bredde og lengde er harde grenser; opptil 5 %
+  over en vektgrense er bare en advarsel. De samme stoppene kjørt av kjøretøy i ulike størrelser rutes hver for seg: hver
+  **kjøretøygruppe** får sitt eget lille bilde, med kjøretøyene ved siden av mønsteret. Turer uten kjøretøy, eller med et
+  kjøretøy uten mål, rutes som før.
+  - **Hvorfor ruten går rundt:** der grensene sender ruten en omvei, tegnes ruten uten grenser i rødt (**Rute uten
+    grenser (stengt)** i **Forklaring**), og infofeltet sier hvorfor, for eksempel «Går rundt: TB (4,0 m) er høyere enn
+    fri høyde 3,7 m på Matrandvegen – +1,4 km, +2 min», med lenken **OpenStreetMap ↗** til veien, så en feil merking kan
+    sjekkes og rettes der. Kommer ikke kjøretøyet fram til et stopp, står det «Ingen rute for dette kjøretøyet». Infofeltet
+    viser også **Laveste grenser** langs strekningen.
+  - **U-svinger:** et kjøretøy kan snu ved et stopp, et punkt ruten skal gjennom, eller i et kryss på en liten vei
+    (residential, unclassified eller service i OpenStreetMap, høyst 50 km/t), og jo lengre kjøretøyet er, jo mer koster
+    det: en minibuss snur ved stoppet sitt der en 12 m lang buss kjører videre for å snu. På større og raskere veier blir
+    det ingen U-svinger. Ruting merker hver U-sving på kartet (**U-sving** i Forklaring).
+  - **Godta** lagrer ruten som den vanlige strekningen, eller som kjøretøygruppens egen variant når den er en annen.
+    Står det «Deles med …» i infofeltet, bruker en annen gruppe den samme ruten. **Behold** virker også for én gruppe.
+  - **Sjekk av lagrede ruter:** når Ruting åpnes, sjekker Nepos selv de lagrede rutene mot grensene (ruter lagret med en eldre
+    versjon av Nepos får grensene fylt ut første gang), og en rute merkes bare når en grense betyr noe for kjøretøyet.
+    Nyere kartdata alene merker ingen ruter. Byttes et kjøretøy, kan strekninger bli oransje: **Kan være kortere for dette
+    kjøretøyet** (**Behold** eller **Finn rute**) eller **Ikke sjekket mot kjøretøyets mål ennå** (**Finn rute**).
 
   Kartdataene lastes ned første gang du ruter og ligger så i prosjektets `cache/`, så du kan rute uten nett der du har
   rutet før. En strekning ingen tur bruker lenger (du har byttet et stopp i rutetabellen), eksporteres ikke, men den
@@ -415,7 +437,8 @@ skjuler det). ✕ lukker og løsner.
   rader legges til ved behov.
 - **Tøm stopp** fjerner stoppet fra raden (navnet blir stående).
 
-Nepos tilbyr bare stopp med samme transportmåte som linjen.
+Nepos tilbyr bare stopp med samme transportmåte som linjen. En linje for snø og is kan også bruke veistopp (buss,
+langdistansebuss), men en buss- eller langdistansebusslinje kan ikke bruke stopp for snø og is.
 
 **Kartlag:** øverst til høyre på kartet velger du **Kart** (OpenFreeMap, som før), **OpenStreetMap** (mørknet i
 mørk modus) eller **Flyfoto** (Esri). Valget huskes for deg. Har prosjektinnstillingene en egen kartstil, vises ikke
@@ -450,10 +473,19 @@ kommer fra Entur sitt register; det eneste du kan endre, er eksport-ID-en (bare 
 etikett-raden i rutetabellen.
 
 **Kjøretøy** (+ Nytt kjøretøy) er prosjektets egne kjøretøy, til kjøretøy-raden i rutetabellen. Et kjøretøy har
-navn, kortkode (vises i rutetabellen i stedet for navnet), transportform (må være den samme som linjens; rutetabellen
-viser bare kjøretøy som passer), drivstoff, lavgulv, sitteplasser, lengde, bredde og høyde i meter, en kjøretøytype-ID
-som Nepos lager, og en VehicleTypeRef (du skriver delen etter `NMR:VehicleType:`). Fargen er bare fargen på
-merkelappen i rutetabellen, ikke kjøretøyets farge. De eksporteres ikke ennå; senere skal et kjøretøy her vise til Entur sitt kjøretøyregister.
+navn, kortkode (vises i rutetabellen i stedet for navnet), transportform, drivstoff, lavgulv, sitteplasser, lengde,
+bredde og høyde i meter, **vekt** i tonn (tillatt totalvekt), en kjøretøytype-ID som Nepos lager, og en VehicleTypeRef
+(du skriver delen etter `NMR:VehicleType:`). Fargen er bare fargen på merkelappen i rutetabellen, ikke kjøretøyets farge.
+De eksporteres ikke ennå; senere skal et kjøretøy her vise til Entur sitt kjøretøyregister.
+
+Transportformen avgjør hvilke linjer kjøretøyet kan kjøre, og rutetabellen viser bare kjøretøy som passer. Buss,
+langdistansebuss og taxi hører sammen, og det gjør båt og ferge også. Et kjøretøy for snø og is (en beltebil) kan kjøre
+alle veilinjer, men et veikjøretøy kan ikke kjøre en linje for snø og is. Alle andre transportformer må være like. Et
+kjøretøy uten transportform passer på alle linjer. Et kjøretøy lagret som «Ferge» blir «Båt» neste gang kjøretøylisten
+lagres.
+
+Høyde, bredde, lengde og vekt styrer **Ruting** og eksportkontrollen (se Ruting og Eksport); lengden avgjør også hva en
+U-sving koster. Kjøretøy uten mål ruter som før.
 
 ---
 
@@ -470,6 +502,14 @@ Codespace i prosjektet må være nøyaktig det samme som codespacet Entur har gi
 
 Problemene er samlet etter type: samme feil på mange turer i en linje står på én linje med antallet (for eksempel
 «×20»). Klikk for å se hver av dem.
+
+**Kjøretøy og grenser:** kontrollen sjekker hver tur mot grensene langs ruten kjøretøyet får (se **Ruting**). En tur der
+kjøretøyet er over en grense, er en **feil** («… er høyere enn fri høyde …: bytt kjøretøy eller ruter på nytt»). Under
+0,5 m å gå på (høyde, bredde, lengde), eller en vekt nær grensen, er en **advarsel**. Strekninger som må bekreftes etter
+et bytte av kjøretøy, eller som ikke er sjekket mot kjøretøyets mål ennå, gir én advarsel per linje («… åpne Ruting på
+linjen»). Der Nepos kan se at et byttet kjøretøy fortsatt får samme rute, spør den ikke. Eksporten skriver hver tur på
+ruten til kjøretøygruppen sin; kjører to grupper med de samme stoppene ulike veier, får de hvert sitt JourneyPattern
+(Antu melder det bare som informasjon).
 
 Hver tur blir en NeTEx ServiceJourney med én DatedServiceJourney for hver dag den kjører (kalender +
 dagkode + turens egne datoer). Tognummer eksporteres som TrainNumber, andre turnummer som PrivateCode.
