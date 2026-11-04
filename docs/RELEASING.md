@@ -34,8 +34,7 @@ again. At release only the date goes into the changelog heading — check the ve
 
 - [ ] UI texts exist in both languages (`src/i18n/strings.js`: English and Norwegian blocks).
 - [ ] Keyboard shortcuts: the list in Help (`helpKeys` in `src/i18n/strings.js`, both languages) matches the app.
-- [ ] User guide (`docs/user-guide.md`) describes new or changed features; old wording updated.
-- [ ] Help menu content, when it exists, says the same as the guide.
+- The user guide (`docs/user-guide.md`, Help → User guide) is on hold (backlog 9, user 2026-11-04) and is not checked at release.
 
 ## 4. The formats
 
