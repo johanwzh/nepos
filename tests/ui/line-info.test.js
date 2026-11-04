@@ -208,4 +208,19 @@ describe('a line’s routing by pattern (routing editor, 2026-10-31)', () => {
     expect(lineRouting('22')).toBeNull();
     quayInfo.clear();
   });
+
+  it('is cached for the open line too, by its content: a change is seen, no change is not worked out again (backlog 96)', async () => {
+    quayInfo.set('NSR:Quay:1', /** @type {any} */ ({ lon: 10, lat: 59 }));
+    quayInfo.set('NSR:Quay:2', /** @type {any} */ ({ lon: 10.01, lat: 59 }));
+    try {
+      await selectRoute('20');
+      const first = lineRouting('20');
+      expect(first).toEqual({ patterns: 1, green: 0, orange: 0, red: 1 });
+      expect(lineRouting('20')).toBe(first);
+      app.routeState.periods[0].calendarIds = ['cal-1']; // changed in place: worked out again
+      expect(lineRouting('20')).not.toBe(first);
+    } finally {
+      quayInfo.clear();
+    }
+  });
 });
