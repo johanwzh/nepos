@@ -856,7 +856,7 @@ export const STRINGS = {
     fuel_petrolUnleaded: 'Blyfri bensin', fuel_none: 'Ingen', fuel_other: 'Annet',
     vehiclesRow: 'Kjøretøy', vehicleNone: 'Ingen', vehiclesNoneYet: 'Ingen kjøretøy ennå: legg dem til under Ressurser.', ctxVehiclesShow: 'Vis kjøretøy', ctxVehiclesHide: 'Skjul kjøretøy', confirmVehiclesHide: 'Skjule kjøretøy-raden? Kjøretøyene i den fjernes.',
     probErrors: (n) => `${n} feil`, probWarnings: (n) => `${n} advarsel${n === 1 ? '' : 'er'}`, probHint: 'Klikk for å gå til neste problem', probFill: 'Må fylles inn', probFix: 'Må utbedres',
-    heavyLine: (/** @type {number} */ trips, /** @type {number} */ times) => `Stor linje: ${trips.toLocaleString('nb')} tur${trips === 1 ? '' : 'er'} og ${times.toLocaleString('nb')} passeringer — kontrolleres når du stopper å skrive`,
+    heavyLine: (/** @type {number} */ trips, /** @type {number} */ times) => `Stor linje: ${trips.toLocaleString('nb')} tur${trips === 1 ? '' : 'er'} og ${times.toLocaleString('nb')} passeringer — kontrolleres når du er ferdig med å skrive`,
     heavyLineHint: 'Nepos kontrollerer hver tur ved hvert stopp, så en linje veier turer × stopp (dagene teller ikke). En blokk lager alle turene sine: la den være så tett og så lang som tilbudet. Å dele turene på flere tabeller gjør ikke linjen lettere. Mer i brukerveiledningen, «Store linjer».',
     pasteGrowConfirm: (r, c) => `Dette limer inn ${r} nye rad(er) og ${c} nye kolonne(r). Fortsette?`,
     tsmNew: 'Ny…', tsmDup: 'Dupliser', tsmEdit: 'Rediger…', tsmDel: 'Slett', tseTitle: 'Tabellsett', tableSetCopyName: (n) => `${n} (kopi)`,

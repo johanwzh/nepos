@@ -2,6 +2,12 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
+## 2.6.3 — unreleased
+
+**Fixes and tweaks**
+
+- **Norwegian wording of the footer for heavy lines (backlog 120):** the note now says «kontrolleres når du er ferdig med å skrive» (checked when you are done typing) instead of «når du stopper å skrive».
+
 ## 2.6.2 — 2026-11-04
 
 **New features**
