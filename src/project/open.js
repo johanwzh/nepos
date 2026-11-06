@@ -67,6 +67,7 @@ export async function openProject(fs, { now = new Date() } = {}) {
   meta = { ...meta, codespace: cs.value };
 
   const { settings, recovered: settingsRecovered } = await readSettings(fs);
+  settings.exportAsZip = true; // "As a ZIP file" is on each time a project opens (user 2026-11-06)
   const { orgs, error: orgsError } = await readOrgs(fs);
   const { brandings, error: brandingsError } = await readBrandings(fs);
   const { labels, error: labelsError } = await readLabels(fs);
