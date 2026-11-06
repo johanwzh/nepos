@@ -2,11 +2,13 @@
 
 Newest first. Version rule: fixes and tweaks x.x.+1, new features x.+1.0, major or breaking changes +1.0.0.
 
-## 2.6.3 — unreleased
+## 2.6.3 — 2026-11-06
 
 **Fixes and tweaks**
 
 - **Norwegian wording of the footer for heavy lines (backlog 120):** the note now says «kontrolleres når du er ferdig med å skrive» (checked when you are done typing) instead of «når du stopper å skrive».
+- **Vehicles in the export (backlog 121):** a trip's vehicle is now exported with its national vehicle register id (the ServiceJourney gets a VehicleTypeRef), so Antu can check it.
+- **Help menu (backlog 130):** Delivery to Entur now sits above Version history.
 
 ## 2.6.2 — 2026-11-04
 

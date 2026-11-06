@@ -52,7 +52,7 @@ describe('menu bar', () => {
     openMenu(2);
     expect(items()).toEqual(['Språk', 'Lys/mørk', 'Fargetema', 'Vis stoppenes privatkode', 'Automatisk ruting (Oppdater alle i Ruting)']);
     openMenu(3);
-    expect(items()).toEqual(['Hurtigtaster', 'Brukerveiledning', 'Versjonshistorikk', 'Levering til Entur', 'GitHub']);
+    expect(items()).toEqual(['Hurtigtaster', 'Brukerveiledning', 'Levering til Entur', 'Versjonshistorikk', 'GitHub']);
   });
 
   it('switches the stops\' private codes on and off from Visning, and remembers it', () => {

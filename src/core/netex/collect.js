@@ -135,5 +135,7 @@ export function collectNeTExData({ codespace, routes: inputRoutes, orgs: orgList
     }
     // Every ServiceJourney the line files will write, so Knutepunkt links can refer to another line's trips
     const journeys = journeyIndex(cs, routes, colDays);
-    return { cs, routes, orgs, orgFor, orgMode, brandings, usedStops, destDisps, destDispId, operDays, colDays, overallFrom, overallTo, usedLinks, linkRefsFor, linkVariantsFor, journeys };
+    return { cs, routes, orgs, orgFor, orgMode, brandings, usedStops, destDisps, destDispId, operDays, colDays, overallFrom, overallTo, usedLinks, linkRefsFor, linkVariantsFor, journeys,
+        /** The national register id of a trip's vehicle (backlog 121), or ''. @param {string} name */
+        vehicleRefFor: (name) => String(vehicles.find((v) => v?.name === name)?.vehicleTypeRef ?? '').trim() };
 }

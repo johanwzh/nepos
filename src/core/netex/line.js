@@ -176,12 +176,15 @@ export function genLineXml(routeCode, rs, data, { timestamp } = {}) {
                     const tnId = `${cs}:TrainNumber:${uuid5(`${sjId}|train`)}`;
                     if (isTrain) trainNumbers.push(`      <TrainNumber id="${tnId}" version="1">\n        <ForAdvertisement>${xe(col.tripNo)}</ForAdvertisement>\n      </TrainNumber>`);
                     const sjTrain = isTrain ? `\n        <trainNumbers>\n          <TrainNumberRef ref="${tnId}" version="1"/>\n        </trainNumbers>` : '';
+                    const vehRef = col.vehicle ? data.vehicleRefFor?.(String(col.vehicle)) : '';
+                    const sjVeh = vehRef ? `
+        <VehicleTypeRef ref="${xe(vehRef)}"/>` : '';
                     // The trip's booking, else the line's (booking spec 2026-10-22). Provisional until Entur answers how a
                     // fixed line where every trip is booked is delivered: the line's booking on every trip without its own
                     const fspEls = bookingElements(col.booking ?? rs.booking, '          ');
                     const fsp = fspEls ? `\n        <FlexibleServiceProperties id="${cs}:FlexibleServiceProperties:${uuid5(`${sjId}|booking`)}" version="1">\n${fspEls}\n        </FlexibleServiceProperties>` : '';
                     sjs.push(`      <ServiceJourney id="${sjId}" version="1"${pubAttr}>${sjPriv}
-        <JourneyPatternRef ref="${jpId}" version="1"/>${sjTrain}
+        <JourneyPatternRef ref="${jpId}" version="1"/>${sjVeh}${sjTrain}
         <passingTimes>${ptXml}
         </passingTimes>${fsp}
       </ServiceJourney>`);

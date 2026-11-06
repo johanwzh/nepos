@@ -118,3 +118,15 @@ describe('ServiceLinks per vehicle group (backlog 93, design 2026-11-03 §11)', 
     expect(after.map((f) => f.xml)).toEqual(before.map((f) => f.xml));
   });
 });
+
+describe('VehicleTypeRef on the ServiceJourney (backlog 121)', () => {
+  it('writes the trip vehicle\'s register id; none without one', () => {
+    const rs = route('r1', [1, 2]);
+    const g = rs.grids[`${rs.periods[0].id}:${rs.periods[0].setId}`];
+    g.cols[0].vehicle = 'TB';
+    const b = (/** @type {any[]} */ vehicles) => buildNeTExFiles({ codespace: 'TST', deliveryName: 'T', routes: [{ code: 'r1', rs }], orgs: [], brandings: [],
+      calendars: [{ id: 'h1', name: 'V', ranges: [['20260101', '20260630']] }], timestamp: 'x', quayInfo, vehicles })[1].xml;
+    expect(b([{ name: 'TB', vehicleTypeRef: 'NMR:VehicleType:123' }])).toContain('<VehicleTypeRef ref="NMR:VehicleType:123"/>');
+    expect(b([{ name: 'TB', vehicleTypeRef: '' }])).not.toContain('VehicleTypeRef');
+  });
+});

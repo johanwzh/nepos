@@ -86,9 +86,9 @@ const MENUS = [
   { label: () => t('menuHelp'), items: () => [
     { label: t('helpShortcuts'), action: showShortcuts },
     { label: t('helpGuide'), action: showUserGuide },
-    { label: t('helpVersions'), action: showVersionHistory },
-    'separator',
     { label: t('helpContact'), action: showContact },
+    'separator',
+    { label: t('helpVersions'), action: showVersionHistory },
     { label: 'GitHub', action: showGitHub },
   ] },
 ];
